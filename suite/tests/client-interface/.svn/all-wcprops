@@ -1,0 +1,833 @@
+K 25
+svn:wc:ra_dav:version-url
+V 53
+/svn/!svn/ver/1925/trunk/suite/tests/client-interface
+END
+unregister.dll.c
+K 25
+svn:wc:ra_dav:version-url
+V 69
+/svn/!svn/ver/704/trunk/suite/tests/client-interface/unregister.dll.c
+END
+cbr2.dll.c
+K 25
+svn:wc:ra_dav:version-url
+V 63
+/svn/!svn/ver/943/trunk/suite/tests/client-interface/cbr2.dll.c
+END
+events_cpp.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 68
+/svn/!svn/ver/1514/trunk/suite/tests/client-interface/events_cpp.cpp
+END
+security.c
+K 25
+svn:wc:ra_dav:version-url
+V 64
+/svn/!svn/ver/1638/trunk/suite/tests/client-interface/security.c
+END
+fragdel.dll.c
+K 25
+svn:wc:ra_dav:version-url
+V 66
+/svn/!svn/ver/704/trunk/suite/tests/client-interface/fragdel.dll.c
+END
+decode-bb.runall
+K 25
+svn:wc:ra_dav:version-url
+V 67
+/svn/!svn/ver/1/trunk/suite/tests/client-interface/decode-bb.runall
+END
+cbr-retarget.c
+K 25
+svn:wc:ra_dav:version-url
+V 68
+/svn/!svn/ver/1178/trunk/suite/tests/client-interface/cbr-retarget.c
+END
+flush.c
+K 25
+svn:wc:ra_dav:version-url
+V 60
+/svn/!svn/ver/704/trunk/suite/tests/client-interface/flush.c
+END
+thread.dll.c
+K 25
+svn:wc:ra_dav:version-url
+V 65
+/svn/!svn/ver/943/trunk/suite/tests/client-interface/thread.dll.c
+END
+modules.appdll.c
+K 25
+svn:wc:ra_dav:version-url
+V 70
+/svn/!svn/ver/1775/trunk/suite/tests/client-interface/modules.appdll.c
+END
+count-ctis.c
+K 25
+svn:wc:ra_dav:version-url
+V 65
+/svn/!svn/ver/704/trunk/suite/tests/client-interface/count-ctis.c
+END
+cbr3.c
+K 25
+svn:wc:ra_dav:version-url
+V 59
+/svn/!svn/ver/704/trunk/suite/tests/client-interface/cbr3.c
+END
+timer.dll.c
+K 25
+svn:wc:ra_dav:version-url
+V 64
+/svn/!svn/ver/298/trunk/suite/tests/client-interface/timer.dll.c
+END
+syscall-mod.expect
+K 25
+svn:wc:ra_dav:version-url
+V 69
+/svn/!svn/ver/1/trunk/suite/tests/client-interface/syscall-mod.expect
+END
+events_cpp.template
+K 25
+svn:wc:ra_dav:version-url
+V 73
+/svn/!svn/ver/1514/trunk/suite/tests/client-interface/events_cpp.template
+END
+syscall-mod.dll.c
+K 25
+svn:wc:ra_dav:version-url
+V 68
+/svn/!svn/ver/1/trunk/suite/tests/client-interface/syscall-mod.dll.c
+END
+count-bbs.expect
+K 25
+svn:wc:ra_dav:version-url
+V 69
+/svn/!svn/ver/528/trunk/suite/tests/client-interface/count-bbs.expect
+END
+cbr2.runall
+K 25
+svn:wc:ra_dav:version-url
+V 62
+/svn/!svn/ver/1/trunk/suite/tests/client-interface/cbr2.runall
+END
+alloc.dll.c
+K 25
+svn:wc:ra_dav:version-url
+V 65
+/svn/!svn/ver/1925/trunk/suite/tests/client-interface/alloc.dll.c
+END
+events.c
+K 25
+svn:wc:ra_dav:version-url
+V 62
+/svn/!svn/ver/1656/trunk/suite/tests/client-interface/events.c
+END
+modules.c
+K 25
+svn:wc:ra_dav:version-url
+V 63
+/svn/!svn/ver/1635/trunk/suite/tests/client-interface/modules.c
+END
+drmgr-test.templatex
+K 25
+svn:wc:ra_dav:version-url
+V 74
+/svn/!svn/ver/1717/trunk/suite/tests/client-interface/drmgr-test.templatex
+END
+strace.template
+K 25
+svn:wc:ra_dav:version-url
+V 68
+/svn/!svn/ver/106/trunk/suite/tests/client-interface/strace.template
+END
+nudge_test.runall
+K 25
+svn:wc:ra_dav:version-url
+V 70
+/svn/!svn/ver/226/trunk/suite/tests/client-interface/nudge_test.runall
+END
+pcache-use.expect
+K 25
+svn:wc:ra_dav:version-url
+V 71
+/svn/!svn/ver/1243/trunk/suite/tests/client-interface/pcache-use.expect
+END
+retaddr.c
+K 25
+svn:wc:ra_dav:version-url
+V 63
+/svn/!svn/ver/1527/trunk/suite/tests/client-interface/retaddr.c
+END
+truncate.c
+K 25
+svn:wc:ra_dav:version-url
+V 63
+/svn/!svn/ver/704/trunk/suite/tests/client-interface/truncate.c
+END
+call-retarget.c
+K 25
+svn:wc:ra_dav:version-url
+V 69
+/svn/!svn/ver/1193/trunk/suite/tests/client-interface/call-retarget.c
+END
+strace.dll.c
+K 25
+svn:wc:ra_dav:version-url
+V 66
+/svn/!svn/ver/1717/trunk/suite/tests/client-interface/strace.dll.c
+END
+call-retarget.expect
+K 25
+svn:wc:ra_dav:version-url
+V 74
+/svn/!svn/ver/1193/trunk/suite/tests/client-interface/call-retarget.expect
+END
+cbr.template
+K 25
+svn:wc:ra_dav:version-url
+V 65
+/svn/!svn/ver/112/trunk/suite/tests/client-interface/cbr.template
+END
+thread.template
+K 25
+svn:wc:ra_dav:version-url
+V 68
+/svn/!svn/ver/298/trunk/suite/tests/client-interface/thread.template
+END
+drutil-test.templatex
+K 25
+svn:wc:ra_dav:version-url
+V 75
+/svn/!svn/ver/1337/trunk/suite/tests/client-interface/drutil-test.templatex
+END
+count-ctis.dll.c
+K 25
+svn:wc:ra_dav:version-url
+V 70
+/svn/!svn/ver/1731/trunk/suite/tests/client-interface/count-ctis.dll.c
+END
+large_options.c
+K 25
+svn:wc:ra_dav:version-url
+V 69
+/svn/!svn/ver/1731/trunk/suite/tests/client-interface/large_options.c
+END
+null_instrument.expect
+K 25
+svn:wc:ra_dav:version-url
+V 76
+/svn/!svn/ver/1448/trunk/suite/tests/client-interface/null_instrument.expect
+END
+syscall.c
+K 25
+svn:wc:ra_dav:version-url
+V 62
+/svn/!svn/ver/801/trunk/suite/tests/client-interface/syscall.c
+END
+segfault.c
+K 25
+svn:wc:ra_dav:version-url
+V 64
+/svn/!svn/ver/1725/trunk/suite/tests/client-interface/segfault.c
+END
+abort.expect
+K 25
+svn:wc:ra_dav:version-url
+V 63
+/svn/!svn/ver/1/trunk/suite/tests/client-interface/abort.expect
+END
+events.dll.c
+K 25
+svn:wc:ra_dav:version-url
+V 66
+/svn/!svn/ver/1514/trunk/suite/tests/client-interface/events.dll.c
+END
+abort.dll.c
+K 25
+svn:wc:ra_dav:version-url
+V 64
+/svn/!svn/ver/704/trunk/suite/tests/client-interface/abort.dll.c
+END
+cbr.runall
+K 25
+svn:wc:ra_dav:version-url
+V 61
+/svn/!svn/ver/1/trunk/suite/tests/client-interface/cbr.runall
+END
+modules.dll.c
+K 25
+svn:wc:ra_dav:version-url
+V 67
+/svn/!svn/ver/1774/trunk/suite/tests/client-interface/modules.dll.c
+END
+signal.expect
+K 25
+svn:wc:ra_dav:version-url
+V 64
+/svn/!svn/ver/1/trunk/suite/tests/client-interface/signal.expect
+END
+pcache.c
+K 25
+svn:wc:ra_dav:version-url
+V 62
+/svn/!svn/ver/1243/trunk/suite/tests/client-interface/pcache.c
+END
+unregister.c
+K 25
+svn:wc:ra_dav:version-url
+V 65
+/svn/!svn/ver/704/trunk/suite/tests/client-interface/unregister.c
+END
+cbr4.c
+K 25
+svn:wc:ra_dav:version-url
+V 59
+/svn/!svn/ver/704/trunk/suite/tests/client-interface/cbr4.c
+END
+count-bbs.c
+K 25
+svn:wc:ra_dav:version-url
+V 64
+/svn/!svn/ver/704/trunk/suite/tests/client-interface/count-bbs.c
+END
+events.template
+K 25
+svn:wc:ra_dav:version-url
+V 69
+/svn/!svn/ver/1521/trunk/suite/tests/client-interface/events.template
+END
+call-retarget.dll.c
+K 25
+svn:wc:ra_dav:version-url
+V 73
+/svn/!svn/ver/1193/trunk/suite/tests/client-interface/call-retarget.dll.c
+END
+pc-check.template
+K 25
+svn:wc:ra_dav:version-url
+V 70
+/svn/!svn/ver/112/trunk/suite/tests/client-interface/pc-check.template
+END
+cleancall.template
+K 25
+svn:wc:ra_dav:version-url
+V 72
+/svn/!svn/ver/1381/trunk/suite/tests/client-interface/cleancall.template
+END
+thread.c
+K 25
+svn:wc:ra_dav:version-url
+V 61
+/svn/!svn/ver/704/trunk/suite/tests/client-interface/thread.c
+END
+drwrap-test.c
+K 25
+svn:wc:ra_dav:version-url
+V 67
+/svn/!svn/ver/1271/trunk/suite/tests/client-interface/drwrap-test.c
+END
+null_instrument.appdll.c
+K 25
+svn:wc:ra_dav:version-url
+V 78
+/svn/!svn/ver/1448/trunk/suite/tests/client-interface/null_instrument.appdll.c
+END
+decode-bb.dll.c
+K 25
+svn:wc:ra_dav:version-url
+V 68
+/svn/!svn/ver/704/trunk/suite/tests/client-interface/decode-bb.dll.c
+END
+cleancall.c
+K 25
+svn:wc:ra_dav:version-url
+V 65
+/svn/!svn/ver/1656/trunk/suite/tests/client-interface/cleancall.c
+END
+cbr.dll.c
+K 25
+svn:wc:ra_dav:version-url
+V 62
+/svn/!svn/ver/704/trunk/suite/tests/client-interface/cbr.dll.c
+END
+thread.appdll.c
+K 25
+svn:wc:ra_dav:version-url
+V 68
+/svn/!svn/ver/704/trunk/suite/tests/client-interface/thread.appdll.c
+END
+segfault.dll.c
+K 25
+svn:wc:ra_dav:version-url
+V 68
+/svn/!svn/ver/1725/trunk/suite/tests/client-interface/segfault.dll.c
+END
+syscall.dll.c
+K 25
+svn:wc:ra_dav:version-url
+V 67
+/svn/!svn/ver/1570/trunk/suite/tests/client-interface/syscall.dll.c
+END
+custom_traces.runall
+K 25
+svn:wc:ra_dav:version-url
+V 71
+/svn/!svn/ver/1/trunk/suite/tests/client-interface/custom_traces.runall
+END
+syscall-mod.c
+K 25
+svn:wc:ra_dav:version-url
+V 66
+/svn/!svn/ver/704/trunk/suite/tests/client-interface/syscall-mod.c
+END
+pcache.expect
+K 25
+svn:wc:ra_dav:version-url
+V 67
+/svn/!svn/ver/1243/trunk/suite/tests/client-interface/pcache.expect
+END
+decode-bb.template
+K 25
+svn:wc:ra_dav:version-url
+V 71
+/svn/!svn/ver/112/trunk/suite/tests/client-interface/decode-bb.template
+END
+alloc.expect
+K 25
+svn:wc:ra_dav:version-url
+V 66
+/svn/!svn/ver/1925/trunk/suite/tests/client-interface/alloc.expect
+END
+timer.templatex
+K 25
+svn:wc:ra_dav:version-url
+V 68
+/svn/!svn/ver/298/trunk/suite/tests/client-interface/timer.templatex
+END
+cbr4.dll.c
+K 25
+svn:wc:ra_dav:version-url
+V 64
+/svn/!svn/ver/1328/trunk/suite/tests/client-interface/cbr4.dll.c
+END
+count-bbs.dll.c
+K 25
+svn:wc:ra_dav:version-url
+V 69
+/svn/!svn/ver/1731/trunk/suite/tests/client-interface/count-bbs.dll.c
+END
+drsyms-test.dll.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 73
+/svn/!svn/ver/1829/trunk/suite/tests/client-interface/drsyms-test.dll.cpp
+END
+events.appdll.c
+K 25
+svn:wc:ra_dav:version-url
+V 69
+/svn/!svn/ver/1774/trunk/suite/tests/client-interface/events.appdll.c
+END
+drsyms-test.templatex
+K 25
+svn:wc:ra_dav:version-url
+V 75
+/svn/!svn/ver/1523/trunk/suite/tests/client-interface/drsyms-test.templatex
+END
+dr_options.c
+K 25
+svn:wc:ra_dav:version-url
+V 66
+/svn/!svn/ver/1422/trunk/suite/tests/client-interface/dr_options.c
+END
+strace.c
+K 25
+svn:wc:ra_dav:version-url
+V 60
+/svn/!svn/ver/88/trunk/suite/tests/client-interface/strace.c
+END
+cbr2.template
+K 25
+svn:wc:ra_dav:version-url
+V 66
+/svn/!svn/ver/112/trunk/suite/tests/client-interface/cbr2.template
+END
+drwrap-test.dll.c
+K 25
+svn:wc:ra_dav:version-url
+V 71
+/svn/!svn/ver/1743/trunk/suite/tests/client-interface/drwrap-test.dll.c
+END
+signal.dll.c
+K 25
+svn:wc:ra_dav:version-url
+V 65
+/svn/!svn/ver/943/trunk/suite/tests/client-interface/signal.dll.c
+END
+nudge_ex.template
+K 25
+svn:wc:ra_dav:version-url
+V 71
+/svn/!svn/ver/1346/trunk/suite/tests/client-interface/nudge_ex.template
+END
+cleancall.dll.c
+K 25
+svn:wc:ra_dav:version-url
+V 69
+/svn/!svn/ver/1575/trunk/suite/tests/client-interface/cleancall.dll.c
+END
+drmgr-test.c
+K 25
+svn:wc:ra_dav:version-url
+V 66
+/svn/!svn/ver/1731/trunk/suite/tests/client-interface/drmgr-test.c
+END
+truncate.expect
+K 25
+svn:wc:ra_dav:version-url
+V 66
+/svn/!svn/ver/1/trunk/suite/tests/client-interface/truncate.expect
+END
+retaddr.expect
+K 25
+svn:wc:ra_dav:version-url
+V 68
+/svn/!svn/ver/1379/trunk/suite/tests/client-interface/retaddr.expect
+END
+file_io_data.txt
+K 25
+svn:wc:ra_dav:version-url
+V 70
+/svn/!svn/ver/1872/trunk/suite/tests/client-interface/file_io_data.txt
+END
+nudge_ex.c
+K 25
+svn:wc:ra_dav:version-url
+V 64
+/svn/!svn/ver/1346/trunk/suite/tests/client-interface/nudge_ex.c
+END
+custom_traces.template
+K 25
+svn:wc:ra_dav:version-url
+V 75
+/svn/!svn/ver/112/trunk/suite/tests/client-interface/custom_traces.template
+END
+drwrap-test.template
+K 25
+svn:wc:ra_dav:version-url
+V 74
+/svn/!svn/ver/1539/trunk/suite/tests/client-interface/drwrap-test.template
+END
+fcache_shift.c
+K 25
+svn:wc:ra_dav:version-url
+V 68
+/svn/!svn/ver/1286/trunk/suite/tests/client-interface/fcache_shift.c
+END
+abort.c
+K 25
+svn:wc:ra_dav:version-url
+V 60
+/svn/!svn/ver/704/trunk/suite/tests/client-interface/abort.c
+END
+fragdel.expect
+K 25
+svn:wc:ra_dav:version-url
+V 65
+/svn/!svn/ver/1/trunk/suite/tests/client-interface/fragdel.expect
+END
+flush.template
+K 25
+svn:wc:ra_dav:version-url
+V 67
+/svn/!svn/ver/190/trunk/suite/tests/client-interface/flush.template
+END
+large_options.expect
+K 25
+svn:wc:ra_dav:version-url
+V 74
+/svn/!svn/ver/1023/trunk/suite/tests/client-interface/large_options.expect
+END
+fcache_shift.expect
+K 25
+svn:wc:ra_dav:version-url
+V 73
+/svn/!svn/ver/1286/trunk/suite/tests/client-interface/fcache_shift.expect
+END
+security.expect
+K 25
+svn:wc:ra_dav:version-url
+V 69
+/svn/!svn/ver/1638/trunk/suite/tests/client-interface/security.expect
+END
+inline.c
+K 25
+svn:wc:ra_dav:version-url
+V 62
+/svn/!svn/ver/1736/trunk/suite/tests/client-interface/inline.c
+END
+drutil-test.c
+K 25
+svn:wc:ra_dav:version-url
+V 67
+/svn/!svn/ver/1246/trunk/suite/tests/client-interface/drutil-test.c
+END
+events_cpp.dll.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 72
+/svn/!svn/ver/1514/trunk/suite/tests/client-interface/events_cpp.dll.cpp
+END
+security.dll.c
+K 25
+svn:wc:ra_dav:version-url
+V 68
+/svn/!svn/ver/1731/trunk/suite/tests/client-interface/security.dll.c
+END
+cbr3.template
+K 25
+svn:wc:ra_dav:version-url
+V 66
+/svn/!svn/ver/281/trunk/suite/tests/client-interface/cbr3.template
+END
+inline.expect
+K 25
+svn:wc:ra_dav:version-url
+V 67
+/svn/!svn/ver/1736/trunk/suite/tests/client-interface/inline.expect
+END
+pc-check.runall
+K 25
+svn:wc:ra_dav:version-url
+V 66
+/svn/!svn/ver/1/trunk/suite/tests/client-interface/pc-check.runall
+END
+dr_options.dll.c
+K 25
+svn:wc:ra_dav:version-url
+V 70
+/svn/!svn/ver/1498/trunk/suite/tests/client-interface/dr_options.dll.c
+END
+flush.dll.c
+K 25
+svn:wc:ra_dav:version-url
+V 65
+/svn/!svn/ver/1189/trunk/suite/tests/client-interface/flush.dll.c
+END
+cbr-retarget.dll.c
+K 25
+svn:wc:ra_dav:version-url
+V 72
+/svn/!svn/ver/1190/trunk/suite/tests/client-interface/cbr-retarget.dll.c
+END
+drsyms-testgcc.templatex
+K 25
+svn:wc:ra_dav:version-url
+V 78
+/svn/!svn/ver/1523/trunk/suite/tests/client-interface/drsyms-testgcc.templatex
+END
+null_instrument.c
+K 25
+svn:wc:ra_dav:version-url
+V 71
+/svn/!svn/ver/1451/trunk/suite/tests/client-interface/null_instrument.c
+END
+drmgr-test.dll.c
+K 25
+svn:wc:ra_dav:version-url
+V 70
+/svn/!svn/ver/1841/trunk/suite/tests/client-interface/drmgr-test.dll.c
+END
+cbr3.dll.c
+K 25
+svn:wc:ra_dav:version-url
+V 64
+/svn/!svn/ver/1328/trunk/suite/tests/client-interface/cbr3.dll.c
+END
+file_io.c
+K 25
+svn:wc:ra_dav:version-url
+V 62
+/svn/!svn/ver/801/trunk/suite/tests/client-interface/file_io.c
+END
+nudge_ex.dll.c
+K 25
+svn:wc:ra_dav:version-url
+V 68
+/svn/!svn/ver/1717/trunk/suite/tests/client-interface/nudge_ex.dll.c
+END
+drsyms-test.appdll.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 76
+/svn/!svn/ver/1250/trunk/suite/tests/client-interface/drsyms-test.appdll.cpp
+END
+file_io.expect
+K 25
+svn:wc:ra_dav:version-url
+V 68
+/svn/!svn/ver/1872/trunk/suite/tests/client-interface/file_io.expect
+END
+fcache_shift.dll.c
+K 25
+svn:wc:ra_dav:version-url
+V 72
+/svn/!svn/ver/1286/trunk/suite/tests/client-interface/fcache_shift.dll.c
+END
+segfault.expect
+K 25
+svn:wc:ra_dav:version-url
+V 69
+/svn/!svn/ver/1725/trunk/suite/tests/client-interface/segfault.expect
+END
+count-ctis.template
+K 25
+svn:wc:ra_dav:version-url
+V 73
+/svn/!svn/ver/1352/trunk/suite/tests/client-interface/count-ctis.template
+END
+cbr4.template
+K 25
+svn:wc:ra_dav:version-url
+V 66
+/svn/!svn/ver/281/trunk/suite/tests/client-interface/cbr4.template
+END
+dr_options.expect
+K 25
+svn:wc:ra_dav:version-url
+V 71
+/svn/!svn/ver/1422/trunk/suite/tests/client-interface/dr_options.expect
+END
+drwrap-test.appdll.c
+K 25
+svn:wc:ra_dav:version-url
+V 74
+/svn/!svn/ver/1539/trunk/suite/tests/client-interface/drwrap-test.appdll.c
+END
+inline.dll.c
+K 25
+svn:wc:ra_dav:version-url
+V 66
+/svn/!svn/ver/1737/trunk/suite/tests/client-interface/inline.dll.c
+END
+nudge_test.template
+K 25
+svn:wc:ra_dav:version-url
+V 72
+/svn/!svn/ver/226/trunk/suite/tests/client-interface/nudge_test.template
+END
+drutil-test.dll.c
+K 25
+svn:wc:ra_dav:version-url
+V 71
+/svn/!svn/ver/1849/trunk/suite/tests/client-interface/drutil-test.dll.c
+END
+syscall.templatex
+K 25
+svn:wc:ra_dav:version-url
+V 71
+/svn/!svn/ver/1111/trunk/suite/tests/client-interface/syscall.templatex
+END
+drsyms-test.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 69
+/svn/!svn/ver/1523/trunk/suite/tests/client-interface/drsyms-test.cpp
+END
+truncate.dll.c
+K 25
+svn:wc:ra_dav:version-url
+V 67
+/svn/!svn/ver/704/trunk/suite/tests/client-interface/truncate.dll.c
+END
+retaddr.dll.c
+K 25
+svn:wc:ra_dav:version-url
+V 67
+/svn/!svn/ver/1381/trunk/suite/tests/client-interface/retaddr.dll.c
+END
+modules.template
+K 25
+svn:wc:ra_dav:version-url
+V 69
+/svn/!svn/ver/477/trunk/suite/tests/client-interface/modules.template
+END
+fragdel.c
+K 25
+svn:wc:ra_dav:version-url
+V 62
+/svn/!svn/ver/704/trunk/suite/tests/client-interface/fragdel.c
+END
+nudge_test.dll.c
+K 25
+svn:wc:ra_dav:version-url
+V 69
+/svn/!svn/ver/704/trunk/suite/tests/client-interface/nudge_test.dll.c
+END
+null_instrument.dll.c
+K 25
+svn:wc:ra_dav:version-url
+V 75
+/svn/!svn/ver/1747/trunk/suite/tests/client-interface/null_instrument.dll.c
+END
+signal.c
+K 25
+svn:wc:ra_dav:version-url
+V 62
+/svn/!svn/ver/1656/trunk/suite/tests/client-interface/signal.c
+END
+large_options.dll.c
+K 25
+svn:wc:ra_dav:version-url
+V 73
+/svn/!svn/ver/1023/trunk/suite/tests/client-interface/large_options.dll.c
+END
+timer.c
+K 25
+svn:wc:ra_dav:version-url
+V 61
+/svn/!svn/ver/1656/trunk/suite/tests/client-interface/timer.c
+END
+file_io.dll.c
+K 25
+svn:wc:ra_dav:version-url
+V 67
+/svn/!svn/ver/1872/trunk/suite/tests/client-interface/file_io.dll.c
+END
+custom_traces.dll.c
+K 25
+svn:wc:ra_dav:version-url
+V 72
+/svn/!svn/ver/704/trunk/suite/tests/client-interface/custom_traces.dll.c
+END
+pc-check.dll.c
+K 25
+svn:wc:ra_dav:version-url
+V 67
+/svn/!svn/ver/704/trunk/suite/tests/client-interface/pc-check.dll.c
+END
+cbr-retarget.expect
+K 25
+svn:wc:ra_dav:version-url
+V 73
+/svn/!svn/ver/1178/trunk/suite/tests/client-interface/cbr-retarget.expect
+END
+alloc.c
+K 25
+svn:wc:ra_dav:version-url
+V 61
+/svn/!svn/ver/1925/trunk/suite/tests/client-interface/alloc.c
+END
+unregister.expect
+K 25
+svn:wc:ra_dav:version-url
+V 68
+/svn/!svn/ver/1/trunk/suite/tests/client-interface/unregister.expect
+END
+pcache.dll.c
+K 25
+svn:wc:ra_dav:version-url
+V 66
+/svn/!svn/ver/1334/trunk/suite/tests/client-interface/pcache.dll.c
+END

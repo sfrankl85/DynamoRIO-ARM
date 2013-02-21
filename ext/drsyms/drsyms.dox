@@ -1,0 +1,165 @@
+/* **********************************************************
+ * Copyright (c) 2011-2012 Google, Inc.  All rights reserved.
+ * Copyright (c) 2010 VMware, Inc.  All rights reserved.
+ * **********************************************************/
+
+/*
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ * 
+ * * Redistributions of source code must retain the above copyright notice,
+ *   this list of conditions and the following disclaimer.
+ * 
+ * * Redistributions in binary form must reproduce the above copyright notice,
+ *   this list of conditions and the following disclaimer in the documentation
+ *   and/or other materials provided with the distribution.
+ * 
+ * * Neither the name of VMware, Inc. nor the names of its contributors may be
+ *   used to endorse or promote products derived from this software without
+ *   specific prior written permission.
+ * 
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED. IN NO EVENT SHALL VMWARE, INC. OR CONTRIBUTORS BE LIABLE
+ * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+ * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+ * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+ * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
+ * DAMAGE.
+ */
+
+/**
+***************************************************************************
+***************************************************************************
+\page page_drsyms Symbol Access Library
+
+The \p drsyms DynamoRIO Extension provides symbol information.  Currently drsyms
+supports reading symbol information from Windows PDB files and Linux ELF or
+Windows PECOFF files with DWARF2 line information.
+
+ - \ref sec_drsyms_setup
+ - \ref sec_drsyms_exports
+ - \ref sec_drsyms_api
+ - \ref sec_drsyms_mem
+
+\section sec_drsyms_setup Setup
+
+To use \p drsyms with your client simply include this line in your client's
+\p CMakeLists.txt file:
+
+\code use_DynamoRIO_extension(clientname drsyms) \endcode
+
+That will automatically set up the include path and library dependence.
+
+The \p drsyms library on Windows relies on the \p dbghelp.dll library from
+Microsoft.  You will need to download the Debugging Tools for Windows
+package from http://www.microsoft.com/whdc/devtools/debugging/default.mspx
+and place the \p dbghelp.dll in the same directory as either \p drsyms.dll
+or as your client library.  Version 6.0 or higher of \p dbghelp.dll is
+required, and 6.3 or higher is recommended.  Recent versions of Windows do
+have these versions of \p dbghelp.dll in their system directories, but be
+aware that those versions are not redistributable.
+
+More recent versions of \p dbghelp.dll on Windows can use significant
+amounts of stack space.  We have observed usage of 36KB.  This is within
+the default stack size for a DynamoRIO client, but be aware if trying to
+trim the stack size via the DynamoRIO runtime option <tt>-stack_size</tt>
+that anything lower than 36KB is likely to be problematic on Windows.
+
+On Windows, \p drsyms does support Cygwin and MinGW symbols, and will find
+file and line information if in DWARF2 format.  The \p stabs format is not
+supported.  Cygwin and MinGW gcc versions prior to 4.3 use \p stabs by
+default; pass the \p -ggdb flag to request DWARF2.
+
+The \p drsyms library on Linux uses bundled copies of \p libelf, \p libdwarf,
+and \p libelftc built from the
+<a href="http://elftoolchain.sourceforge.net">elftoolchain</a> project and
+requires no setup.
+
+\section sec_drsyms_exports Exported Functions
+
+For clients interested only in functions exported from a library, it is not
+necessary to use \p drsyms as the core DynamoRIO API provides functions for
+iterating modules and looking up module exports.  The following core
+DynamoRIO API functions are relevant:
+
+ - dr_get_proc_address()
+ - dr_get_application_name()
+ - dr_register_module_load_event()
+ - dr_lookup_module()
+ - dr_lookup_module_by_name()
+ - dr_module_iterator_start()
+
+These core API routines are more efficient to use than the \p drsyms
+routines, as the latter must locate, load, and parse debug information.
+Furthermore, the core API routines operate regardless of whether debug
+information is available.  However, for internal non-exported symbols, \p
+drsyms must be used.
+
+On Linux, \p drsyms searches both \p .dynsym and \p .symtab, while
+dr_get_proc_address() only searches \p .dynsym.  Global symbols in an
+executable (i.e., a non-library) are only present in \p .symtab by
+default.  If the executable is built with the \p -rdynamic flag to \p gcc,
+its global symbols will be placed in \p .dynsym and thus
+dr_get_proc_address() will find them.  Regardless of how it was built, if
+it's not stripped, \p drsyms will find the global symbols.
+
+\section sec_drsyms_api API
+
+All functions return a success code of type #drsym_error_t.
+
+Prior to use, \p drsyms must be initialized by a call to drsym_init().  
+The \p drsyms API will eventually support both sideline and online use, and
+the parameter to drsym_init() will specify the symbol server to use for
+sideline use.  Today only online use is supported and \p NULL should be
+passed.
+
+Symbol lookup is supported in both directions: from an address to a symbol
+via drsym_lookup_address(), and from a symbol to an address via
+drsym_lookup_symbol().  All symbols in a given module can be enumerated via
+drsym_enumerate_symbols(), though on Windows using drsym_search_symbols()
+for a particular match where a non-full search is not required (i.e., the
+search is only targeting function symbols) is significantly faster and uses
+less memory than a full enumeration.  In fact, drsym_search_symbols() is
+usually faster than drsym_lookup_symbol().
+
+For C++ applications, each routine that handles symbols accepts a \p flags
+argument that controls how or whether C++ symbols are demangled or undecorated.
+Currently there are three modes:
+
+- \p DRSYM_LEAVE_MANGLED: Matches against or returns the mangled C++ symbol.
+- \p DRSYM_DEMANGLE: Matches against or returns a "short" demangled C++ symbol.
+  On Linux, both templates and parameters are collapsed to <> and ()
+  respectively.  On Windows, templates are still expanded, and parameters are
+  omitted without parentheses.
+- \p DRSYM_DEMANGLE_FULL: Matches against or returns the fully demangled C++
+  symbol with both template arguments and parameter types.
+- \p DRSYM_DEFAULT_FLAGS: This is equivalent to \p DRSYM_DEMANGLE.
+
+On Windows, this functionality is reduced due to the limitations of \p
+dbghelp.dll.  For all routines except drsym_demangle_symbol(), no matter what
+flags the user passes, all symbols returned or searched use the default
+demangling on Windows, which includes template arguments and excludes parameter
+types.
+
+For an example of usage see the \p instrcalls sample client distributed with
+DynamoRIO.
+
+When finished with the library, call drsym_exit().
+
+\subsection sec_drsyms_mem Memory Usage
+
+When running large applications, loading debug information for all of their
+modules can occupy a lot of memory, from hundreds of megabytes into the
+gigabyte range.  Use the drsym_free_resources() routine when finished with
+a module to unload its debug information.  Normally, a client will query
+for symbols in the module load event, and then won't need symbols again
+until perhaps a callstack walk later on.  Thus, we recommend that a client
+call drsym_free_resources() at the end of its module load event.  Due to
+fragmentation concerns, it is not easy for drsyms itself to perform
+internal garbage collection at any high frequency.
+
+*/

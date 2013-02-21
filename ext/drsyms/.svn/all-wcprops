@@ -1,0 +1,113 @@
+K 25
+svn:wc:ra_dav:version-url
+V 35
+/svn/!svn/ver/1905/trunk/ext/drsyms
+END
+dbghelp_imports.def
+K 25
+svn:wc:ra_dav:version-url
+V 55
+/svn/!svn/ver/1905/trunk/ext/drsyms/dbghelp_imports.def
+END
+drsyms_linux.c
+K 25
+svn:wc:ra_dav:version-url
+V 50
+/svn/!svn/ver/1763/trunk/ext/drsyms/drsyms_linux.c
+END
+drsyms_pecoff.c
+K 25
+svn:wc:ra_dav:version-url
+V 51
+/svn/!svn/ver/1681/trunk/ext/drsyms/drsyms_pecoff.c
+END
+drsyms_dwarf.c
+K 25
+svn:wc:ra_dav:version-url
+V 50
+/svn/!svn/ver/1522/trunk/ext/drsyms/drsyms_dwarf.c
+END
+drsyms_elf.c
+K 25
+svn:wc:ra_dav:version-url
+V 48
+/svn/!svn/ver/1552/trunk/ext/drsyms/drsyms_elf.c
+END
+demangle.cc
+K 25
+svn:wc:ra_dav:version-url
+V 47
+/svn/!svn/ver/1250/trunk/ext/drsyms/demangle.cc
+END
+drsyms_obj.h
+K 25
+svn:wc:ra_dav:version-url
+V 48
+/svn/!svn/ver/1251/trunk/ext/drsyms/drsyms_obj.h
+END
+drsyms_private.h
+K 25
+svn:wc:ra_dav:version-url
+V 52
+/svn/!svn/ver/1681/trunk/ext/drsyms/drsyms_private.h
+END
+drsyms_bench.c
+K 25
+svn:wc:ra_dav:version-url
+V 50
+/svn/!svn/ver/1266/trunk/ext/drsyms/drsyms_bench.c
+END
+demangle.h
+K 25
+svn:wc:ra_dav:version-url
+V 46
+/svn/!svn/ver/1100/trunk/ext/drsyms/demangle.h
+END
+dbghelp_imports.c
+K 25
+svn:wc:ra_dav:version-url
+V 53
+/svn/!svn/ver/1905/trunk/ext/drsyms/dbghelp_imports.c
+END
+drsyms_unix.c
+K 25
+svn:wc:ra_dav:version-url
+V 49
+/svn/!svn/ver/1681/trunk/ext/drsyms/drsyms_unix.c
+END
+drsyms.h
+K 25
+svn:wc:ra_dav:version-url
+V 44
+/svn/!svn/ver/1755/trunk/ext/drsyms/drsyms.h
+END
+drsyms.dox
+K 25
+svn:wc:ra_dav:version-url
+V 46
+/svn/!svn/ver/1792/trunk/ext/drsyms/drsyms.dox
+END
+drsyms_infox.h
+K 25
+svn:wc:ra_dav:version-url
+V 50
+/svn/!svn/ver/1681/trunk/ext/drsyms/drsyms_infox.h
+END
+drsyms_common.c
+K 25
+svn:wc:ra_dav:version-url
+V 51
+/svn/!svn/ver/1148/trunk/ext/drsyms/drsyms_common.c
+END
+drsyms_windows.c
+K 25
+svn:wc:ra_dav:version-url
+V 52
+/svn/!svn/ver/1865/trunk/ext/drsyms/drsyms_windows.c
+END
+CMakeLists.txt
+K 25
+svn:wc:ra_dav:version-url
+V 50
+/svn/!svn/ver/1905/trunk/ext/drsyms/CMakeLists.txt
+END

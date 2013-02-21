@@ -1,0 +1,173 @@
+K 25
+svn:wc:ra_dav:version-url
+V 43
+/svn/!svn/ver/1911/trunk/suite/tests/common
+END
+memoryhog.template
+K 25
+svn:wc:ra_dav:version-url
+V 61
+/svn/!svn/ver/112/trunk/suite/tests/common/memoryhog.template
+END
+fib.c
+K 25
+svn:wc:ra_dav:version-url
+V 46
+/svn/!svn/ver/1/trunk/suite/tests/common/fib.c
+END
+broadfun.c
+K 25
+svn:wc:ra_dav:version-url
+V 54
+/svn/!svn/ver/1731/trunk/suite/tests/common/broadfun.c
+END
+eflags.c
+K 25
+svn:wc:ra_dav:version-url
+V 51
+/svn/!svn/ver/128/trunk/suite/tests/common/eflags.c
+END
+conflict.c
+K 25
+svn:wc:ra_dav:version-url
+V 51
+/svn/!svn/ver/1/trunk/suite/tests/common/conflict.c
+END
+ops.c
+K 25
+svn:wc:ra_dav:version-url
+V 46
+/svn/!svn/ver/1/trunk/suite/tests/common/ops.c
+END
+nativeexec.expect
+K 25
+svn:wc:ra_dav:version-url
+V 61
+/svn/!svn/ver/1425/trunk/suite/tests/common/nativeexec.expect
+END
+hello.c
+K 25
+svn:wc:ra_dav:version-url
+V 48
+/svn/!svn/ver/1/trunk/suite/tests/common/hello.c
+END
+nativeexec.dll.c
+K 25
+svn:wc:ra_dav:version-url
+V 60
+/svn/!svn/ver/1425/trunk/suite/tests/common/nativeexec.dll.c
+END
+fib.expect
+K 25
+svn:wc:ra_dav:version-url
+V 51
+/svn/!svn/ver/1/trunk/suite/tests/common/fib.expect
+END
+broadfun.expect
+K 25
+svn:wc:ra_dav:version-url
+V 56
+/svn/!svn/ver/1/trunk/suite/tests/common/broadfun.expect
+END
+decode-bad.c
+K 25
+svn:wc:ra_dav:version-url
+V 56
+/svn/!svn/ver/1656/trunk/suite/tests/common/decode-bad.c
+END
+conflict.expect
+K 25
+svn:wc:ra_dav:version-url
+V 56
+/svn/!svn/ver/1/trunk/suite/tests/common/conflict.expect
+END
+ops.expect
+K 25
+svn:wc:ra_dav:version-url
+V 51
+/svn/!svn/ver/1/trunk/suite/tests/common/ops.expect
+END
+eflags.expect
+K 25
+svn:wc:ra_dav:version-url
+V 54
+/svn/!svn/ver/1/trunk/suite/tests/common/eflags.expect
+END
+recurse.c
+K 25
+svn:wc:ra_dav:version-url
+V 50
+/svn/!svn/ver/1/trunk/suite/tests/common/recurse.c
+END
+hello.expect
+K 25
+svn:wc:ra_dav:version-url
+V 53
+/svn/!svn/ver/1/trunk/suite/tests/common/hello.expect
+END
+segfault.c
+K 25
+svn:wc:ra_dav:version-url
+V 54
+/svn/!svn/ver/1656/trunk/suite/tests/common/segfault.c
+END
+decode.template
+K 25
+svn:wc:ra_dav:version-url
+V 59
+/svn/!svn/ver/1783/trunk/suite/tests/common/decode.template
+END
+decode-bad.expect
+K 25
+svn:wc:ra_dav:version-url
+V 58
+/svn/!svn/ver/1/trunk/suite/tests/common/decode-bad.expect
+END
+recurse.expect
+K 25
+svn:wc:ra_dav:version-url
+V 55
+/svn/!svn/ver/1/trunk/suite/tests/common/recurse.expect
+END
+segfault.expect
+K 25
+svn:wc:ra_dav:version-url
+V 56
+/svn/!svn/ver/1/trunk/suite/tests/common/segfault.expect
+END
+decode.c
+K 25
+svn:wc:ra_dav:version-url
+V 52
+/svn/!svn/ver/1783/trunk/suite/tests/common/decode.c
+END
+getretaddr.c
+K 25
+svn:wc:ra_dav:version-url
+V 56
+/svn/!svn/ver/1549/trunk/suite/tests/common/getretaddr.c
+END
+protect-dstack.c
+K 25
+svn:wc:ra_dav:version-url
+V 60
+/svn/!svn/ver/1750/trunk/suite/tests/common/protect-dstack.c
+END
+getretaddr.expect
+K 25
+svn:wc:ra_dav:version-url
+V 58
+/svn/!svn/ver/1/trunk/suite/tests/common/getretaddr.expect
+END
+nativeexec.c
+K 25
+svn:wc:ra_dav:version-url
+V 56
+/svn/!svn/ver/1911/trunk/suite/tests/common/nativeexec.c
+END
+protect-dstack.expect
+K 25
+svn:wc:ra_dav:version-url
+V 62
+/svn/!svn/ver/1/trunk/suite/tests/common/protect-dstack.expect
+END

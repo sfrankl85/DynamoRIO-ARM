@@ -1,0 +1,35 @@
+K 25
+svn:wc:ra_dav:version-url
+V 52
+/svn/!svn/ver/1745/trunk/ext/drsyms/libelftc/include
+END
+libdwarf.h
+K 25
+svn:wc:ra_dav:version-url
+V 63
+/svn/!svn/ver/1745/trunk/ext/drsyms/libelftc/include/libdwarf.h
+END
+libelf.h
+K 25
+svn:wc:ra_dav:version-url
+V 61
+/svn/!svn/ver/1390/trunk/ext/drsyms/libelftc/include/libelf.h
+END
+elfdefinitions.h
+K 25
+svn:wc:ra_dav:version-url
+V 69
+/svn/!svn/ver/1745/trunk/ext/drsyms/libelftc/include/elfdefinitions.h
+END
+dwarf.h
+K 25
+svn:wc:ra_dav:version-url
+V 60
+/svn/!svn/ver/1390/trunk/ext/drsyms/libelftc/include/dwarf.h
+END
+libelftc.h
+K 25
+svn:wc:ra_dav:version-url
+V 63
+/svn/!svn/ver/1390/trunk/ext/drsyms/libelftc/include/libelftc.h
+END

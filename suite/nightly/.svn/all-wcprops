@@ -1,0 +1,83 @@
+K 25
+svn:wc:ra_dav:version-url
+V 35
+/svn/!svn/ver/5/trunk/suite/nightly
+END
+nightly_bashrc
+K 25
+svn:wc:ra_dav:version-url
+V 50
+/svn/!svn/ver/1/trunk/suite/nightly/nightly_bashrc
+END
+linux-slave.sh
+K 25
+svn:wc:ra_dav:version-url
+V 50
+/svn/!svn/ver/1/trunk/suite/nightly/linux-slave.sh
+END
+nightly_windows.sh
+K 25
+svn:wc:ra_dav:version-url
+V 54
+/svn/!svn/ver/1/trunk/suite/nightly/nightly_windows.sh
+END
+cygwin_nightly.bat
+K 25
+svn:wc:ra_dav:version-url
+V 54
+/svn/!svn/ver/1/trunk/suite/nightly/cygwin_nightly.bat
+END
+linux-nightly.sh
+K 25
+svn:wc:ra_dav:version-url
+V 52
+/svn/!svn/ver/1/trunk/suite/nightly/linux-nightly.sh
+END
+nightly_linux.sh
+K 25
+svn:wc:ra_dav:version-url
+V 52
+/svn/!svn/ver/1/trunk/suite/nightly/nightly_linux.sh
+END
+memory_xp.sh
+K 25
+svn:wc:ra_dav:version-url
+V 48
+/svn/!svn/ver/5/trunk/suite/nightly/memory_xp.sh
+END
+do_nightly.sh
+K 25
+svn:wc:ra_dav:version-url
+V 49
+/svn/!svn/ver/1/trunk/suite/nightly/do_nightly.sh
+END
+linux-win32checkup.sh
+K 25
+svn:wc:ra_dav:version-url
+V 57
+/svn/!svn/ver/1/trunk/suite/nightly/linux-win32checkup.sh
+END
+linux-memory.sh
+K 25
+svn:wc:ra_dav:version-url
+V 51
+/svn/!svn/ver/1/trunk/suite/nightly/linux-memory.sh
+END
+east_coast_weekend_rsync.sh
+K 25
+svn:wc:ra_dav:version-url
+V 63
+/svn/!svn/ver/1/trunk/suite/nightly/east_coast_weekend_rsync.sh
+END
+utreport.pl
+K 25
+svn:wc:ra_dav:version-url
+V 47
+/svn/!svn/ver/1/trunk/suite/nightly/utreport.pl
+END
+east_coast_daily_rsync.sh
+K 25
+svn:wc:ra_dav:version-url
+V 61
+/svn/!svn/ver/1/trunk/suite/nightly/east_coast_daily_rsync.sh
+END

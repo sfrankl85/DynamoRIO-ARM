@@ -1,0 +1,197 @@
+K 25
+svn:wc:ra_dav:version-url
+V 42
+/svn/!svn/ver/704/trunk/suite/tests/runall
+END
+calc-hotp.template
+K 25
+svn:wc:ra_dav:version-url
+V 61
+/svn/!svn/ver/112/trunk/suite/tests/runall/calc-hotp.template
+END
+preunload.runall
+K 25
+svn:wc:ra_dav:version-url
+V 58
+/svn/!svn/ver/88/trunk/suite/tests/runall/preunload.runall
+END
+calc.runall
+K 25
+svn:wc:ra_dav:version-url
+V 52
+/svn/!svn/ver/1/trunk/suite/tests/runall/calc.runall
+END
+earlythread.dll.c
+K 25
+svn:wc:ra_dav:version-url
+V 58
+/svn/!svn/ver/1/trunk/suite/tests/runall/earlythread.dll.c
+END
+initapc.template
+K 25
+svn:wc:ra_dav:version-url
+V 59
+/svn/!svn/ver/112/trunk/suite/tests/runall/initapc.template
+END
+processchain.c
+K 25
+svn:wc:ra_dav:version-url
+V 57
+/svn/!svn/ver/704/trunk/suite/tests/runall/processchain.c
+END
+calc-detach.template
+K 25
+svn:wc:ra_dav:version-url
+V 63
+/svn/!svn/ver/112/trunk/suite/tests/runall/calc-detach.template
+END
+calc-persist.template
+K 25
+svn:wc:ra_dav:version-url
+V 64
+/svn/!svn/ver/112/trunk/suite/tests/runall/calc-persist.template
+END
+notepad.template
+K 25
+svn:wc:ra_dav:version-url
+V 59
+/svn/!svn/ver/112/trunk/suite/tests/runall/notepad.template
+END
+calc-hotp.runall
+K 25
+svn:wc:ra_dav:version-url
+V 58
+/svn/!svn/ver/88/trunk/suite/tests/runall/calc-hotp.runall
+END
+runalltest.sh
+K 25
+svn:wc:ra_dav:version-url
+V 55
+/svn/!svn/ver/38/trunk/suite/tests/runall/runalltest.sh
+END
+preunload.c
+K 25
+svn:wc:ra_dav:version-url
+V 52
+/svn/!svn/ver/1/trunk/suite/tests/runall/preunload.c
+END
+detach_test.expect
+K 25
+svn:wc:ra_dav:version-url
+V 60
+/svn/!svn/ver/88/trunk/suite/tests/runall/detach_test.expect
+END
+earlythread.template
+K 25
+svn:wc:ra_dav:version-url
+V 61
+/svn/!svn/ver/1/trunk/suite/tests/runall/earlythread.template
+END
+initapc.dll.c
+K 25
+svn:wc:ra_dav:version-url
+V 56
+/svn/!svn/ver/704/trunk/suite/tests/runall/initapc.dll.c
+END
+detach_test.runall
+K 25
+svn:wc:ra_dav:version-url
+V 60
+/svn/!svn/ver/88/trunk/suite/tests/runall/detach_test.runall
+END
+initapc.runall
+K 25
+svn:wc:ra_dav:version-url
+V 55
+/svn/!svn/ver/1/trunk/suite/tests/runall/initapc.runall
+END
+calc-detach.runall
+K 25
+svn:wc:ra_dav:version-url
+V 60
+/svn/!svn/ver/88/trunk/suite/tests/runall/calc-detach.runall
+END
+earlythread.c
+K 25
+svn:wc:ra_dav:version-url
+V 54
+/svn/!svn/ver/1/trunk/suite/tests/runall/earlythread.c
+END
+calc-persist.runall
+K 25
+svn:wc:ra_dav:version-url
+V 61
+/svn/!svn/ver/88/trunk/suite/tests/runall/calc-persist.runall
+END
+notepad.runall
+K 25
+svn:wc:ra_dav:version-url
+V 55
+/svn/!svn/ver/1/trunk/suite/tests/runall/notepad.runall
+END
+calc-freeze.template
+K 25
+svn:wc:ra_dav:version-url
+V 63
+/svn/!svn/ver/112/trunk/suite/tests/runall/calc-freeze.template
+END
+processchain.template
+K 25
+svn:wc:ra_dav:version-url
+V 63
+/svn/!svn/ver/88/trunk/suite/tests/runall/processchain.template
+END
+calc-reset.template
+K 25
+svn:wc:ra_dav:version-url
+V 62
+/svn/!svn/ver/112/trunk/suite/tests/runall/calc-reset.template
+END
+earlythread.runall
+K 25
+svn:wc:ra_dav:version-url
+V 59
+/svn/!svn/ver/1/trunk/suite/tests/runall/earlythread.runall
+END
+preunload.template
+K 25
+svn:wc:ra_dav:version-url
+V 60
+/svn/!svn/ver/88/trunk/suite/tests/runall/preunload.template
+END
+detach_test.c
+K 25
+svn:wc:ra_dav:version-url
+V 54
+/svn/!svn/ver/1/trunk/suite/tests/runall/detach_test.c
+END
+initapc.c
+K 25
+svn:wc:ra_dav:version-url
+V 50
+/svn/!svn/ver/1/trunk/suite/tests/runall/initapc.c
+END
+calc-freeze.runall
+K 25
+svn:wc:ra_dav:version-url
+V 60
+/svn/!svn/ver/88/trunk/suite/tests/runall/calc-freeze.runall
+END
+calc.template
+K 25
+svn:wc:ra_dav:version-url
+V 56
+/svn/!svn/ver/112/trunk/suite/tests/runall/calc.template
+END
+processchain.runall
+K 25
+svn:wc:ra_dav:version-url
+V 60
+/svn/!svn/ver/1/trunk/suite/tests/runall/processchain.runall
+END
+calc-reset.runall
+K 25
+svn:wc:ra_dav:version-url
+V 59
+/svn/!svn/ver/88/trunk/suite/tests/runall/calc-reset.runall
+END

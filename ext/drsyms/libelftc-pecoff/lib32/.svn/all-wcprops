@@ -1,0 +1,29 @@
+K 25
+svn:wc:ra_dav:version-url
+V 57
+/svn/!svn/ver/1745/trunk/ext/drsyms/libelftc-pecoff/lib32
+END
+elftc.pdb
+K 25
+svn:wc:ra_dav:version-url
+V 67
+/svn/!svn/ver/1745/trunk/ext/drsyms/libelftc-pecoff/lib32/elftc.pdb
+END
+elftc.lib
+K 25
+svn:wc:ra_dav:version-url
+V 67
+/svn/!svn/ver/1745/trunk/ext/drsyms/libelftc-pecoff/lib32/elftc.lib
+END
+dwarf.pdb
+K 25
+svn:wc:ra_dav:version-url
+V 67
+/svn/!svn/ver/1745/trunk/ext/drsyms/libelftc-pecoff/lib32/dwarf.pdb
+END
+dwarf.lib
+K 25
+svn:wc:ra_dav:version-url
+V 67
+/svn/!svn/ver/1745/trunk/ext/drsyms/libelftc-pecoff/lib32/dwarf.lib
+END

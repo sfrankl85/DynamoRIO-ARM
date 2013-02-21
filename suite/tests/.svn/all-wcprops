@@ -1,0 +1,65 @@
+K 25
+svn:wc:ra_dav:version-url
+V 36
+/svn/!svn/ver/1927/trunk/suite/tests
+END
+threads.h
+K 25
+svn:wc:ra_dav:version-url
+V 46
+/svn/!svn/ver/1774/trunk/suite/tests/threads.h
+END
+rungcc.cmake
+K 25
+svn:wc:ra_dav:version-url
+V 49
+/svn/!svn/ver/1387/trunk/suite/tests/rungcc.cmake
+END
+tools.c
+K 25
+svn:wc:ra_dav:version-url
+V 44
+/svn/!svn/ver/1927/trunk/suite/tests/tools.c
+END
+runcmp.cmake
+K 25
+svn:wc:ra_dav:version-url
+V 48
+/svn/!svn/ver/476/trunk/suite/tests/runcmp.cmake
+END
+client_tools.h
+K 25
+svn:wc:ra_dav:version-url
+V 51
+/svn/!svn/ver/1194/trunk/suite/tests/client_tools.h
+END
+tools.h
+K 25
+svn:wc:ra_dav:version-url
+V 44
+/svn/!svn/ver/1761/trunk/suite/tests/tools.h
+END
+mresources.rc
+K 25
+svn:wc:ra_dav:version-url
+V 50
+/svn/!svn/ver/1687/trunk/suite/tests/mresources.rc
+END
+oresources.rc
+K 25
+svn:wc:ra_dav:version-url
+V 50
+/svn/!svn/ver/1687/trunk/suite/tests/oresources.rc
+END
+runall.cmake
+K 25
+svn:wc:ra_dav:version-url
+V 48
+/svn/!svn/ver/704/trunk/suite/tests/runall.cmake
+END
+CMakeLists.txt
+K 25
+svn:wc:ra_dav:version-url
+V 51
+/svn/!svn/ver/1911/trunk/suite/tests/CMakeLists.txt
+END

@@ -1,0 +1,29 @@
+K 25
+svn:wc:ra_dav:version-url
+V 43
+/svn/!svn/ver/1598/trunk/clients/standalone
+END
+module_rsrc.c
+K 25
+svn:wc:ra_dav:version-url
+V 54
+/svn/!svn/ver/1/trunk/clients/standalone/module_rsrc.c
+END
+winsysnums.c
+K 25
+svn:wc:ra_dav:version-url
+V 56
+/svn/!svn/ver/1598/trunk/clients/standalone/winsysnums.c
+END
+vista_hash.c
+K 25
+svn:wc:ra_dav:version-url
+V 55
+/svn/!svn/ver/704/trunk/clients/standalone/vista_hash.c
+END
+CMakeLists.txt
+K 25
+svn:wc:ra_dav:version-url
+V 58
+/svn/!svn/ver/1598/trunk/clients/standalone/CMakeLists.txt
+END

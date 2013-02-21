@@ -1,0 +1,23 @@
+K 25
+svn:wc:ra_dav:version-url
+V 50
+/svn/!svn/ver/1745/trunk/ext/drsyms/libelftc/lib32
+END
+libelftc.a
+K 25
+svn:wc:ra_dav:version-url
+V 61
+/svn/!svn/ver/1745/trunk/ext/drsyms/libelftc/lib32/libelftc.a
+END
+libdwarf.a
+K 25
+svn:wc:ra_dav:version-url
+V 61
+/svn/!svn/ver/1745/trunk/ext/drsyms/libelftc/lib32/libdwarf.a
+END
+libelf.a
+K 25
+svn:wc:ra_dav:version-url
+V 59
+/svn/!svn/ver/1745/trunk/ext/drsyms/libelftc/lib32/libelf.a
+END

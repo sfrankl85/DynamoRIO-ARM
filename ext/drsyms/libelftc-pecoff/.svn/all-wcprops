@@ -1,0 +1,17 @@
+K 25
+svn:wc:ra_dav:version-url
+V 51
+/svn/!svn/ver/1745/trunk/ext/drsyms/libelftc-pecoff
+END
+HOWTOBUILD
+K 25
+svn:wc:ra_dav:version-url
+V 62
+/svn/!svn/ver/1250/trunk/ext/drsyms/libelftc-pecoff/HOWTOBUILD
+END
+libelftc-pecoff.patch
+K 25
+svn:wc:ra_dav:version-url
+V 73
+/svn/!svn/ver/1745/trunk/ext/drsyms/libelftc-pecoff/libelftc-pecoff.patch
+END

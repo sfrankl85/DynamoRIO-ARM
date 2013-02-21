@@ -1,0 +1,167 @@
+K 25
+svn:wc:ra_dav:version-url
+V 32
+/svn/!svn/ver/1927/trunk/libutil
+END
+policy.c
+K 25
+svn:wc:ra_dav:version-url
+V 41
+/svn/!svn/ver/1596/trunk/libutil/policy.c
+END
+utils.c
+K 25
+svn:wc:ra_dav:version-url
+V 40
+/svn/!svn/ver/1796/trunk/libutil/utils.c
+END
+mfapi.h
+K 25
+svn:wc:ra_dav:version-url
+V 40
+/svn/!svn/ver/1796/trunk/libutil/mfapi.h
+END
+parser.h
+K 25
+svn:wc:ra_dav:version-url
+V 40
+/svn/!svn/ver/133/trunk/libutil/parser.h
+END
+tests.c
+K 25
+svn:wc:ra_dav:version-url
+V 37
+/svn/!svn/ver/1/trunk/libutil/tests.c
+END
+policy.h
+K 25
+svn:wc:ra_dav:version-url
+V 40
+/svn/!svn/ver/133/trunk/libutil/policy.h
+END
+utils.h
+K 25
+svn:wc:ra_dav:version-url
+V 40
+/svn/!svn/ver/1591/trunk/libutil/utils.h
+END
+config.c
+K 25
+svn:wc:ra_dav:version-url
+V 40
+/svn/!svn/ver/372/trunk/libutil/config.c
+END
+processes.c
+K 25
+svn:wc:ra_dav:version-url
+V 44
+/svn/!svn/ver/1878/trunk/libutil/processes.c
+END
+tester.c
+K 25
+svn:wc:ra_dav:version-url
+V 38
+/svn/!svn/ver/1/trunk/libutil/tester.c
+END
+share.h
+K 25
+svn:wc:ra_dav:version-url
+V 40
+/svn/!svn/ver/1591/trunk/libutil/share.h
+END
+dumpevts.c
+K 25
+svn:wc:ra_dav:version-url
+V 40
+/svn/!svn/ver/1/trunk/libutil/dumpevts.c
+END
+tests.h
+K 25
+svn:wc:ra_dav:version-url
+V 37
+/svn/!svn/ver/1/trunk/libutil/tests.h
+END
+mfapi.def
+K 25
+svn:wc:ra_dav:version-url
+V 39
+/svn/!svn/ver/1/trunk/libutil/mfapi.def
+END
+config.h
+K 25
+svn:wc:ra_dav:version-url
+V 41
+/svn/!svn/ver/1591/trunk/libutil/config.h
+END
+processes.h
+K 25
+svn:wc:ra_dav:version-url
+V 43
+/svn/!svn/ver/133/trunk/libutil/processes.h
+END
+elm.c
+K 25
+svn:wc:ra_dav:version-url
+V 35
+/svn/!svn/ver/1/trunk/libutil/elm.c
+END
+sample.mfp
+K 25
+svn:wc:ra_dav:version-url
+V 40
+/svn/!svn/ver/1/trunk/libutil/sample.mfp
+END
+elm.h
+K 25
+svn:wc:ra_dav:version-url
+V 35
+/svn/!svn/ver/1/trunk/libutil/elm.h
+END
+services.c
+K 25
+svn:wc:ra_dav:version-url
+V 42
+/svn/!svn/ver/133/trunk/libutil/services.c
+END
+services.h
+K 25
+svn:wc:ra_dav:version-url
+V 40
+/svn/!svn/ver/1/trunk/libutil/services.h
+END
+detach.c
+K 25
+svn:wc:ra_dav:version-url
+V 40
+/svn/!svn/ver/892/trunk/libutil/detach.c
+END
+dr_config.c
+K 25
+svn:wc:ra_dav:version-url
+V 44
+/svn/!svn/ver/1927/trunk/libutil/dr_config.c
+END
+our_tchar.h
+K 25
+svn:wc:ra_dav:version-url
+V 44
+/svn/!svn/ver/1591/trunk/libutil/our_tchar.h
+END
+parser.c
+K 25
+svn:wc:ra_dav:version-url
+V 40
+/svn/!svn/ver/133/trunk/libutil/parser.c
+END
+CMakeLists.txt
+K 25
+svn:wc:ra_dav:version-url
+V 47
+/svn/!svn/ver/1665/trunk/libutil/CMakeLists.txt
+END
+mfapi.c
+K 25
+svn:wc:ra_dav:version-url
+V 39
+/svn/!svn/ver/133/trunk/libutil/mfapi.c
+END

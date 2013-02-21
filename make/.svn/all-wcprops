@@ -1,0 +1,155 @@
+K 25
+svn:wc:ra_dav:version-url
+V 29
+/svn/!svn/ver/1905/trunk/make
+END
+ninja.exe
+K 25
+svn:wc:ra_dav:version-url
+V 39
+/svn/!svn/ver/1858/trunk/make/ninja.exe
+END
+utils.cmake
+K 25
+svn:wc:ra_dav:version-url
+V 41
+/svn/!svn/ver/1673/trunk/make/utils.cmake
+END
+copy.bat
+K 25
+svn:wc:ra_dav:version-url
+V 37
+/svn/!svn/ver/567/trunk/make/copy.bat
+END
+cpp2asm_support.cmake
+K 25
+svn:wc:ra_dav:version-url
+V 51
+/svn/!svn/ver/1491/trunk/make/cpp2asm_support.cmake
+END
+DynamoRIOConfigVersion.cmake.in
+K 25
+svn:wc:ra_dav:version-url
+V 61
+/svn/!svn/ver/1623/trunk/make/DynamoRIOConfigVersion.cmake.in
+END
+cygintl-2.dll
+K 25
+svn:wc:ra_dav:version-url
+V 42
+/svn/!svn/ver/357/trunk/make/cygintl-2.dll
+END
+CMake_events.cmake
+K 25
+svn:wc:ra_dav:version-url
+V 46
+/svn/!svn/ver/78/trunk/make/CMake_events.cmake
+END
+vcvars64.bat
+K 25
+svn:wc:ra_dav:version-url
+V 40
+/svn/!svn/ver/90/trunk/make/vcvars64.bat
+END
+configure.cmake.h
+K 25
+svn:wc:ra_dav:version-url
+V 47
+/svn/!svn/ver/1774/trunk/make/configure.cmake.h
+END
+make.exe-README
+K 25
+svn:wc:ra_dav:version-url
+V 43
+/svn/!svn/ver/86/trunk/make/make.exe-README
+END
+FindGhostscript.cmake
+K 25
+svn:wc:ra_dav:version-url
+V 49
+/svn/!svn/ver/69/trunk/make/FindGhostscript.cmake
+END
+make.exe
+K 25
+svn:wc:ra_dav:version-url
+V 37
+/svn/!svn/ver/489/trunk/make/make.exe
+END
+CMake_asm.cmake
+K 25
+svn:wc:ra_dav:version-url
+V 43
+/svn/!svn/ver/70/trunk/make/CMake_asm.cmake
+END
+package.bat
+K 25
+svn:wc:ra_dav:version-url
+V 40
+/svn/!svn/ver/152/trunk/make/package.bat
+END
+FindFig2Dev.cmake
+K 25
+svn:wc:ra_dav:version-url
+V 45
+/svn/!svn/ver/66/trunk/make/FindFig2Dev.cmake
+END
+as-2.18.50-README
+K 25
+svn:wc:ra_dav:version-url
+V 45
+/svn/!svn/ver/10/trunk/make/as-2.18.50-README
+END
+ntdll_imports.cmake
+K 25
+svn:wc:ra_dav:version-url
+V 49
+/svn/!svn/ver/1905/trunk/make/ntdll_imports.cmake
+END
+package.cmake
+K 25
+svn:wc:ra_dav:version-url
+V 42
+/svn/!svn/ver/602/trunk/make/package.cmake
+END
+ninja.exe-README
+K 25
+svn:wc:ra_dav:version-url
+V 46
+/svn/!svn/ver/1858/trunk/make/ninja.exe-README
+END
+upload.py
+K 25
+svn:wc:ra_dav:version-url
+V 39
+/svn/!svn/ver/1746/trunk/make/upload.py
+END
+DynamoRIOConfig.cmake.in
+K 25
+svn:wc:ra_dav:version-url
+V 54
+/svn/!svn/ver/1867/trunk/make/DynamoRIOConfig.cmake.in
+END
+codereview.cmake
+K 25
+svn:wc:ra_dav:version-url
+V 45
+/svn/!svn/ver/704/trunk/make/codereview.cmake
+END
+as-2.18.50
+K 25
+svn:wc:ra_dav:version-url
+V 37
+/svn/!svn/ver/5/trunk/make/as-2.18.50
+END
+cygintl-2.dll-README
+K 25
+svn:wc:ra_dav:version-url
+V 49
+/svn/!svn/ver/357/trunk/make/cygintl-2.dll-README
+END
+vcvars32.bat
+K 25
+svn:wc:ra_dav:version-url
+V 40
+/svn/!svn/ver/90/trunk/make/vcvars32.bat
+END

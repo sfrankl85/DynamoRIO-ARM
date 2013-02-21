@@ -1,0 +1,101 @@
+K 25
+svn:wc:ra_dav:version-url
+V 35
+/svn/!svn/ver/1927/trunk/core/linux
+END
+symtab.c
+K 25
+svn:wc:ra_dav:version-url
+V 43
+/svn/!svn/ver/704/trunk/core/linux/symtab.c
+END
+symtab.h
+K 25
+svn:wc:ra_dav:version-url
+V 41
+/svn/!svn/ver/1/trunk/core/linux/symtab.h
+END
+nudgesig.c
+K 25
+svn:wc:ra_dav:version-url
+V 46
+/svn/!svn/ver/1446/trunk/core/linux/nudgesig.c
+END
+loader.c
+K 25
+svn:wc:ra_dav:version-url
+V 44
+/svn/!svn/ver/1877/trunk/core/linux/loader.c
+END
+diagnost.c
+K 25
+svn:wc:ra_dav:version-url
+V 44
+/svn/!svn/ver/94/trunk/core/linux/diagnost.c
+END
+os_exports.h
+K 25
+svn:wc:ra_dav:version-url
+V 48
+/svn/!svn/ver/1838/trunk/core/linux/os_exports.h
+END
+native_elf.c
+K 25
+svn:wc:ra_dav:version-url
+V 48
+/svn/!svn/ver/1911/trunk/core/linux/native_elf.c
+END
+injector.c
+K 25
+svn:wc:ra_dav:version-url
+V 46
+/svn/!svn/ver/1927/trunk/core/linux/injector.c
+END
+signal.c
+K 25
+svn:wc:ra_dav:version-url
+V 44
+/svn/!svn/ver/1768/trunk/core/linux/signal.c
+END
+os_private.h
+K 25
+svn:wc:ra_dav:version-url
+V 48
+/svn/!svn/ver/1927/trunk/core/linux/os_private.h
+END
+os.c
+K 25
+svn:wc:ra_dav:version-url
+V 40
+/svn/!svn/ver/1915/trunk/core/linux/os.c
+END
+pcprofile.c
+K 25
+svn:wc:ra_dav:version-url
+V 46
+/svn/!svn/ver/754/trunk/core/linux/pcprofile.c
+END
+module.c
+K 25
+svn:wc:ra_dav:version-url
+V 44
+/svn/!svn/ver/1927/trunk/core/linux/module.c
+END
+preload.c
+K 25
+svn:wc:ra_dav:version-url
+V 45
+/svn/!svn/ver/1474/trunk/core/linux/preload.c
+END
+module.h
+K 25
+svn:wc:ra_dav:version-url
+V 44
+/svn/!svn/ver/1876/trunk/core/linux/module.h
+END
+stackdump.c
+K 25
+svn:wc:ra_dav:version-url
+V 47
+/svn/!svn/ver/1731/trunk/core/linux/stackdump.c
+END

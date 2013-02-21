@@ -1,0 +1,155 @@
+K 25
+svn:wc:ra_dav:version-url
+V 36
+/svn/!svn/ver/1904/trunk/tools/DRgui
+END
+StdAfx.h
+K 25
+svn:wc:ra_dav:version-url
+V 45
+/svn/!svn/ver/1387/trunk/tools/DRgui/StdAfx.h
+END
+MainFrm.h
+K 25
+svn:wc:ra_dav:version-url
+V 43
+/svn/!svn/ver/1/trunk/tools/DRgui/MainFrm.h
+END
+DynamoRIOView.h
+K 25
+svn:wc:ra_dav:version-url
+V 52
+/svn/!svn/ver/1878/trunk/tools/DRgui/DynamoRIOView.h
+END
+DynamoRIO.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 50
+/svn/!svn/ver/1222/trunk/tools/DRgui/DynamoRIO.cpp
+END
+CmdlineDlg.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 51
+/svn/!svn/ver/1904/trunk/tools/DRgui/CmdlineDlg.cpp
+END
+DynamoRIO.h
+K 25
+svn:wc:ra_dav:version-url
+V 46
+/svn/!svn/ver/64/trunk/tools/DRgui/DynamoRIO.h
+END
+CmdlineDlg.h
+K 25
+svn:wc:ra_dav:version-url
+V 46
+/svn/!svn/ver/1/trunk/tools/DRgui/CmdlineDlg.h
+END
+IgnoreDlg.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 50
+/svn/!svn/ver/1878/trunk/tools/DRgui/IgnoreDlg.cpp
+END
+LoggingDlg.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 49
+/svn/!svn/ver/64/trunk/tools/DRgui/LoggingDlg.cpp
+END
+SyswideDlg.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 50
+/svn/!svn/ver/240/trunk/tools/DRgui/SyswideDlg.cpp
+END
+IgnoreDlg.h
+K 25
+svn:wc:ra_dav:version-url
+V 45
+/svn/!svn/ver/1/trunk/tools/DRgui/IgnoreDlg.h
+END
+OptionsDlg.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 51
+/svn/!svn/ver/1878/trunk/tools/DRgui/OptionsDlg.cpp
+END
+LoggingDlg.h
+K 25
+svn:wc:ra_dav:version-url
+V 46
+/svn/!svn/ver/1/trunk/tools/DRgui/LoggingDlg.h
+END
+DynamoRIO.rc
+K 25
+svn:wc:ra_dav:version-url
+V 49
+/svn/!svn/ver/1222/trunk/tools/DRgui/DynamoRIO.rc
+END
+SyswideDlg.h
+K 25
+svn:wc:ra_dav:version-url
+V 46
+/svn/!svn/ver/1/trunk/tools/DRgui/SyswideDlg.h
+END
+DynamoRIODoc.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 53
+/svn/!svn/ver/1655/trunk/tools/DRgui/DynamoRIODoc.cpp
+END
+OptionsDlg.h
+K 25
+svn:wc:ra_dav:version-url
+V 46
+/svn/!svn/ver/1/trunk/tools/DRgui/OptionsDlg.h
+END
+ShellInterface.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 53
+/svn/!svn/ver/64/trunk/tools/DRgui/ShellInterface.cpp
+END
+MainFrm.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 45
+/svn/!svn/ver/1/trunk/tools/DRgui/MainFrm.cpp
+END
+StdAfx.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 44
+/svn/!svn/ver/1/trunk/tools/DRgui/StdAfx.cpp
+END
+resource.h
+K 25
+svn:wc:ra_dav:version-url
+V 45
+/svn/!svn/ver/64/trunk/tools/DRgui/resource.h
+END
+DynamoRIODoc.h
+K 25
+svn:wc:ra_dav:version-url
+V 49
+/svn/!svn/ver/64/trunk/tools/DRgui/DynamoRIODoc.h
+END
+CMakeLists.txt
+K 25
+svn:wc:ra_dav:version-url
+V 51
+/svn/!svn/ver/1878/trunk/tools/DRgui/CMakeLists.txt
+END
+DynamoRIOView.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 54
+/svn/!svn/ver/1878/trunk/tools/DRgui/DynamoRIOView.cpp
+END
+ShellInterface.h
+K 25
+svn:wc:ra_dav:version-url
+V 50
+/svn/!svn/ver/1/trunk/tools/DRgui/ShellInterface.h
+END

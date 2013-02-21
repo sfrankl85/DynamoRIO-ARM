@@ -1,0 +1,29 @@
+K 25
+svn:wc:ra_dav:version-url
+V 34
+/svn/!svn/ver/1841/trunk/ext/drmgr
+END
+drmgr.h
+K 25
+svn:wc:ra_dav:version-url
+V 42
+/svn/!svn/ver/1841/trunk/ext/drmgr/drmgr.h
+END
+drmgr.dox
+K 25
+svn:wc:ra_dav:version-url
+V 44
+/svn/!svn/ver/1743/trunk/ext/drmgr/drmgr.dox
+END
+drmgr.c
+K 25
+svn:wc:ra_dav:version-url
+V 42
+/svn/!svn/ver/1841/trunk/ext/drmgr/drmgr.c
+END
+CMakeLists.txt
+K 25
+svn:wc:ra_dav:version-url
+V 49
+/svn/!svn/ver/1774/trunk/ext/drmgr/CMakeLists.txt
+END

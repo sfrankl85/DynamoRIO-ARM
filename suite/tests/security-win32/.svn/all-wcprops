@@ -1,0 +1,251 @@
+K 25
+svn:wc:ra_dav:version-url
+V 51
+/svn/!svn/ver/1670/trunk/suite/tests/security-win32
+END
+aslr-ind.template
+K 25
+svn:wc:ra_dav:version-url
+V 68
+/svn/!svn/ver/112/trunk/suite/tests/security-win32/aslr-ind.template
+END
+hooker-ntdll.c
+K 25
+svn:wc:ra_dav:version-url
+V 65
+/svn/!svn/ver/128/trunk/suite/tests/security-win32/hooker-ntdll.c
+END
+gbop-test.c
+K 25
+svn:wc:ra_dav:version-url
+V 62
+/svn/!svn/ver/704/trunk/suite/tests/security-win32/gbop-test.c
+END
+sec-fixed.c
+K 25
+svn:wc:ra_dav:version-url
+V 62
+/svn/!svn/ver/704/trunk/suite/tests/security-win32/sec-fixed.c
+END
+ret-SEH.c
+K 25
+svn:wc:ra_dav:version-url
+V 61
+/svn/!svn/ver/1597/trunk/suite/tests/security-win32/ret-SEH.c
+END
+sec-xdata.c
+K 25
+svn:wc:ra_dav:version-url
+V 62
+/svn/!svn/ver/704/trunk/suite/tests/security-win32/sec-xdata.c
+END
+except-execution.templatex
+K 25
+svn:wc:ra_dav:version-url
+V 78
+/svn/!svn/ver/1215/trunk/suite/tests/security-win32/except-execution.templatex
+END
+indexisting.template
+K 25
+svn:wc:ra_dav:version-url
+V 71
+/svn/!svn/ver/112/trunk/suite/tests/security-win32/indexisting.template
+END
+selfmod-threads.c
+K 25
+svn:wc:ra_dav:version-url
+V 68
+/svn/!svn/ver/704/trunk/suite/tests/security-win32/selfmod-threads.c
+END
+secalign-fixed.c
+K 25
+svn:wc:ra_dav:version-url
+V 67
+/svn/!svn/ver/704/trunk/suite/tests/security-win32/secalign-fixed.c
+END
+aslr-ind.dll.c
+K 25
+svn:wc:ra_dav:version-url
+V 65
+/svn/!svn/ver/128/trunk/suite/tests/security-win32/aslr-ind.dll.c
+END
+TestNTFlush.c
+K 25
+svn:wc:ra_dav:version-url
+V 64
+/svn/!svn/ver/135/trunk/suite/tests/security-win32/TestNTFlush.c
+END
+sd_tester.template
+K 25
+svn:wc:ra_dav:version-url
+V 69
+/svn/!svn/ver/596/trunk/suite/tests/security-win32/sd_tester.template
+END
+except-thread.template
+K 25
+svn:wc:ra_dav:version-url
+V 73
+/svn/!svn/ver/134/trunk/suite/tests/security-win32/except-thread.template
+END
+hooker.c
+K 25
+svn:wc:ra_dav:version-url
+V 59
+/svn/!svn/ver/128/trunk/suite/tests/security-win32/hooker.c
+END
+secalign-fixed.expect
+K 25
+svn:wc:ra_dav:version-url
+V 72
+/svn/!svn/ver/280/trunk/suite/tests/security-win32/secalign-fixed.expect
+END
+patterns.template
+K 25
+svn:wc:ra_dav:version-url
+V 68
+/svn/!svn/ver/112/trunk/suite/tests/security-win32/patterns.template
+END
+codemod-threads.template
+K 25
+svn:wc:ra_dav:version-url
+V 75
+/svn/!svn/ver/473/trunk/suite/tests/security-win32/codemod-threads.template
+END
+sd_tester.c
+K 25
+svn:wc:ra_dav:version-url
+V 62
+/svn/!svn/ver/704/trunk/suite/tests/security-win32/sd_tester.c
+END
+except.h
+K 25
+svn:wc:ra_dav:version-url
+V 57
+/svn/!svn/ver/1/trunk/suite/tests/security-win32/except.h
+END
+patterns.c
+K 25
+svn:wc:ra_dav:version-url
+V 59
+/svn/!svn/ver/1/trunk/suite/tests/security-win32/patterns.c
+END
+ret-SEH.template
+K 25
+svn:wc:ra_dav:version-url
+V 67
+/svn/!svn/ver/112/trunk/suite/tests/security-win32/ret-SEH.template
+END
+sec-xdata.template
+K 25
+svn:wc:ra_dav:version-url
+V 69
+/svn/!svn/ver/112/trunk/suite/tests/security-win32/sec-xdata.template
+END
+codemod-threads.c
+K 25
+svn:wc:ra_dav:version-url
+V 66
+/svn/!svn/ver/1/trunk/suite/tests/security-win32/codemod-threads.c
+END
+apc-shellcode.c
+K 25
+svn:wc:ra_dav:version-url
+V 67
+/svn/!svn/ver/1670/trunk/suite/tests/security-win32/apc-shellcode.c
+END
+aslr-ind.c
+K 25
+svn:wc:ra_dav:version-url
+V 61
+/svn/!svn/ver/704/trunk/suite/tests/security-win32/aslr-ind.c
+END
+selfmod-threads.template
+K 25
+svn:wc:ra_dav:version-url
+V 75
+/svn/!svn/ver/112/trunk/suite/tests/security-win32/selfmod-threads.template
+END
+sec-adata.template
+K 25
+svn:wc:ra_dav:version-url
+V 69
+/svn/!svn/ver/112/trunk/suite/tests/security-win32/sec-adata.template
+END
+TestNTFlush.template
+K 25
+svn:wc:ra_dav:version-url
+V 71
+/svn/!svn/ver/128/trunk/suite/tests/security-win32/TestNTFlush.template
+END
+sec-fixed.expect
+K 25
+svn:wc:ra_dav:version-url
+V 67
+/svn/!svn/ver/280/trunk/suite/tests/security-win32/sec-fixed.expect
+END
+hooker.template
+K 25
+svn:wc:ra_dav:version-url
+V 66
+/svn/!svn/ver/656/trunk/suite/tests/security-win32/hooker.template
+END
+sec-fixed.dll.c
+K 25
+svn:wc:ra_dav:version-url
+V 64
+/svn/!svn/ver/1/trunk/suite/tests/security-win32/sec-fixed.dll.c
+END
+sec-adata.c
+K 25
+svn:wc:ra_dav:version-url
+V 62
+/svn/!svn/ver/134/trunk/suite/tests/security-win32/sec-adata.c
+END
+sec-xdata.dll.c
+K 25
+svn:wc:ra_dav:version-url
+V 64
+/svn/!svn/ver/1/trunk/suite/tests/security-win32/sec-xdata.dll.c
+END
+indexisting.c
+K 25
+svn:wc:ra_dav:version-url
+V 62
+/svn/!svn/ver/1/trunk/suite/tests/security-win32/indexisting.c
+END
+except-execution.c
+K 25
+svn:wc:ra_dav:version-url
+V 69
+/svn/!svn/ver/704/trunk/suite/tests/security-win32/except-execution.c
+END
+hooker-ntdll.template
+K 25
+svn:wc:ra_dav:version-url
+V 72
+/svn/!svn/ver/656/trunk/suite/tests/security-win32/hooker-ntdll.template
+END
+secalign-fixed.dll.c
+K 25
+svn:wc:ra_dav:version-url
+V 69
+/svn/!svn/ver/1/trunk/suite/tests/security-win32/secalign-fixed.dll.c
+END
+apc-shellcode.template
+K 25
+svn:wc:ra_dav:version-url
+V 73
+/svn/!svn/ver/112/trunk/suite/tests/security-win32/apc-shellcode.template
+END
+except-thread.c
+K 25
+svn:wc:ra_dav:version-url
+V 66
+/svn/!svn/ver/128/trunk/suite/tests/security-win32/except-thread.c
+END
+gbop-test.template
+K 25
+svn:wc:ra_dav:version-url
+V 69
+/svn/!svn/ver/128/trunk/suite/tests/security-win32/gbop-test.template
+END

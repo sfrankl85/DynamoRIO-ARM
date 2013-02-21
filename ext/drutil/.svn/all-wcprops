@@ -1,0 +1,35 @@
+K 25
+svn:wc:ra_dav:version-url
+V 35
+/svn/!svn/ver/1849/trunk/ext/drutil
+END
+license.txt
+K 25
+svn:wc:ra_dav:version-url
+V 46
+/svn/!svn/ver/876/trunk/ext/drutil/license.txt
+END
+drutil.c
+K 25
+svn:wc:ra_dav:version-url
+V 44
+/svn/!svn/ver/1849/trunk/ext/drutil/drutil.c
+END
+drutil.h
+K 25
+svn:wc:ra_dav:version-url
+V 44
+/svn/!svn/ver/1841/trunk/ext/drutil/drutil.h
+END
+drutil.dox
+K 25
+svn:wc:ra_dav:version-url
+V 45
+/svn/!svn/ver/876/trunk/ext/drutil/drutil.dox
+END
+CMakeLists.txt
+K 25
+svn:wc:ra_dav:version-url
+V 50
+/svn/!svn/ver/1841/trunk/ext/drutil/CMakeLists.txt
+END

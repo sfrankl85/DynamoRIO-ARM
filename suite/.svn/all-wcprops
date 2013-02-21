@@ -1,0 +1,47 @@
+K 25
+svn:wc:ra_dav:version-url
+V 30
+/svn/!svn/ver/1927/trunk/suite
+END
+runsuite_ssh.cmake
+K 25
+svn:wc:ra_dav:version-url
+V 48
+/svn/!svn/ver/357/trunk/suite/runsuite_ssh.cmake
+END
+runsuite_common_post.cmake
+K 25
+svn:wc:ra_dav:version-url
+V 57
+/svn/!svn/ver/1881/trunk/suite/runsuite_common_post.cmake
+END
+runsuite_common_pre.cmake
+K 25
+svn:wc:ra_dav:version-url
+V 56
+/svn/!svn/ver/1669/trunk/suite/runsuite_common_pre.cmake
+END
+runsuite_long.cmake
+K 25
+svn:wc:ra_dav:version-url
+V 49
+/svn/!svn/ver/126/trunk/suite/runsuite_long.cmake
+END
+runsuite.cmake
+K 25
+svn:wc:ra_dav:version-url
+V 45
+/svn/!svn/ver/1868/trunk/suite/runsuite.cmake
+END
+old-runregression-runs-2-6-08
+K 25
+svn:wc:ra_dav:version-url
+V 57
+/svn/!svn/ver/1/trunk/suite/old-runregression-runs-2-6-08
+END
+nightly.cmake
+K 25
+svn:wc:ra_dav:version-url
+V 43
+/svn/!svn/ver/200/trunk/suite/nightly.cmake
+END

@@ -1,0 +1,221 @@
+K 25
+svn:wc:ra_dav:version-url
+V 33
+/svn/!svn/ver/1925/trunk/core/x86
+END
+loadtoconst.h
+K 25
+svn:wc:ra_dav:version-url
+V 44
+/svn/!svn/ver/1/trunk/core/x86/loadtoconst.h
+END
+instr.c
+K 25
+svn:wc:ra_dav:version-url
+V 41
+/svn/!svn/ver/1880/trunk/core/x86/instr.c
+END
+decode_fast.c
+K 25
+svn:wc:ra_dav:version-url
+V 47
+/svn/!svn/ver/1004/trunk/core/x86/decode_fast.c
+END
+optimize.c
+K 25
+svn:wc:ra_dav:version-url
+V 44
+/svn/!svn/ver/1731/trunk/core/x86/optimize.c
+END
+sideline.h
+K 25
+svn:wc:ra_dav:version-url
+V 41
+/svn/!svn/ver/1/trunk/core/x86/sideline.h
+END
+interp.c
+K 25
+svn:wc:ra_dav:version-url
+V 42
+/svn/!svn/ver/1910/trunk/core/x86/interp.c
+END
+instr_inline.h
+K 25
+svn:wc:ra_dav:version-url
+V 48
+/svn/!svn/ver/1847/trunk/core/x86/instr_inline.h
+END
+instr.h
+K 25
+svn:wc:ra_dav:version-url
+V 41
+/svn/!svn/ver/1880/trunk/core/x86/instr.h
+END
+decode_fast.h
+K 25
+svn:wc:ra_dav:version-url
+V 44
+/svn/!svn/ver/1/trunk/core/x86/decode_fast.h
+END
+instrument.c
+K 25
+svn:wc:ra_dav:version-url
+V 46
+/svn/!svn/ver/1925/trunk/core/x86/instrument.c
+END
+instrument.h
+K 25
+svn:wc:ra_dav:version-url
+V 46
+/svn/!svn/ver/1925/trunk/core/x86/instrument.h
+END
+x86_code.c
+K 25
+svn:wc:ra_dav:version-url
+V 44
+/svn/!svn/ver/1909/trunk/core/x86/x86_code.c
+END
+decode.c
+K 25
+svn:wc:ra_dav:version-url
+V 42
+/svn/!svn/ver/1691/trunk/core/x86/decode.c
+END
+instr_create.h
+K 25
+svn:wc:ra_dav:version-url
+V 48
+/svn/!svn/ver/1438/trunk/core/x86/instr_create.h
+END
+x86_to_x64.c
+K 25
+svn:wc:ra_dav:version-url
+V 46
+/svn/!svn/ver/1557/trunk/core/x86/x86_to_x64.c
+END
+decode.h
+K 25
+svn:wc:ra_dav:version-url
+V 42
+/svn/!svn/ver/1691/trunk/core/x86/decode.h
+END
+disassemble.c
+K 25
+svn:wc:ra_dav:version-url
+V 47
+/svn/!svn/ver/1731/trunk/core/x86/disassemble.c
+END
+disassemble.h
+K 25
+svn:wc:ra_dav:version-url
+V 47
+/svn/!svn/ver/1882/trunk/core/x86/disassemble.h
+END
+mangle.c
+K 25
+svn:wc:ra_dav:version-url
+V 42
+/svn/!svn/ver/1810/trunk/core/x86/mangle.c
+END
+proc.c
+K 25
+svn:wc:ra_dav:version-url
+V 40
+/svn/!svn/ver/1157/trunk/core/x86/proc.c
+END
+steal_reg.c
+K 25
+svn:wc:ra_dav:version-url
+V 43
+/svn/!svn/ver/94/trunk/core/x86/steal_reg.c
+END
+arch_exports.h
+K 25
+svn:wc:ra_dav:version-url
+V 48
+/svn/!svn/ver/1890/trunk/core/x86/arch_exports.h
+END
+proc.h
+K 25
+svn:wc:ra_dav:version-url
+V 40
+/svn/!svn/ver/1809/trunk/core/x86/proc.h
+END
+decodelib.c
+K 25
+svn:wc:ra_dav:version-url
+V 45
+/svn/!svn/ver/1731/trunk/core/x86/decodelib.c
+END
+steal_reg.h
+K 25
+svn:wc:ra_dav:version-url
+V 42
+/svn/!svn/ver/1/trunk/core/x86/steal_reg.h
+END
+asm_defines.asm
+K 25
+svn:wc:ra_dav:version-url
+V 49
+/svn/!svn/ver/1670/trunk/core/x86/asm_defines.asm
+END
+arch.c
+K 25
+svn:wc:ra_dav:version-url
+V 40
+/svn/!svn/ver/1810/trunk/core/x86/arch.c
+END
+emit_utils.c
+K 25
+svn:wc:ra_dav:version-url
+V 46
+/svn/!svn/ver/1826/trunk/core/x86/emit_utils.c
+END
+pre_inject_asm.asm
+K 25
+svn:wc:ra_dav:version-url
+V 52
+/svn/!svn/ver/1837/trunk/core/x86/pre_inject_asm.asm
+END
+arch.h
+K 25
+svn:wc:ra_dav:version-url
+V 40
+/svn/!svn/ver/1909/trunk/core/x86/arch.h
+END
+x86.asm
+K 25
+svn:wc:ra_dav:version-url
+V 41
+/svn/!svn/ver/1909/trunk/core/x86/x86.asm
+END
+retcheck.c
+K 25
+svn:wc:ra_dav:version-url
+V 43
+/svn/!svn/ver/754/trunk/core/x86/retcheck.c
+END
+loadtoconst.c
+K 25
+svn:wc:ra_dav:version-url
+V 47
+/svn/!svn/ver/1627/trunk/core/x86/loadtoconst.c
+END
+decode_table.c
+K 25
+svn:wc:ra_dav:version-url
+V 48
+/svn/!svn/ver/1833/trunk/core/x86/decode_table.c
+END
+sideline.c
+K 25
+svn:wc:ra_dav:version-url
+V 44
+/svn/!svn/ver/1376/trunk/core/x86/sideline.c
+END
+encode.c
+K 25
+svn:wc:ra_dav:version-url
+V 42
+/svn/!svn/ver/1834/trunk/core/x86/encode.c
+END

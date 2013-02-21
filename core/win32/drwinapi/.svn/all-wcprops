@@ -1,0 +1,107 @@
+K 25
+svn:wc:ra_dav:version-url
+V 44
+/svn/!svn/ver/1924/trunk/core/win32/drwinapi
+END
+advapi32_redir.c
+K 25
+svn:wc:ra_dav:version-url
+V 61
+/svn/!svn/ver/1903/trunk/core/win32/drwinapi/advapi32_redir.c
+END
+kernel32_misc.c
+K 25
+svn:wc:ra_dav:version-url
+V 60
+/svn/!svn/ver/1887/trunk/core/win32/drwinapi/kernel32_misc.c
+END
+ntdll_redir.c
+K 25
+svn:wc:ra_dav:version-url
+V 58
+/svn/!svn/ver/1912/trunk/core/win32/drwinapi/ntdll_redir.c
+END
+rpcrt4_redir.c
+K 25
+svn:wc:ra_dav:version-url
+V 59
+/svn/!svn/ver/1887/trunk/core/win32/drwinapi/rpcrt4_redir.c
+END
+advapi32_redir.h
+K 25
+svn:wc:ra_dav:version-url
+V 61
+/svn/!svn/ver/1904/trunk/core/win32/drwinapi/advapi32_redir.h
+END
+ntdll_redir.h
+K 25
+svn:wc:ra_dav:version-url
+V 58
+/svn/!svn/ver/1854/trunk/core/win32/drwinapi/ntdll_redir.h
+END
+kernel32_proc.c
+K 25
+svn:wc:ra_dav:version-url
+V 60
+/svn/!svn/ver/1924/trunk/core/win32/drwinapi/kernel32_proc.c
+END
+rpcrt4_redir.h
+K 25
+svn:wc:ra_dav:version-url
+V 59
+/svn/!svn/ver/1887/trunk/core/win32/drwinapi/rpcrt4_redir.h
+END
+kernel32_redir.c
+K 25
+svn:wc:ra_dav:version-url
+V 61
+/svn/!svn/ver/1924/trunk/core/win32/drwinapi/kernel32_redir.c
+END
+kernel32_lib.c
+K 25
+svn:wc:ra_dav:version-url
+V 59
+/svn/!svn/ver/1886/trunk/core/win32/drwinapi/kernel32_lib.c
+END
+drwinapi_private.h
+K 25
+svn:wc:ra_dav:version-url
+V 63
+/svn/!svn/ver/1863/trunk/core/win32/drwinapi/drwinapi_private.h
+END
+drwinapi.c
+K 25
+svn:wc:ra_dav:version-url
+V 55
+/svn/!svn/ver/1919/trunk/core/win32/drwinapi/drwinapi.c
+END
+kernel32_redir.h
+K 25
+svn:wc:ra_dav:version-url
+V 61
+/svn/!svn/ver/1918/trunk/core/win32/drwinapi/kernel32_redir.h
+END
+kernel32_sync.c
+K 25
+svn:wc:ra_dav:version-url
+V 60
+/svn/!svn/ver/1912/trunk/core/win32/drwinapi/kernel32_sync.c
+END
+drwinapi.h
+K 25
+svn:wc:ra_dav:version-url
+V 55
+/svn/!svn/ver/1852/trunk/core/win32/drwinapi/drwinapi.h
+END
+kernel32_mem.c
+K 25
+svn:wc:ra_dav:version-url
+V 59
+/svn/!svn/ver/1870/trunk/core/win32/drwinapi/kernel32_mem.c
+END
+kernel32_file.c
+K 25
+svn:wc:ra_dav:version-url
+V 60
+/svn/!svn/ver/1923/trunk/core/win32/drwinapi/kernel32_file.c
+END

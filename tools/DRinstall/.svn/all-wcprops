@@ -1,0 +1,107 @@
+K 25
+svn:wc:ra_dav:version-url
+V 40
+/svn/!svn/ver/1655/trunk/tools/DRinstall
+END
+StdAfx.h
+K 25
+svn:wc:ra_dav:version-url
+V 48
+/svn/!svn/ver/704/trunk/tools/DRinstall/StdAfx.h
+END
+Wizard.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 48
+/svn/!svn/ver/1/trunk/tools/DRinstall/Wizard.cpp
+END
+CopyDlg.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 52
+/svn/!svn/ver/1655/trunk/tools/DRinstall/CopyDlg.cpp
+END
+WizSheet.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 50
+/svn/!svn/ver/1/trunk/tools/DRinstall/WizSheet.cpp
+END
+Wizard.h
+K 25
+svn:wc:ra_dav:version-url
+V 46
+/svn/!svn/ver/1/trunk/tools/DRinstall/Wizard.h
+END
+CopyDlg.h
+K 25
+svn:wc:ra_dav:version-url
+V 47
+/svn/!svn/ver/1/trunk/tools/DRinstall/CopyDlg.h
+END
+WizSheet.h
+K 25
+svn:wc:ra_dav:version-url
+V 48
+/svn/!svn/ver/1/trunk/tools/DRinstall/WizSheet.h
+END
+LicenseDlg.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 52
+/svn/!svn/ver/1/trunk/tools/DRinstall/LicenseDlg.cpp
+END
+LicenseDlg.h
+K 25
+svn:wc:ra_dav:version-url
+V 50
+/svn/!svn/ver/1/trunk/tools/DRinstall/LicenseDlg.h
+END
+FinalDlg.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 50
+/svn/!svn/ver/1/trunk/tools/DRinstall/FinalDlg.cpp
+END
+Wizard.rc
+K 25
+svn:wc:ra_dav:version-url
+V 49
+/svn/!svn/ver/143/trunk/tools/DRinstall/Wizard.rc
+END
+FinalDlg.h
+K 25
+svn:wc:ra_dav:version-url
+V 48
+/svn/!svn/ver/1/trunk/tools/DRinstall/FinalDlg.h
+END
+ShellInterface.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 56
+/svn/!svn/ver/1/trunk/tools/DRinstall/ShellInterface.cpp
+END
+StdAfx.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 48
+/svn/!svn/ver/1/trunk/tools/DRinstall/StdAfx.cpp
+END
+Makefile
+K 25
+svn:wc:ra_dav:version-url
+V 47
+/svn/!svn/ver/11/trunk/tools/DRinstall/Makefile
+END
+resource.h
+K 25
+svn:wc:ra_dav:version-url
+V 48
+/svn/!svn/ver/1/trunk/tools/DRinstall/resource.h
+END
+ShellInterface.h
+K 25
+svn:wc:ra_dav:version-url
+V 54
+/svn/!svn/ver/1/trunk/tools/DRinstall/ShellInterface.h
+END

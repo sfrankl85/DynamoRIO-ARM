@@ -1,0 +1,53 @@
+K 25
+svn:wc:ra_dav:version-url
+V 45
+/svn/!svn/ver/1731/trunk/suite/tests/pthreads
+END
+pthreads.expect
+K 25
+svn:wc:ra_dav:version-url
+V 58
+/svn/!svn/ver/1/trunk/suite/tests/pthreads/pthreads.expect
+END
+pthreads_fork.expect
+K 25
+svn:wc:ra_dav:version-url
+V 66
+/svn/!svn/ver/1382/trunk/suite/tests/pthreads/pthreads_fork.expect
+END
+pthreads_exit.c
+K 25
+svn:wc:ra_dav:version-url
+V 60
+/svn/!svn/ver/888/trunk/suite/tests/pthreads/pthreads_exit.c
+END
+ptsig.c
+K 25
+svn:wc:ra_dav:version-url
+V 53
+/svn/!svn/ver/1731/trunk/suite/tests/pthreads/ptsig.c
+END
+pthreads_exit.expect
+K 25
+svn:wc:ra_dav:version-url
+V 65
+/svn/!svn/ver/888/trunk/suite/tests/pthreads/pthreads_exit.expect
+END
+pthreads.c
+K 25
+svn:wc:ra_dav:version-url
+V 56
+/svn/!svn/ver/1731/trunk/suite/tests/pthreads/pthreads.c
+END
+pthreads_fork.c
+K 25
+svn:wc:ra_dav:version-url
+V 61
+/svn/!svn/ver/1498/trunk/suite/tests/pthreads/pthreads_fork.c
+END
+ptsig.expect
+K 25
+svn:wc:ra_dav:version-url
+V 55
+/svn/!svn/ver/1/trunk/suite/tests/pthreads/ptsig.expect
+END

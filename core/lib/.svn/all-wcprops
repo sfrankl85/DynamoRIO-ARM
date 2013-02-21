@@ -1,0 +1,89 @@
+K 25
+svn:wc:ra_dav:version-url
+V 33
+/svn/!svn/ver/1917/trunk/core/lib
+END
+dr_ntdll.def
+K 25
+svn:wc:ra_dav:version-url
+V 45
+/svn/!svn/ver/229/trunk/core/lib/dr_ntdll.def
+END
+globals_shared.h
+K 25
+svn:wc:ra_dav:version-url
+V 50
+/svn/!svn/ver/1871/trunk/core/lib/globals_shared.h
+END
+dr_config.h
+K 25
+svn:wc:ra_dav:version-url
+V 45
+/svn/!svn/ver/1661/trunk/core/lib/dr_config.h
+END
+hotpatch_interface.h
+K 25
+svn:wc:ra_dav:version-url
+V 53
+/svn/!svn/ver/754/trunk/core/lib/hotpatch_interface.h
+END
+dr_ntdll_x64.def
+K 25
+svn:wc:ra_dav:version-url
+V 49
+/svn/!svn/ver/229/trunk/core/lib/dr_ntdll_x64.def
+END
+dr_api.h
+K 25
+svn:wc:ra_dav:version-url
+V 41
+/svn/!svn/ver/704/trunk/core/lib/dr_api.h
+END
+kstatsx.h
+K 25
+svn:wc:ra_dav:version-url
+V 40
+/svn/!svn/ver/1/trunk/core/lib/kstatsx.h
+END
+dr_inject.h
+K 25
+svn:wc:ra_dav:version-url
+V 45
+/svn/!svn/ver/1917/trunk/core/lib/dr_inject.h
+END
+dr_stats.h
+K 25
+svn:wc:ra_dav:version-url
+V 41
+/svn/!svn/ver/1/trunk/core/lib/dr_stats.h
+END
+mcxtx.h
+K 25
+svn:wc:ra_dav:version-url
+V 40
+/svn/!svn/ver/754/trunk/core/lib/mcxtx.h
+END
+dr_app.h
+K 25
+svn:wc:ra_dav:version-url
+V 42
+/svn/!svn/ver/1368/trunk/core/lib/dr_app.h
+END
+statsx.h
+K 25
+svn:wc:ra_dav:version-url
+V 42
+/svn/!svn/ver/1909/trunk/core/lib/statsx.h
+END
+fortran.c
+K 25
+svn:wc:ra_dav:version-url
+V 40
+/svn/!svn/ver/1/trunk/core/lib/fortran.c
+END
+genapi.pl
+K 25
+svn:wc:ra_dav:version-url
+V 43
+/svn/!svn/ver/1861/trunk/core/lib/genapi.pl
+END

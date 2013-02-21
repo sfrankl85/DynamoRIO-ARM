@@ -1,0 +1,161 @@
+K 25
+svn:wc:ra_dav:version-url
+V 43
+/svn/!svn/ver/1/trunk/tools/desktop-scripts
+END
+lionfish_core_srv_exes.txt
+K 25
+svn:wc:ra_dav:version-url
+V 70
+/svn/!svn/ver/1/trunk/tools/desktop-scripts/lionfish_core_srv_exes.txt
+END
+last_build_num.txt
+K 25
+svn:wc:ra_dav:version-url
+V 62
+/svn/!svn/ver/1/trunk/tools/desktop-scripts/last_build_num.txt
+END
+desktop_nightly.pl
+K 25
+svn:wc:ra_dav:version-url
+V 62
+/svn/!svn/ver/1/trunk/tools/desktop-scripts/desktop_nightly.pl
+END
+sleep.pl
+K 25
+svn:wc:ra_dav:version-url
+V 52
+/svn/!svn/ver/1/trunk/tools/desktop-scripts/sleep.pl
+END
+reboot_qatest.pl
+K 25
+svn:wc:ra_dav:version-url
+V 60
+/svn/!svn/ver/1/trunk/tools/desktop-scripts/reboot_qatest.pl
+END
+measure_options.pl
+K 25
+svn:wc:ra_dav:version-url
+V 62
+/svn/!svn/ver/1/trunk/tools/desktop-scripts/measure_options.pl
+END
+install_new_core
+K 25
+svn:wc:ra_dav:version-url
+V 60
+/svn/!svn/ver/1/trunk/tools/desktop-scripts/install_new_core
+END
+install_new_core.bat
+K 25
+svn:wc:ra_dav:version-url
+V 64
+/svn/!svn/ver/1/trunk/tools/desktop-scripts/install_new_core.bat
+END
+uptime.vbs
+K 25
+svn:wc:ra_dav:version-url
+V 54
+/svn/!svn/ver/1/trunk/tools/desktop-scripts/uptime.vbs
+END
+getservices.pl
+K 25
+svn:wc:ra_dav:version-url
+V 58
+/svn/!svn/ver/1/trunk/tools/desktop-scripts/getservices.pl
+END
+sysmark_automate.bat
+K 25
+svn:wc:ra_dav:version-url
+V 64
+/svn/!svn/ver/1/trunk/tools/desktop-scripts/sysmark_automate.bat
+END
+cpu_idle.pl
+K 25
+svn:wc:ra_dav:version-url
+V 55
+/svn/!svn/ver/1/trunk/tools/desktop-scripts/cpu_idle.pl
+END
+install_new_core.pl
+K 25
+svn:wc:ra_dav:version-url
+V 63
+/svn/!svn/ver/1/trunk/tools/desktop-scripts/install_new_core.pl
+END
+getmeminfo_automate.pl
+K 25
+svn:wc:ra_dav:version-url
+V 66
+/svn/!svn/ver/1/trunk/tools/desktop-scripts/getmeminfo_automate.pl
+END
+lionfish-desktop-services-def.bat
+K 25
+svn:wc:ra_dav:version-url
+V 77
+/svn/!svn/ver/1/trunk/tools/desktop-scripts/lionfish-desktop-services-def.bat
+END
+measure_word.pl
+K 25
+svn:wc:ra_dav:version-url
+V 59
+/svn/!svn/ver/1/trunk/tools/desktop-scripts/measure_word.pl
+END
+measure_cores.pl
+K 25
+svn:wc:ra_dav:version-url
+V 60
+/svn/!svn/ver/1/trunk/tools/desktop-scripts/measure_cores.pl
+END
+measure_mem.pl
+K 25
+svn:wc:ra_dav:version-url
+V 58
+/svn/!svn/ver/1/trunk/tools/desktop-scripts/measure_mem.pl
+END
+go.bat
+K 25
+svn:wc:ra_dav:version-url
+V 50
+/svn/!svn/ver/1/trunk/tools/desktop-scripts/go.bat
+END
+install_cores.pl
+K 25
+svn:wc:ra_dav:version-url
+V 60
+/svn/!svn/ver/1/trunk/tools/desktop-scripts/install_cores.pl
+END
+lionfish-desktop-services-med.bat
+K 25
+svn:wc:ra_dav:version-url
+V 77
+/svn/!svn/ver/1/trunk/tools/desktop-scripts/lionfish-desktop-services-med.bat
+END
+desktop_nightly.bat
+K 25
+svn:wc:ra_dav:version-url
+V 63
+/svn/!svn/ver/1/trunk/tools/desktop-scripts/desktop_nightly.bat
+END
+email_mem_summary.pl
+K 25
+svn:wc:ra_dav:version-url
+V 64
+/svn/!svn/ver/1/trunk/tools/desktop-scripts/email_mem_summary.pl
+END
+measure_reset.pl
+K 25
+svn:wc:ra_dav:version-url
+V 60
+/svn/!svn/ver/1/trunk/tools/desktop-scripts/measure_reset.pl
+END
+getmem5.pl
+K 25
+svn:wc:ra_dav:version-url
+V 54
+/svn/!svn/ver/1/trunk/tools/desktop-scripts/getmem5.pl
+END
+lionfish-desktop-services-all.bat
+K 25
+svn:wc:ra_dav:version-url
+V 77
+/svn/!svn/ver/1/trunk/tools/desktop-scripts/lionfish-desktop-services-all.bat
+END
