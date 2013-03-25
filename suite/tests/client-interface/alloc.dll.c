@@ -33,10 +33,16 @@
 
 #include "dr_api.h"
 #include "client_tools.h"
+#ifdef LINUX
+# include <sys/personality.h>
+#endif
 
 char *global;
 #define SIZE 10
 #define VAL 17
+
+/* i#262 add exec if READ_IMPLIES_EXEC is set in personality */
+static bool add_exec = false;
 
 static
 void write_array(char *array)
@@ -56,12 +62,15 @@ static
 void global_test(void)
 {
     char *array;
-    uint prot;
+    uint prot, expect;
     dr_fprintf(STDERR, "  testing global memory alloc...");
     array = dr_global_alloc(SIZE);
     write_array(array);
     dr_query_memory((const byte *)array, NULL, NULL, &prot);
-    if (prot != (DR_MEMPROT_READ|DR_MEMPROT_WRITE))
+    expect = DR_MEMPROT_READ|DR_MEMPROT_WRITE;
+    if (add_exec)
+        expect |= DR_MEMPROT_EXEC;
+    if (prot != expect)
         dr_fprintf(STDERR, "[error: prot %d doesn't match rw] ", prot);
     dr_global_free(array, SIZE);
     dr_fprintf(STDERR, "success\n");
@@ -72,10 +81,102 @@ void global_test(void)
 #else
 # define PREFERRED_ADDR (char *)0x2000000
 #endif
+
+#ifdef X64
+/* This could be moved into its own test, but it fits conveniently here
+ * while we have a >4GB address we can write to, and we can add to it once
+ * we have DR_HEAP_REACHABLE and DR_LOW_2GB params on client alloc routines.
+ */
+static void
+reachability_test(void)
+{
+    void *drcontext = dr_get_current_drcontext();
+    instrlist_t *ilist = instrlist_create(drcontext);
+    byte *gencode = (byte *)
+        dr_nonheap_alloc(PAGE_SIZE, DR_MEMPROT_READ|DR_MEMPROT_WRITE|DR_MEMPROT_EXEC);
+    byte *pc;
+    int res;
+    byte *highmem = PREFERRED_ADDR;
+    pc = dr_raw_mem_alloc(PAGE_SIZE, DR_MEMPROT_READ|DR_MEMPROT_WRITE|
+                               DR_MEMPROT_EXEC, highmem);
+    ASSERT(pc == highmem);
+
+    /* Test auto-magically turning rip-rel that won't reach but targets xax
+     * into absmem.
+     */
+    instrlist_append(ilist, INSTR_CREATE_mov_ld
+                     (drcontext, opnd_create_reg(DR_REG_EAX),
+                      opnd_create_rel_addr(highmem, OPSZ_4)));
+    instrlist_append(ilist, INSTR_CREATE_ret(drcontext));
+    pc = instrlist_encode(drcontext, ilist, gencode, false);
+    instrlist_clear(drcontext, ilist);
+    ASSERT(pc < gencode + PAGE_SIZE);
+    *(int*)highmem = 0x12345678;
+    res = ((int (*)(void))gencode)();
+    ASSERT(res == 0x12345678);
+
+    /* Test auto-magically turning a reachable absmem into a rip-rel. */
+    instrlist_append(ilist, INSTR_CREATE_mov_ld
+                     (drcontext, opnd_create_reg(DR_REG_ECX),
+                      opnd_create_abs_addr(highmem + 0x800, OPSZ_4)));
+    instrlist_append(ilist, INSTR_CREATE_mov_ld
+                     (drcontext, opnd_create_reg(DR_REG_EAX),
+                      opnd_create_reg(DR_REG_ECX)));
+    instrlist_append(ilist, INSTR_CREATE_ret(drcontext));
+    pc = instrlist_encode(drcontext, ilist, highmem, false);
+    instrlist_clear(drcontext, ilist);
+    ASSERT(pc < highmem + PAGE_SIZE);
+    *(int*)(highmem + 0x800) = 0x12345678;
+    res = ((int (*)(void))highmem)();
+    ASSERT(res == 0x12345678);
+
+    dr_raw_mem_free(highmem, PAGE_SIZE);
+
+    /* Test targeting upper 2GB of low 4GB */
+    highmem = dr_raw_mem_alloc(PAGE_SIZE, DR_MEMPROT_READ|DR_MEMPROT_WRITE|
+                               DR_MEMPROT_EXEC, (byte *)0xabcd0000);
+    instrlist_append(ilist, INSTR_CREATE_mov_ld
+                     (drcontext, opnd_create_reg(DR_REG_ECX),
+                      opnd_create_abs_addr(highmem, OPSZ_4)));
+    instrlist_append(ilist, INSTR_CREATE_mov_ld
+                     (drcontext, opnd_create_reg(DR_REG_EAX),
+                      opnd_create_reg(DR_REG_ECX)));
+    instrlist_append(ilist, INSTR_CREATE_ret(drcontext));
+    pc = instrlist_encode(drcontext, ilist, gencode, false);
+    instrlist_clear(drcontext, ilist);
+    ASSERT(pc < gencode + PAGE_SIZE);
+    *(int*)highmem = 0x12345678;
+    res = ((int (*)(void))gencode)();
+    ASSERT(res == 0x12345678);
+    dr_raw_mem_free(highmem, PAGE_SIZE);
+
+    /* Test targeting lower 2GB of low 4GB */
+    highmem = dr_raw_mem_alloc(PAGE_SIZE, DR_MEMPROT_READ|DR_MEMPROT_WRITE|
+                               DR_MEMPROT_EXEC, (byte *)0x143d0000);
+    instrlist_append(ilist, INSTR_CREATE_mov_ld
+                     (drcontext, opnd_create_reg(DR_REG_ECX),
+                      opnd_create_abs_addr(highmem, OPSZ_4)));
+    instrlist_append(ilist, INSTR_CREATE_mov_ld
+                     (drcontext, opnd_create_reg(DR_REG_EAX),
+                      opnd_create_reg(DR_REG_ECX)));
+    instrlist_append(ilist, INSTR_CREATE_ret(drcontext));
+    pc = instrlist_encode(drcontext, ilist, gencode, false);
+    instrlist_clear(drcontext, ilist);
+    ASSERT(pc < gencode + PAGE_SIZE);
+    *(int*)highmem = 0x12345678;
+    res = ((int (*)(void))gencode)();
+    ASSERT(res == 0x12345678);
+    dr_raw_mem_free(highmem, PAGE_SIZE);
+
+    instrlist_clear_and_destroy(drcontext, ilist);
+    dr_nonheap_free(gencode, PAGE_SIZE);
+}
+#endif
+
 static
 void raw_alloc_test(void)
 {
-    uint prot;
+    uint prot, expect;
     char *array = PREFERRED_ADDR;
     dr_mem_info_t info;
     bool res;
@@ -88,7 +189,10 @@ void raw_alloc_test(void)
     }
     write_array(array);
     dr_query_memory((const byte *)array, NULL, NULL, &prot);
-    if (prot != (DR_MEMPROT_READ|DR_MEMPROT_WRITE))
+    expect = DR_MEMPROT_READ|DR_MEMPROT_WRITE;
+    if (add_exec)
+        expect |= DR_MEMPROT_EXEC;
+    if (prot != expect)
         dr_fprintf(STDERR, "[error: prot %d doesn't match rw]\n", prot);
     dr_raw_mem_free(array, PAGE_SIZE);
     dr_query_memory_ex((const byte *)array, &info);
@@ -100,7 +204,7 @@ void raw_alloc_test(void)
 static
 void nonheap_test(void)
 {
-    uint prot;
+    uint prot, expect;
     char *array =
         dr_nonheap_alloc(SIZE, DR_MEMPROT_READ|DR_MEMPROT_WRITE|DR_MEMPROT_EXEC);
     dr_fprintf(STDERR, "  testing nonheap memory alloc...");
@@ -111,16 +215,30 @@ void nonheap_test(void)
     dr_memory_protect(array, SIZE, DR_MEMPROT_NONE);
     dr_query_memory((const byte *)array, NULL, NULL, &prot);
     if (prot != DR_MEMPROT_NONE)
-        dr_fprintf(STDERR, "[error: prot %d doesn't match r] ", prot);
+        dr_fprintf(STDERR, "[error: prot %d doesn't match none] ", prot);
     dr_memory_protect(array, SIZE, DR_MEMPROT_READ);
     dr_query_memory((const byte *)array, NULL, NULL, &prot);
-    if (prot != DR_MEMPROT_READ)
+    expect = DR_MEMPROT_READ;
+    if (add_exec)
+        expect |= DR_MEMPROT_EXEC;
+    if (prot != expect)
         dr_fprintf(STDERR, "[error: prot %d doesn't match r] ", prot);
     if (dr_safe_write(array, 1, (const void *) &prot, NULL))
         dr_fprintf(STDERR, "[error: should not be writable] ");
     dr_nonheap_free(array, SIZE);
     dr_fprintf(STDERR, "success\n");
 }
+
+#ifdef LINUX
+static void
+calloc_test(void)
+{
+    /* using the trigger from i#1115 */
+    char *array = (char *) calloc(100000, 16);
+    if (array[100000*16 - 1] != 0)
+        dr_fprintf(STDERR, "error: calloc not zeroing\n");
+}
+#endif
 
 static
 void local_test(void *drcontext)
@@ -153,6 +271,12 @@ void inline_alloc_test(void)
     global_test();
     nonheap_test();
     raw_alloc_test();
+#ifdef LINUX
+    calloc_test();
+#endif
+#ifdef X64
+    reachability_test();
+#endif
 }
 
 #define MINSERT instrlist_meta_preinsert
@@ -220,6 +344,18 @@ DR_EXPORT
 void dr_init(client_id_t id)
 {
     dr_fprintf(STDERR, "thank you for testing the client interface\n");
+
+#ifdef LINUX
+    /* i#262: check if READ_IMPLIES_EXEC in personality. If true,
+     * we expect the readable memory also has exec right.
+     */
+    int res = personality(0xffffffff);
+    if (res == -1)
+        fprintf(stderr, "Error: fail to get personality\n");
+    else if (TEST(READ_IMPLIES_EXEC, res))
+        add_exec = true;
+#endif
+
     global_test();
     nonheap_test();
 

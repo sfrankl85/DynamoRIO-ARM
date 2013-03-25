@@ -1,5 +1,5 @@
 /* **********************************************************
- * Copyright (c) 2010-2012 Google, Inc.  All rights reserved.
+ * Copyright (c) 2010-2013 Google, Inc.  All rights reserved.
  * Copyright (c) 2001-2010 VMware, Inc.  All rights reserved.
  * **********************************************************/
 
@@ -423,7 +423,11 @@ DECLARE_CXTSWPROT_VAR(static mutex_t request_region_be_heap_reachable_lock,
 /* Request that the supplied region be 32bit offset reachable from the DR heap.  Should
  * be called before vmm_heap_init() so we can place the DR heap to meet these constraints.
  * Can also be called post vmm_heap_init() but at that point acts as an assert that the
- * supplied region is reachable since the heap is already reserved. */
+ * supplied region is reachable since the heap is already reserved.
+ *
+ * Must be called at least once up front, for the -heap_in_lower_4GB code here
+ * to kick in!
+ */
 void
 request_region_be_heap_reachable(byte *start, size_t size)
 {
@@ -720,22 +724,7 @@ vmm_heap_unit_init(vm_heap_t *vmh, size_t size)
      * hand changing any of the lower 16 bits will make our bugs
      * non-deterministic. */
     /* Make sure we don't waste the lower bits from our random number */
-    preferred = (
-#if defined(WINDOWS) || !defined(X64) || defined(VMX86_SERVER)
-                 DYNAMO_OPTION(vm_base)
-#else
-                 /* For 64-bit linux we can't use a fixed base since our library
-                  * might be loaded anywhere.  For now we just hope to find
-                  * enough free space at this random offset from it. 
-                  * Probably the best long-term solution is to make our heap
-                  * and library not need to reach each other, which should only
-                  * require indirect jumps in fcache_{enter,return}.  Selfmod
-                  * s2ro isn't perf-critical.  Client library callees and data
-                  * should ideally be close to the heap though.
-                  * Xref PR 253624.
-                  */
-                 (ptr_uint_t) get_dynamorio_dll_start()
-#endif
+    preferred = (DYNAMO_OPTION(vm_base)
                  + get_random_offset(DYNAMO_OPTION(vm_max_offset)/VMM_BLOCK_SIZE)
                  *VMM_BLOCK_SIZE);
     preferred = ALIGN_FORWARD(preferred, VMM_BLOCK_SIZE);
@@ -902,14 +891,43 @@ get_vmm_heap_bounds(byte **heap_start/*OUT*/, byte **heap_end/*OUT*/)
     *heap_end = heapmgt->vmheap.end_addr;
 }
 
-bool
-rel32_reachable_from_heap(byte *tgt)
+/* i#774: eventually we'll split vmheap from vmcode.  For now, vmcode queries
+ * refer to the single vmheap reservation.
+ */
+byte *
+vmcode_get_start(void)
 {
-    byte *heap_start, *heap_end;
-    ptr_int_t new_offs;
-    /* FIXME: also check if we're now allocating memory beyond the vmm heap */
-    get_vmm_heap_bounds(&heap_start, &heap_end);
-    new_offs = (tgt > heap_start) ? (tgt - heap_start) : (heap_end - tgt);
+    byte *start, *end;
+    get_vmm_heap_bounds(&start, &end);
+    return start;
+}
+
+byte *
+vmcode_get_end(void)
+{
+    byte *start, *end;
+    get_vmm_heap_bounds(&start, &end);
+    return end;
+}
+
+byte *
+vmcode_unreachable_pc(void)
+{
+    ptr_uint_t start, end;
+    get_vmm_heap_bounds((byte **)&start, (byte **)&end);
+    if (start > INT_MAX)
+        return NULL;
+    else
+        return (byte *) PTR_UINT_MINUS_1;
+}
+
+bool
+rel32_reachable_from_vmcode(byte *tgt)
+{
+    byte *vmcode_start = vmcode_get_start();
+    byte *vmcode_end = vmcode_get_end();
+    ptr_int_t new_offs = (tgt > vmcode_start) ? (tgt - vmcode_start) : (vmcode_end - tgt);
+    /* FIXME i#774: handle beyond-vmm-reservation allocs */
     return REL32_REACHABLE_OFFS(new_offs);
 }
 
@@ -1287,18 +1305,12 @@ vmm_heap_init()
 {
 #ifdef X64
     /* add reachable regions before we allocate the heap, xref PR 215395 */
-# ifdef WINDOWS
-    request_region_be_heap_reachable(get_dynamorio_dll_start(),
-                                     get_allocation_size(get_dynamorio_dll_start(), NULL));
-    /* i#774, i#901: we do not need to be near ntdll.dll */
-# else /* LINUX */
-    /* FIXME - On Linux we compile core with -fpic and samples Makefile uses it as
-     * well (comments suggest problems if we don't).  But without our own loader
-     * that means we can't control where the libraries are loaded.  For now we count
-     * on a good choice of vm_base.  See PR 253624. */
-    request_region_be_heap_reachable(get_dynamorio_dll_start(),
-                                     get_dynamorio_dll_end() - get_dynamorio_dll_start());
-# endif
+    /* i#774, i#901: we no longer need the DR library nor ntdll.dll to be
+     * reachable by the vmheap reservation.  But, for -heap_in_lower_4GB,
+     * we must call request_region_be_heap_reachable() up front.
+     */
+    if (DYNAMO_OPTION(heap_in_lower_4GB))
+        request_region_be_heap_reachable((byte *)(ptr_uint_t)0x80000000/*middle*/, 1);
 #endif /* X64 */
     
     IF_WINDOWS(ASSERT(VMM_BLOCK_SIZE == OS_ALLOC_GRANULARITY));
@@ -4710,7 +4722,7 @@ alloc_landing_pad(app_pc addr_to_hook)
      * pads aren't added to executable_areas here, at the point of allocation.
      */
 
-    LOG(GLOBAL, LOG_ALL, 1/*NOCHECKIN 3*/, "%s: used "PIFX" bytes in "PFX"-"PFX"\n", __FUNCTION__,
+    LOG(GLOBAL, LOG_ALL, 3, "%s: used "PIFX" bytes in "PFX"-"PFX"\n", __FUNCTION__,
         lpad_area->cur_ptr - lpad_area->start, lpad_area->start, lpad_area->end);
 
     /* Boundary check to make sure the allocation is within the landing pad area. */

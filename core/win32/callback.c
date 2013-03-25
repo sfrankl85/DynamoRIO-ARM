@@ -1,5 +1,5 @@
 /* **********************************************************
- * Copyright (c) 2010-2012 Google, Inc.  All rights reserved.
+ * Copyright (c) 2010-2013 Google, Inc.  All rights reserved.
  * Copyright (c) 2002-2010 VMware, Inc.  All rights reserved.
  * **********************************************************/
 
@@ -81,6 +81,15 @@ static void asynch_take_over(app_state_at_intercept_t *state);
 /* the app's top-level exception handler */
 static LPTOP_LEVEL_EXCEPTION_FILTER app_top_handler;
 #endif
+
+/* All of our hooks use landing pads to then indirectly target
+ * this interception code, which in turn assumes it can directly
+ * reach our hook targets in the DR lib.  Thus, we want this
+ * interception buffer to not be in vmcode nor vmheap, but near the
+ * DR lib: which is simplest with a static array.
+ * We write-protect this, so we don't need the ASLR of our heap.
+ */
+ALIGN_VAR(4096) static byte interception_code_array[INTERCEPTION_CODE_SIZE];
 
 /* interception information 
  * if it weren't for syscall trampolines this could be a single page
@@ -525,8 +534,8 @@ initstack mutex once not using the initstack itself!
 
 /* common routine separate since used for let go and alternate let go */
 static void
-insert_let_go_cleanup(dcontext_t *dcontext, instrlist_t *ilist, instr_t *decision,
-                      bool assume_xsp, bool assume_not_on_dstack,
+insert_let_go_cleanup(dcontext_t *dcontext, byte *pc, instrlist_t *ilist,
+                      instr_t *decision, bool assume_xsp, bool assume_not_on_dstack,
                       after_intercept_action_t action_after)
 {
     instr_t *first = NULL;
@@ -539,7 +548,11 @@ insert_let_go_cleanup(dcontext_t *dcontext, instrlist_t *ilist, instr_t *decisio
         /* make sure to use dr_insert_call() rather than a raw OP_call instr,
          * since x64 windows requires 32 bytes of stack space even w/ no args.
          */
-        dr_insert_call((void *)dcontext, ilist, NULL/*append*/, (void *)EXIT_DR_HOOK, 0);
+        IF_DEBUG(bool direct = )
+            dr_insert_call_ex((void *)dcontext, ilist, NULL/*append*/,
+                              /* we're not in vmcode, so avoid indirect call */
+                              pc, (void *)EXIT_DR_HOOK, 0);
+        ASSERT(direct);
     }
 
     /* Get the app xsp passed to the handler from the popa location and store
@@ -853,6 +866,7 @@ emit_intercept_code(dcontext_t *dcontext, byte *pc, intercept_function_t callee,
     bool assume_not_on_dstack = assume_xsp;
     app_pc no_cleanup;
     uint stack_offs = 0;
+    IF_DEBUG(bool direct;)
     
     /* AFTER_INTERCEPT_LET_GO_ALT_DYN is used only dynamically to select alternate */
     ASSERT(action_after != AFTER_INTERCEPT_LET_GO_ALT_DYN);
@@ -1111,8 +1125,11 @@ emit_intercept_code(dcontext_t *dcontext, byte *pc, intercept_function_t callee,
         /* make sure to use dr_insert_call() rather than a raw OP_call instr,
          * since x64 windows requires 32 bytes of stack space even w/ no args.
          */
-        dr_insert_call((void *)dcontext, &ilist, NULL/*append*/,
-                       (void *)ENTER_DR_HOOK, 0);
+        IF_DEBUG(direct = )
+            dr_insert_call_ex((void *)dcontext, &ilist, NULL/*append*/,
+                              /* we're not in vmcode, so avoid indirect call */
+                              pc, (void *)ENTER_DR_HOOK, 0);
+        ASSERT(direct);
     }
 
     /* these are part of app_state_at_intercept_t struct so we have to
@@ -1156,9 +1173,13 @@ emit_intercept_code(dcontext_t *dcontext, byte *pc, intercept_function_t callee,
         }
 #endif
     }
-    dr_insert_call(dcontext, &ilist, NULL, (byte *)callee, 1,
-                   parameters_stack_padded() ? opnd_create_reg(REG_XAX) :
-                   opnd_create_reg(REG_XSP));
+    IF_DEBUG(direct = )
+        dr_insert_call_ex(dcontext, &ilist, NULL,
+                          /* we're not in vmcode, so avoid indirect call */
+                          pc, (byte *)callee, 1,
+                          parameters_stack_padded() ? opnd_create_reg(REG_XAX) :
+                          opnd_create_reg(REG_XSP));
+    ASSERT(direct);
 #ifdef X64
     /* i#331, misaligned stack adjustment cleanup */
     if (parameters_stack_padded()) {
@@ -1220,14 +1241,22 @@ emit_intercept_code(dcontext_t *dcontext, byte *pc, intercept_function_t callee,
                                                                -(int)XSP_SZ, OPSZ_0)));
 #endif
         }
-        dr_insert_call(dcontext, &ilist, NULL, (app_pc)asynch_take_over, 1,
-                       parameters_stack_padded() ? opnd_create_reg(REG_XAX) :
-                       opnd_create_reg(REG_XSP));
+        IF_DEBUG(direct = )
+            dr_insert_call_ex(dcontext, &ilist, NULL,
+                              /* we're not in vmcode, so avoid indirect call */
+                              pc, (app_pc)asynch_take_over, 1,
+                              parameters_stack_padded() ? opnd_create_reg(REG_XAX) :
+                              opnd_create_reg(REG_XSP));
+        ASSERT(direct);
 #ifdef INTERNAL
-        dr_insert_call(dcontext, &ilist, NULL, (app_pc)internal_error, 3,
-                       OPND_CREATE_INTPTR(0),
-                       OPND_CREATE_INT32(-3),
-                       OPND_CREATE_INTPTR(0));
+        IF_DEBUG(direct = )
+            dr_insert_call_ex(dcontext, &ilist, NULL,
+                              /* we're not in vmcode, so avoid indirect call */
+                              pc, (app_pc)internal_error, 3,
+                              OPND_CREATE_INTPTR(0),
+                              OPND_CREATE_INT32(-3),
+                              OPND_CREATE_INTPTR(0));
+        ASSERT(direct);
 #endif
 #ifdef X64
         if (parameters_stack_padded()) {
@@ -1242,35 +1271,23 @@ emit_intercept_code(dcontext_t *dcontext, byte *pc, intercept_function_t callee,
     if (action_after == AFTER_INTERCEPT_LET_GO ||
         action_after == AFTER_INTERCEPT_DYNAMIC_DECISION) {
         if (alternate_after != NULL) {
-            insert_let_go_cleanup(dcontext, &ilist, alt_decision,
+            byte *encode_pc;
+            insert_let_go_cleanup(dcontext, pc, &ilist, alt_decision,
                                   assume_xsp, assume_not_on_dstack, action_after);
             /* alternate after cleanup target */
             /* if alt_after_tgt_p != NULL we always do pointer-sized even if
              * the initial target happens to reach
              */
-            if (IF_X64(alt_after_tgt_p == NULL &&)
-                REL32_REACHABLE(pc, alternate_after) &&
-                /* over-estimate to be sure: we assert below we're < PAGE_SIZE */
-                REL32_REACHABLE(pc + PAGE_SIZE, alternate_after)) {
-                alt_after = INSTR_CREATE_jmp(dcontext,
-                                             opnd_create_pc((app_pc)alternate_after));
-                APP(&ilist, alt_after);
-            } else {
-                /* indirect through an inlined target */
-                alt_after =
-                    instr_build_bits(dcontext, OP_UNDECODED, sizeof(alternate_after));
-                APP(&ilist, INSTR_CREATE_jmp_ind
-                    (dcontext, opnd_create_mem_instr(alt_after, 0, OPSZ_PTR)));
-                /* XXX: could use mov imm->xax and have target skip rex+opcode
-                 * for clean disassembly
-                 */
-                instr_set_raw_bytes(alt_after, (byte *) &alternate_after,
-                                    sizeof(alternate_after));
-                APP(&ilist, alt_after);
-            }
+            /* we assert below we're < PAGE_SIZE for reachability test */
+            encode_pc = (alt_after_tgt_p != NULL) ? vmcode_unreachable_pc() : pc;
+            IF_DEBUG(direct = )
+                insert_reachable_cti(dcontext, &ilist, NULL, encode_pc,
+                                     alternate_after, true/*jmp*/, false/*!precise*/,
+                                     DR_REG_NULL/*no scratch*/, &alt_after);
+            ASSERT(alt_after_tgt_p == NULL || !direct);
         }
         /* the normal let_go target */
-        insert_let_go_cleanup(dcontext, &ilist, decision,
+        insert_let_go_cleanup(dcontext, pc, &ilist, decision,
                               assume_xsp, assume_not_on_dstack, action_after);
     }
 
@@ -1556,16 +1573,8 @@ intercept_call(byte *our_pc, byte *tgt_pc, intercept_function_t prof_func,
     bool is_hooked = false;
     bool ok;
 
-#ifdef HOT_PATCHING_INTERFACE
-    /* During core init time when hotp_init() is executed, for hotp_only 
-     * injection takes place.  At this time thread initializations haven't 
-     * been done, so dcontext is NULL, therefore the call to intercept_call() 
-     * fails because it calls decode() which needs a valid dcontext to 
-     * allocate memory. 
-     */
-    if (DYNAMO_OPTION(hotp_only) && dcontext == NULL)
+    if (dcontext == NULL)
         dcontext = GLOBAL_DCONTEXT;
-#endif
 
     ASSERT(tgt_pc != NULL);
     /* can't detect hookers if ignoring CTIs */
@@ -2124,9 +2133,9 @@ syscall_wrapper_ilist(dcontext_t *dcontext,
                  * back here.
                  * FIXME: keep in mind the code on the instrlist is executed natively
                  */
+                insert_push_immed_ptrsz(dcontext, ilist, NULL, (ptr_int_t)pc,
+                                        NULL, NULL);
 #ifdef X64
-                /* do push-64-bit-immed in two pieces */
-                insert_push_immed_ptrsz(dcontext, ilist, NULL, (ptr_int_t)pc);
                 /* check reachability from new location */
                 /* allow interception code to be up to a page: don't bother
                  * to calculate exactly where our jmp will be encoded */
@@ -2137,9 +2146,6 @@ syscall_wrapper_ilist(dcontext_t *dcontext,
                     FATAL_USAGE_ERROR(TAMPERED_NTDLL, 2, get_application_name(),
                                       get_application_pid());
                 }
-#else
-                instrlist_append(ilist, INSTR_CREATE_push_imm
-                                 (dcontext, OPND_CREATE_INTPTR((ptr_int_t)pc)));
 #endif
                 instrlist_append(ilist,
                                  INSTR_CREATE_jmp(dcontext, 
@@ -2449,6 +2455,8 @@ intercept_syscall_wrapper(byte **ptgt_pc /* IN/OUT */,
     bool changed_prot;
     dcontext_t *dcontext = get_thread_private_dcontext();
     bool ok;
+    if (dcontext == NULL)
+        dcontext = GLOBAL_DCONTEXT;
 
     instrlist_init(&ilist);
 
@@ -2656,6 +2664,8 @@ is_syscall_trampoline(byte *pc, byte **tgt)
             is_jmp_rel32(pc - JMP_LONG_LENGTH, NULL, NULL)) {
             dcontext_t *dcontext = get_thread_private_dcontext();
             instr_t instr;
+            if (dcontext == NULL)
+                dcontext = GLOBAL_DCONTEXT;
             instr_init(dcontext, &instr);
             decode(dcontext, syscall, &instr);
             if (instr_is_syscall(&instr)) {
@@ -3484,6 +3494,8 @@ check_apc_context_offset(byte *apc_entry)
 {
     dcontext_t *dcontext = get_thread_private_dcontext();
     instr_t instr;
+    if (dcontext == NULL)
+        dcontext = GLOBAL_DCONTEXT;
     instr_init(dcontext, &instr);
 
     LOG(GLOBAL, LOG_ASYNCH, 3, "check_apc_context_offset\n");
@@ -4914,7 +4926,7 @@ intercept_exception(app_state_at_intercept_t *state)
      * is_thread_known().  
      * FIXME: is_thread_known() may be unnecessary */
     dcontext_t *dcontext = get_thread_private_dcontext();
-    
+
     if (dynamo_exited && get_num_threads() > 1) {
         /* PR 470957: this is almost certainly a race so just squelch it.
          * We live w/ the risk that it was holding a lock our release-build
@@ -4955,7 +4967,8 @@ intercept_exception(app_state_at_intercept_t *state)
 #endif
         fault_xsp = (byte *) cxt->CXT_XSP;
 
-        if (dcontext == NULL && !is_safe_read_pc((app_pc)cxt->CXT_XIP)) {
+        if (dcontext == NULL && !is_safe_read_pc((app_pc)cxt->CXT_XIP) &&
+            (dynamo_initialized || global_try_except.try_except_state == NULL)) {
             ASSERT_NOT_TESTED();
             SYSLOG_INTERNAL_CRITICAL("Early thread failure, no dcontext\n");
             /* there is no good reason for this, other than DR error */
@@ -5047,7 +5060,8 @@ intercept_exception(app_state_at_intercept_t *state)
 #endif
 
         if (is_safe_read_pc((app_pc)cxt->CXT_XIP) ||
-            dcontext->try_except_state != NULL) {
+            (dcontext != NULL && dcontext->try_except.try_except_state != NULL) ||
+            (!dynamo_initialized && global_try_except.try_except_state != NULL)) {
             /* handle our own TRY/EXCEPT */
             /* similar to hotpatch exceptions above */
 
@@ -5065,9 +5079,10 @@ intercept_exception(app_state_at_intercept_t *state)
 # endif
 
 # ifndef CLIENT_INTERFACE /* clients may use for other purposes */
-            ASSERT(is_on_dstack(dcontext, (byte *)cxt->CXT_XSP) ||
-                   is_on_initstack((byte *)cxt->CXT_XSP) ||
-                   !dynamo_initialized);
+            ASSERT(!dynamo_initialized ||
+                   (dcontext != NULL &&
+                    is_on_dstack(dcontext, (byte *)cxt->CXT_XSP)) ||
+                   is_on_initstack((byte *)cxt->CXT_XSP));
             ASSERT(pExcptRec->ExceptionCode == EXCEPTION_ACCESS_VIOLATION);
             ASSERT_CURIOSITY((pExcptRec->NumberParameters >= 2) && 
                              (pExcptRec->ExceptionInformation[0] == 
@@ -5083,8 +5098,13 @@ intercept_exception(app_state_at_intercept_t *state)
             if (is_safe_read_pc((app_pc)cxt->CXT_XIP)) {
                 cxt->CXT_XIP = (ptr_uint_t) safe_read_resume_pc();
                 nt_continue(cxt);
-            } else
-                DR_LONGJMP(&dcontext->try_except_state->context, LONGJMP_EXCEPTION);
+            } else {
+                try_except_context_t *try_cxt =
+                    (dcontext != NULL) ? dcontext->try_except.try_except_state :
+                    global_try_except.try_except_state;
+                ASSERT(try_cxt != NULL);
+                DR_LONGJMP(&try_cxt->context, LONGJMP_EXCEPTION);
+            }
             ASSERT_NOT_REACHED();
         }
         ASSERT(dcontext != NULL); /* NULL cases handled above */
@@ -6284,6 +6304,8 @@ get_pc_after_call(byte *entry, byte **cbret)
     byte *after_call = NULL;
     instr_t instr;
     int num_instrs = 0;
+    if (dcontext == NULL)
+        dcontext = GLOBAL_DCONTEXT;
 
     /* find call to callback */
     instr_init(dcontext, &instr);
@@ -7040,7 +7062,7 @@ callback_interception_init_start(void)
     intercept_asynch = true;
     intercept_callbacks = true;
 
-    interception_code = heap_mmap(INTERCEPTION_CODE_SIZE);
+    interception_code = interception_code_array;
 
 #ifdef INTERCEPT_TOP_LEVEL_EXCEPTIONS
     app_top_handler = 
@@ -7181,11 +7203,11 @@ callback_interception_init_start(void)
     interception_cur_pc = pc; /* save for callback_interception_init_finish() */
     /* we assume callback_interception_init_finish() is called immediately
      * after client init, and that leaving interception_code off exec areas
-     * and writable during client init is ok
+     * and writable during client init is ok: but now that the buffer is inside
+     * our data section, we must mark it +x
      */
-
-    /* now that drmarker is set up, fill in windbg commands (i#522) */
-    privload_add_windbg_cmds();
+    set_protection(interception_code, INTERCEPTION_CODE_SIZE,
+                   MEMPROT_READ|MEMPROT_WRITE|MEMPROT_EXEC);
 
     /* other initialization */
 #ifndef X64
@@ -7294,6 +7316,8 @@ callback_interception_init_finish(void)
         dcontext_t *dcontext = get_thread_private_dcontext();
         bool skip8 = false;
         byte *end_asynch_pc = pc;
+        if (dcontext == NULL)
+            dcontext = GLOBAL_DCONTEXT;
         pc = interception_code + sizeof(dr_marker_t);
         LOG(GLOBAL, LOG_EMIT, 3, "\nCreated these interception points:\n");
         do {
@@ -7355,7 +7379,8 @@ callback_interception_init_finish(void)
         LOG(GLOBAL, LOG_EMIT, 3, "\n");
     });
 
-    make_unwritable(interception_code, INTERCEPTION_CODE_SIZE);
+    /* make unwritable and +x */
+    set_protection(interception_code, INTERCEPTION_CODE_SIZE, MEMPROT_READ|MEMPROT_EXEC);
 
     /* No vm areas except dynamo_areas exists in thin_client mode. */
     if (!DYNAMO_OPTION(thin_client)) {
@@ -7418,11 +7443,10 @@ callback_interception_exit()
 {
     ASSERT(callback_interception_unintercepted);
     /* FIXME : we are exiting so no need to flush here right? */
-    if (!DYNAMO_OPTION(thin_client))
+    if (!DYNAMO_OPTION(thin_client)) {
         remove_executable_region(interception_code, INTERCEPTION_CODE_SIZE,
                                  false/*no lock*/);
-    heap_munmap(interception_code, INTERCEPTION_CODE_SIZE);
-
+    }
     HEAP_TYPE_FREE(GLOBAL_DCONTEXT, intercept_map, intercept_map_t,
                    ACCT_OTHER, PROTECTED);
 

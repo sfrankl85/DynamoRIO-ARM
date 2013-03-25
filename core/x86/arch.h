@@ -116,8 +116,6 @@ mixed_mode_enabled(void)
 #define NEXT_TAG_OFFSET        ((PROT_OFFS)+offsetof(dcontext_t, next_tag))
 #define LAST_EXIT_OFFSET       ((PROT_OFFS)+offsetof(dcontext_t, last_exit))
 #define DSTACK_OFFSET          ((PROT_OFFS)+offsetof(dcontext_t, dstack))
-#define NATIVE_EXEC_RETVAL_OFFSET ((PROT_OFFS)+offsetof(dcontext_t, native_exec_retval))
-#define NATIVE_EXEC_RETLOC_OFFSET ((PROT_OFFS)+offsetof(dcontext_t, native_exec_retloc))
 #ifdef RETURN_STACK
 # define RSTACK_OFFSET         ((PROT_OFFS)+offsetof(dcontext_t, rstack))
 # define TOP_OF_RSTACK_OFFSET  ((PROT_OFFS)+offsetof(dcontext_t, top_of_rstack))
@@ -135,6 +133,7 @@ mixed_mode_enabled(void)
 #  define PRIV_RPC_OFFSET       ((PROT_OFFS)+offsetof(dcontext_t, priv_nt_rpc))
 #  define APP_NLS_CACHE_OFFSET  ((PROT_OFFS)+offsetof(dcontext_t, app_nls_cache))
 #  define PRIV_NLS_CACHE_OFFSET ((PROT_OFFS)+offsetof(dcontext_t, priv_nls_cache))
+#  define APP_STACK_LIMIT_OFFSET ((PROT_OFFS)+offsetof(dcontext_t, app_stack_limit))
 # endif
 # define NONSWAPPED_SCRATCH_OFFSET  ((PROT_OFFS)+offsetof(dcontext_t, nonswapped_scratch))
 #endif
@@ -381,9 +380,14 @@ insert_pop_all_registers(dcontext_t *dcontext, clean_call_info_t *cci,
 bool
 parameters_stack_padded(void);
 /* Inserts a complete call to callee with the passed-in arguments */
-void
+bool
 insert_meta_call_vargs(dcontext_t *dcontext, instrlist_t *ilist, instr_t *instr,
-                       bool clean_call, void *callee, uint num_args, opnd_t *args);
+                       bool clean_call, byte *encode_pc, void *callee,
+                       uint num_args, opnd_t *args);
+bool
+insert_reachable_cti(dcontext_t *dcontext, instrlist_t *ilist, instr_t *where,
+                     byte *encode_pc, byte *target, bool jmp, bool precise,
+                     reg_id_t scratch, instr_t **inlined_tgt_instr);
 void
 insert_get_mcontext_base(dcontext_t *dcontext, instrlist_t *ilist, 
                          instr_t *where, reg_id_t reg);

@@ -1443,6 +1443,7 @@ bool get_client_bounds(client_id_t client_id,
                        app_pc *start/*OUT*/, app_pc *end/*OUT*/);
 const char *get_client_path_from_addr(app_pc addr);
 bool is_valid_client_id(client_id_t id);
+void instrument_client_thread_init(dcontext_t *dcontext, bool client_thread);
 void instrument_thread_init(dcontext_t *dcontext, bool client_thread, bool valid_mc);
 void instrument_thread_exit_event(dcontext_t *dcontext);
 void instrument_thread_exit(dcontext_t *dcontext);
@@ -3118,22 +3119,31 @@ dr_file_size(file_t fd, OUT uint64 *size);
 /* DR_API EXPORT END */
 /* DR_API EXPORT BEGIN */
 /* flags for use with dr_map_file() */
-/**
- * If set, changes to mapped memory are private to the mapping process and
- * are not reflected in the underlying file.  If not set, changes are visible
- * to other processes that map the same file, and will be propagated
- * to the file itself.
- */
-#define DR_MAP_PRIVATE               0x1
+enum {
+    /**
+     * If set, changes to mapped memory are private to the mapping process and
+     * are not reflected in the underlying file.  If not set, changes are visible
+     * to other processes that map the same file, and will be propagated
+     * to the file itself.
+     */
+    DR_MAP_PRIVATE             = 0x1,
 #ifdef LINUX
-/**
- * If set, indicates that the passed-in start address is required rather than a
- * hint.  On Linux, this has the same semantics as mmap with MAP_FIXED: i.e.,
- * any existing mapping in [addr,addr+size) will be unmapped.  This flags is not
- * supported on Windows.
- */
-#define DR_MAP_FIXED                 0x2
+    /**
+     * If set, indicates that the passed-in start address is required rather than a
+     * hint.  On Linux, this has the same semantics as mmap with MAP_FIXED: i.e.,
+     * any existing mapping in [addr,addr+size) will be unmapped.  This flags is not
+     * supported on Windows.
+     */
+    DR_MAP_FIXED               = 0x2,
 #endif
+#ifdef WINDOWS
+    /**
+     * If set, loads the specified file as an executable image, rather than a data
+     * file.  This flags is not supported on Linux.
+     */
+    DR_MAP_IMAGE               = 0x4,
+#endif
+};
 /* DR_API EXPORT END */
 
 DR_API
@@ -4106,6 +4116,17 @@ DR_API
  * The clean call sequence will be optimized based on the runtime option
  * \ref op_cleancall "-opt_cleancall".
  *
+ * For 64-bit, for purposes of reachability, this call is assumed to
+ * be destined for encoding into DR's regular generated code region.
+ * This includes the code cache as well as memory allocated with
+ * dr_nonheap_alloc() specified as #DR_MEMPROT_EXEC.  The call used
+ * here will be direct if it is reachable from those locations; if it
+ * is not reachable, an indirect call through r11 will be used (with
+ * r11's contents being clobbered).  Use dr_insert_clean_call_ex()
+ * with #DR_CLEANCALL_INDIRECT to ensure reachability when encoding to
+ * a location other than DR's regular code region.  See also
+ * dr_insert_call_ex().
+ *
  * \note The stack used to save state and call \p callee is limited to
  * 20KB by default; this can be changed with the -stack_size DR runtime
  * parameter.  This stack cannot be used to store state that persists
@@ -4138,7 +4159,10 @@ dr_insert_clean_call(void *drcontext, instrlist_t *ilist, instr_t *where,
                      void *callee, bool save_fpstate, uint num_args, ...);
 
 /* DR_API EXPORT BEGIN */
-/** Flags to request non-default preservation of state in a clean call */
+/**
+ * Flags to request non-default preservation of state in a clean call
+ * as well as other call options.
+ */
 typedef enum {
     /** Save floating-point state. */
     DR_CLEANCALL_SAVE_FLOAT             = 0x0001,
@@ -4155,6 +4179,11 @@ typedef enum {
     DR_CLEANCALL_NOSAVE_XMM_NONPARAM    = 0x0008,
     /** Skip saving any XMM or YMM registers that are never used as return values. */
     DR_CLEANCALL_NOSAVE_XMM_NONRET      = 0x0010,
+    /**
+     * Requests that an indirect call be used to ensure reachability.
+     * Only honored for 64-bit mode, where r11 will be used for the indirection.
+     */
+    DR_CLEANCALL_INDIRECT               = 0x0020,
 } dr_cleancall_save_t;
 /* DR_API EXPORT END */
 
@@ -4191,12 +4220,22 @@ DR_API
  * dictates.  The registers are NOT saved beforehand (to do so, use
  * dr_insert_clean_call()).
  *
- * It is up to the caller of this routine to preserve caller-saved registers.
+ * It is up to the caller of this routine to preserve any caller-saved registers
+ * that the callee might modify.
  *
  * DR does not support translating a fault in an argument.  For fault
  * transparency, the client must perform the translation (see
  * #dr_register_restore_state_event()), or use
  * #dr_insert_clean_call().
+ *
+ * For 64-bit, for purposes of reachability, this call is assumed to
+ * be destined for encoding into DR's regular generated code region.
+ * This includes the code cache as well as memory allocated with
+ * dr_nonheap_alloc() specified as #DR_MEMPROT_EXEC.  The call used
+ * here will be direct if it is reachable from those locations; if it
+ * is not reachable, an indirect call through r11 will be used (with
+ * r11's contents being clobbered).  Use dr_insert_call_ex() when
+ * encoding to a location other than DR's regular code region.
  *
  * \note This routine only supports passing arguments that are
  * integers or pointers of a size equal to the register size: i.e., no
@@ -4222,6 +4261,20 @@ DR_API
 void 
 dr_insert_call(void *drcontext, instrlist_t *ilist, instr_t *where,
                void *callee, uint num_args, ...);
+
+/**
+ * Identical to dr_insert_call() except it takes in \p encode_pc
+ * indicating roughly where the call sequence will be encoded.  If \p
+ * callee is not reachable from \p encode_pc plus or minus one page,
+ * an indirect call will be used instead of the direct call used by
+ * dr_insert_call().  The indirect call overwrites the r11 register.
+ *
+ * \return true if the inserted call is direct and false if indirect.
+ */
+DR_API
+bool
+dr_insert_call_ex(void *drcontext, instrlist_t *ilist, instr_t *where,
+                  byte *encode_pc, void *callee, uint num_args, ...);
 
 DR_API
 /**
@@ -5227,5 +5280,29 @@ bool
 dr_unregister_persist_patch(bool (*func_patch)(void *drcontext, void *perscxt,
                                                byte *bb_start, size_t bb_size,
                                                void *user_data));
+
+DR_API
+/**
+ * Create instructions for storing pointer-size integer \p val to \p dst,
+ * and then insert them into \p ilist prior to \p where. 
+ * The created instructions are returned in \p first and \p second.
+ * Note that \p second may return NULL if only one instruction is created.
+ */
+void
+instrlist_insert_mov_immed_ptrsz(void *drcontext, ptr_int_t val, opnd_t dst,
+                                 instrlist_t *ilist, instr_t *where,
+                                 instr_t **first OUT, instr_t **second OUT);
+
+DR_API
+/**
+ * Create instructions for pushing pointer-size integer \p val on the stack,
+ * and then insert them into \p ilist prior to \p where. 
+ * The created instructions are returned in \p first and \p second.
+ * Note that \p second may return NULL if only one instruction is created.
+ */
+void
+instrlist_insert_push_immed_ptrsz(void *drcontext, ptr_int_t val,
+                                  instrlist_t *ilist, instr_t *where,
+                                  instr_t **first OUT, instr_t **second OUT);
 
 #endif /* _INSTRUMENT_H_ */

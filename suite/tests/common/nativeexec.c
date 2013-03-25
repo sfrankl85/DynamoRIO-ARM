@@ -32,22 +32,73 @@
 
 #ifndef ASM_CODE_ONLY
 
-/* nativeexec.exe that calls routines in nativeexec.dll.dll via 
+/* nativeexec.exe that calls routines in nativeexec.appdll.dll via 
  * different call* constructions
  */
 #include "tools.h"
+
+#include <setjmp.h>
+
+typedef void (*int_fn_t)(int);
+typedef int (*int2_fn_t)(int, int);
+typedef void (*tail_caller_t)(int_fn_t, int);
 
 /* from nativeexec.dll.dll */
 IMPORT void import_me1(int x);
 IMPORT void import_me2(int x);
 IMPORT void import_me3(int x);
+IMPORT void import_me4(int_fn_t fn, int x);
+IMPORT int import_ret_imm(int x, int y);
+IMPORT void *tail_caller(int_fn_t, int);
 
-void call_plt(void (*fn)(int));
-void call_funky(void (*fn)(int));
+/* Test unwinding across back_from_native retaddrs. */
+IMPORT void unwind_level1(int_fn_t fn, int x);
+static void unwind_setjmp(int x);
+IMPORT void unwind_level3(int_fn_t fn, int x);
+static void unwind_level4(int x);
+IMPORT void unwind_level5(int_fn_t fn, int x);
+static void unwind_longjmp(int x);
+
+void call_plt(int_fn_t fn);
+void call_funky(int_fn_t fn);
+int call_ret_imm(int2_fn_t fn);
+
+void
+print_int(int x)
+{
+    print("nativeexec.exe:print_int(%d)\n", x);
+}
+
+static jmp_buf jump_buf;
+
+void
+unwind_setjmp(int x)
+{
+    if (setjmp(jump_buf)) {
+        print("after longjmp\n");
+    } else {
+        unwind_level3(unwind_level4, x - 1);
+    }
+}
+
+void
+unwind_level4(int x)
+{
+    unwind_level5(unwind_longjmp, x - 1);
+}
+
+void
+unwind_longjmp(int x)
+{
+    print("before longjmp, %d\n", x);
+    longjmp(jump_buf, 1);
+}
 
 int
 main(int argc, char **argv)
 {
+    int x;
+
     INIT();
 
     if (argc > 2 && strcmp("-bind_now", argv[1])) {
@@ -90,6 +141,22 @@ main(int argc, char **argv)
     print("calling via funky ind call\n");
     call_funky(&import_me3);
 
+    print("calling nested native\n");
+    import_me4(print_int, 42);
+
+    print("calling cross-module unwinder\n");
+    unwind_level1(unwind_setjmp, 3);
+
+    print("calling indirect ret_imm\n");
+    x = call_ret_imm(import_ret_imm);
+    print(" -> %d\n", x);
+
+    /* i#1077: If the appdll is native, then DR inserts a back_from_native
+     * retaddr.  The appdll then does a tail call
+     */
+    print("calling tail caller\n");
+    tail_caller(print_int, 35);
+
     print("all done\n");
 
     return 0;
@@ -131,6 +198,21 @@ GLOBAL_LABEL(call_funky:)
         leave
         ret
         END_FUNC(call_funky)
+
+        DECLARE_FUNC(call_ret_imm)
+GLOBAL_LABEL(call_ret_imm:)
+        /* XXX: Not doing SEH prologue for test code. */
+        mov      REG_XDX, ARG1          /* XDX is volatile and not regparm 0. */
+        enter    0, 0                   /* Maintain 16-byte alignment. */
+        /* Do a callee cleanup style call that uses ret imm similar to stdcall
+         * from win32.
+         */
+        push     19
+        push     21
+        call     REG_XDX
+        leave
+        ret
+        END_FUNC(call_ret_imm)
 
 END_FILE
 

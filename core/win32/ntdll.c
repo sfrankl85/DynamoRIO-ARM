@@ -1633,9 +1633,6 @@ get_process_handle_count(HANDLE ph, ULONG *handle_count)
     return res;
 }
 
-/* forward -- static since others probably want seconds as unit */
-static LONGLONG query_time_100ns(void);
-
 int
 get_process_load(HANDLE h)
 {
@@ -2936,7 +2933,7 @@ get_application_cmdline(void)
                                  peb->ProcessParameters->CommandLine.Buffer);
 }
 
-static LONGLONG
+LONGLONG
 query_time_100ns()
 {
     /* FIXME: we could use KUSER_SHARED_DATA here, but it's too volatile
@@ -4014,13 +4011,6 @@ create_process(wchar_t *exe, wchar_t *cmdline)
     thread_id_t tid;
     PROCESS_BASIC_INFORMATION pbi;
 
-    GET_NTDLL(NtCreateSection, (OUT PHANDLE SectionHandle,
-                                IN ACCESS_MASK DesiredAccess,
-                                IN POBJECT_ATTRIBUTES ObjectAttributes,
-                                IN PLARGE_INTEGER SectionSize OPTIONAL,
-                                IN ULONG Protect,
-                                IN ULONG Attributes,
-                                IN HANDLE FileHandle));
     GET_NTDLL(NtCreateProcess, (OUT PHANDLE ProcessHandle,
                                 IN ACCESS_MASK DesiredAccess,
                                 IN POBJECT_ATTRIBUTES ObjectAttributes,
@@ -4047,8 +4037,8 @@ create_process(wchar_t *exe, wchar_t *cmdline)
         goto creation_error;
     }
     oa.ObjectName = 0;
-    if (!NT_SUCCESS(NtCreateSection(&hSection, SECTION_ALL_ACCESS, &oa,
-                                    0, PAGE_EXECUTE, SEC_IMAGE, hFile))) {
+    if (!NT_SUCCESS(NT_SYSCALL(CreateSection, &hSection, SECTION_ALL_ACCESS, &oa,
+                               0, PAGE_EXECUTE, SEC_IMAGE, hFile))) {
         NTPRINT("create_process: failed to create section\n");
         goto creation_error;
     }

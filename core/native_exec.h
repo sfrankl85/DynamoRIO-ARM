@@ -48,9 +48,16 @@ native_exec_init(void);
 void
 native_exec_exit(void);
 
+bool
+is_native_pc(app_pc pc);
+
 /* Gets called on every call into a native module. */
 void
-entering_native(void);
+call_to_native(app_pc *sp);
+
+/* Gets called on every return to a native module. */
+void
+return_to_native(void);
 
 /* Gets called on every cross-module call out of a native module. */
 void
@@ -69,5 +76,27 @@ void
 native_module_hook(module_area_t *ma, bool at_map);
 void
 native_module_unhook(module_area_t *ma);
+
+/* Update next_tag with the real app return address. */
+void
+interpret_back_from_native(dcontext_t *dcontext);
+
+/* Put back the native return addresses that we swapped to maintain control.  We
+ * do this when detaching.  If we're coordinating with the app, then we could do
+ * this before the app takes a stack trace.  Returns whether or not there were
+ * any native retaddrs.
+ */
+void
+put_back_native_retaddrs(dcontext_t *dcontext);
+
+/* Return if this pc is one of the back_from_native return stubs.  Try to make
+ * this a single predictable branch.
+ */
+static inline bool
+native_exec_is_back_from_native(app_pc pc)
+{
+    ptr_uint_t diff = (ptr_uint_t)pc - (ptr_uint_t)back_from_native_retstubs;
+    return (diff < MAX_NATIVE_RETSTACK * BACK_FROM_NATIVE_RETSTUB_SIZE);
+}
 
 #endif /* _NATIVE_EXEC_H_ */

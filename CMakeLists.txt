@@ -1,5 +1,5 @@
 # **********************************************************
-# Copyright (c) 2010-2012 Google, Inc.    All rights reserved.
+# Copyright (c) 2010-2013 Google, Inc.    All rights reserved.
 # Copyright (c) 2009-2010 VMware, Inc.    All rights reserved.
 # **********************************************************
 
@@ -32,12 +32,9 @@
 ###########################################################################
 # Missing features:
 # i#77: make DRgui a subproject to support with different compiler from libutil 
-# i#73: provide automatic suport for locating ml64.exe when using Vista SDK+WDK
-# i#79: custom build number or label for non-release builds
 # i#84: nmake adds space before 1st / in 1st arg to a command invoked with quotes
 # i#74: create source tarball via 'make package_source' 
 # i#68: replace perl with cmake scripts and CTest
-# i#69: re-add support for core unit tests and standalone build rules
 # i#70: symbol store support in core/Makefile and tools/Makefile
 # i#75: convert clients/standalone/Makefile to CMake 
 # i#72: RHEL3 linker script has no __executable_start
@@ -132,6 +129,11 @@ else ()
 endif ()
 
 include(CheckCCompilerFlag)
+
+###########################################################################
+# utility functions
+
+include(make/utils.cmake)
 
 ###########################################################################
 # configuration options
@@ -257,6 +259,7 @@ endif()
 
 option(CALLPROF "internal caller profiling support")
 option(LINKCOUNT "internal linkcount profiling")
+option(PROFILE "profiling build: disables FPO and tweaks other flags" OFF)
 if (WIN32)
   # xref PR 192750 - runregression uses this to avoid over-ssh pdb issues
   option(GENERATE_PDBS "generate Windows debug information" ON)
@@ -305,6 +308,7 @@ mark_as_advanced(
   KSTATS
   CALLPROF
   LINKCOUNT
+  PROFILE
   SET_PREFERRED_BASE
   preferred_base
   GENERATE_PDBS
@@ -470,6 +474,8 @@ if (UNIX)
     message(FATAL_ERROR "gcc is required to build")
   endif (NOT CMAKE_COMPILER_IS_GNUCC)
 
+  check_if_linker_is_gnu_gold(LINKER_IS_GNU_GOLD)
+
 else (UNIX)
 
   if (NOT ${COMPILER_BASE_NAME} STREQUAL "cl")
@@ -610,6 +616,9 @@ if (UNIX)
   set(DBG "-g3")
   # gcc doesn't change its optimizations based on -g
   set(OPT "-O3 ${DBG}")
+  if (PROFILE)
+    set(OPT "${OPT} -fno-omit-frame-pointer")
+  endif ()
 
   # XXX: core-specific: move to core/CMakeLists.txt?
   #
@@ -713,30 +722,39 @@ if (UNIX)
     set(HAVE_FVISIBILITY ON)
   endif (VISIBILITY)
 
-  # Better to use -dT when passing linker options through gcc, but ld
-  # prior to 2.18 only supports -T
-  # FIXME: should we duplicate this in DynamoRIOConfig.cmake?
-  execute_process(COMMAND
-    ${CMAKE_LINKER} --help
-    RESULT_VARIABLE ld_result
-    ERROR_VARIABLE ld_error
-    OUTPUT_VARIABLE ld_out)
-  if (ld_result OR ld_error)
-    message(FATAL_ERROR "*** ${CMAKE_LINKER} failed: ***\n${ld_error}")
-  endif (ld_result OR ld_error)
-  string(REGEX MATCH "dT" flag_present "${ld_out}")
-  if (NOT flag_present)
-    message("${CMAKE_LINKER} missing flag -dT, using -T instead")
-    set(ld_script_option "-T")
-  else (NOT flag_present)
-    set(ld_script_option "-dT")
-  endif (NOT flag_present)
+  if (NOT LINKER_IS_GNU_GOLD)
+    # Better to use -dT when passing linker options through gcc, but ld
+    # prior to 2.18 only supports -T
+    # FIXME: should we duplicate this in DynamoRIOConfig.cmake?
+    execute_process(COMMAND
+      ${CMAKE_LINKER} --help
+      RESULT_VARIABLE ld_result
+      ERROR_VARIABLE ld_error
+      OUTPUT_VARIABLE ld_out)
+    if (ld_result OR ld_error)
+      message(FATAL_ERROR "*** ${CMAKE_LINKER} failed: ***\n${ld_error}")
+    endif (ld_result OR ld_error)
+    string(REGEX MATCH "dT" flag_present "${ld_out}")
+    if (NOT flag_present)
+      message("${CMAKE_LINKER} missing flag -dT, using -T instead")
+      set(ld_script_option "-T")
+    else (NOT flag_present)
+      set(ld_script_option "-dT")
+    endif (NOT flag_present)
+  endif (NOT LINKER_IS_GNU_GOLD)
+
+  # In the past, there have been tools on Linux that don't know how to follow
+  # .gnu_debuglink.  While we aren't aware of any major tools with this bug
+  # today, it's useful to be able to turn this off while experimenting with new
+  # tools.
+  option(SPLIT_SYMBOLS "whether to split debug symbols from binaries" ON)
+  mark_as_advanced(SPLIT_SYMBOLS)
 
   # We want separate .debug files for all shared libraries
-  if (NOT DEFINED CMAKE_OBJCOPY)
+  if (SPLIT_SYMBOLS AND NOT DEFINED CMAKE_OBJCOPY)
     find_package(BinUtils)
-  endif (NOT DEFINED CMAKE_OBJCOPY)
-  if (EXISTS ${CMAKE_OBJCOPY} AND EXISTS ${CMAKE_STRIP})
+  endif ()
+  if (SPLIT_SYMBOLS AND EXISTS ${CMAKE_OBJCOPY} AND EXISTS ${CMAKE_STRIP})
     # Check for --only-keep-debug support: added ~2.15
     execute_process(COMMAND
       ${CMAKE_OBJCOPY} --help
@@ -746,6 +764,12 @@ if (UNIX)
     if (objcopy_result)
       message(FATAL_ERROR "*** ${CMAKE_OBJCOPY} failed to run ***\n")
     endif (objcopy_result)
+    set(strip_local "-x")  # Strip local (non-exported) symbols from .symtab.
+    if (PROFILE)
+      # Keep .symtab for tools (objdump) that don't always handle split debug
+      # info gracefully.
+      set(strip_local "")
+    endif ()
     string(REGEX MATCH "only-keep-debug" flag_present "${objcopy_out}")
     if (NOT flag_present)
       message("${CMAKE_OBJCOPY} missing flag --only-keep-debug: leaving debug info in .so files")
@@ -761,13 +785,13 @@ if (UNIX)
         # We can't strip everything since a client's _USES_DR_VERSION_ will be
         # removed, so we only strip debug (-g) and local (-x):
         # i#572: We used to pass -p here, but that floors the mtime.
-        "${CMAKE_STRIP} -g -x <TARGET>"
+        "${CMAKE_STRIP} -g ${strip_local} <TARGET>"
         )
       SET(CMAKE_C_LINK_EXECUTABLE
         "<CMAKE_C_COMPILER> <FLAGS> <CMAKE_C_LINK_FLAGS> <LINK_FLAGS> <OBJECTS>  -o <TARGET> <LINK_LIBRARIES>"
         "${CMAKE_OBJCOPY} --only-keep-debug <TARGET> <TARGET>.debug"
         "${CMAKE_OBJCOPY} --add-gnu-debuglink=<TARGET>.debug <TARGET>"
-        "${CMAKE_STRIP} -g -x <TARGET>"
+        "${CMAKE_STRIP} -g ${strip_local} <TARGET>"
         )
       set(CMAKE_CXX_CREATE_SHARED_LIBRARY
         # standard rule
@@ -780,16 +804,16 @@ if (UNIX)
         # We can't strip everything since a client's _USES_DR_VERSION_ will be
         # removed, so we only strip debug (-g) and local (-x):
         # i#572: We used to pass -p here, but that floors the mtime.
-        "${CMAKE_STRIP} -g -x <TARGET>"
+        "${CMAKE_STRIP} -g ${strip_local} <TARGET>"
         )
       SET(CMAKE_CXX_LINK_EXECUTABLE
         "<CMAKE_CXX_COMPILER> <FLAGS> <CMAKE_CXX_LINK_FLAGS> <LINK_FLAGS> <OBJECTS>  -o <TARGET> <LINK_LIBRARIES>"
         "${CMAKE_OBJCOPY} --only-keep-debug <TARGET> <TARGET>.debug"
         "${CMAKE_OBJCOPY} --add-gnu-debuglink=<TARGET>.debug <TARGET>"
-        "${CMAKE_STRIP} -g -x <TARGET>"
+        "${CMAKE_STRIP} -g ${strip_local} <TARGET>"
         )
     endif (NOT flag_present)
-  endif (EXISTS ${CMAKE_OBJCOPY} AND EXISTS ${CMAKE_STRIP})
+  endif (SPLIT_SYMBOLS AND EXISTS ${CMAKE_OBJCOPY} AND EXISTS ${CMAKE_STRIP})
 
 endif (UNIX)
 
@@ -812,11 +836,6 @@ if (NOT DISABLE_WARNINGS)
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${WARN}")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${WARN}")
 endif (NOT DISABLE_WARNINGS)
-
-###########################################################################
-# utility functions
-
-include(make/utils.cmake)
 
 ###########################################################################
 

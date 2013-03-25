@@ -909,7 +909,7 @@ os_init(void)
         TLS_NUM_SLOTS, IF_X64_ELSE("gs", "fs"), tls_local_state_offs);
     ASSERT_CURIOSITY(proc_is_cache_aligned(get_local_state()) || 
                      DYNAMO_OPTION(tls_align != 0));
-    if (IF_CLIENT_INTERFACE_ELSE(IF_UNIT_TEST_ELSE(true, !standalone_library), true)) {
+    if (IF_UNIT_TEST_ELSE(true, !standalone_library)) {
         tls_dcontext_offs = os_tls_offset(TLS_DCONTEXT_SLOT);
         ASSERT(tls_dcontext_offs != TLS_UNINITIALIZED);
     }
@@ -958,7 +958,7 @@ os_init(void)
     get_dynamorio_dll_preferred_base();
     get_image_entry();
     get_system_basic_info();
-    if (IF_CLIENT_INTERFACE_ELSE(!standalone_library, true))
+    if (!standalone_library)
         os_user_directory_supports_ownership();
     is_wow64_process(NT_CURRENT_PROCESS);
     is_in_ntdll(get_ntdll_base());
@@ -1116,11 +1116,19 @@ os_terminate_wow64_stack(HANDLE thread_handle)
             teb = get_teb(thread_handle);
         if (teb == NULL) /* app may have passed bogus handle */
             return (byte *) wow64_syscall_stack;
-        /* Use the TLS slots.  Leave room for syscall call*'s retaddr plus 1
-         * extra.  There's still plenty of room at higher addresses for 2 args
-         * for os_terminate_wow64_write_args().
+        /* We use our scratch slots in the TEB.  We need room for syscall
+         * call*'s retaddr below and 2 args for os_terminate_wow64_write_args()
+         * above, so we take our own xbx slot, which has xax below and xcx+xdx
+         * above.  We do not have the extra safety slot that wow64_syscall_stack
+         * has, but that's not necessary, and if the wow64 wrapper wrote to it
+         * it would just be writing to an app slot that's likely unused (b/c DR
+         * takes TLS slots from the end).
+         *
+         * XXX: it would be cleaner to not write to this until we're done
+         * cleaning up private libraries, which examine the TEB.
+         * Then we could use any part of the TEB.
          */
-        return (byte *)teb + offsetof(TEB, TlsSlots) + 2*XSP_SZ;        
+        return (byte *)teb + os_tls_offset(TLS_XBX_SLOT);
     }
 #endif
 }
@@ -1614,6 +1622,8 @@ dr_create_client_thread(void (*func)(void *param), void *arg)
     void *arg_buf[2];
     LOG(THREAD, LOG_ASYNCH, 1,
         "dr_create_client_thread: dstack for new thread is "PFX"\n", dstack);
+
+    pre_second_thread();
 
     /* We store the func and args at base of dstack for client_thread_target */
     arg_buf[0] = (void *) func;
@@ -2682,7 +2692,7 @@ process_image(app_pc base, size_t size, uint prot, bool add, bool rewalking,
      * We could optimize out these system calls, but for now staying safe
      */
     if (!is_readable_pe_base(base)) {
-        DOLOG(1, LOG_VMAREAS, {
+        DOCHECK(1, {
             wchar_t buf[MAXIMUM_PATH];
             NTSTATUS res = get_mapped_file_name(base, buf, BUFFER_SIZE_BYTES(buf));
             if (NT_SUCCESS(res)) {
@@ -2690,11 +2700,12 @@ process_image(app_pc base, size_t size, uint prot, bool add, bool rewalking,
                     "\t%s: WARNING: image but non-PE mapping @"PFX" backed by \"%S\"\n",
                     __FUNCTION__, base, buf);
             }
+            /* This happens with on win7 so not an assert curiosity
+             * \Device\HarddiskVolume1\Windows\System32\apisetschema.dll
+             */
+            if (!NT_SUCCESS(res) || wcsstr(buf, L"apisetschema") == NULL)
+                SYSLOG_INTERNAL_WARNING_ONCE("image but non-PE mapping found");
         });
-        /* This happens with on win7 so not an assert curiosity
-         * \Device\HarddiskVolume1\Windows\System32\apisetschema.dll
-         */
-        SYSLOG_INTERNAL_WARNING_ONCE("image but non-PE mapping found");
         return;
     }
     /* Our WOW64 design for 32-bit DR involves ignoring all 64-bit dlls
@@ -4845,7 +4856,7 @@ convert_to_NT_file_path_wide(OUT wchar_t *fixedbuf, IN const wchar_t *fname,
     const wchar_t *name = fname;
     wchar_t *buf;
     int i, size;
-    size_t size_needed, buf_len;
+    size_t wchars_needed, buf_len;
     ASSERT(fixedbuf != NULL && fixedbuf_len != 0);
     if (name[0] == L'\\') {
         name += 1; /* eat the first \ */
@@ -4881,9 +4892,9 @@ convert_to_NT_file_path_wide(OUT wchar_t *fixedbuf, IN const wchar_t *fname,
         }
     }
     /* should now have either ("c:\" and !is_UNC) or ("\server" and is_UNC) */ 
-    size_needed = (wcslen(name) + wcslen(L"\\??\\") +
-                   (is_UNC ? wcslen(L"UNC") : 0) + 1/*null*/) * sizeof(wchar_t);
-    if (fixedbuf_len >= size_needed) {
+    wchars_needed = (wcslen(name) + wcslen(L"\\??\\") +
+                     (is_UNC ? wcslen(L"UNC") : 0) + 1/*null*/);
+    if (fixedbuf_len >= wchars_needed) {
         buf = fixedbuf;
         buf_len = fixedbuf_len;
     } else {
@@ -4891,16 +4902,17 @@ convert_to_NT_file_path_wide(OUT wchar_t *fixedbuf, IN const wchar_t *fname,
          * larger-than-MAX_PATH paths (technically drwinapi only has to do
          * that for "\\?\" paths).
          */
-        buf = (wchar_t *) global_heap_alloc(size_needed HEAPACCT(ACCT_OTHER));
-        buf_len = size_needed;
-        *allocbuf_sz = buf_len;
+        buf = (wchar_t *) global_heap_alloc(wchars_needed * sizeof(wchar_t)
+                                            HEAPACCT(ACCT_OTHER));
+        buf_len = wchars_needed;
+        *allocbuf_sz = wchars_needed * sizeof(wchar_t);
     }
     size = snwprintf(buf, buf_len, L"\\??\\%s%s", is_UNC ? L"UNC" : L"", name);
     buf[buf_len-1] = L'\0';
     if (size < 0 || size == (int)buf_len) {
         if (buf != fixedbuf)
-            global_heap_free(buf, buf_len HEAPACCT(ACCT_OTHER));
-        return false;
+            global_heap_free(buf, *allocbuf_sz HEAPACCT(ACCT_OTHER));
+        return NULL;
     }
     /* change / to \ */
     for (i = 0; i < size; i++) {
@@ -5293,9 +5305,9 @@ os_open(const char *fname, int os_open_flags)
         return os_internal_create_file(fname, false, access, sharing, FILE_OPEN);
 
     /* clients are allowed to open the file however they want, xref PR 227737 */
-    ASSERT_CURIOSITY_ONCE((TEST(OS_OPEN_REQUIRE_NEW, os_open_flags)
-                           IF_CLIENT_INTERFACE( || standalone_library ||
-                             !IS_INTERNAL_STRING_OPTION_EMPTY(client_lib))) &&
+    ASSERT_CURIOSITY_ONCE((TEST(OS_OPEN_REQUIRE_NEW, os_open_flags) || standalone_library
+                           IF_CLIENT_INTERFACE(|| !IS_INTERNAL_STRING_OPTION_EMPTY
+                                               (client_lib))) &&
                           "symlink risk PR 213492");
     
     return os_internal_create_file(fname, false,
@@ -6661,37 +6673,7 @@ detach_helper(int detach_type)
                 /* we do need to restore the app ret addr, for native_exec */
                 if (!DYNAMO_OPTION(thin_client) && DYNAMO_OPTION(native_exec) &&
                     !vmvector_empty(native_exec_areas)) {
-                    /* We store the retaddr location that we clobbered in
-                     * native_exec_retloc.  We don't currently follow callbacks
-                     * so we don't have to do this while walking the callback
-                     * stack below, just for this dcontext.  We also only have a
-                     * single location since we don't re-takeover while native on
-                     * an APC or an exception.
-                     */
-                    app_pc *esp = (app_pc *) threads[i]->dcontext->native_exec_retloc;
-                    app_pc real_retaddr = threads[i]->dcontext->native_exec_retval;
-
-                    /* In hotp_only mode, a thread can be !under_dynamo_control 
-                     * and have no native_exec_retloc.  For hotp_only, there 
-                     * should be no need to restore a return value on the stack 
-                     * as the thread has been native from the start and not 
-                     * half-way through as it would in the regular hot patching 
-                     * mode, i.e., with the code cache.  See case 7681. 
-                     */
-#ifdef HOT_PATCHING_INTERFACE
-                    if (esp == NULL) {
-                        ASSERT(DYNAMO_OPTION(hotp_only));
-                        ASSERT(real_retaddr == NULL);
-                    } else {
-                        ASSERT(!DYNAMO_OPTION(hotp_only));
-#endif
-                        ASSERT(esp != NULL && 
-                               *esp == (app_pc)back_from_native);
-                        ASSERT(real_retaddr != NULL);
-                        *esp = real_retaddr;
-#ifdef HOT_PATCHING_INTERFACE
-                    }
-#endif
+                    put_back_native_retaddrs(dcontext);
                 }
             }
             /* handle special case of vsyscall, need to hack the return address

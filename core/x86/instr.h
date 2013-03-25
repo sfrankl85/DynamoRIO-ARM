@@ -747,7 +747,7 @@ DR_API
  *    needs to be specified for an absolute address; otherwise, simply
  *    use the desired short registers for base and/or index).
  *
- * (Both of those are false when using opnd_create_far_base_disp()).
+ * (All of these are false when using opnd_create_far_base_disp()).
  */
 opnd_t
 opnd_create_far_base_disp_ex(reg_id_t seg, reg_id_t base_reg, reg_id_t index_reg,
@@ -765,8 +765,12 @@ DR_API
  * opnd_create_base_disp(DR_REG_NULL, DR_REG_NULL, 0, (int)addr, data_size).
  *
  * Otherwise, this routine creates a separate operand type with an
- * absolute 64-bit memory address.  Note that such an operand can only be
- * used as a load or store from or to the rax register.
+ * absolute 64-bit memory address.  Such an operand can only be
+ * guaranteed to be encodable in absolute form as a load or store from
+ * or to the rax (or eax) register.  It will automatically be
+ * converted to a pc-relative operand (as though
+ * opnd_create_rel_addr() had been called) if it is used in any other
+ * way.
  */
 opnd_t 
 opnd_create_abs_addr(void *addr, opnd_size_t data_size);
@@ -782,8 +786,12 @@ DR_API
  * opnd_create_far_base_disp(seg, DR_REG_NULL, DR_REG_NULL, 0, (int)addr, data_size).
  *
  * Otherwise, this routine creates a separate operand type with an
- * absolute 64-bit memory address.  Note that such an operand can only be
- * used as a load or store from or to the rax register.
+ * absolute 64-bit memory address.  Such an operand can only be
+ * guaranteed to be encodable in absolute form as a load or store from
+ * or to the rax (or eax) register.  It will automatically be
+ * converted to a pc-relative operand (as though
+ * opnd_create_far_rel_addr() had been called) if it is used in any
+ * other way.
  */
 opnd_t 
 opnd_create_far_abs_addr(reg_id_t seg, void *addr, opnd_size_t data_size);
@@ -803,6 +811,11 @@ DR_API
  * 32-bit reachability of its code caches and heap.  This means that
  * any static data or code in a client library, or any data allocated
  * using DR's API, is guaranteed to be reachable from code cache code.
+ *
+ * If \p addr is not pc-reachable at encoding time and this operand is
+ * used in a load or store to or from the rax (or eax) register, an
+ * absolute form will be used (as though opnd_create_abs_addr() had
+ * been called).
  *
  * The operand has data size data_size (must be a OPSZ_ constant).
  *
@@ -828,6 +841,11 @@ DR_API
  * 32-bit reachability of its code caches and heap.  This means that
  * any static data or code in a client library, or any data allocated
  * using DR's API, is guaranteed to be reachable from code cache code.
+ *
+ * If \p addr is not pc-reachable at encoding time and this operand is
+ * used in a load or store to or from the rax (or eax) register, an
+ * absolute form will be used (as though opnd_create_far_abs_addr()
+ * had been called).
  *
  * The operand has data size \p data_size (must be a OPSZ_ constant).
  *
@@ -4429,7 +4447,7 @@ enum {
 /* 538 */     OP_palignr,        /* &prefix_extensions[133][0], */ /**< palignr opcode */
 
     /* SSE4 (incl AMD (SSE4A) and Intel-specific (SSE4.1, SSE4.2) extensions */
-/* 539 */     OP_popcnt,         /* &second_byte[0xb8], */ /**< popcnt opcode */
+/* 539 */     OP_popcnt,         /* &prefix_extensions[140][1], */ /**< popcnt opcode */
 /* 540 */     OP_movntss,        /* &prefix_extensions[11][1], */ /**< movntss opcode */
 /* 541 */     OP_movntsd,        /* &prefix_extensions[11][3], */ /**< movntsd opcode */
 /* 542 */     OP_extrq,          /* &prefix_extensions[134][2], */ /**< extrq opcode */

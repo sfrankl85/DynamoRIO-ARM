@@ -1314,17 +1314,24 @@ insert_parameter_preparation(dcontext_t *dcontext, instrlist_t *ilist, instr_t *
  * For x64, assumes the stack pointer is currently 16-byte aligned.
  * Clean calls ensure this by using clean base of dstack and having
  * dr_prepare_for_call pad to 16 bytes.
+ * Returns whether the call is direct.
  */
-void
+bool
 insert_meta_call_vargs(dcontext_t *dcontext, instrlist_t *ilist, instr_t *instr,
-                       bool clean_call, void *callee, uint num_args, opnd_t *args)
+                       bool clean_call, byte *encode_pc, void *callee,
+                       uint num_args, opnd_t *args)
 {
     instr_t *in = (instr == NULL) ? instrlist_last(ilist) : instr_get_prev(instr);
+    bool direct;
     uint stack_for_params = 
         insert_parameter_preparation(dcontext, ilist, instr, 
                                      clean_call, num_args, args);
     IF_X64(ASSERT(ALIGNED(stack_for_params, 16)));
-    PRE(ilist, instr, INSTR_CREATE_call(dcontext, opnd_create_pc(callee)));
+    /* If we need an indirect call, we use r11 as the last of the scratch regs.
+     * We document this to clients using dr_insert_call_ex() or DR_CLEANCALL_INDIRECT.
+     */
+    direct = insert_reachable_cti(dcontext, ilist, instr, encode_pc, (byte *)callee,
+                                  false/*call*/, false/*!precise*/, DR_REG_R11, NULL);
     if (stack_for_params > 0) {
         /* FIXME PR 245936: let user decide whether to clean up?
          * i.e., support calling a stdcall routine?
@@ -1343,6 +1350,7 @@ insert_meta_call_vargs(dcontext_t *dcontext, instrlist_t *ilist, instr_t *instr,
         instr_set_ok_to_mangle(in, false);
         in = instr_get_next(in);
     }
+    return direct;
 }
 
 /* If jmp_instr == NULL, uses jmp_tag, otherwise uses jmp_instr
@@ -1383,6 +1391,78 @@ insert_clean_call_with_arg_jmp_if_ret_true(dcontext_t *dcontext,
     cleanup_after_clean_call(dcontext, NULL, ilist, instr);
     false_popa = instr_get_next(false_popa);
     instr_set_target(jcc, opnd_create_instr(false_popa));
+}
+
+/* If !precise, encode_pc is treated as +- a page (meant for clients
+ * writing an instrlist to gencode so not sure of exact placement but
+ * within a page).
+ * If encode_pc == vmcode_get_start(), checks reachability of whole
+ * vmcode region (meant for code going somewhere not precisely known
+ * in the code cache).
+ * Returns whether ended up using a direct cti.  If inlined_tgt_instr != NULL,
+ * and an inlined target was used, returns a pointer to that instruction
+ * in *inlined_tgt_instr.
+ */
+bool
+insert_reachable_cti(dcontext_t *dcontext, instrlist_t *ilist, instr_t *where,
+                     byte *encode_pc, byte *target, bool jmp, bool precise,
+                     reg_id_t scratch, instr_t **inlined_tgt_instr)
+{
+    byte *encode_start;
+    byte *encode_end;
+    if (precise) {
+        encode_start = target + JMP_LONG_LENGTH;
+        encode_end = encode_start;
+    } else if (encode_pc == vmcode_get_start()) {
+        /* consider whole vmcode region */
+        encode_start = encode_pc;
+        encode_end = vmcode_get_end();
+    } else {
+        encode_start = (byte *) PAGE_START(encode_pc - PAGE_SIZE);
+        encode_end = (byte *) ALIGN_FORWARD(encode_pc + PAGE_SIZE, PAGE_SIZE);
+    }
+    if (REL32_REACHABLE(encode_start, target) &&
+        REL32_REACHABLE(encode_end, target)) {
+        /* For precise, we could consider a short cti, but so far no
+         * users are precise so we'll leave that for i#56.
+         */
+        if (jmp)
+            PRE(ilist, where, INSTR_CREATE_jmp(dcontext, opnd_create_pc(target)));
+        else
+            PRE(ilist, where, INSTR_CREATE_call(dcontext, opnd_create_pc(target)));
+        return true;
+    } else {
+        opnd_t ind_tgt;
+        instr_t *inlined_tgt = NULL;
+        if (scratch == DR_REG_NULL) {
+            /* indirect through an inlined target */
+            inlined_tgt = instr_build_bits(dcontext, OP_UNDECODED, sizeof(target));
+            /* XXX: could use mov imm->xax and have target skip rex+opcode
+             * for clean disassembly
+             */
+            instr_set_raw_bytes(inlined_tgt, (byte *) &target, sizeof(target));
+            /* this will copy the bytes for us, so we don't have to worry about
+             * the lifetime of the target param
+             */
+            instr_allocate_raw_bits(dcontext, inlined_tgt, sizeof(target));
+            ind_tgt = opnd_create_mem_instr(inlined_tgt, 0, OPSZ_PTR);
+            if (inlined_tgt_instr != NULL)
+                *inlined_tgt_instr = inlined_tgt;
+        } else {
+            PRE(ilist, where, INSTR_CREATE_mov_imm
+                (dcontext, opnd_create_reg(scratch), OPND_CREATE_INTPTR(target)));
+            ind_tgt = opnd_create_reg(scratch);
+            if (inlined_tgt_instr != NULL)
+                *inlined_tgt_instr = NULL;
+        }
+        if (jmp)
+            PRE(ilist, where, INSTR_CREATE_jmp_ind(dcontext, ind_tgt));
+        else
+            PRE(ilist, where, INSTR_CREATE_call_ind(dcontext, ind_tgt));
+        if (inlined_tgt != NULL)
+            PRE(ilist, where, inlined_tgt);
+        return false;
+    }
 }
 
 /*###########################################################################
@@ -1516,6 +1596,7 @@ FIXME: coordinate this w/ ret site:       restore flags
     }
 # endif
 
+    /* exit cit, so no reachability concerns */
     instrlist_preinsert(ilist, next_instr, INSTR_CREATE_jmp(dcontext,
                                                 opnd_create_pc((app_pc)retaddr)));
     return next_instr;
@@ -1729,30 +1810,98 @@ return_stack_mangle_direct_call(dcontext_t *dcontext, instrlist_t *ilist,
 #endif /* RETURN_STACK */
 
 void
-insert_push_immed_ptrsz(dcontext_t *dcontext, instrlist_t *ilist, instr_t *instr,
-                        ptr_int_t val)
+insert_mov_immed_ptrsz(dcontext_t *dcontext, ptr_int_t val, opnd_t dst,
+                       instrlist_t *ilist, instr_t *instr,
+                       instr_t **first, instr_t **second)
 {
+    instr_t *mov1, *mov2;
+#ifdef X64
+    if (X64_MODE_DC(dcontext) && !opnd_is_reg(dst)) {
+        if (val <= INT_MAX && val >= INT_MIN) {
+            /* mov is sign-extended, so we can use one move if it is all
+             * 0 or 1 in top 33 bits
+             */
+            mov1 = INSTR_CREATE_mov_imm(dcontext, dst,
+                                        OPND_CREATE_INT32((int)val));
+            PRE(ilist, instr, mov1);
+            mov2 = NULL;
+        } else {
+            /* do mov-64-bit-immed in two pieces.  tiny corner-case risk of racy
+             * access to [dst] if this thread is suspended in between or another
+             * thread is trying to read [dst], but o/w we have to spill and
+             * restore a register.
+             */
+            CLIENT_ASSERT(opnd_is_memory_reference(dst), "invalid dst opnd");
+            /* mov low32 => [mem32] */
+            opnd_set_size(&dst, OPSZ_4);
+            mov1 = INSTR_CREATE_mov_st(dcontext, dst,
+                                       OPND_CREATE_INT32((int)val));
+            PRE(ilist, instr, mov1);
+            /* mov high32 => [mem32+4] */
+            if (opnd_is_base_disp(dst)) {
+                int disp = opnd_get_disp(dst);
+                CLIENT_ASSERT(disp + 4 > disp, "disp overflow");
+                opnd_set_disp(&dst, disp+4);
+            } else {
+                byte *addr = opnd_get_addr(dst);
+                CLIENT_ASSERT(!POINTER_OVERFLOW_ON_ADD(addr, 4),
+                              "addr overflow");
+                dst = OPND_CREATE_ABSMEM(addr+4, OPSZ_4);
+            }
+            mov2 = INSTR_CREATE_mov_st(dcontext, dst,
+                                       OPND_CREATE_INT32((int)(val >> 32)));
+            PRE(ilist, instr, mov2);
+        }
+    } else {
+#endif
+        mov1 = INSTR_CREATE_mov_imm(dcontext, dst, OPND_CREATE_INTPTR(val));
+        PRE(ilist, instr, mov1);
+        mov2 = NULL;
+#ifdef X64
+    }
+#endif
+    if (first != NULL)
+        *first = mov1;
+    if (second != NULL)
+        *second = mov2;
+}
+
+void
+insert_push_immed_ptrsz(dcontext_t *dcontext, instrlist_t *ilist, instr_t *instr,
+                        ptr_int_t val, instr_t **first, instr_t **second)
+{
+    instr_t *push, *mov;
 #ifdef X64
     if (X64_MODE_DC(dcontext)) {
         /* do push-64-bit-immed in two pieces.  tiny corner-case risk of racy
          * access to TOS if this thread is suspended in between or another
          * thread is trying to read its stack, but o/w we have to spill and
-         * restore a register. */
-        PRE(ilist, instr,
-            INSTR_CREATE_push_imm(dcontext, OPND_CREATE_INT32((int)val)));
-        /* push is sign-extended, so we can skip top half if nothing in top 33 bits */
-        if (val >= 0x80000000) {
-            PRE(ilist, instr,
-                INSTR_CREATE_mov_st(dcontext, OPND_CREATE_MEM32(REG_XSP, 4),
-                                    OPND_CREATE_INT32((int)(val >> 32))));
+         * restore a register.
+         */
+        push = INSTR_CREATE_push_imm(dcontext, OPND_CREATE_INT32((int)val));
+        PRE(ilist, instr, push);
+        /* push is sign-extended, so we can skip top half if it is all 0 or 1
+         * in top 33 bits
+         */
+        if (val <= INT_MAX && val >= INT_MIN) {
+            mov = NULL;
+        } else {
+            mov = INSTR_CREATE_mov_st(dcontext, OPND_CREATE_MEM32(REG_XSP, 4),
+                                      OPND_CREATE_INT32((int)(val >> 32)));
+            PRE(ilist, instr, mov);
         }
     } else {
 #endif
-        PRE(ilist, instr,
-            INSTR_CREATE_push_imm(dcontext, OPND_CREATE_INT32(val)));
+        push = INSTR_CREATE_push_imm(dcontext, OPND_CREATE_INT32(val));
+        PRE(ilist, instr, push);
+        mov  = NULL;
 #ifdef X64
     }
 #endif
+    if (first != NULL)
+        *first = push;
+    if (second != NULL)
+        *second = mov;
 }
 
 /* Far calls and rets have double total size */
@@ -1810,7 +1959,7 @@ insert_push_retaddr(dcontext_t *dcontext, instrlist_t *ilist, instr_t *instr,
                                 OPND_CREATE_INT16(val)));
     } else if (opsize == OPSZ_PTR
                IF_X64(|| (!X64_CACHE_MODE_DC(dcontext) && opsize == OPSZ_4))) {
-        insert_push_immed_ptrsz(dcontext, ilist, instr, retaddr);
+        insert_push_immed_ptrsz(dcontext, ilist, instr, retaddr, NULL, NULL);
     } else {
 #ifdef X64
         ptr_int_t val = retaddr & (ptr_int_t) 0xffffffff;
@@ -2413,6 +2562,7 @@ mangle_indirect_call(dcontext_t *dcontext, instrlist_t *ilist, instr_t *instr,
 # endif
     instrlist_preinsert(ilist, next_instr,
                        INSTR_CREATE_call(dcontext, opnd_create_instr(next_instr)));
+    /* exit cti, so no reachability concerns */
     instrlist_preinsert(ilist, next_instr, INSTR_CREATE_jmp(dcontext,
                                                 opnd_create_pc((app_pc)retaddr)));
 #endif
@@ -2864,11 +3014,14 @@ mangle_insert_clone_code(dcontext_t *dcontext, instrlist_t *ilist, instr_t *inst
         INSTR_CREATE_jmp(dcontext, opnd_create_instr(parent)));
 
     PRE(ilist, in, child);
-    /* an exit cti, not a meta instr */
-    instrlist_preinsert
-        (ilist, in,
-         INSTR_CREATE_jmp(dcontext, opnd_create_pc
-                          ((app_pc)get_new_thread_start(dcontext _IF_X64(mode)))));
+    /* We used to insert this directly into fragments for inlined system
+     * calls, but not once we eliminated clean calls out of the DR cache
+     * for security purposes.  Thus it can be a meta jmp, or an indirect jmp.
+     */
+    insert_reachable_cti(dcontext, ilist, in, vmcode_get_start(),
+                         (byte *) get_new_thread_start(dcontext _IF_X64(mode)),
+                         true/*jmp*/, false/*!precise*/, DR_REG_NULL/*no scratch*/,
+                         NULL);
     instr_set_ok_to_mangle(instr_get_prev(in), false);
     PRE(ilist, in, parent);
     PRE(ilist, in, INSTR_CREATE_xchg(dcontext, opnd_create_reg(REG_XAX),
@@ -3464,7 +3617,7 @@ mangle_rel_addr(dcontext_t *dcontext, instrlist_t *ilist, instr_t *instr,
          * heap (assumed to be a single heap: xref PR 215395, and xref
          * potential secondary code caches PR 253446.
          */
-        if (!rel32_reachable_from_heap(tgt)) {
+        if (!rel32_reachable_from_vmcode(tgt)) {
             int si = -1, di = -1;
             opnd_t relop, newop;
             bool spill = true;
@@ -4823,6 +4976,7 @@ set_selfmod_sandbox_offsets(dcontext_t *dcontext)
 #endif
                 cache_pc start_pc, end_pc;
                 app_pc app_start;
+                instr_t *inst;
                 instrlist_init(&ilist);
                 /* sandbox_top_of_bb assumes there's an instr there */
                 instrlist_append(&ilist, INSTR_CREATE_label(dcontext));
@@ -4834,6 +4988,15 @@ set_selfmod_sandbox_offsets(dcontext_t *dcontext)
                                    * both patch points */
                                   app_start, app_start + 2, false,
                                   &patch, &start_pc, &end_pc);
+                /* The exit cti's may not reachably encode (normally
+                 * they'd be mangled away) so we munge them first
+                 */
+                for (inst = instrlist_first(&ilist); inst != NULL;
+                     inst = instr_get_next(inst)) {
+                    if (instr_is_exit_cti(inst)) {
+                        instr_set_target(inst, opnd_create_pc(buf));
+                    }
+                }
                 len = encode_with_patch_list(dcontext, &patch, &ilist, buf);
                 ASSERT(len < BUFFER_SIZE_BYTES(buf));
                 IF_X64(ASSERT(CHECK_TRUNCATE_TYPE_uint(start_pc - buf)));

@@ -53,6 +53,7 @@
 #endif
 
 #include <string.h>
+#include <stdarg.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <time.h>
@@ -242,6 +243,7 @@ const char *usage_str =
     "       -early             Whether to use early injection.\n"
     "       -attach <pid>      Attach to the process with the given pid.  Pass 0\n"
     "                          for pid to launch and inject into a new process.\n"
+    "       -logdir <dir>      Logfiles will be stored in this directory.\n"
 # endif
     "       -use_dll <dll>     Inject given dll instead of configured DR dll.\n"
     "       -force             Inject regardless of configuration.\n"
@@ -281,7 +283,8 @@ _access(const char *fname, int mode)
 
 # ifndef DRCONFIG
 /* Implements a normal path search for fname on the paths in env_var.  Assumes
- * full_path is at least MAXIMUM_PATH bytes long.
+ * full_path is at least MAXIMUM_PATH bytes long.  Resolves symlinks, which is
+ * needed to get the right config filename (i#1062).
  */
 static int
 _searchenv(const char *fname, const char *env_var, char *full_path)
@@ -321,21 +324,32 @@ GetLastError(void)
 }
 # endif
 
-/* XXX: Returns void and resolves symlinks, which we may not want.
+/* Simply concatenates the cwd with the given relative path.  Previously we
+ * called realpath, but this requires the path to exist and expands symlinks,
+ * which is inconsistent with Windows GetFullPathName().
  */
 static void
 GetFullPathName(const char *rel, size_t abs_len, char *abs, char **ext)
 {
-    /* XXX: realpath takes no size, so we have to allocate a larger buffer. */
-    char tmp_buf[PATH_MAX];
-    char *err;
+    size_t len = 0;
     assert(ext == NULL && "invalid param");
-    err = realpath(rel, tmp_buf);
-    if (err == NULL) {
-        abs[0] = '\0';
-    } else {
-        strncpy(abs, tmp_buf, abs_len);
+    if (rel[0] != '/') {
+        char *err = getcwd(abs, abs_len);
+        if (err != NULL) {
+            len = strlen(abs);
+            /* Append a slash if it doesn't have a trailing slash. */
+            if (abs[len-1] != '/' && len < abs_len) {
+                abs[len++] = '/';
+                abs[len] = '\0';
+            }
+            /* Omit any leading ./. */
+            if (rel[0] == '.' && rel[0] == '/') {
+                rel += 2;
+            }
+        }
     }
+    strncpy(abs + len, rel, abs_len - len);
+    abs[abs_len-1] = '\0';
 }
 
 #endif /* LINUX */
@@ -628,6 +642,105 @@ append_client(const char *client, int id, const char *client_ops,
 }
 #endif
 
+/* Appends a space-separated option string to buf.  A space is appended only if
+ * the buffer is non-empty.  Aborts on buffer overflow.  Always null terminates
+ * the string.
+ * XXX: Use print_to_buffer.
+ */
+static void
+add_extra_option(char *buf, size_t bufsz, size_t *sofar, const char *fmt, ...)
+{
+    ssize_t len;
+    va_list ap;
+    if (*sofar > 0 && *sofar < bufsz)
+        buf[(*sofar)++] = ' ';  /* Add a space. */
+
+    va_start(ap, fmt);
+    len = vsnprintf(buf + *sofar, bufsz - *sofar, fmt, ap);
+    va_end(ap);
+
+    if (len < 0 || (size_t)len >= bufsz) {
+        error("option string too long, buffer overflow");
+        die();
+    }
+    *sofar += len;
+    /* be paranoid: though usually many calls in a row and could delay until end */
+    buf[bufsz-1] = '\0';
+}
+
+#if defined(DRCONFIG) || defined(DRRUN)
+/* Returns the path to the client library.  Appends to extra_ops. 
+ * A tool config file must contain one of these line types:
+ *   CLIENT_ABS=<absolute path to client>
+ *   CLIENT_REL=<path to client relative to DR root>
+ * It can contain as many DR_OP= lines as desired.  Each must contain
+ * one DynamoRIO option token:
+ *   DR_OP=<DR option token>
+ * It can also contain TOOL_OP= lines for tool options, though normally
+ * tool default options should just be set in the tool:
+ *   TOOL_OP=<tool option token>
+ * We take one token per line rather than a string of options to avoid
+ * having to do any string parsing.
+ * DR ops go last (thus, user can't override); tool ops go first.
+ */
+static bool
+read_tool_file(const char *toolname, const char *dr_root, dr_platform_t dr_platform,
+               char *client, size_t client_size,
+               char *ops, size_t ops_size, size_t *ops_sofar,
+               char *tool_ops, size_t tool_ops_size, size_t *tool_ops_sofar)
+{
+    FILE *f;
+    char config_file[MAXIMUM_PATH];
+    char line[MAXIMUM_PATH];
+    bool found_client = false;
+    const char *arch = IF_X64_ELSE("64", "32");
+    if (dr_platform == DR_PLATFORM_32BIT)
+        arch = "32";
+    else if (dr_platform == DR_PLATFORM_64BIT)
+        arch = "64";
+    _snprintf(config_file, BUFFER_SIZE_ELEMENTS(config_file),
+              "%s/tools/%s.drrun%s", dr_root, toolname, arch);
+    NULL_TERMINATE_BUFFER(config_file);
+    info("reading tool config file %s", config_file);
+    /* XXX i#943: we need to use _tfopen() on windows */
+    f = fopen(config_file, "r");
+    if (f == NULL) {
+        error("Cannot find tool config file %s\n", config_file);
+        return false;
+    }
+    while (fgets(line, BUFFER_SIZE_ELEMENTS(line), f) != NULL) {
+        ssize_t len;
+        NULL_TERMINATE_BUFFER(line);
+        len = strlen(line) - 1;
+        while (len >= 0 && (line[len] == '\n' || line[len] == '\r')) {
+            line[len] = '\0';
+            len--;
+        }
+        if (line[0] == '#') {
+            continue;
+        } else if (strstr(line, "CLIENT_REL=") == line) {
+            _snprintf(client, client_size, "%s/%s", dr_root,
+                      line + strlen("CLIENT_REL="));
+            client[client_size-1] = '\0';
+            found_client = true;
+        } else if (strstr(line, "CLIENT_ABS=") == line) {
+            strncpy(client, line + strlen("CLIENT_ABS="), client_size);
+            found_client = true;
+        } else if (strstr(line, "DR_OP=") == line) {
+            add_extra_option(ops, ops_size, ops_sofar, "%s", line + strlen("DR_OP="));
+        } else if (strstr(line, "TOOL_OP=") == line) {
+            add_extra_option(tool_ops, tool_ops_size, tool_ops_sofar,
+                             "%s", line + strlen("TOOL_OP="));
+        } else if (line[0] != '\0') {
+            error("Tool config file is malformed: unknown line %s\n", line);
+            return false;
+        }
+    }
+    fclose(f);
+    return found_client;
+}
+#endif
+
 int main(int argc, char *argv[])
 {
     char *dr_root = NULL;
@@ -653,6 +766,7 @@ int main(int argc, char *argv[])
 # endif
 #endif /* !DRINJECT */
     char extra_ops[MAX_OPTIONS_STRING];
+    size_t extra_ops_sofar = 0;
 #ifdef DRCONFIG
     action_t action = action_none;
 #endif
@@ -722,7 +836,8 @@ int main(int argc, char *argv[])
     for (i=1; i<argc; i++) {
 
         /* params with no arg */
-        if (strcmp(argv[i], "-verbose") == 0) {
+        if (strcmp(argv[i], "-verbose") == 0 ||
+            strcmp(argv[i], "-v") == 0) {
             verbose = true;
             continue;
         }
@@ -730,11 +845,15 @@ int main(int argc, char *argv[])
             quiet = true;
             continue;
         }
+        else if (strcmp(argv[i], "-nocheck") == 0) {
+            nocheck = true;
+            continue;
+        }
         else if (strcmp(argv[i], "-debug") == 0) {
             use_debug = true;
             continue;
         }
-        else if (!strcmp(argv[i], "-v")) {
+        else if (!strcmp(argv[i], "-version")) {
 #if defined(BUILD_NUMBER) && defined(VERSION_NUMBER)
           printf(TOOLNAME" version %s -- build %d\n", STRINGIFY(VERSION_NUMBER), BUILD_NUMBER);
 #elif defined(BUILD_NUMBER)
@@ -820,14 +939,11 @@ int main(int argc, char *argv[])
             continue;
         }
         else if (strcmp(argv[i], "-early") == 0) {
-            /* Appending -early_inject to extra_ops communicates our intentions to
-             * drinjectlib.
-             * XXX: reuse print_to_buffer from x86/decodelib.c and utils.c.
+            /* Appending -early_inject to extra_ops communicates our intentions
+             * to drinjectlib.
              */
-            _snprintf(extra_ops + strlen(extra_ops),
-                      BUFFER_SIZE_ELEMENTS(extra_ops) - strlen(extra_ops),
-                      "%s-early_inject", (extra_ops[0] == '\0') ? "" : " ");
-            NULL_TERMINATE_BUFFER(extra_ops);
+            add_extra_option(extra_ops, BUFFER_SIZE_ELEMENTS(extra_ops),
+                             &extra_ops_sofar, "-early_inject");
             continue;
         }
 # endif /* LINUX */
@@ -846,6 +962,15 @@ int main(int argc, char *argv[])
             /* support -dr_home alias used by script */
             strcmp(argv[i], "-dr_home") == 0) {
             dr_root = argv[++i];
+        }
+        else if (strcmp(argv[i], "-logdir") == 0) {
+            /* Accept this for compatibility with the old drrun shell script. */
+            const char *dir = argv[++i];
+            if (_access(dir, 0) == -1)
+                usage("-logdir %s does not exist", dir);
+            add_extra_option(extra_ops, BUFFER_SIZE_ELEMENTS(extra_ops),
+                             &extra_ops_sofar, "-logdir `%s`", dir);
+            continue;
         }
 #ifdef DRCONFIG
         else if (strcmp(argv[i], "-reg") == 0) {
@@ -943,10 +1068,8 @@ int main(int argc, char *argv[])
         }
         else if (strcmp(argv[i], "-ops") == 0) {
             /* support repeating the option (i#477) */
-            _snprintf(extra_ops + strlen(extra_ops),
-                      BUFFER_SIZE_ELEMENTS(extra_ops) - strlen(extra_ops),
-                      "%s%s", (extra_ops[0] == '\0') ? "" : " ", argv[++i]);
-            NULL_TERMINATE_BUFFER(extra_ops);
+            add_extra_option(extra_ops, BUFFER_SIZE_ELEMENTS(extra_ops),
+                             &extra_ops_sofar, "%s", argv[++i]);
 	}
 #endif
 #if defined(DRRUN) || defined(DRINJECT)
@@ -991,33 +1114,49 @@ int main(int argc, char *argv[])
         else if (argv[i][0] == '-') {
             while (i<argc) {
                 if (strcmp(argv[i], "-c") == 0 ||
+                    strcmp(argv[i], "-t") == 0 ||
                     strcmp(argv[i], "--") == 0) {
                     break;
                 }
-                _snprintf(extra_ops + strlen(extra_ops),
-                          BUFFER_SIZE_ELEMENTS(extra_ops) - strlen(extra_ops),
-                          "%s%s", (extra_ops[0] == '\0') ? "" : " ", argv[i]);
-                NULL_TERMINATE_BUFFER(extra_ops);
+                add_extra_option(extra_ops, BUFFER_SIZE_ELEMENTS(extra_ops),
+                                 &extra_ops_sofar, "%s", argv[i]);
                 i++;
             }
-            if (i < argc && strcmp(argv[i], "-c") == 0) {
+            if (i < argc &&
+                (strcmp(argv[i], "-t") == 0 ||
+                 strcmp(argv[i], "-c") == 0)) {
                 const char *client;
+                char client_buf[MAXIMUM_PATH];
+                size_t client_sofar = 0;
                 if (i + 1 >= argc)
-                    usage("too few arguments to -c");
+                    usage("too few arguments to %s", argv[i]);
                 if (num_clients != 0)
-                    usage("Cannot use -client with -c.");
+                    usage("Cannot use -client with %s.", argv[i]);
                 client = argv[++i];
+                single_client_ops[0] = '\0';
+
+                if (strcmp(argv[i-1], "-t") == 0) {
+                    /* Client-requested DR default options come last, so they
+                     * cannot be overridden by DR options passed here.
+                     * The user must use -c or -client to do that.
+                     */
+                    if (!read_tool_file(client, dr_root, dr_platform,
+                                        client_buf, BUFFER_SIZE_ELEMENTS(client_buf),
+                                        extra_ops, BUFFER_SIZE_ELEMENTS(extra_ops),
+                                        &extra_ops_sofar,
+                                        single_client_ops,
+                                        BUFFER_SIZE_ELEMENTS(single_client_ops),
+                                        &client_sofar))
+                        usage("unknown tool requested");
+                    client = client_buf;
+                }
 
                 /* Treat everything up to -- or end of argv as client args. */
                 i++;
-                single_client_ops[0] = '\0';
                 while (i < argc && strcmp(argv[i], "--") != 0) {
-                    _snprintf(single_client_ops + strlen(single_client_ops),
-                              BUFFER_SIZE_ELEMENTS(single_client_ops) -
-                              strlen(single_client_ops),
-                              "%s%s", (single_client_ops[0] == '\0') ? "" : " ",
-                              argv[i]);
-                    NULL_TERMINATE_BUFFER(single_client_ops);
+                    add_extra_option(single_client_ops,
+                                     BUFFER_SIZE_ELEMENTS(single_client_ops),
+                                     &client_sofar, "%s", argv[i]);
                     i++;
                 }
                 append_client(client, 0, single_client_ops, client_paths,

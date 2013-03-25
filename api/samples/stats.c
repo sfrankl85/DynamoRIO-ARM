@@ -81,7 +81,7 @@ const char *stat_names[] = {
  */
 #define CLIENT_SHMEM_KEY_NT_L L"DynamoRIO_Client_Statistics"
 #define CLIENT_SHMEM_KEY_L    L"Local\\DynamoRIO_Client_Statistics"
-#define CLIENTSTAT_NAME_MAX_LEN 50
+#define CLIENTSTAT_NAME_MAX_LEN 47
 #define NUM_STATS (sizeof(stat_names)/sizeof(char*))
 
 /* Statistics are all 64-bit for x64.  At some point we'll add per-stat
@@ -185,7 +185,9 @@ shared_memory_init(void)
         num++;
     }
     dr_log(NULL, LOG_ALL, 1, "Shared memory key is: \"%S\"\n", shared_keyname);
+#ifdef SHOW_RESULTS
     dr_fprintf(STDERR, "Shared memory key is: \"%S\"\n", shared_keyname);
+#endif
     shared_view = MapViewOfFile(shared_map, FILE_MAP_READ|FILE_MAP_WRITE, 0, 0, 0);
     DR_ASSERT(shared_view != NULL);
     return (client_stats *) shared_view;

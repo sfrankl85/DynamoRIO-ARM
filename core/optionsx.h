@@ -230,6 +230,9 @@
     OPTION_INTERNAL(bool, tracedump_text, "text dump of traces (after optimization)")
     OPTION_INTERNAL(bool, tracedump_origins, "write out original instructions for each trace")
     OPTION(bool, syntax_intel, "use Intel disassembly syntax")
+    OPTION(bool, syntax_att, "use AT&T disassembly syntax")
+    /* whether to mark gray-area instrs as invalid when we know the length (i#1118) */
+    OPTION(bool, decode_strict, "mark all known-invalid instructions as invalid")
 #ifdef EXPOSE_INTERNAL_OPTIONS
 # ifdef PROFILE_LINKCOUNT
     OPTION(uint, tracedump_threshold, "profile_counts threshold for dumping a trace")
@@ -486,7 +489,14 @@
      * yet be exposed in non-internal CI builds, so we make it CI-only.
      */
     OPTION_INTERNAL(bool, full_decode, "decode all instrs to level 3 during bb building")
-# endif
+    /* Provides a speed boost at startup for observation-only clients that don't
+     * use any libraries that need to see all instructions.
+     * Not officially supported yet: see i#805 and i#1112.
+     * Not compatible with DR_EMIT_STORE_TRANSLATIONS.
+     */
+    OPTION_INTERNAL(bool, fast_client_decode,
+                    "avoid full decoding even when clients are present (risky)")
+# endif /* CLIENT_INTERFACE */
 #endif /* EXPOSE_INTERNAL_OPTIONS */
 
     /* i#42: Optimize and shrink clean call sequences */
@@ -659,6 +669,14 @@
            of yielding and waiting on a kernel object. 
            See Robbins for a discussion on a good value for the above - 
            it should be based on expectations on how long does it take to finish a task. */
+
+    /* i#1111: try to improve startup-time performance by avoiding the bb lock
+     * in the initial thread.  However, we can have races if a new thread
+     * appears for which we did not see the creation call: e.g., for a nudge,
+     * or any other externally-created thread.  Thus this is off by default.
+     */
+    OPTION_INTERNAL(bool, nop_initial_bblock,
+                    "nop bb building lock until 2nd thread is created")
 
      /* INTERNAL options */
      /* These options should be used with a wrapper INTERNAL_OPTION(opt) which in external */

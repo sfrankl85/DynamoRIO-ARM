@@ -858,6 +858,11 @@ thread_id_t dynamorio_clone(uint flags, byte *newsp, void *ptid, void *tls,
                             void *ctid, void (*func)(void));
 #endif
 void back_from_native(void);
+/* These two are labels, not functions. */
+void back_from_native_retstubs(void);
+void back_from_native_retstubs_end(void);
+/* Each stub should be 4 bytes: push imm8 + jmp rel8 */
+enum { BACK_FROM_NATIVE_RETSTUB_SIZE = 4 };
 #ifdef LINUX
 void native_plt_call(void);
 #endif
@@ -872,6 +877,12 @@ void hashlookup_null_handler(void);
 
 /* x86_code.c */
 void dynamo_start(priv_mcontext_t *mc);
+
+/* Gets the retstack index saved in x86.asm and restores the mcontext to the
+ * original app state.
+ */
+int
+native_get_retstack_idx(priv_mcontext_t *mc);
 
 /* in proc.c -- everything in proc.h is exported so just include it here */
 #include "proc.h"
@@ -1342,6 +1353,9 @@ instrlist_t * build_app_bb_ilist(dcontext_t *dcontext, byte *start_pc, file_t ou
 void
 bb_build_abort(dcontext_t *dcontext, bool clean_vmarea);
 
+bool
+expand_should_set_translation(dcontext_t *dcontext);
+
 /* Builds an instrlist_t as though building a bb from pc.
  * Use recreate_fragment_ilist() for building an instrlist_t for a fragment.
  * If check_vm_area is false, Does NOT call check_thread_vm_area()!
@@ -1496,8 +1510,12 @@ instrlist_encode_to_copy(dcontext_t *dcontext, instrlist_t *ilist, byte *copy_pc
 void insert_clean_call_with_arg_jmp_if_ret_true(dcontext_t *dcontext, instrlist_t *ilist,
         instr_t *instr, void *callee, int arg, app_pc jmp_tag, instr_t *jmp_instr);
 void
+insert_mov_immed_ptrsz(dcontext_t *dcontext, ptr_int_t val, opnd_t dst,
+                       instrlist_t *ilist, instr_t *instr,
+                       instr_t **first OUT, instr_t **second OUT);
+void
 insert_push_immed_ptrsz(dcontext_t *dcontext, instrlist_t *ilist, instr_t *instr,
-                        ptr_int_t val);
+                        ptr_int_t val, instr_t **first OUT, instr_t **second OUT);
 #ifdef LINUX
 void mangle_clone_code(dcontext_t *dcontext, byte *pc, bool skip);
 bool mangle_syscall_code(dcontext_t *dcontext, fragment_t *f, byte *pc, bool skip);

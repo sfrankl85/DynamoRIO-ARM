@@ -1,5 +1,5 @@
 /* **********************************************************
- * Copyright (c) 2012 Google, Inc.  All rights reserved.
+ * Copyright (c) 2012-2013 Google, Inc.  All rights reserved.
  * **********************************************************/
 
 /*
@@ -899,10 +899,16 @@ NtQueryDirectoryFile(IN HANDLE FileHandle,
 NTEXPORT NTSTATUS NTAPI
 NtFlushVirtualMemory(IN HANDLE ProcessHandle,
                      IN OUT PVOID *BaseAddress,
-                     IN OUT PULONG FlushSize,
+                     IN OUT PULONG_PTR FlushSize,
                      OUT PIO_STATUS_BLOCK IoStatusBlock)
 {
     return STATUS_SUCCESS;
+}
+
+NTEXPORT ULONG_PTR NTAPI
+NtGetTickCount(void)
+{
+    return 0;
 }
 
 /***************************************************************************

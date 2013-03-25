@@ -1,5 +1,5 @@
 /* **********************************************************
- * Copyright (c) 2011-2012 Google, Inc.  All rights reserved.
+ * Copyright (c) 2011-2013 Google, Inc.  All rights reserved.
  * Copyright (c) 2001-2010 VMware, Inc.  All rights reserved.
  * **********************************************************/
 
@@ -107,6 +107,9 @@ bool mangle_trace(dcontext_t *dcontext, instrlist_t *ilist, monitor_data_t *md);
 
 /* exported so micro routines can assert whether held */
 DECLARE_CXTSWPROT_VAR(mutex_t bb_building_lock, INIT_LOCK_FREE(bb_building_lock));
+
+/* i#1111: we do not use the lock until the 2nd thread is created */
+volatile bool bb_lock_start;
 
 #ifdef INTERNAL
 file_t bbdump_file = INVALID_FILE;
@@ -736,7 +739,7 @@ check_new_page_jmp(dcontext_t *dcontext, build_bb_t *bb, app_pc new_pc)
     if (DYNAMO_OPTION(native_exec) &&
         DYNAMO_OPTION(native_exec_dircalls) &&
         !vmvector_empty(native_exec_areas) &&
-        vmvector_overlap(native_exec_areas, new_pc, new_pc+1))
+        is_native_pc(new_pc))
         return false;
 #ifdef CLIENT_INTERFACE
     /* i#805: If we're crossing a module boundary between two modules that are
@@ -2227,7 +2230,7 @@ bb_process_IAT_convertible_indjmp(dcontext_t *dcontext, build_bb_t *bb,
      * intercept those jmps.
      */
     if (DYNAMO_OPTION(native_exec) &&
-        vmvector_overlap(native_exec_areas, target, target+1)) {
+        is_native_pc(target)) {
         BBPRINT(bb, 3,
                 "   NOT inlining indirect jump to native exec module "PFX"\n", target);
         STATS_INC(num_indirect_jumps_IAT_native);
@@ -2342,7 +2345,7 @@ bb_process_IAT_convertible_indcall(dcontext_t *dcontext, build_bb_t *bb,
      * this check isn't much slower.
      */
     if (DYNAMO_OPTION(native_exec) &&
-        vmvector_overlap(native_exec_areas, target, target+1)) {
+        is_native_pc(target)) {
         BBPRINT(bb, 3,
                 "   NOT inlining indirect call to native exec module "PFX"\n", target);
         STATS_INC(num_indirect_calls_IAT_native);
@@ -2474,9 +2477,14 @@ client_process_bb(dcontext_t *dcontext, build_bb_t *bb)
      */
     if (instrlist_first(bb->ilist) == NULL)
         return;
-    if (!instr_opcode_valid(instrlist_first(bb->ilist))) {
-        /* it should have only one instr */
-        ASSERT(instrlist_first(bb->ilist) == instrlist_last(bb->ilist));
+    if (!instr_opcode_valid(instrlist_first(bb->ilist)) &&
+        /* For -fast_client_decode we can have level 0 instrs so check
+         * to ensure this is a single-instr bb that was built just to
+         * raise the fault for us.
+         * XXX i#1000: shouldn't we pass this to the client?  It might not handle an
+         * invalid instr properly though.
+         */
+        instrlist_first(bb->ilist) == instrlist_last(bb->ilist)) {
         return;
     }
 
@@ -2717,12 +2725,19 @@ client_process_bb(dcontext_t *dcontext, build_bb_t *bb)
      * FIXME: should we not do eflags tracking while decoding, then, and always
      * do it afterward?
      */
-    bb->eflags = forward_eflags_analysis(dcontext, bb->ilist, instrlist_first(bb->ilist));
+    /* for -fast_client_decode, we don't support the client changing the app code */
+    if (!INTERNAL_OPTION(fast_client_decode)) {
+        bb->eflags = forward_eflags_analysis(dcontext, bb->ilist,
+                                             instrlist_first(bb->ilist));
+    }
 
     if (TEST(DR_EMIT_STORE_TRANSLATIONS, emitflags)) {
         /* PR 214962: let client request storage instead of recreation */
         bb->flags |= FRAG_HAS_TRANSLATION_INFO;
         /* if we didn't have record on from start, can't store translation info */
+        CLIENT_ASSERT(!INTERNAL_OPTION(fast_client_decode),
+                      "-fast_client_decode not compatible with "
+                      "DR_EMIT_STORE_TRANSLATIONS");
         ASSERT(bb->record_translation && bb->full_decode);
     }
 
@@ -2832,7 +2847,9 @@ build_bb_ilist(dcontext_t *dcontext, build_bb_t *bb)
     } else
         ASSERT(dynamo_exited);
     
-    if (bb->record_translation || !bb->for_cache
+    if ((bb->record_translation
+         IF_CLIENT_INTERFACE(&& !INTERNAL_OPTION(fast_client_decode))) ||
+        !bb->for_cache
         /* to split riprel, need to decode every instr */
         /* in x86_to_x64, need to translate every x86 instr */
         IF_X64(|| DYNAMO_OPTION(coarse_split_riprel) || DYNAMO_OPTION(x86_to_x64))
@@ -3039,7 +3056,8 @@ build_bb_ilist(dcontext_t *dcontext, build_bb_t *bb)
          * through the above loop only once for cti's, so it's safe
          * to set the translation here.
          */
-        if (instr_opcode_valid(bb->instr) && instr_is_cti(bb->instr))
+        if (instr_opcode_valid(bb->instr) &&
+            (instr_is_cti(bb->instr) || bb->record_translation))
             instr_set_translation(bb->instr, bb->instr_start);
 
 #ifdef HOT_PATCHING_INTERFACE
@@ -3389,7 +3407,7 @@ build_bb_ilist(dcontext_t *dcontext, build_bb_t *bb)
          * at a return-address-clobberable point.
          */
         app_pc tgt = opnd_get_pc(instr_get_target(bb->instr));
-        if (vmvector_overlap(native_exec_areas, tgt, tgt+1) &&
+        if (is_native_pc(tgt) &&
             at_native_exec_gateway(dcontext, tgt, &bb->native_call
                                    _IF_DEBUG(true/*xfer tgt*/))) {
             /* replace this ilist w/ a native exec one */
@@ -3776,12 +3794,26 @@ bb_build_abort(dcontext_t *dcontext, bool clean_vmarea)
          */
         if (bb->has_bb_building_lock) {
             ASSERT_OWN_MUTEX(USE_BB_BUILDING_LOCK(), &bb_building_lock);
-            SHARED_BB_MUTEX(unlock);
+            SHARED_BB_UNLOCK();
             KSTOP_REWIND(bb_building);
         } else
             ASSERT_DO_NOT_OWN_MUTEX(USE_BB_BUILDING_LOCK(), &bb_building_lock);
         dcontext->bb_build_info = NULL;
     }
+}
+
+bool
+expand_should_set_translation(dcontext_t *dcontext)
+{
+    if (dcontext->bb_build_info != NULL) {
+        build_bb_t *bb = (build_bb_t *) dcontext->bb_build_info;
+        /* Expanding to a higher level should set the translation to
+         * the raw bytes if we're building a bb where we can assume
+         * the raw byte pointer is the app pc.
+         */
+        return bb->record_translation;
+    }
+    return false;
 }
 
 /* returns false if need to rebuild bb: in that case this routine will
@@ -3991,53 +4023,6 @@ report_native_module(dcontext_t *dcontext, app_pc modpc)
 }
 #endif
 
-/* Appends code to a native bb to save the retaddr on the stack into the
- * dcontext and replace it with back_from_native().  We assume the dcontext is
- * already set up in the default register and that REG_XAX is scratch.
- * WARNING: breaks transparency rules.
- */
-static void
-native_bb_swap_retaddr(dcontext_t *dcontext, build_bb_t *bb)
-{
-    /* To regain control we put our interception routine as the retaddr,
-     * assuming of course no transparency problems like longjmp or retaddr examination.
-     * We need to know where to go when we return -- but this can be stdcall,
-     * where it's tough to just push our retaddr after real one as earlier args will be
-     * "cleaned up" and beyond TOS and we don't know how many args there were!
-     * We use two special fields to store the original return address as well as its
-     * stack location.  We assume that we do not re-takeover on exceptions or
-     * APCs (callbacks will be ok) -- if we ever decide to we'll have to either
-     * use the dcontext stack just like for callbacks or stack
-     * native_exec_ret{val,loc} in some other manner.
-     */
-    instrlist_append(bb->ilist, INSTR_CREATE_mov_ld(dcontext, opnd_create_reg(REG_XAX),
-                                                    OPND_CREATE_MEMPTR(REG_XSP, 0)));
-    instrlist_append(bb->ilist, instr_create_save_to_dc_via_reg
-                     (dcontext, REG_NULL/*default*/, REG_XAX,
-                      NATIVE_EXEC_RETVAL_OFFSET));
-    /* we don't count on mcontext being preserved (native syscalls will clobber it),
-     * and when we re-takeover we need the new app state anyway, so we have to use
-     * a special field to store where we clobbered the app retaddr in order to restore
-     * it on a detach
-     */
-    instrlist_append(bb->ilist, instr_create_save_to_dc_via_reg
-                     (dcontext, REG_NULL/*default*/, REG_XSP,
-                      NATIVE_EXEC_RETLOC_OFFSET));
-#ifdef X64
-    /* must go through a register */
-    instrlist_append(bb->ilist, INSTR_CREATE_mov_imm
-                     (dcontext, opnd_create_reg(REG_XAX),
-                      OPND_CREATE_INTPTR((ptr_int_t)back_from_native)));
-    instrlist_append(bb->ilist, INSTR_CREATE_mov_st
-                     (dcontext, OPND_CREATE_MEMPTR(REG_XSP, 0),
-                      opnd_create_reg(REG_XAX)));
-#else
-    instrlist_append(bb->ilist, INSTR_CREATE_mov_st
-                     (dcontext, OPND_CREATE_MEM32(REG_XSP, 0),
-                      OPND_CREATE_INTPTR((ptr_int_t)back_from_native)));
-#endif
-}
-
 /* WARNING: breaks all kinds of rules, like ret addr transparency and
  * assuming app stack and not doing calls out of the cache and not having
  * control during dll loads, etc...
@@ -4048,7 +4033,7 @@ build_native_exec_bb(dcontext_t *dcontext, build_bb_t *bb)
     instr_t *in;
     opnd_t jmp_tgt;
 #ifdef X64
-    bool reachable = rel32_reachable_from_heap(bb->start_pc);
+    bool reachable = rel32_reachable_from_vmcode(bb->start_pc);
 #endif
     DEBUG_DECLARE(bool ok;)
     /* if we ever protect from simultaneous thread attacks then this will
@@ -4093,15 +4078,17 @@ build_native_exec_bb(dcontext_t *dcontext, build_bb_t *bb)
     instrlist_append(bb->ilist, instr_create_save_to_dc_via_reg
                      (dcontext, REG_NULL/*default*/, REG_XAX, XAX_OFFSET));
 
-    /* For calls into native modules, we save the retaddr in the dcontext and
-     * replace it with back_from_native.  For returns from non-native to native
-     * modules, we enter directly.
+    /* need some cleanup prior to native: turn off asynch, clobber trace, etc.
+     * Now that we have a stack of native retaddrs, we save the app retaddr in C
+     * code.
      */
     if (bb->native_call) {
-        native_bb_swap_retaddr(dcontext, bb);
+        dr_insert_clean_call(dcontext, bb->ilist, NULL,
+                             (void *)call_to_native, false/*!fp*/, 1,
+                             opnd_create_reg(REG_XSP));
     } else {
-        ASSERT(DYNAMO_OPTION(native_exec_retakeover) &&
-               "shouldn't jump to native without callout interception");
+        dr_insert_clean_call(dcontext, bb->ilist, NULL,
+                             (void *) return_to_native, false/*!fp*/, 0);
     }
 
 #ifdef X64
@@ -4130,9 +4117,6 @@ build_native_exec_bb(dcontext_t *dcontext, build_bb_t *bb)
                      (dcontext, REG_NULL/*default*/, REG_XAX, XAX_OFFSET));
     append_shared_restore_dcontext_reg(dcontext, bb->ilist);
 
-    /* need some cleanup prior to native: turn off asynch, clobber trace, etc. */
-    dr_insert_clean_call(dcontext, bb->ilist, NULL, (void *) entering_native,
-                         false/*!fp*/, 0);
     /* this is the jump to native code */
     instrlist_append(bb->ilist, instr_create_0dst_1src
                      (dcontext, (opnd_is_pc(jmp_tgt) ? OP_jmp : OP_jmp_ind),
@@ -4219,7 +4203,7 @@ at_native_exec_gateway(dcontext_t *dcontext, app_pc start, bool *is_call
              LINKSTUB_INDIRECT(dcontext->last_exit->flags))) {
             STATS_INC(num_native_entrance_checks);
             /* we do the overlap check last since it's more costly */
-            if (vmvector_overlap(native_exec_areas, start, start+1)) {
+            if (is_native_pc(start)) {
                 native_exec_bb = true;
                 *is_call = true;
                 DOSTATS({
@@ -4237,7 +4221,7 @@ at_native_exec_gateway(dcontext_t *dcontext, app_pc start, bool *is_call
         else if (DYNAMO_OPTION(native_exec_retakeover) &&
                  LINKSTUB_INDIRECT(dcontext->last_exit->flags) &&
                  TEST(LINK_RETURN, dcontext->last_exit->flags)) {
-            if (vmvector_overlap(native_exec_areas, start, start+1)) {
+            if (is_native_pc(start)) {
                 /* XXX: check that this is the return address of a known native
                  * callsite where we took over on a module transition.
                  */
@@ -4253,7 +4237,7 @@ at_native_exec_gateway(dcontext_t *dcontext, app_pc start, bool *is_call
         else if (DYNAMO_OPTION(native_exec_retakeover) &&
                  LINKSTUB_INDIRECT(dcontext->last_exit->flags) &&
                  start == get_image_entry()) {
-            if (vmvector_overlap(native_exec_areas, start, start+1)) {
+            if (is_native_pc(start)) {
                 native_exec_bb = true;
                 *is_call = false;
             }
@@ -4273,7 +4257,7 @@ at_native_exec_gateway(dcontext_t *dcontext, app_pc start, bool *is_call
             /* vector check cheaper than is_readable syscall, etc. so do it before them,
              * but after last_exit checks above since overlap is more costly
              */
-            if (vmvector_overlap(native_exec_areas, start, start+1) &&
+            if (is_native_pc(start) &&
                 is_readable_without_exception((app_pc)tos, sizeof(app_pc))) {
                 enum { MAX_CALL_CONSIDER = 6 /* ignore prefixes */ };
                 app_pc retaddr = *tos;
@@ -4332,7 +4316,7 @@ at_native_exec_gateway(dcontext_t *dcontext, app_pc start, bool *is_call
         DOSTATS({
             /* did we reach a native dll w/o going through an ind call caught above? */
             if (!xfer_target /* else we'll re-check at the target itself */ &&
-                !native_exec_bb && vmvector_overlap(native_exec_areas, start, start+1)) {
+                !native_exec_bb && is_native_pc(start)) {
                 LOG(THREAD, LOG_INTERP|LOG_VMAREAS, 2,
                     "WARNING: pc "PFX" is on native list but reached bypassing gateway!\n",
                     start);
@@ -4409,7 +4393,7 @@ init_interp_build_bb(dcontext_t *dcontext, build_bb_t *bb, app_pc start,
          * do not export level-handling instr_t routines like *_expand
          * for walking instrlists and instr_decode().
          */
-        bb->full_decode = true;
+        bb->full_decode = !INTERNAL_OPTION(fast_client_decode);
         /* PR 299808: we give client chance to re-add instrumentation */
         bb->for_trace = for_trace;
     }

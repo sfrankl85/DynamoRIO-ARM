@@ -501,6 +501,31 @@ dynamorio_app_init(void)
         modules_init(); /* before vm_areas_init() */
         os_init();
         config_heap_init(); /* after heap_init */
+
+        /* Setup for handling faults in loader_init() */
+        /* initial stack so we don't have to use app's 
+         * N.B.: we never de-allocate initstack (see comments in app_exit)
+         */
+        initstack = (byte *) stack_alloc(DYNAMORIO_STACK_SIZE);
+
+#if defined(WINDOWS) && defined(STACK_GUARD_PAGE)
+        /* PR203701: separate stack for error reporting when the
+         * dstack is exhausted
+         */
+        exception_stack = (byte *) stack_alloc(EXCEPTION_STACK_SIZE);
+#endif
+#ifdef WINDOWS
+        if (!INTERNAL_OPTION(noasynch)) {
+            /* We split the hooks up: first we put in just Ki* to catch
+             * exceptions in client init routines (PR 200207), but we don't want
+             * syscall hooks so client init can scan syscalls.
+             * Xref PR 216934 where this was originally down below 1st thread init,
+             * before we had GLOBAL_DCONTEXT.
+             */
+            callback_interception_init_start();
+        }
+#endif /* WINDOWS */
+
         /* loader initialization, finalize the private lib load.
          * FIXME i#338: this must be before arch_init() for Windows, but Linux
          * wants it later.
@@ -544,17 +569,6 @@ dynamorio_app_init(void)
         }
 #endif /* INTERNAL */
 
-        /* initial stack so we don't have to use app's 
-         * N.B.: we never de-allocate initstack (see comments in app_exit)
-         */
-        initstack = (byte *) stack_alloc(DYNAMORIO_STACK_SIZE);
-
-#if defined(WINDOWS) && defined(STACK_GUARD_PAGE)
-        /* PR203701: separate stack for error reporting when the
-         * dstack is exhausted
-         */
-        exception_stack = (byte *) stack_alloc(EXCEPTION_STACK_SIZE);
-#endif
         LOG(GLOBAL, LOG_TOP, 1, "\n");
 
         /* initialize thread hashtable */
@@ -567,6 +581,9 @@ dynamorio_app_init(void)
         size = HASHTABLE_SIZE(ALL_THREADS_HASH_BITS) * sizeof(thread_record_t*);
         all_threads = (thread_record_t**) global_heap_alloc(size HEAPACCT(ACCT_THREAD_MGT));
         memset(all_threads, 0, size);
+        if (!INTERNAL_OPTION(nop_initial_bblock)
+            IF_WINDOWS(|| !check_sole_thread())) /* some other thread is already here! */
+            bb_lock_start = true;
 
 #ifdef SIDELINE
         /* initialize sideline thread after thread table is set up */
@@ -604,21 +621,6 @@ dynamorio_app_init(void)
             find_dynamo_library_vm_areas();
             dynamo_vm_areas_unlock();
         }
-
-#ifdef WINDOWS
-        if (!INTERNAL_OPTION(noasynch)) {
-            /* PR 216934: This is only this late b/c we originally didn't have
-             * GLOBAL_DCONTEXT and had to be post-thread-init.  Now we should
-             * move it up to report errors in client init routines: though we
-             * then have to handle client library loads w/ our hooks in place.
-             */
-            /* We split the hooks up: first we put in just Ki* to catch
-             * exceptions in client init routines (PR 200207), but we don't want
-             * syscall hooks so client init can scan syscalls
-             */
-            callback_interception_init_start();
-        }
-#endif /* WINDOWS */
 
 #ifdef CLIENT_INTERFACE
         /* client last, in case it depends on other inits: must be after
@@ -1471,7 +1473,7 @@ create_new_dynamo_context(bool initial, byte *dstack_in)
     /* Set the hot patch exception state to be empty/unused. */
     DODEBUG(memset(&dcontext->hotp_excpt_state, -1, sizeof(dr_jmp_buf_t)););
 #endif
-    ASSERT(dcontext->try_except_state == NULL);
+    ASSERT(dcontext->try_except.try_except_state == NULL);
 
     DODEBUG({dcontext->logfile = INVALID_FILE;});
     dcontext->owning_thread = get_thread_id();
@@ -1499,7 +1501,7 @@ delete_dynamo_context(dcontext_t *dcontext, bool free_stack)
         stack_free(dcontext->dstack, DYNAMORIO_STACK_SIZE);
     } /* else will be cleaned up by caller */
 
-    ASSERT(dcontext->try_except_state == NULL);
+    ASSERT(dcontext->try_except.try_except_state == NULL);
 
 #ifdef RETURN_STACK
     LOG(THREAD, LOG_TOP, 1, "Return stack still has %d pair(s) on it\n",
@@ -1538,9 +1540,9 @@ initialize_dynamo_context(dcontext_t *dcontext)
     dcontext->initialized = true;
     dcontext->whereami = WHERE_APP;
     dcontext->next_tag = NULL;
-    dcontext->native_exec_retval = NULL;
-    dcontext->native_exec_retloc = NULL;
     dcontext->native_exec_postsyscall = NULL;
+    memset(dcontext->native_retstack, 0, sizeof(dcontext->native_retstack));
+    dcontext->native_retstack_cur = 0;
 #ifdef RETURN_STACK
     dcontext->top_of_rstack = dcontext->rstack;
 #endif
@@ -1672,6 +1674,7 @@ create_callback_dcontext(dcontext_t *old_dcontext)
     new_dcontext->priv_nt_rpc = old_dcontext->priv_nt_rpc;
     new_dcontext->app_nls_cache = old_dcontext->app_nls_cache;
     new_dcontext->priv_nls_cache = old_dcontext->priv_nls_cache;
+    IF_X64(new_dcontext->app_stack_limit = old_dcontext->app_stack_limit);
     new_dcontext->teb_base = old_dcontext->teb_base;
 #endif
 #ifdef LINUX
@@ -1717,7 +1720,7 @@ create_callback_dcontext(dcontext_t *old_dcontext)
     new_dcontext->nudge_thread = old_dcontext->nudge_thread;
 #endif
     /* our exceptions should be handled within one DR context switch */
-    ASSERT(old_dcontext->try_except_state == NULL);
+    ASSERT(old_dcontext->try_except.try_except_state == NULL);
     new_dcontext->local_state = old_dcontext->local_state;
 #ifdef WINDOWS
     new_dcontext->aslr_context.last_child_padded =
@@ -2028,6 +2031,10 @@ dynamo_thread_init(byte *dstack_in, priv_mcontext_t *mc
      * for win32, in new_thread_setup for linux, in main init for 1st thread
      */
 
+    /* Try to handle externally injected threads */
+    if (dynamo_initialized && !bb_lock_start)
+        pre_second_thread();
+
     /* synch point so thread creation can be prevented for critical periods */
     mutex_lock(&thread_initexit_lock);
 
@@ -2144,6 +2151,11 @@ dynamo_thread_init(byte *dstack_in, priv_mcontext_t *mc
      * to avoid holding it while running private lib thread init code (i#875).
      */
     mutex_unlock(&thread_initexit_lock);
+
+#ifdef CLIENT_INTERFACE
+    /* Set up client data needed in loader_thread_init for IS_CLIENT_THREAD */
+    instrument_client_thread_init(dcontext, client_thread);
+#endif
 
     loader_thread_init(dcontext);
 
@@ -2327,6 +2339,15 @@ dynamo_thread_exit_common(dcontext_t *dcontext, thread_id_t id,
     if (!other_thread)
         dynamo_thread_not_under_dynamo(dcontext);
 
+    /* We clean up priv libs prior to setting tls dc to NULL so we can use
+     * TRY_EXCEPT when calling the priv lib entry routine
+     */
+    if (!dynamo_exited ||
+        (other_thread &&
+         (IF_WINDOWS_ELSE(!doing_detach, true) ||
+          dcontext->owning_thread != get_thread_id()))) /* else already did this */
+        loader_thread_exit(dcontext);
+
     /* set tls dc to NULL prior to cleanup, to avoid problems handling
      * alarm signals received during cleanup (we'll suppress if tls
      * dc==NULL which seems the right thing to do: not worth our
@@ -2344,11 +2365,6 @@ dynamo_thread_exit_common(dcontext_t *dcontext, thread_id_t id,
     if (id == get_thread_id())
         set_thread_private_dcontext(NULL);
 
-    if (!dynamo_exited ||
-        (other_thread &&
-         (IF_WINDOWS_ELSE(!doing_detach, true) ||
-          dcontext->owning_thread != get_thread_id()))) /* else already did this */
-        loader_thread_exit(dcontext);
     fcache_thread_exit(dcontext);
     link_thread_exit(dcontext);
     monitor_thread_exit(dcontext);
@@ -2612,6 +2628,8 @@ dynamorio_take_over_threads(dcontext_t *dcontext)
     do {
         found_threads = os_take_over_all_unknown_threads(dcontext);
         attempts++;
+        if (found_threads && !bb_lock_start)
+            bb_lock_start = true;
     } while (found_threads && attempts < MAX_TAKE_OVER_ATTEMPTS);
 
     if (found_threads) {
@@ -2932,26 +2950,25 @@ check_should_be_protected(uint sec)
 bool
 data_sections_enclose_region(app_pc start, app_pc end)
 {
-    /* rather than solve the general enclose problem, we check for 32-bit,
-     * where .data|.fspdata|.cspdata|.nspdata form the only writable region,
-     * and 64-bit, where .pdata is between .data and .fspdata.
-     * Building with VS2012, I'm seeing the sections in other orders (i#1075).
+    /* Rather than solve the general enclose problem by sorting,
+     * we subtract each piece we find.
+     * It used to be that on 32-bit .data|.fspdata|.cspdata|.nspdata formed
+     * the only writable region, with .pdata between .data and .fspdata on 64.
+     * But building with VS2012, I'm seeing the sections in other orders (i#1075).
+     * And with x64 reachability we moved the interception buffer in .data,
+     * and marking it +rx results in sub-section calls to here.
      */
     int i;
     bool found_start = false, found_end = false;
-    ssize_t sz = 0;
+    ssize_t sz = end - start;
     for (i = 0; i < DATASEC_NUM; i++) {
-        if (datasec_start[i] == start)
-            found_start = true;
-        if (datasec_end[i] == end)
-            found_end = true;
-        sz += (datasec_end[i] - datasec_start[i]);
+        if (datasec_start[i] <= end && datasec_end[i] >= start) {
+            byte *overlap_start = MAX(datasec_start[i], start);
+            byte *overlap_end = MIN(datasec_end[i], end);
+            sz -= overlap_end - overlap_start;
+        }
     }
-#  ifdef X64
-    return (found_start && found_end);
-#  else
-    return (found_start && found_end && sz == end - start);
-#  endif
+    return sz == 0;
 }
 # endif /* WINDOWS */
 #endif /* DEBUG */
@@ -3161,3 +3178,25 @@ is_currently_on_dstack(dcontext_t *dcontext)
     GET_STACK_PTR(cur_esp);
     return is_on_dstack(dcontext, cur_esp);
 }
+
+void
+pre_second_thread(void)
+{
+    /* i#1111: nop-out bb_building_lock until 2nd thread created.
+     * While normally we'll call this in the primary thread while not holding
+     * the lock, it's possible on Windows for an externally injected thread
+     * (or for a thread sneakily created by some native_exec code w/o going
+     * through ntdll wrappers) to appear.  We solve the problem of the main
+     * thread currently holding bb_building_lock and us turning its
+     * unlock into an error by the bb_lock_would_have bool in
+     * SHARED_BB_UNLOCK().
+     */
+    if (!bb_lock_start) {
+        mutex_lock(&bb_building_lock);
+        SELF_UNPROTECT_DATASEC(DATASEC_RARELY_PROT);
+        bb_lock_start = true;
+        SELF_PROTECT_DATASEC(DATASEC_RARELY_PROT);
+        mutex_unlock(&bb_building_lock);
+    }
+}
+

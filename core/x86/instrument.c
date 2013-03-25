@@ -1079,6 +1079,9 @@ dr_nudge_client_ex(process_id_t process_id, client_id_t client_id,
 {
     if (process_id == get_process_id()) {
         size_t i;
+#ifdef WINDOWS
+        pre_second_thread();
+#endif
         for (i=0; i<num_client_libs; i++) {
             if (client_libs[i].id == client_id) {
                 if (client_libs[i].nudge_callbacks.num == 0) {
@@ -1103,18 +1106,8 @@ dr_nudge_client(client_id_t client_id, uint64 argument)
 }
 
 void
-instrument_thread_init(dcontext_t *dcontext, bool client_thread, bool valid_mc)
+instrument_client_thread_init(dcontext_t *dcontext, bool client_thread)
 {
-#if defined(CLIENT_INTERFACE) && defined(WINDOWS)
-    bool swap_peb = false;
-#endif
-
-    /* Note that we're called twice for the initial thread: once prior
-     * to instrument_init() (PR 216936) to set up the dcontext client
-     * field (at which point there should be no callbacks since client
-     * has not had a chance to register any), and once after
-     * instrument_init() to call the client event.
-     */
     if (dcontext->client_data == NULL) {
         dcontext->client_data = HEAP_TYPE_ALLOC(dcontext, client_data_t,
                                                 ACCT_OTHER, UNPROTECTED);
@@ -1134,10 +1127,28 @@ instrument_thread_init(dcontext_t *dcontext, bool client_thread, bool valid_mc)
         /* We don't call dynamo_thread_not_under_dynamo() b/c we want itimers. */
         dcontext->thread_record->under_dynamo_control = false;
         dcontext->client_data->is_client_thread = true;
+    }
+#endif /* CLIENT_SIDELINE */
+}
+
+void
+instrument_thread_init(dcontext_t *dcontext, bool client_thread, bool valid_mc)
+{
+    /* Note that we're called twice for the initial thread: once prior
+     * to instrument_init() (PR 216936) to set up the dcontext client
+     * field (at which point there should be no callbacks since client
+     * has not had a chance to register any) (now split out, but both
+     * routines are called prior to instrument_init()), and once after
+     * instrument_init() to call the client event.
+     */
+#if defined(CLIENT_INTERFACE) && defined(WINDOWS)
+    bool swap_peb = false;
+#endif
+
+    if (client_thread) {
         /* no init event */
         return;
     }
-#endif /* CLIENT_SIDELINE */
 
 #if defined(CLIENT_INTERFACE) && defined(WINDOWS)
     /* i#996: we might be in app's state.
@@ -1328,7 +1339,9 @@ check_ilist_translations(instrlist_t *ilist)
      */
     instr_t *in;
     for (in = instrlist_first(ilist); in != NULL; in = instr_get_next(in)) {
-        if (instr_ok_to_mangle(in)) {
+        if (!instr_opcode_valid(in)) {
+            CLIENT_ASSERT(INTERNAL_OPTION(fast_client_decode), "level 0 instr found");
+        } else if (instr_ok_to_mangle(in)) {
             DOLOG(LOG_INTERP, 1, {
                 if (instr_get_translation(in) == NULL)
                     loginst(get_thread_private_dcontext(), 1, in, "translation is NULL");
@@ -2644,8 +2657,8 @@ dr_try_setup(void *drcontext, void **try_cxt)
     try_state = (try_except_context_t *)
         HEAP_TYPE_ALLOC(dcontext, try_except_context_t, ACCT_CLIENT, PROTECTED);
     *try_cxt = try_state;
-    try_state->prev_context = dcontext->try_except_state;
-    dcontext->try_except_state = try_state;
+    try_state->prev_context = dcontext->try_except.try_except_state;
+    dcontext->try_except.try_except_state = try_state;
 }
 
 /* dr_try_start() is in x86.asm since we can't have an extra frame that's
@@ -2661,7 +2674,7 @@ dr_try_stop(void *drcontext, void *try_cxt)
     CLIENT_ASSERT(!standalone_library, "API not supported in standalone mode");
     ASSERT(dcontext != NULL && dcontext == get_thread_private_dcontext());
     ASSERT(try_state != NULL);
-    POP_TRY_BLOCK(dcontext, *try_state); 
+    POP_TRY_BLOCK(&dcontext->try_except, *try_state);
     HEAP_TYPE_FREE(dcontext, try_state, try_except_context_t, ACCT_CLIENT, PROTECTED);
 }
 
@@ -3512,7 +3525,7 @@ dr_map_file(file_t f, size_t *size INOUT, uint64 offs, app_pc addr, uint prot,
 {
     return (void *) map_file(f, size, offs, addr, prot,
                              TEST(DR_MAP_PRIVATE, flags),
-                             false/*!image*/,
+                             IF_WINDOWS_ELSE(TEST(DR_MAP_IMAGE, flags), false),
                              IF_WINDOWS_ELSE(false, TEST(DR_MAP_FIXED, flags)));
 }
 
@@ -3520,8 +3533,21 @@ DR_API
 bool
 dr_unmap_file(void *map, size_t size)
 {
+    dr_mem_info_t info;
     CLIENT_ASSERT(ALIGNED(map, PAGE_SIZE),
                   "dr_unmap_file: map is not page aligned");
+    if (!dr_query_memory_ex(map, &info) /* fail to query */ ||
+        info.type == DR_MEMTYPE_FREE /* not mapped file */) {
+        CLIENT_ASSERT(false, "dr_unmap_file: incorrect file map");
+        return false;
+    }
+#ifdef WINDOWS
+    /* On Windows, the whole file will be unmapped instead, so we adjust
+     * the bound to make sure vm_areas are updated correctly.
+     */
+    map  = info.base_pc;
+    size = info.size;
+#endif
     return unmap_file((byte *) map, size);
 }
 
@@ -3683,7 +3709,7 @@ dr_write_to_console(bool to_stdout, const char *fmt, va_list ap)
     uint written;
     int len;
     HANDLE std;
-    CLIENT_ASSERT(!dr_using_console(), "internal logic error");
+    CLIENT_ASSERT(dr_using_console(), "internal logic error");
     ASSERT(priv_kernel32 != NULL &&
            kernel32_WriteFile != NULL);
     /* kernel32!GetStdHandle(STD_OUTPUT_HANDLE) == our PEB-based get_stdout_handle */
@@ -4207,11 +4233,37 @@ dr_insert_call(void *drcontext, instrlist_t *ilist, instr_t *where,
         va_end(ap);
     }
     insert_meta_call_vargs(dcontext, ilist, where, false/*not clean*/,
-                           callee, num_args, args);
+                           vmcode_get_start(), callee, num_args, args);
     if (num_args != 0) {
         HEAP_ARRAY_FREE(drcontext, args, opnd_t, num_args,
                         ACCT_CLEANCALL, UNPROTECTED);
     }
+}
+
+bool
+dr_insert_call_ex(void *drcontext, instrlist_t *ilist, instr_t *where,
+                  byte *encode_pc, void *callee, uint num_args, ...)
+{
+    dcontext_t *dcontext = (dcontext_t *) drcontext;
+    opnd_t *args = NULL;
+    bool direct;
+    va_list ap;
+    CLIENT_ASSERT(drcontext != NULL, "dr_insert_call: drcontext cannot be NULL");
+    /* we don't check for GLOBAL_DCONTEXT since DR internally calls this */
+    if (num_args != 0) {
+        args = HEAP_ARRAY_ALLOC(drcontext, opnd_t, num_args,
+                                ACCT_CLEANCALL, UNPROTECTED);
+        va_start(ap, num_args);
+        convert_va_list_to_opnd(args, num_args, ap);
+        va_end(ap);
+    }
+    direct = insert_meta_call_vargs(dcontext, ilist, where, false/*not clean*/,
+                                    encode_pc, callee, num_args, args);
+    if (num_args != 0) {
+        HEAP_ARRAY_FREE(drcontext, args, opnd_t, num_args,
+                        ACCT_CLEANCALL, UNPROTECTED);
+    }
+    return direct;
 }
 
 /* Internal utility routine for inserting context save for a clean call.
@@ -4286,6 +4338,7 @@ dr_insert_clean_call_ex_varg(void *drcontext, instrlist_t *ilist, instr_t *where
     clean_call_info_t cci; /* information for clean call insertion. */
     opnd_t *args = NULL;
     bool save_fpstate = TEST(DR_CLEANCALL_SAVE_FLOAT, save_flags);
+    byte *encode_pc;
     CLIENT_ASSERT(drcontext != NULL, "dr_insert_clean_call: drcontext cannot be NULL");
     STATS_INC(cleancall_inserted);
     LOG(THREAD, LOG_CLEANCALL, 2, "CLEANCALL: insert clean call to "PFX"\n", callee);
@@ -4393,8 +4446,12 @@ dr_insert_clean_call_ex_varg(void *drcontext, instrlist_t *ilist, instr_t *where
      * flag will disappear and translation will fail.
      */
     instrlist_set_our_mangling(ilist, true);
+    if (TEST(DR_CLEANCALL_INDIRECT, save_flags))
+        encode_pc = vmcode_unreachable_pc();
+    else
+        encode_pc = vmcode_get_start();
     insert_meta_call_vargs(dcontext, ilist, where, true/*clean*/,
-                           callee, num_args, args);
+                           encode_pc, callee, num_args, args);
     if (num_args != 0) {
         HEAP_ARRAY_FREE(drcontext, args, opnd_t, num_args, 
                         ACCT_CLEANCALL, UNPROTECTED);
@@ -6421,4 +6478,32 @@ dr_unregister_persist_patch(bool (*func_patch)(void *drcontext, void *perscxt,
     return remove_callback(&persist_patch_callbacks, (void (*)(void))func_patch, true);
 }
 
+DR_API
+/* Create instructions for storing pointer-size integer val to dst,
+ * and then insert them into ilist prior to where. 
+ * The created instructions are returned in first and second.
+ */
+void
+instrlist_insert_mov_immed_ptrsz(void *drcontext, ptr_int_t val, opnd_t dst,
+                                 instrlist_t *ilist, instr_t *where,
+                                 instr_t **first OUT, instr_t **second OUT)
+{
+    CLIENT_ASSERT(opnd_get_size(dst) == OPSZ_PTR, "wrong dst size");
+    insert_mov_immed_ptrsz((dcontext_t *)drcontext, val, dst,
+                           ilist, where, first, second);
+}
+
+DR_API
+/* Create instructions for pushing pointer-size integer val on the stack,
+ * and then insert them into ilist prior to where. 
+ * The created instructions are returned in first and second.
+ */
+void
+instrlist_insert_push_immed_ptrsz(void *drcontext, ptr_int_t val,
+                                  instrlist_t *ilist, instr_t *where,
+                                  instr_t **first OUT, instr_t **second OUT)
+{
+    insert_push_immed_ptrsz((dcontext_t *)drcontext, ilist, where,
+                            val, first, second);
+}
 #endif /* CLIENT_INTERFACE */

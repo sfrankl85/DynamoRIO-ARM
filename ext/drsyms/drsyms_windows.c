@@ -1,5 +1,5 @@
 /* **********************************************************
- * Copyright (c) 2011-2012 Google, Inc.  All rights reserved.
+ * Copyright (c) 2011-2013 Google, Inc.  All rights reserved.
  * Copyright (c) 2009-2010 VMware, Inc.  All rights reserved.
  * **********************************************************/
 
@@ -78,6 +78,21 @@
 #include "drsyms.h"
 #include "wininc/dia2.h"  /* for BasicType and SymTagEnum */
 
+#if _MSC_VER <= 1400 /* VS2005- */
+/* Not present in VS2005 DbgHelp.h.  Our own dbghelp_imports.lib lets us link.
+ * This is present in dbghelp.dll 6.0+ which we already say we require.
+ */
+DWORD64 IMAGEAPI
+SymLoadModuleExW(__in HANDLE hProcess,
+                 __in_opt HANDLE hFile,
+                 __in_opt PCWSTR ImageName,
+                 __in_opt PCWSTR ModuleName,
+                 __in DWORD64 BaseOfDll,
+                 __in DWORD DllSize,
+                 __in_opt PMODLOAD_DATA Data,
+                 __in_opt DWORD Flags);
+#endif
+
 /* SymSearch is not present in VS2005sp1 headers */
 typedef BOOL (__stdcall *func_SymSearch_t)
     (__in HANDLE hProcess,
@@ -95,14 +110,14 @@ typedef BOOL (__stdcall *func_SymSearch_t)
 #endif
 
 /* SymGetSymbolFile is not present in VS2005sp1 headers */
-typedef BOOL (__stdcall *func_SymGetSymbolFile_t)
+typedef BOOL (__stdcall *func_SymGetSymbolFileW_t)
     (__in_opt HANDLE hProcess,
-     __in_opt PCSTR SymPath,
-     __in PCSTR ImageFile,
+     __in_opt PCWSTR SymPath,
+     __in PCWSTR ImageFile,
      __in DWORD Type,
-     __out_ecount(cSymbolFile) PSTR SymbolFile,
+     __out_ecount(cSymbolFile) PWSTR SymbolFile,
      __in size_t cSymbolFile,
-     __out_ecount(cDbgFile) PSTR DbgFile,
+     __out_ecount(cDbgFile) PWSTR DbgFile,
      __in size_t cDbgFile);
 
 typedef struct _mod_entry_t {
@@ -287,14 +302,19 @@ load_module(HANDLE proc, const char *path)
     DWORD64 base;
     DWORD64 size;
     char *ext = strrchr(path, '.');
+    wchar_t wpath[MAX_PATH];
+
+    /* UTF-8 to wide string. */
+    dr_snwprintf(wpath, BUFFER_SIZE_ELEMENTS(wpath), L"%S", path);
+    NULL_TERMINATE_BUFFER(wpath);
 
     /* We specify bases and try to pack the address space, except for
      * the .exe which is not relocatable.
      */
     if (!stri_eq(ext, ".exe")) {
         /* Any base will do, but we need the size */
-        HANDLE f = CreateFile(path, GENERIC_READ, FILE_SHARE_READ, 
-                              NULL, OPEN_EXISTING, 0, NULL);
+        HANDLE f = CreateFileW(wpath, GENERIC_READ, FILE_SHARE_READ,
+                               NULL, OPEN_EXISTING, 0, NULL);
         if (f == INVALID_HANDLE_VALUE)
             return 0;
         base = next_load;
@@ -304,7 +324,7 @@ load_module(HANDLE proc, const char *path)
             return 0;
         next_load += ALIGN_FORWARD(size, 64*1024);
     } else {
-        /* Can pass 0 to SymLoadModule64 */
+        /* Can pass 0 to SymLoadModuleExW */
         base = 0;
         size = 0;
     }
@@ -314,15 +334,15 @@ load_module(HANDLE proc, const char *path)
      * removing resources needed for finishing an iteration
      */
 
-    base = SymLoadModule64(GetCurrentProcess(), NULL, (char *)path, NULL, base,
-                           (DWORD)size/*should check trunc*/);
+    base = SymLoadModuleExW(GetCurrentProcess(), NULL, wpath, NULL, base,
+                            (DWORD)size/*should check trunc*/, NULL, 0);
     if (base == 0) {
         /* FIXME PR 463897: for !single_target, we should handle load
          * failure by trying a different address, informed by some
          * memory queries.  For now we assume only one .exe and that
          * it's below our start load address and that we won't fail.
          */
-        NOTIFY("SymLoadModule64 error %d\n", GetLastError());
+        NOTIFY("SymLoadModuleExW error %d\n", GetLastError());
         return 0;
     }
     if (verbose) {
@@ -468,7 +488,14 @@ drsym_lookup_address_local(const char *modpath, size_t modoffs,
     line.SizeOfStruct = sizeof(line);
     if (SymGetLineFromAddr64(GetCurrentProcess(), base + modoffs, &line_disp, &line)) {
         NOTIFY("%s:%u+0x%x\n", line.FileName, line.LineNumber, line_disp);
-        /* We assume that line.FileName has a permanent lifetime */
+        /* FIXME i#1085: Get wide path with SymGetLineFromAddrW64 and convert to
+         * UTF-8.  The caller doesn't give any storage for filename so we can't
+         * do this without breaking the ABI.  Perhaps in the future we should
+         * drop the trailing variable length array so we can safely add new
+         * fields to drsym_info_t.
+         * FIXME i#1085: MSDN docs imply that FileName is reused on subsequent
+         * calls.
+         */
         out->file = line.FileName;
         out->line = line.LineNumber;
         out->line_offs = line_disp;
@@ -743,6 +770,76 @@ demangle_symbol(char *dst OUT, size_t dst_sz, const char *mangled, uint flags)
     }
 
     return len;
+}
+
+typedef struct _enum_line_info_t {
+    drsym_enumerate_lines_cb cb;
+    void *data;
+    DWORD64 base;
+    drsym_error_t success;
+} enum_line_info_t;
+
+static BOOL CALLBACK
+enum_lines_cb(PSRCCODEINFO in, void *data)
+{
+    enum_line_info_t *enum_info = (enum_line_info_t *) data;
+    drsym_line_info_t out;
+    if (in->SizeOfStruct < sizeof(*in)) {
+        /* Old dbghelp or something: bail */
+        enum_info->success = DRSYM_ERROR_FEATURE_NOT_AVAILABLE;
+        return FALSE;
+    }
+    out.cu_name = in->Obj;
+    out.file = in->FileName;
+    out.line = in->LineNumber;
+    out.line_addr = (size_t) (in->Address - enum_info->base);
+    if (!(*enum_info->cb)(&out, enum_info->data))
+        return FALSE;
+    else
+        return TRUE;
+}
+
+static drsym_error_t
+drsym_enumerate_lines_local(const char *modpath, drsym_enumerate_lines_cb callback,
+                            void *data)
+{
+    mod_entry_t *mod;
+    enum_line_info_t info;
+
+    if (modpath == NULL || callback == NULL)
+        return DRSYM_ERROR_INVALID_PARAMETER;
+
+    dr_recurlock_lock(symbol_lock);
+    mod = lookup_or_load(modpath, true/*use dbghelp*/);
+    if (mod == NULL) {
+        dr_recurlock_unlock(symbol_lock);
+        return DRSYM_ERROR_LOAD_FAILED;
+    }
+    recursive_context = true;
+    if (mod->use_pecoff_symtable) {
+        drsym_error_t symerr =
+            drsym_unix_enumerate_lines(mod->u.pecoff_data, callback, data);
+        recursive_context = false;
+        dr_recurlock_unlock(symbol_lock);
+        return symerr;
+    }
+
+    info.cb = callback;
+    info.data = data;
+    info.base = mod->u.load_base;
+    info.success = DRSYM_SUCCESS;
+    /* SymEnumSourceLines does not include compiler-provided files.
+     * We assume the caller wants all files, so we use SymEnumLines.
+     */
+    if (!SymEnumLines(GetCurrentProcess(), mod->u.load_base, NULL/*all*/,
+                      NULL/*all*/, enum_lines_cb, &info)) {
+       NOTIFY("SymEnumLines error %d\n", GetLastError());
+       info.success = DRSYM_ERROR_LINE_NOT_AVAILABLE;
+    }
+    recursive_context = false;
+
+    dr_recurlock_unlock(symbol_lock);
+    return info.success;
 }
 
 /***************************************************************************
@@ -1364,7 +1461,7 @@ drsym_module_has_symbols(const char *modpath)
         /* dbghelp.dll 6.3+ is required for SymGetSymbolFile, but the VS2005sp1
          * headers and lib have only 6.1, so we dynamically look it up
          */
-        static func_SymGetSymbolFile_t func;
+        static func_SymGetSymbolFileW_t func;
 
         if (modpath == NULL)
             return DRSYM_ERROR_INVALID_PARAMETER;
@@ -1383,20 +1480,24 @@ drsym_module_has_symbols(const char *modpath)
                  */
                 HMODULE hmod = GetModuleHandle("dbghelp.dll");
                 if (hmod != NULL)
-                    func = (func_SymGetSymbolFile_t)
-                        GetProcAddress(hmod, "SymGetSymbolFile");
+                    func = (func_SymGetSymbolFileW_t)
+                        GetProcAddress(hmod, "SymGetSymbolFileW");
             }
             if (func != NULL) {
                 /* more efficient than fully loading the pdb */
-                static char pdb_name[MAXIMUM_PATH];
-                static char pdb_path[MAXIMUM_PATH];
+                static wchar_t pdb_name[MAXIMUM_PATH];
+                static wchar_t pdb_path[MAXIMUM_PATH];
+                wchar_t wmodpath[MAXIMUM_PATH];
+                /* UTF-8 to wide string. */
+                dr_snwprintf(wmodpath, BUFFER_SIZE_ELEMENTS(wmodpath), L"%S", modpath);
+                NULL_TERMINATE_BUFFER(wmodpath);
                 /* i#917: sfPdb is not in VS2005's dbghelp.h.  Unfortunately it's
                  * an enum so we can't test whether it's defined, so we
                  * override it and assume its value will not change (unlikely
                  * since that would break binary compatibility).
                  */
 #               define sfPdb 2
-                if ((*func)(GetCurrentProcess(), NULL, modpath, sfPdb,
+                if ((*func)(GetCurrentProcess(), NULL, wmodpath, sfPdb,
                             pdb_name, BUFFER_SIZE_ELEMENTS(pdb_name),
                             pdb_path, BUFFER_SIZE_ELEMENTS(pdb_path))) {
                     /* If we ever use the name/path, note that path seems to be
@@ -1455,5 +1556,16 @@ drsym_free_resources(const char *modpath)
         dr_recurlock_unlock(symbol_lock);
 
         return (found ? DRSYM_SUCCESS : DRSYM_ERROR);
+    }
+}
+
+DR_EXPORT
+drsym_error_t
+drsym_enumerate_lines(const char *modpath, drsym_enumerate_lines_cb callback, void *data)
+{
+    if (IS_SIDELINE) {
+        return DRSYM_ERROR_NOT_IMPLEMENTED;
+    } else {
+        return drsym_enumerate_lines_local(modpath, callback, data);
     }
 }

@@ -54,7 +54,6 @@ set(TEST_OPTIONS "" CACHE STRING "Extra DynamoRIO options when running tests")
 set(TEST_32BIT_PATH "" CACHE STRING "32-bit test bin dir for cross-arch tests")
 
 # FIXME: i#120: .runall support
-# FIXME: i#65: run samples like runregression does
 # FIXME: i#65: add command to run natively
 # FIXME: i#111: get .runall tests to run in parallel
 #   and use latest cmake for "ctest -j" (and "ctest -W 60")
@@ -680,8 +679,9 @@ function(tobuild_gcc exe source depender extra_args)
   add_dependencies(${depender} target_${exe})
 endfunction(tobuild_gcc)
 
+# If the client is in suite/tests/client-interface, caller must append ".dll".
 function(torunonly_ci test realexe realclient source client_ops dr_ops exe_ops)
-  get_client_path(client_path ${realclient}.dll ${realexe})
+  get_client_path(client_path ${realclient} ${realexe})
 
   # note that b/c of cmake's ridiculous scoping we can't easily share this code
   # w/ tobuild_ci: still have to propagate out of there, so we dup.
@@ -947,69 +947,65 @@ endfunction(template2expect)
 function(rundr_cmd outcmd outops native dr_ops_aux is_runall)
   # assumes tools have been built: enforced at top level
   if (UNIX)
-    set(dr_ops "-stderr_mask 0xC -dumpcore_mask 0 ${dr_ops_aux} ${TEST_OPTIONS}")
-    if (is_runall)
-      # eliminate double-spaces, to help w/ passing strings to runall.cmake
-      string(REGEX REPLACE "  +" " " dr_ops "${dr_ops}")
-      string(REGEX REPLACE " $" "" dr_ops "${dr_ops}")
-      # ; must be quoted: can't seem to match \; or replace w/ \ so using !
-      string(REGEX REPLACE ".;" "!" dr_ops "${dr_ops}")
-    endif (is_runall)
-    # Since the creation of CTestTestfile.cmake ends up replacing \ with / we
-    # can't escape quotes, so we have to use a list variable
-    set(cmd ${MAIN_RUNTIME_OUTPUT_DIRECTORY}/runstats -s ${TEST_SECONDS} -killpg -silent)
-    if (NOT native)
-      set(cmd ${cmd} ${MAIN_RUNTIME_OUTPUT_DIRECTORY}/drrun)
-      if (TEST_SUITE)  # Use install dir in the suite for cross-arch execve.
-        set(cmd ${cmd} -dr_home "${CMAKE_INSTALL_PREFIX}")
-      endif ()
-      if (DEBUG)
-        set(cmd ${cmd} -debug)
-      endif ()
-      if (LINUX AND "${dr_ops}" MATCHES "-early_inject")
-        set(cmd ${cmd} -early)
-      endif()
-      # add dr_ops last to avoid needing extra \ on ;
-      set(${outcmd} ${cmd} -ops "${dr_ops}" PARENT_SCOPE)
-    else ()
-      # We set LD_LIBRARY_PATH for native api/ apps since we're not setting
-      # rpath (to make it easier to try different trees)
-      set(cmd ${cmd} -env LD_LIBRARY_PATH
-        "${MAIN_LIBRARY_OUTPUT_DIRECTORY}:${EXT_LIBRARY_OUTPUT_DIRECTORY}:$ENV{LD_LIBRARY_PATH}")
-      # add dr_ops last to avoid needing extra \ on ;
-      set(${outcmd} ${cmd} -env DYNAMORIO_OPTIONS "${dr_ops}" PARENT_SCOPE)
-    endif ()
-  else (UNIX)
+    set(os_ops "-dumpcore_mask 0")
+  else ()
     # Turn on core dumps for most fatal errors.  Don't dump for curiosities or
     # security violations.
-    set(dr_ops "-stderr_mask 0xC -msgbox_mask 0 -dumpcore_mask 0x7d -staged ${dr_ops_aux} ${TEST_OPTIONS}")
-    if (is_runall)
-      # eliminate double-spaces, to help w/ passing strings to runall.cmake
-      string(REGEX REPLACE "  +" " " dr_ops "${dr_ops}")
-      string(REGEX REPLACE " $" "" dr_ops "${dr_ops}")
-      # ; must be quoted: can't seem to match \; or replace w/ \ so using !
-      string(REGEX REPLACE ".;" "!" dr_ops "${dr_ops}")
-    endif (is_runall)
-    # if we used a cmake script to run each test we could use in that script:
-    #   set(ENV{DYNAMORIO_OPTIONS} "${dr_ops}")
-    # but we take advantage of the new drrun tool
-    # we pass -exit0 to avoid ctest from considering our segfault and other tests
-    # to have failed (also xref PR 548997).
-    if (VPS AND VMAP OR VMSAFE)
-      set(MODE -mode code)
-    else (VPS AND VMAP OR VMSAFE)
-      set(MODE "")
-    endif (VPS AND VMAP OR VMSAFE)
-    set(cmd ${MAIN_RUNTIME_OUTPUT_DIRECTORY}/drrun.exe -s ${TEST_SECONDS} -quiet -exit0 ${MODE})
-    if (native)
-      set(${outcmd} ${cmd} -ops "${dr_ops}" -noinject PARENT_SCOPE)
-    else (native)
+    set(os_ops "-msgbox_mask 0 -dumpcore_mask 0x7d -staged")
+  endif ()
+  set(dr_ops "-stderr_mask 0xC ${os_ops} ${dr_ops_aux} ${TEST_OPTIONS}")
+
+  if (is_runall)
+    # eliminate double-spaces, to help w/ passing strings to runall.cmake
+    string(REGEX REPLACE "  +" " " dr_ops "${dr_ops}")
+    string(REGEX REPLACE " $" "" dr_ops "${dr_ops}")
+    # ; must be quoted: can't seem to match \; or replace w/ \ so using !
+    string(REGEX REPLACE ".;" "!" dr_ops "${dr_ops}")
+  endif (is_runall)
+
+  if (WIN32 OR NOT native)
+    # Both Windows and non-native Unix tests now use the native drrun frontend.
+    # Since the creation of CTestTestfile.cmake ends up replacing \ with / we
+    # can't escape quotes, so we have to use a list variable
+    get_target_property(drrun_path drrun LOCATION${location_suffix})
+    set(cmd "${drrun_path}" -s ${TEST_SECONDS} -quiet)
+    if (DEBUG)
+      set(cmd ${cmd} -debug)
+    endif ()
+    if (UNIX)
+      set(cmd ${cmd} -killpg)
+    endif ()
+    if (UNIX AND TEST_SUITE)
+      # In the Unix suite, use the DR install dir for cross-arch execve.
+      set(cmd ${cmd} -dr_home "${CMAKE_INSTALL_PREFIX}")
+    endif ()
+    if (WIN32)
       file(TO_CMAKE_PATH "${MAIN_LIBRARY_OUTPUT_DIRECTORY}/dynamorio.dll" dllpath)
       # forward slashes work fine: we just need drive-letter path
-      # add dr_ops last to avoid needing extra \ on ;
-      set(${outcmd} ${cmd} -ops "${dr_ops}" -use_dll ${dllpath} PARENT_SCOPE)
-    endif (native)
-  endif (UNIX)
+      set(cmd ${cmd} -use_dll ${dllpath})
+      # we pass -exit0 to avoid ctest from considering our segfault and other tests
+      # to have failed (also xref PR 548997).
+      set(cmd ${cmd} -exit0)
+      if (VPS AND VMAP OR VMSAFE)
+        set(cmd ${cmd} -mode code)
+      endif (VPS AND VMAP OR VMSAFE)
+      if (native)
+        set(cmd ${cmd} -noinject)
+      endif ()
+    endif (WIN32)
+    # add dr_ops last to avoid needing extra \ on ;
+    set(${outcmd} ${cmd} -ops "${dr_ops}" PARENT_SCOPE)
+
+  elseif (UNIX AND native)
+    set(cmd ${MAIN_RUNTIME_OUTPUT_DIRECTORY}/runstats -s ${TEST_SECONDS} -killpg -silent)
+    # We set LD_LIBRARY_PATH for native api/ apps since we're not setting
+    # rpath (to make it easier to try different trees)
+    set(cmd ${cmd} -env LD_LIBRARY_PATH
+      "${MAIN_LIBRARY_OUTPUT_DIRECTORY}:${EXT_LIBRARY_OUTPUT_DIRECTORY}:$ENV{LD_LIBRARY_PATH}")
+    # add dr_ops last to avoid needing extra \ on ;
+    set(${outcmd} ${cmd} -env DYNAMORIO_OPTIONS "${dr_ops}" PARENT_SCOPE)
+  endif ()
+
   set(${outops} "${dr_ops}" PARENT_SCOPE)
 endfunction(rundr_cmd)
 
@@ -1072,9 +1068,12 @@ function(torun test key source native dr_ops exe_ops)
     if (UNIX)
       # swap from runstats to run_in_bg to run the test in the background
       set(tmpfile "${CMAKE_CURRENT_BINARY_DIR}/${test}-out")
-      string(REGEX REPLACE "^.*(-env;LD_L|${MAIN_RUNTIME_OUTPUT_DIRECTORY}/drrun)" 
+      string(REGEX REPLACE "^.*(${MAIN_RUNTIME_OUTPUT_DIRECTORY}/drrun)" 
         "${MAIN_RUNTIME_OUTPUT_DIRECTORY}/run_in_bg;-out;${tmpfile};\\1"
         rundr "${rundr}")
+      # Remove timeout args to drrun to ensure that it doesn't fork the app.
+      string(REGEX REPLACE ";-s;[0-9]+" "" rundr "${rundr}")
+      string(REGEX REPLACE ";-killpg" "" rundr "${rundr}")
       set(clear_arg "")
       if ("${runall}" MATCHES "<reset>")
         set(nudge_arg "-type\;reset")
@@ -1214,6 +1213,10 @@ function(torun_normal name test ops)
     ops2testprefix(prefix "${ops}")
     set_property(TEST ${name} APPEND PROPERTY DEPENDS "${prefix}${${test}_depends}")
   endif (DEFINED ${test}_depends)
+  if (DEFINED ${test}_env)
+    ops2testprefix(prefix "${ops}")
+    set_property(TEST ${name} APPEND PROPERTY ENVIRONMENT "${prefix}${${test}_env}")
+  endif ()
 endfunction(torun_normal)
 
 function(torun_ci name test ops)
@@ -1238,6 +1241,10 @@ function(torun_ci name test ops)
     ops2testprefix(prefix "${ops}")
     set_property(TEST ${name} APPEND PROPERTY DEPENDS "${prefix}${${test}_depends}")
   endif (DEFINED ${test}_depends)
+  if (DEFINED ${test}_env)
+    ops2testprefix(prefix "${ops}")
+    set_property(TEST ${name} APPEND PROPERTY ENVIRONMENT "${prefix}${${test}_env}")
+  endif ()
 endfunction(torun_ci)
 
 function(torun_api name test ops)
@@ -1276,13 +1283,15 @@ endif (WIN32)
 tobuild(common.eflags common/eflags.c)
 tobuild(common.fib common/fib.c)
 tobuild(common.getretaddr common/getretaddr.c)
-if (WIN32)
-  set(native_dll_name "common.nativeexec.dll.dll")
-else ()
-  set(native_dll_name "libcommon.nativeexec.dll.so")
-endif ()
-tobuild_dll(common.nativeexec common/nativeexec.c
+
+tobuild_appdll(common.nativeexec common/nativeexec.c)
+get_target_property(native_dll_name common.nativeexec.appdll LOCATION${location_suffix})
+get_filename_component(native_dll_name "${native_dll_name}" NAME)
+tobuild(common.nativeexec common/nativeexec.c
   "-native_exec_list ${native_dll_name}")
+target_link_libraries(common.nativeexec common.nativeexec.appdll)
+# We want rpath on Linux so we can load the appdll.
+set_target_properties(common.nativeexec PROPERTIES SKIP_BUILD_RPATH OFF)
 if (UNIX)
   # FIXME i#978: Windows support NYI
   torunonly(common.nativeexec_retakeover common.nativeexec common/nativeexec.c
@@ -1433,7 +1442,7 @@ if (CLIENT_INTERFACE)
       client-interface/drsyms-test.appdll.cpp client.drsyms-test "-shared")
     torunonly_ci(client.drsyms-testgcc
       ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/client.drsyms-testgcc.exe
-      client.drsyms-test client-interface/drsyms-test.cpp "" "-stack_size 36K"
+      client.drsyms-test.dll client-interface/drsyms-test.cpp "" "-stack_size 36K"
       "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/client.drsyms-testgcc.appdll.dll")
     set(client.drsyms-testgcc_expectbase "drsyms-testgcc")
   endif (WIN32 AND GCC AND NOT X64)
@@ -1457,7 +1466,7 @@ if (CLIENT_INTERFACE)
     append_link_flags(client.pcache "/dynamicbase:no")
   endif ()
   set(DynamoRIO_SET_PREFERRED_BASE OFF)
-  torunonly_ci(client.pcache-use client.pcache client.pcache
+  torunonly_ci(client.pcache-use client.pcache client.pcache.dll
     client-interface/pcache.c "" "-persist" "")
   # XXX: we should have the key be the default for the .expect but
   # currently that's not the case (thread-reset, etc.).
@@ -1500,6 +1509,21 @@ if (CLIENT_INTERFACE)
   use_DynamoRIO_extension(client.nudge_ex_FLAKY.dll drmgr)
 
   tobuild_ci(client.retaddr client-interface/retaddr.c "" "" "")
+
+  if (BUILD_SAMPLES)
+    # Sanity tests: we run the samples without SHOW_RESULTS (turned off
+    # if BUILD_TESTS is on) so we're only ensuring the client doesn't crash.
+    # This requires that each sample does not affect stdout and works
+    # when given no arguments.
+    # We run common.eflags mainly for memtrace and other big clients which
+    # are quite slow on common.fib or common.broadfun: just a sanity check
+    # after all.
+    get_property(sample_list GLOBAL PROPERTY DynamoRIO_sample_list)
+    foreach (sample ${sample_list})
+      torunonly_ci(sample.${sample} common.eflags ${sample} common/eflags.c "" "" "")
+    endforeach ()
+  endif (BUILD_SAMPLES)
+
 endif (CLIENT_INTERFACE)
 
 if (UNIX)
@@ -1837,6 +1861,28 @@ if (NOT X64)
 endif (NOT X64)
 tobuild(security-common.selfmod security-common/selfmod.c)
 tochcon(security-common.selfmod textrel_shlib_t)
+if (X64)
+  # Reachability tests
+
+  # Floating DR lib.  We'd have to build a 2nd dynamorio.dll on Windows so
+  # we only test on Linux for now.
+  if (UNIX)
+    torunonly(float_DR security-common.selfmod security-common/selfmod.c "" "")
+    set(float_DR_env "LD_USE_LOAD_BIAS=0")
+    if (CLIENT_INTERFACE)
+      torunonly_ci(client.float_DR security-common.selfmod
+        client.dr_options.dll security-common/selfmod.c
+        # I picked dr_options b/c it has no output, but it requires all these ops:
+        "" "-native_exec_list foo.dll,bar.dll -opt_cleancall 3 -thread_private" "")
+      set(client.float_DR_env "LD_USE_LOAD_BIAS=0")
+    endif ()
+  endif (UNIX)
+
+  # Floating vmbase.  Risky to just pick this hardcoded address: any better ideas?
+  torunonly(float_vmbase security-common.selfmod security-common/selfmod.c
+    "-vm_base 0x30000000000 -no_heap_in_lower_4GB" "")
+
+endif (X64)
 
 tobuild("security-common.TestAllocWE" security-common/TestAllocWE.c)
 

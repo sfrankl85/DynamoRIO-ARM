@@ -808,6 +808,9 @@ os_init(void)
     if (GLOBAL != INVALID_FILE)
         fd_table_add(GLOBAL, OS_OPEN_CLOSE_ON_FORK);
 #endif
+
+    /* Ensure initialization */
+    get_dynamorio_dll_start();
 }
 
 /* called before any logfiles are opened */
@@ -1131,6 +1134,11 @@ typedef enum {
 #endif
 } tls_type_t;
 
+static tls_type_t tls_type;
+#ifdef X64
+static bool tls_using_msr;
+#endif
+
 #ifdef HAVE_TLS
 /* GDT slot we use for set_thread_area.
  * This depends on the kernel, not on the app!
@@ -1345,27 +1353,21 @@ static uint
 read_selector(reg_id_t seg)
 {
     uint sel;
-    /* pre-P6 family leaves upper 2 bytes undefined, so we clear them
-     * we don't clear and then use movw b/c that takes an extra clock cycle
-     */
     if (seg == SEG_FS) {
-        asm volatile("movl %%fs, %%eax; andl $0x0000ffff, %%eax; "
-                     "movl %%eax, %0" : "=m"(sel) : : "eax");
+        asm volatile("movl %%fs, %0" : "=r"(sel));
     } else if (seg == SEG_GS) {
-        asm volatile("movl %%gs, %%eax; andl $0x0000ffff, %%eax; "
-                     "movl %%eax, %0" : "=m"(sel) : : "eax");
+        asm volatile("movl %%gs, %0" : "=r"(sel));
     } else {
         ASSERT_NOT_REACHED();
         return 0;
     }
+    /* Pre-P6 family leaves upper 2 bytes undefined, so we clear them.  We don't
+     * clear and then use movw because that takes an extra clock cycle, and gcc
+     * can optimize this "and" into "test %?x, %?x" for calls from
+     * is_segment_register_initialized().
+     */
+    sel &= 0xffff;
     return sel;
-}
-
-/* FIXME: assumes that fs/gs is not already in use by app */
-static bool
-is_segment_register_initialized(void)
-{
-    return (read_selector(SEG_TLS) != 0);
 }
 
 /* i#107: handle segment reg usage conflicts */
@@ -1421,23 +1423,26 @@ typedef struct _os_local_state_t {
 #define TLS_APP_FS_OFFSET (offsetof(os_local_state_t, app_fs))
 
 /* N.B.: imm and idx are ushorts!
- * imm must be a preprocessor constant
- * cannot find a gcc asm constraint that will put an immed w/o a $ in, so
- * we use the preprocessor to paste the constant in.
+ * We use %c[0-9] to get gcc to emit an integer constant without a leading $ for
+ * the segment offset.  See the documentation here:
+ * http://gcc.gnu.org/onlinedocs/gccint/Output-Template.html#Output-Template
  * Also, var needs to match the pointer size, or else we'll get stack corruption.
+ * XXX: This is marked volatile prevent gcc from speculating this code before
+ * checks for is_segment_register_initialized(), but if we could find a more
+ * precise constraint, then the compiler would be able to optimize better.  See
+ * glibc comments on THREAD_SELF.
  */
 #define WRITE_TLS_SLOT_IMM(imm, var)                                  \
     IF_NOT_HAVE_TLS(ASSERT_NOT_REACHED());                            \
     ASSERT(sizeof(var) == sizeof(void*));                             \
-    asm("mov %0, %%"ASM_XAX : : "m"((var)) : ASM_XAX);                \
-    asm("mov %"ASM_XAX", "ASM_SEG":"STRINGIFY(imm) : : "m"((var)) : ASM_XAX);
+    asm volatile("mov %0, %"ASM_SEG":%c1" : : "r"(var), "i"(imm));
 
 #define READ_TLS_SLOT_IMM(imm, var)                  \
     IF_NOT_HAVE_TLS(ASSERT_NOT_REACHED());           \
     ASSERT(sizeof(var) == sizeof(void*));            \
-    asm("mov "ASM_SEG":"STRINGIFY(imm)", %"ASM_XAX); \
-    asm("mov %%"ASM_XAX", %0" : "=m"((var)) : : ASM_XAX);
+    asm volatile("mov %"ASM_SEG":%c1, %0" : "=r"(var) : "i"(imm));
 
+/* FIXME: need dedicated-storage var for _TLS_SLOT macros, can't use expr */
 #define WRITE_TLS_SLOT(idx, var)                            \
     IF_NOT_HAVE_TLS(ASSERT_NOT_REACHED());                  \
     ASSERT(sizeof(var) == sizeof(void*));                   \
@@ -1446,16 +1451,42 @@ typedef struct _os_local_state_t {
     asm("movzw"IF_X64_ELSE("q","l")" %0, %%"ASM_XDX : : "m"((idx)) : ASM_XDX); \
     asm("mov %%"ASM_XAX", %"ASM_SEG":(%%"ASM_XDX")" : : : ASM_XAX, ASM_XDX);
 
-/* FIXME: get_thread_private_dcontext() is a bottleneck, so it would be
- * good to figure out how to easily change this to use an immediate since it is
- * known at compile time -- see comments above for the _IMM versions
- */
 #define READ_TLS_SLOT(idx, var)                                    \
     ASSERT(sizeof(var) == sizeof(void*));                          \
     ASSERT(sizeof(idx) == 2);                                      \
     asm("movzw"IF_X64_ELSE("q","l")" %0, %%"ASM_XAX : : "m"((idx)) : ASM_XAX); \
     asm("mov %"ASM_SEG":(%%"ASM_XAX"), %%"ASM_XAX : : : ASM_XAX);  \
     asm("mov %%"ASM_XAX", %0" : "=m"((var)) : : ASM_XAX);
+
+/* FIXME: assumes that fs/gs is not already in use by app */
+static bool
+is_segment_register_initialized(void)
+{
+    if (read_selector(SEG_TLS) != 0)
+        return true;
+#ifdef X64
+    if (tls_using_msr) {
+        /* When the MSR is used, the selector in the register remains 0.
+         * We can't clear the MSR early in a new thread and then look for
+         * a zero base here b/c if kernel decides to use GDT that zeroing
+         * will set the selector, unless we want to assume we know when
+         * the kernel uses the GDT.
+         * Instead we make a syscall to get the tid.  This should be ok
+         * perf-wise b/c the common case is the non-zero above.
+         */
+        byte *base;
+        int res = dynamorio_syscall(SYS_arch_prctl, 2,
+                                    (SEG_TLS == SEG_FS ? ARCH_GET_FS : ARCH_GET_GS),
+                                    &base);
+        ASSERT(tls_type == TLS_TYPE_ARCH_PRCTL);
+        if (res >= 0 && base != NULL) {
+            os_local_state_t *os_tls = (os_local_state_t *) base;
+            return (os_tls->tid == get_sys_thread_id());
+        }
+    }
+#endif
+    return false;
+}
 
 /* converts a local_state_t offset to a segment offset */
 ushort
@@ -1493,9 +1524,8 @@ static os_local_state_t *
 get_os_tls(void)
 {
     os_local_state_t *os_tls;
-    ushort offs = TLS_SELF_OFFSET;
     ASSERT(is_segment_register_initialized());
-    READ_TLS_SLOT(offs, os_tls);
+    READ_TLS_SLOT_IMM(TLS_SELF_OFFSET, os_tls);
     return os_tls;
 }
 
@@ -1666,9 +1696,8 @@ local_state_extended_t *
 get_local_state_extended()
 {
     os_local_state_t *os_tls;
-    ushort offs = TLS_SELF_OFFSET;
     ASSERT(is_segment_register_initialized());
-    READ_TLS_SLOT(offs, os_tls);
+    READ_TLS_SLOT_IMM(TLS_SELF_OFFSET, os_tls);
     return &(os_tls->state);
 }
 
@@ -1996,6 +2025,9 @@ os_tls_init(void)
                 os_tls->tls_type = TLS_TYPE_ARCH_PRCTL;
                 LOG(GLOBAL, LOG_THREADS, 1,
                     "os_tls_init: arch_prctl successful for base "PFX"\n", segment);
+                /* Kernel should have written %gs for us if using GDT */
+                if (!dynamo_initialized && read_selector(SEG_TLS) == 0)
+                    tls_using_msr = true;
                 if (IF_CLIENT_INTERFACE_ELSE(INTERNAL_OPTION(private_loader), false)) {
                     res = dynamorio_syscall(SYS_arch_prctl, 2, ARCH_SET_FS, 
                                             os_tls->os_seg_info.dr_fs_base);
@@ -2111,6 +2143,9 @@ os_tls_init(void)
         global_heap_alloc(MAX_THREADS*sizeof(tls_slot_t) HEAPACCT(ACCT_OTHER));
     memset(tls_table, 0, MAX_THREADS*sizeof(tls_slot_t));
 #endif
+    /* store type in global var for convenience: should be same for all threads */
+    tls_type = os_tls->tls_type;
+    ASSERT(is_segment_register_initialized());
 }
 
 /* Frees local_state.  If the calling thread is exiting (i.e.,
@@ -2130,7 +2165,10 @@ os_tls_exit(local_state_t *local_state, bool other_thread)
     tls_type_t tls_type = os_tls->tls_type;
     int index = os_tls->ldt_index;
 
-    if (!other_thread) {
+    /* If the MSR is in use, writing to the reg faults.  We rely on it being 0
+     * to indicate that.
+     */
+    if (!other_thread && read_selector(SEG_TLS) != 0) {
         WRITE_DR_SEG(zero); /* macro needs lvalue! */
     }
     heap_munmap(os_tls->self, PAGE_SIZE);
@@ -2154,7 +2192,9 @@ os_tls_exit(local_state_t *local_state, bool other_thread)
             res = dynamorio_syscall(SYS_arch_prctl, 2, ARCH_SET_GS, NULL);
             ASSERT(res >= 0);
             /* syscall re-sets gs register so re-clear it */
-            WRITE_DR_SEG(zero); /* macro needs lvalue! */
+            if (read_selector(SEG_TLS) != 0) {
+                WRITE_DR_SEG(zero); /* macro needs lvalue! */
+            }
         }
 # endif
     }
@@ -2533,12 +2573,9 @@ thread_id_t
 get_tls_thread_id(void)
 {
     ptr_int_t tid; /* can't use thread_id_t since it's 32-bits */
-    /* need dedicated-storage var for _TLS_SLOT macros, can't use expr */
-    ushort offs;
     if (!is_segment_register_initialized())
         return INVALID_THREAD_ID;
-    offs = TLS_THREAD_ID_OFFSET;
-    READ_TLS_SLOT(offs, tid);
+    READ_TLS_SLOT_IMM(TLS_THREAD_ID_OFFSET, tid);
     /* it reads 8-bytes into the memory, which includes app_gs and app_fs.
      * 0x000000007127357b <get_tls_thread_id+37>:      mov    %gs:(%rax),%rax
      * 0x000000007127357f <get_tls_thread_id+41>:      mov    %rax,-0x8(%rbp)
@@ -2553,8 +2590,6 @@ get_thread_private_dcontext(void)
 {
 #ifdef HAVE_TLS
     dcontext_t *dcontext;
-    /* FIXME: need dedicated-storage var for _TLS_SLOT macros, can't use expr */
-    ushort offs;
     /* We have to check this b/c this is called from __errno_location prior
      * to os_tls_init, as well as after os_tls_exit, and early in a new
      * thread's initialization (see comments below on that).
@@ -2593,8 +2628,7 @@ get_thread_private_dcontext(void)
                /* ok for fork as mentioned above */
                pid_cached != get_process_id());
     });
-    offs = TLS_DCONTEXT_OFFSET;
-    READ_TLS_SLOT(offs, dcontext);
+    READ_TLS_SLOT_IMM(TLS_DCONTEXT_OFFSET, dcontext);
     return dcontext;
 #else
     /* Assumption: no lock needed on a read => no race conditions between
@@ -2620,10 +2654,8 @@ void
 set_thread_private_dcontext(dcontext_t *dcontext)
 {
 #ifdef HAVE_TLS
-    /* FIXME: need dedicated-storage var for _TLS_SLOT macros, can't use expr */
-    ushort offs = TLS_DCONTEXT_OFFSET;
     ASSERT(is_segment_register_initialized());
-    WRITE_TLS_SLOT(offs, dcontext);
+    WRITE_TLS_SLOT_IMM(TLS_DCONTEXT_OFFSET, dcontext);
 #else
     thread_id_t tid = get_thread_id();
     int i;
@@ -2668,17 +2700,15 @@ static void
 replace_thread_id(thread_id_t old, thread_id_t new)
 {
 #ifdef HAVE_TLS
-    /* FIXME: need dedicated-storage var for _TLS_SLOT macros, can't use expr */
-    ushort offs = TLS_THREAD_ID_OFFSET;
     ptr_int_t new_tid = new; /* can't use thread_id_t since it's 32-bits */
     ASSERT(is_segment_register_initialized());
     DOCHECK(1, {
         ptr_int_t old_tid; /* can't use thread_id_t since it's 32-bits */
-        READ_TLS_SLOT(offs, old_tid);
+        READ_TLS_SLOT_IMM(TLS_THREAD_ID_OFFSET, old_tid);
         IF_X64(ASSERT(CHECK_TRUNCATE_TYPE_uint(old_tid)));
         ASSERT(old_tid == old);
     });
-    WRITE_TLS_SLOT(offs, new_tid);
+    WRITE_TLS_SLOT_IMM(TLS_THREAD_ID_OFFSET, new_tid);
 #else
     int i;
     mutex_lock(&tls_lock);
@@ -3363,6 +3393,7 @@ dr_create_client_thread(void (*func)(void *param), void *arg)
         IF_NOT_X64(| CLONE_SETTLS)
         /* CLONE_THREAD required.  Signals and itimers are private anyway. */
         IF_VMX86(| (os_in_vmkernel_userworld() ? CLONE_THREAD : 0));
+    pre_second_thread();
     /* need to share signal handler table, prior to creating clone record */
     handle_clone(dcontext, flags);
     void *crec = create_clone_record(dcontext, (reg_t*)&xsp);
@@ -4924,7 +4955,8 @@ handle_execve(dcontext_t *dcontext)
         idx_ldpath = i++;
     if (DYNAMO_OPTION(follow_children)) {
         for (j = 0; j < NUM_ENV_TO_PROPAGATE; j++) {
-            if (prop_found[j] < 0)
+            prop_idx[j] = prop_found[j];
+            if (prop_idx[j] < 0)
                 prop_idx[j] = i++;
         }
     }
@@ -4971,27 +5003,30 @@ handle_execve(dcontext_t *dcontext)
 
     if (DYNAMO_OPTION(follow_children)) {
         for (j = 0; j < NUM_ENV_TO_PROPAGATE; j++) {
-            if (prop_found[j] < 0) {
-                const char *val = "";
-                switch (j) {
-                case ENV_PROP_RUNUNDER:
-                    ASSERT(strcmp(env_to_propagate[j], DYNAMORIO_VAR_RUNUNDER) == 0);
-                    /* Must pass RUNUNDER_ALL to get child injected if has no app config.
-                     * If rununder var is already set we assume it's set to 1.
-                     */
-                    ASSERT((RUNUNDER_ON | RUNUNDER_ALL) == 0x3); /* else, update "3" */
-                    val = "3";
-                    break;
-                case ENV_PROP_OPTIONS:
-                    ASSERT(strcmp(env_to_propagate[j], DYNAMORIO_VAR_OPTIONS) == 0);
-                    val = option_string;
-                    break;
-                default:
-                    val = getenv(env_to_propagate[j]);
-                    if (val == NULL)
-                        val = "";
-                    break;
-                }
+            const char *val = "";
+            bool set_env_var = (prop_found[j] < 0);
+            switch (j) {
+            case ENV_PROP_RUNUNDER:
+                ASSERT(strcmp(env_to_propagate[j], DYNAMORIO_VAR_RUNUNDER) == 0);
+                /* Must pass RUNUNDER_ALL to get child injected if has no app config.
+                 * If rununder var is already set we assume it's set to 1.
+                 */
+                ASSERT((RUNUNDER_ON | RUNUNDER_ALL) == 0x3); /* else, update "3" */
+                val = "3";
+                break;
+            case ENV_PROP_OPTIONS:
+                ASSERT(strcmp(env_to_propagate[j], DYNAMORIO_VAR_OPTIONS) == 0);
+                val = option_string;
+                /* i#1097: don't use options from the app's envp; use ours. */
+                set_env_var = true;
+                break;
+            default:
+                val = getenv(env_to_propagate[j]);
+                if (val == NULL)
+                    val = "";
+                break;
+            }
+            if (set_env_var) {
                 sz = strlen(env_to_propagate[j]) + strlen(val) + 2 /* '=' + null */;
                 var = heap_alloc(dcontext, sizeof(char)*sz HEAPACCT(ACCT_OTHER));
                 snprintf(var, sz, "%s=%s", env_to_propagate[j], val);
@@ -7544,12 +7579,14 @@ get_library_bounds(const char *name, app_pc *start/*IN/OUT*/, app_pc *end/*OUT*/
  
         if ((name_cmp != NULL &&
              (strstr(iter.comment, name_cmp) != NULL ||
-              /* Include anonymous mappings like .bss.  Our private loader
+              /* Include mid-library (non-.bss) anonymous mappings.  Our private loader
                * fills mapping holes with anonymous memory instead of a
                * MEMPROT_NONE mapping from the original file.
+               * .bss, which can be merged with a subsequent +rw anon mapping,
+               * is handled post-loop.
                */
               (found_library && iter.comment[0] == '\0' && image_size != 0 &&
-               cur_end - mod_start < image_size))) ||
+               iter.vm_end - mod_start < image_size))) ||
             (name == NULL && *start >= iter.vm_start && *start < iter.vm_end)) {
             if (!found_library) {
                 size_t mod_readable_sz;
@@ -7794,12 +7831,6 @@ is_in_dynamo_dll(app_pc pc)
      */
     if (vmk_in_vmklib(pc))
         return true;
-#endif
-#ifdef STATIC_LIBRARY
-    /* i#975: with STATIC_LIBRARY, we can't separate our code from the
-     * executable, so we always return false.
-     */
-    return false;
 #endif
     return (pc >= dynamo_dll_start && pc < dynamo_dll_end);
 }

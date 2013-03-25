@@ -100,6 +100,10 @@
 # they can be triggered earlier by calling configure_DynamoRIO_global().
 # The original cflag values are saved in variables with the prefix ORIG_
 # followed by the variable name (e.g., ORIG_CMAKE_C_FLAGS).
+# These flags are set in the configure_DynamoRIO_*() functions via
+# PARENT_SCOPE.  If you want to call these functions from another
+# function, you must first call configure_DynamoRIO_global() from
+# global scope ahead of time.
 #
 # The compiler flags are not changed when using
 # configure_DynamoRIO_decoder().
@@ -200,6 +204,8 @@ else ("${CMAKE_GENERATOR}" MATCHES "Visual Studio")
   set(location_suffix "")
 endif ("${CMAKE_GENERATOR}" MATCHES "Visual Studio")
 
+check_if_linker_is_gnu_gold(LINKER_IS_GNU_GOLD)
+
 # helper function
 function (get_lang target lang_var)
   # Note that HAS_CXX and LINKER_LANGUAGE are only defined it
@@ -287,6 +293,10 @@ set_property(GLOBAL PROPERTY
 # or per-target include dirs or link dirs, so we have to make global changes.
 # We don't want find_package() to incur those changes: only if a target
 # is actually configured.
+# The is_cxx parameter does not matter much: this routine can be called
+# with is_cxx=OFF and C++ clients will still be configured properly,
+# unless the C++ compiler and the C compiler are configured for
+# different bitwidths.
 function (configure_DynamoRIO_global is_cxx change_flags)
   # Should only be done once per project
   get_property(already_configured_project GLOBAL PROPERTY
@@ -375,6 +385,10 @@ function (configure_DynamoRIO_global is_cxx change_flags)
           string(TOUPPER "_${config}" config_upper)
         endif ("${config}" STREQUAL "")
         foreach (var CMAKE_C_FLAGS${config_upper};CMAKE_CXX_FLAGS${config_upper})
+          if ("${${var}}" STREQUAL "" OR NOT DEFINED ${var})
+            # Empty string will trip the NOT DEFINED ORIG_CMAKE_C_FLAGS check below
+            set(${var} " ")
+          endif ()
           set(ORIG_${var} "${${var}}" PARENT_SCOPE)
           set(local_${var} "${${var}}")
           if (WIN32)
@@ -399,6 +413,22 @@ function (configure_DynamoRIO_global is_cxx change_flags)
       endforeach (config)
     endif (change_flags)
 
+  else (NOT DEFINED already_configured_listdir)
+    # We can detect failure to propagate to global scope on the 2nd client
+    # in the same listdir.
+    # XXX: is there any way we can have better support for functions?
+    # I spent a while trying to use CACHE INTERNAL FORCE to set the
+    # global vars but it has all kinds of weird consequences for other
+    # vars based on the original values of the now-cache vars.
+    # This behavior varies by generator and I never found a solution
+    # that worked for all generators.  Ninja was easy, but VS and Makefiles
+    # ended up with ORIG_* set to the blank values, even when ORIG_*
+    # was marked as cache.  Plus, Dr. Memory's SAVE_* values ended up
+    # w/ the cache value as well.
+    if (NOT DEFINED ORIG_CMAKE_C_FLAGS)
+      message(FATAL_ERROR "When invoking configure_DynamoRIO_*() from a function, "
+        "configure_DynamoRIO_global() must be called from global scope first.")
+    endif (NOT DEFINED ORIG_CMAKE_C_FLAGS)
   endif (NOT DEFINED already_configured_listdir)
 endfunction (configure_DynamoRIO_global)
 
@@ -427,7 +457,7 @@ function (DynamoRIO_extra_cflags flags_out extra_cflags tgt_cxx)
   set(${flags_out} "${extra_cflags}" PARENT_SCOPE)
 endfunction (DynamoRIO_extra_cflags)
 
-function (configure_DynamoRIO_common target is_client x64_var defs_var link_var)
+function (configure_DynamoRIO_common target is_client x64_var defs_var)
   get_lang(${target} tgt_lang)
   if (${tgt_lang} MATCHES CXX)
     set(tgt_cxx ON)
@@ -616,16 +646,20 @@ function (configure_DynamoRIO_common target is_client x64_var defs_var link_var)
       SKIP_BUILD_RPATH ON)
   endif (use_rpath)
 
+  # Append LINK_FLAGS
+  append_property_string(TARGET ${target} LINK_FLAGS "${tgt_link_flags}")
+
   # Pass data to caller
   set(${x64_var} ${tgt_x64} PARENT_SCOPE)
   set(${defs_var} "${tgt_cflags}" PARENT_SCOPE)
-  set(${link_var} "${tgt_link_flags}" PARENT_SCOPE)
 
 endfunction (configure_DynamoRIO_common)
 
 
 function (configure_DynamoRIO_client target)
-  configure_DynamoRIO_common(${target} ON tgt_x64 tgt_cflags tgt_link_flags)
+  # We clear LINK_FLAGS and let the helper routines append to them:
+  set_target_properties(${target} PROPERTIES LINK_FLAGS "")
+  configure_DynamoRIO_common(${target} ON tgt_x64 tgt_cflags)
   if (just_configured)
     # get around lack of GLOBAL_SCOPE
     # do NOT set just_configured in global scope
@@ -653,46 +687,55 @@ function (configure_DynamoRIO_client target)
       set(PREFERRED_BASE 0x72000000)
     endif ()
     if (UNIX)
-      # We use a linker script to set the preferred base
-      set(LD_SCRIPT ${CMAKE_CURRENT_BINARY_DIR}/ldscript)
-      # We do NOT add ${LD_SCRIPT} as an ADDITIONAL_MAKE_CLEAN_FILES since it's
-      # configure-time built not make-time built
-      set(LD_FLAGS "-melf_x86_64")
+      if (LINKER_IS_GNU_GOLD)
+        # Gold doesn't have a default version script for us to edit.  However,
+        # it has a handy command line flag that does exactly what we want.  Note
+        # that gnu ld has -Ttext as well, but it is very different.
+        # XXX: gnu ld added an equivalent -Ttext-segment to binutils 2.20 in
+        # 2009.  We could switch to that if we ever drop support for old
+        # linkers.
+        set(PREFERRED_BASE_FLAGS "-Wl,-Ttext=${PREFERRED_BASE}")
+      else (LINKER_IS_GNU_GOLD)
+        # We use a linker script to set the preferred base
+        set(LD_SCRIPT ${CMAKE_CURRENT_BINARY_DIR}/ldscript)
+        # We do NOT add ${LD_SCRIPT} as an ADDITIONAL_MAKE_CLEAN_FILES since it's
+        # configure-time built not make-time built
+        set(LD_FLAGS "-melf_x86_64")
 
-      # In order to just tweak the default linker script we start with exactly that.
-      execute_process(COMMAND
-        ${CMAKE_LINKER} "${LD_FLAGS}" --verbose
-        RESULT_VARIABLE ld_result
-        ERROR_VARIABLE ld_error
-        OUTPUT_VARIABLE string)
-      if (ld_result OR ld_error)
-        message(FATAL_ERROR "*** ${CMAKE_LINKER} failed: ***\n${ld_error}")
-      endif (ld_result OR ld_error)
+        # In order to just tweak the default linker script we start with exactly that.
+        execute_process(COMMAND
+          ${CMAKE_LINKER} "${LD_FLAGS}" --verbose
+          RESULT_VARIABLE ld_result
+          ERROR_VARIABLE ld_error
+          OUTPUT_VARIABLE string)
+        if (ld_result OR ld_error)
+          message(FATAL_ERROR "*** ${CMAKE_LINKER} failed: ***\n${ld_error}")
+        endif (ld_result OR ld_error)
 
-      # Strip out just the SECTIONS{} portion
-      string(REGEX REPLACE ".*(SECTIONS.*\n\\}).*" "\\1" string "${string}")
-      # Find and replace the default base
-      string(REGEX MATCH "= *[^{\\.\n]+(0x[0-9]+)\\)? *\\+ *SIZEOF_HEADERS"
-        default_base "${string}")
-      if ("${default_base}" STREQUAL "")
-        message(FATAL_ERROR "unsupported ld version: please file this bug")
-      endif()
-      string(REGEX REPLACE ".*(0x[0-9]+).*" "\\1" default_base "${default_base}")
-      string(REGEX REPLACE "${default_base}" "${PREFERRED_BASE}" string "${string}")
-      string(REGEX REPLACE "(\n{)" "\\1\n  . = ${PREFERRED_BASE};" string "${string}")
-      file(WRITE ${LD_SCRIPT} "${string}")
+        # Strip out just the SECTIONS{} portion
+        string(REGEX REPLACE ".*(SECTIONS.*\n\\}).*" "\\1" string "${string}")
+        # Find and replace the default base
+        string(REGEX MATCH "= *[^{\\.\n]+(0x[0-9]+)\\)? *\\+ *SIZEOF_HEADERS"
+          default_base "${string}")
+        if ("${default_base}" STREQUAL "")
+          message(FATAL_ERROR "unsupported ld version: please file this bug")
+        endif()
+        string(REGEX REPLACE ".*(0x[0-9]+).*" "\\1" default_base "${default_base}")
+        string(REGEX REPLACE "${default_base}" "${PREFERRED_BASE}" string "${string}")
+        string(REGEX REPLACE "(\n{)" "\\1\n  . = ${PREFERRED_BASE};" string "${string}")
+        file(WRITE ${LD_SCRIPT} "${string}")
 
-      # -dT is preferred, available on ld 2.18+: we could check for it
-      set(LD_SCRIPT_OPTION "-T")
-      set(PREFERRED_BASE_FLAGS "-Xlinker ${LD_SCRIPT_OPTION} -Xlinker \"${LD_SCRIPT}\"")
+        # -dT is preferred, available on ld 2.18+: we could check for it
+        set(LD_SCRIPT_OPTION "-T")
+        set(PREFERRED_BASE_FLAGS "-Xlinker ${LD_SCRIPT_OPTION} -Xlinker \"${LD_SCRIPT}\"")
+      endif (LINKER_IS_GNU_GOLD)
     else (UNIX)
       set(PREFERRED_BASE_FLAGS "/base:${PREFERRED_BASE} /dynamicbase:no")
     endif (UNIX)
-    set(tgt_link_flags "${tgt_link_flags} ${PREFERRED_BASE_FLAGS}")
+    append_property_string(TARGET ${target} LINK_FLAGS "${PREFERRED_BASE_FLAGS}")
   endif (tgt_x64 OR DynamoRIO_SET_PREFERRED_BASE)
 
   set_compile_flags(${target} "${tgt_cflags}")
-  set_target_properties(${target} PROPERTIES LINK_FLAGS "${tgt_link_flags}")
 
   # TODO: a nice feature would be to check the client for libc imports or
   # other not-recommended properties
@@ -701,7 +744,9 @@ endfunction (configure_DynamoRIO_client)
 
 
 function (configure_DynamoRIO_standalone target)
-  configure_DynamoRIO_common(${target} OFF tgt_x64 tgt_cflags tgt_link_flags)
+  # We don't clear LINK_FLAGS b/c we assume standalone doesn't need to have
+  # flags removed.  Usually the target LINK_FLAGS is empty at this point anyway.
+  configure_DynamoRIO_common(${target} OFF tgt_x64 tgt_cflags)
   # get around lack of GLOBAL_SCOPE
   foreach (config "" ${CMAKE_BUILD_TYPE} ${CMAKE_CONFIGURATION_TYPES})
     if ("${config}" STREQUAL "")
@@ -717,7 +762,7 @@ function (configure_DynamoRIO_standalone target)
   endforeach (config)
 
   set_compile_flags(${target} "${tgt_cflags} -DDYNAMORIO_STANDALONE")
-  set_target_properties(${target} PROPERTIES LINK_FLAGS "${tgt_link_flags}")
+  # LINK_FLAGS are appended by the helper routines above
 
 endfunction (configure_DynamoRIO_standalone)
 
@@ -796,16 +841,24 @@ function (use_DynamoRIO_extension target extname)
     endif ()
   endif (NOT DynamoRIO_INTERNAL)
 
-  if (DEFINED DynamoRIO_RPATH)
+  if (DynamoRIO_RPATH)
     add_rel_rpaths(${target} ${extname})
     if (WIN32)
       get_target_property(libpath ${extname} LOCATION${location_suffix})
       get_filename_component(libdir ${libpath} PATH)
       get_drpath_name(drpath_file ${target})
-      # File should have been created fresh when configured.
-      # XXX: in the future we may add support for relative dirs but for
-      # now we only support absolute.
-      file(APPEND ${drpath_file} "${libdir}\n")
+      if (EXISTS ${drpath_file})
+        # File should have been created fresh when configured.
+        # If it's not there, this is probably a standalone app, for which
+        # a .drpath file is useless.
+        # XXX: in the future we may add support for relative dirs but for
+        # now we only support absolute.
+        file(READ ${drpath_file} cur_contents)
+        string(FIND ${cur_contents} ${libdir} cur_found)
+        if (cur_found LESS 0) # -1 if not found
+          file(APPEND ${drpath_file} "${libdir}\n")
+        endif ()
+      endif ()
     endif (WIN32)
   else ()
     set_target_properties(${target} PROPERTIES SKIP_BUILD_RPATH ON)
