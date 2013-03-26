@@ -38,14 +38,29 @@ set(EXECUTABLE_OUTPUT_DIRECTORY "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}")
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}")
 set_per_config_ouput_to_match_single_config()
 
-set(asm_deps
-  "${PROJECT_SOURCE_DIR}/core/x86/asm_defines.asm"
-  "${PROJECT_BINARY_DIR}/configure.h")
-add_asm_target(x86/x86.asm x86_core_asm_src x86_core_asm_tgt "_core" "" "${asm_deps}")
-add_asm_target(x86/x86.asm x86_noncore_asm_src x86_noncore_asm_tgt "_noncore"
-  "-DNOT_DYNAMORIO_CORE_PROPER" "${asm_deps}")
-add_asm_target(x86/pre_inject_asm.asm preinject_asm_src preinject_asm_tgt ""
-  "-DNOT_DYNAMORIO_CORE_PROPER" "${asm_deps}")
+if (ARM)
+
+  set(asm_deps
+    "${PROJECT_SOURCE_DIR}/core/arm/asm_defines.asm"
+    "${PROJECT_BINARY_DIR}/configure.h")
+  add_asm_target(arm/arm.asm arm_core_asm_src arm_core_asm_tgt "_core" "" "${asm_deps}")
+  add_asm_target(arm/arm.asm arm_noncore_asm_src arm_noncore_asm_tgt "_noncore"
+    "-DNOT_DYNAMORIO_CORE_PROPER" "${asm_deps}")
+  add_asm_target(arm/pre_inject_asm.asm preinject_asm_src preinject_asm_tgt ""
+    "-DNOT_DYNAMORIO_CORE_PROPER" "${asm_deps}")
+
+else (ARM)
+
+  set(asm_deps
+    "${PROJECT_SOURCE_DIR}/core/x86/asm_defines.asm"
+    "${PROJECT_BINARY_DIR}/configure.h")
+  add_asm_target(x86/x86.asm x86_core_asm_src x86_core_asm_tgt "_core" "" "${asm_deps}")
+  add_asm_target(x86/x86.asm x86_noncore_asm_src x86_noncore_asm_tgt "_noncore"
+    "-DNOT_DYNAMORIO_CORE_PROPER" "${asm_deps}")
+  add_asm_target(x86/pre_inject_asm.asm preinject_asm_src preinject_asm_tgt ""
+    "-DNOT_DYNAMORIO_CORE_PROPER" "${asm_deps}")
+
+endif (ARM)
 
 set(CORE_SRCS
   options.c
@@ -97,27 +112,50 @@ if (WIN32 AND NOT X64)
   set_source_files_properties(io.c COMPILE_FLAGS "/QIfist")
 endif (WIN32 AND NOT X64)
 
-set(ARCH_DIRNAME x86)
-set(ARCH_SRCS
-  x86/arch.c
-  x86/decode.c
-  x86/decode_table.c
-  x86/encode.c
-  x86/emit_utils.c
-  x86/instr.c
-  x86/interp.c
-  x86/proc.c
-  x86/mangle.c
-  x86/steal_reg.c
-  x86/x86_code.c
-  x86/disassemble.c
-  ${x86_core_asm_src}
-  x86/decode_fast.c
-  x86/optimize.c
-  x86/sideline.c
-  x86/instrument.c
-  x86/retcheck.c
-  )
+if (ARM)
+  set(ARCH_SRCS
+    arm/arch.c
+    arm/decode.c
+    arm/decode_table.c
+    arm/encode.c
+    arm/emit_utils.c
+    arm/instr.c
+    arm/interp.c
+    arm/proc.c
+    arm/mangle.c
+    arm/steal_reg.c
+    arm/x86_code.c
+    arm/disassemble.c
+    ${arm_core_asm_src}
+    arm/decode_fast.c
+    arm/optimize.c
+    arm/sideline.c
+    arm/instrument.c
+    arm/retcheck.c
+    )
+else (ARM)
+  set(ARCH_SRCS
+    x86/arch.c
+    x86/decode.c
+    x86/decode_table.c
+    x86/encode.c
+    x86/emit_utils.c
+    x86/instr.c
+    x86/interp.c
+    x86/proc.c
+    x86/mangle.c
+    x86/steal_reg.c
+    x86/x86_code.c
+    x86/disassemble.c
+    ${x86_core_asm_src}
+    x86/decode_fast.c
+    x86/optimize.c
+    x86/sideline.c
+    x86/instrument.c
+    x86/retcheck.c
+    )
+
+endif (ARM)
 
 if (X64)
   set(ARCH_SRCS ${ARCH_SRCS} x86/x86_to_x64.c)
@@ -170,21 +208,39 @@ if (UNIX)
     set(OS_SRCS ${OS_SRCS} ${VMKUW_DIR}/vmkuw.c)
   endif (VMKERNEL)
   set(PRELOAD_NAME drpreload)
-  set(PRELOAD_SRCS
-    linux/preload.c
-    config.c
-    linux/os.c
-    ${x86_noncore_asm_src}
-    )
-  set(INJECTOR_SRCS
-    linux/injector.c
-    config.c    # to read config
-    linux/os.c  # for file_t interface
-    linux/module.c
-    string.c
-    io.c
-    ${x86_noncore_asm_src}  # for dynamorio_syscall
-    )
+  if (ARM)
+    set(PRELOAD_SRCS
+      linux/preload.c
+      config.c
+      linux/os.c
+      ${arm_noncore_asm_src}
+      )
+    set(INJECTOR_SRCS
+      linux/injector.c
+      config.c    # to read config
+      linux/os.c  # for file_t interface
+      linux/module.c
+      string.c
+      io.c
+      ${arm_noncore_asm_src}  # for dynamorio_syscall
+      )
+  else (ARM)
+    set(PRELOAD_SRCS
+      linux/preload.c
+      config.c
+      linux/os.c
+      ${x86_noncore_asm_src}
+      )
+    set(INJECTOR_SRCS
+      linux/injector.c
+      config.c    # to read config
+      linux/os.c  # for file_t interface
+      linux/module.c
+      string.c
+      io.c
+      ${x86_noncore_asm_src}  # for dynamorio_syscall
+      )
+  endif (ARM)
 else (UNIX)
   set(OSNAME win32)
   set(OS_SRCS

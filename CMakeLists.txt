@@ -607,26 +607,23 @@ if (UNIX)
   endif (no_stack_protector_avail)
 
   # Check ARM specific flags
-  if(ARM)
-    set(ASM_FLAGS "${ASM_FLAGS} --noexecstack -march=armv7-a")
+  if (ARM)
+    set(ASM_FLAGS "${ASM_FLAGS} --noexecstack -march=armv7-a -mcpu=cortex-a15")
     set(BASE_CFLAGS "${BASE_CFLAGS}")
     set(LD_FLAGS "${LD_FLAGS}")
-    if(ARM_CROSS)
-      set(BASE_CFLAGS "${BASE_CFLAGS}")
-    endif(ARM_CROSS)
-  else(ARM)
+  else (ARM)
     set(ASM_FLAGS "-mmnemonic=intel -msyntax=intel -mnaked-reg --noexecstack")
           # now that the user must set non-default -mNN we don't nec. need these:
-  # now that the user must set non-default -mNN we don't nec. need these:
-  if (X64)
-    set(BASE_CFLAGS "-m64 ${BASE_CFLAGS}")
-    set(BASE_CXXFLAGS "-m64")
-    set(LD_FLAGS "-melf_x86_64")
-  else (X64)
-    set(BASE_CFLAGS "-m32 ${BASE_CFLAGS}")
-    set(BASE_CXXFLAGS "-m32")
-    set(LD_FLAGS "-melf_i386")
-  endif (X64)
+    # now that the user must set non-default -mNN we don't nec. need these:
+    if (X64)
+      set(BASE_CFLAGS "-m64 ${BASE_CFLAGS}")
+      set(BASE_CXXFLAGS "-m64")
+      set(LD_FLAGS "-melf_x86_64")
+    else (X64)
+      set(BASE_CFLAGS "-m32 ${BASE_CFLAGS}")
+      set(BASE_CXXFLAGS "-m32")
+      set(LD_FLAGS "-melf_i386")
+    endif (X64)
   endif (ARM)
 
   # there's no cmake warning control so we hardcode it
@@ -1166,9 +1163,15 @@ configure_file(${PROJECT_SOURCE_DIR}/make/cpp2asm_support.cmake
 configure_file(${PROJECT_SOURCE_DIR}/make/CMake_asm.cmake
   ${BUILD_CMAKE}/cpp2asm_add_newlines.cmake COPYONLY)
 # we need to strip out the #include of configure.h
-file(READ "${PROJECT_SOURCE_DIR}/core/x86/asm_defines.asm" str)
-string(REPLACE "#include \"configure.h\"" "" str "${str}")
-file(WRITE "${BUILD_CMAKE}/cpp2asm_defines.h" "${str}")
+if (ARM)
+  file(READ "${PROJECT_SOURCE_DIR}/core/arm/asm_defines.asm" str)
+  string(REPLACE "#include \"configure.h\"" "" str "${str}")
+  file(WRITE "${BUILD_CMAKE}/cpp2asm_defines.h" "${str}")
+else (ARM)
+  file(READ "${PROJECT_SOURCE_DIR}/core/x86/asm_defines.asm" str)
+  string(REPLACE "#include \"configure.h\"" "" str "${str}")
+  file(WRITE "${BUILD_CMAKE}/cpp2asm_defines.h" "${str}")
+ENDIF (ARM)
 
 # Export docs files just like full install, for using from build dir
 # with projects that include DR sources.  Do this even if not BUILD_DOCS,
@@ -1375,9 +1378,15 @@ DR_install(FILES ${PROJECT_SOURCE_DIR}/make/CMake_asm.cmake
   DESTINATION ${INSTALL_CMAKE} RENAME cpp2asm_add_newlines.cmake
 )
 # we need to strip out the #include of configure.h
-DR_install(CODE "file(READ \"\${PROJECT_SOURCE_DIR}/core/x86/asm_defines.asm\" str)
-  string(REPLACE \"#include \\\\\"configure.h\\\\\"\" \"\" str \"\\\${str}\")
-  file(WRITE \"\${CMAKE_INSTALL_PREFIX}/\${INSTALL_CMAKE}/cpp2asm_defines.h\" \"\\\${str}\")")
+if (ARM)
+  DR_install(CODE "file(READ \"\${PROJECT_SOURCE_DIR}/core/arm/asm_defines.asm\" str)
+    string(REPLACE \"#include \\\\\"configure.h\\\\\"\" \"\" str \"\\\${str}\")
+    file(WRITE \"\${CMAKE_INSTALL_PREFIX}/\${INSTALL_CMAKE}/cpp2asm_defines.h\" \"\\\${str}\")")
+else (ARM)
+  DR_install(CODE "file(READ \"\${PROJECT_SOURCE_DIR}/core/x86/asm_defines.asm\" str)
+    string(REPLACE \"#include \\\\\"configure.h\\\\\"\" \"\" str \"\\\${str}\")
+    file(WRITE \"\${CMAKE_INSTALL_PREFIX}/\${INSTALL_CMAKE}/cpp2asm_defines.h\" \"\\\${str}\")")
+endif (ARM)
 
 # export docs support, with consistent names
 DR_install(FILES ${PROJECT_SOURCE_DIR}/api/docs/CMake_rundoxygen.cmake

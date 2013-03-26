@@ -163,7 +163,12 @@ if (NOT "${CMAKE_GENERATOR}" MATCHES "Visual Studio")
 endif ()
 
 if (UNIX)
-  set(ASM_FLAGS "-mmnemonic=intel -msyntax=intel -mnaked-reg --noexecstack")
+  if (ARM)
+    set(ASM_FLAGS "-march=armv7-a -mcpu=cortex-a15 --noexecstack")
+  else (ARM)
+    set(ASM_FLAGS "-mmnemonic=intel -msyntax=intel -mnaked-reg --noexecstack")
+  endif (ARM)
+
   if (X64)
     set(ASM_FLAGS "${ASM_FLAGS} --64")
   else (X64)
