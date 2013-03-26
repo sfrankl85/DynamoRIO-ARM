@@ -45,6 +45,13 @@
 #   HowToBuild.wiki
 ###########################################################################
 
+# Check if ARM first
+option(ARM "build for the ARM architecture")
+if (ARM)
+  option(ARM_CROSS "build for ARM using cross-compilation")
+endif (ARM)
+
+
 if ("${CMAKE_GENERATOR}" MATCHES "Visual Studio 10")
   # for i#801 workaround
   cmake_minimum_required(VERSION 2.8.8)
@@ -107,6 +114,34 @@ endif (NOT DEFINED CMAKE_INSTALL_PREFIX)
 if (NOT DEFINED ENV{CXXFLAGS})
   set(ENV{CXXFLAGS} "$ENV{CFLAGS}")
 endif (NOT DEFINED ENV{CXXFLAGS})
+
+# Whether 64-bit is expected to be selected by user setting up compiler
+# prior to invoking CMake: it has to be that way for Windows, and for
+# Linux the user should set CFLAGS to -m32 or -m64
+# to override gcc's default. To simplify matters we only look at
+# CMAKE_C_SIZEOF_DATA_PTR, controlled by CFLAGS, so the user doesn't
+# have to also set CXXFLAGS (CMAKE_SIZEOF_VOID_P happens
+# to come from CXXFLAGS). (CMAKE_C_SIZEOF_DATA_PTR can be relied on
+# to be set in all CMake versions we support.)
+# ARM for the moment doesn't accept 64 bit so no need to do this.
+if (ARM)
+  if(ARM_CROSS)
+    set(CMAKE_C_COMPILER arm-elf-gcc)
+    set(CMAKE_CXX_COMPILER arm-elf-g++)
+    set(CMAKE_OBJCOPY arm-elf-objcopy)
+    set(CMAKE_STRIP arm-elf-strip)
+    set(CMAKE_ASM_COMPILER arm-elf-as)
+    set(CMAKE_LINKER arm-elf-ld)
+    set(CMAKE_TOOLCHAIN_FILE /home/user/Code/DynamoRIO-ARM/toolchain-arm.cmake) 
+  endif(ARM_CROSS)
+  set(X64 OFF)
+else(ARM)
+  if (CMAKE_C_SIZEOF_DATA_PTR EQUAL 8)
+    set(X64 ON)
+  else(CMAKE_C_SIZEOF_DATA_PTR EQUAL 8)
+    set(X64 OFF)
+  endif (CMAKE_C_SIZEOF_DATA_PTR EQUAL 8)
+endif(ARM)
 
 # Don't use the default-Debug build type set for the try-compiles
 set(specified_build_type "${CMAKE_BUILD_TYPE}")
@@ -177,19 +212,6 @@ if (WIN32)
   set(WINDOWS 1)
 endif (WIN32)
 
-# Whether 64-bit is expected to be selected by user setting up compiler
-# prior to invoking CMake: it has to be that way for Windows, and for
-# Linux the user should set CFLAGS to -m32 or -m64
-# to override gcc's default.  To simplify matters we only look at
-# CMAKE_C_SIZEOF_DATA_PTR, controlled by CFLAGS, so the user doesn't
-# have to also set CXXFLAGS (CMAKE_SIZEOF_VOID_P happens
-# to come from CXXFLAGS).  (CMAKE_C_SIZEOF_DATA_PTR can be relied on
-# to be set in all CMake versions we support.)
-if (CMAKE_C_SIZEOF_DATA_PTR EQUAL 8)
-  set(X64 ON)
-else(CMAKE_C_SIZEOF_DATA_PTR EQUAL 8)
-  set(X64 OFF)
-endif (CMAKE_C_SIZEOF_DATA_PTR EQUAL 8)
 
 option(VMKERNEL "target VMkernel (not officially supported yet)")
 option(MACOS "target MacOS (not officially supported yet)")
@@ -451,10 +473,12 @@ if (UNIX)
   # We require gas >= 2.18.50 for --32, --64, and the new -msyntax=intel, etc.
   # Since this is pretty recent we include a copy (built vs as old a glibc
   # as was convenient)
-  if (NOT CMAKE_ASM_SUPPORTS_INTEL_SYNTAX)
-    message("${CMAKE_ASM_COMPILER} too old: using ${PROJECT_SOURCE_DIR}/make/as-2.18.50")
-    set(CMAKE_ASM_COMPILER "${PROJECT_SOURCE_DIR}/make/as-2.18.50")
-  endif (NOT CMAKE_ASM_SUPPORTS_INTEL_SYNTAX)
+  if (NOT ARM)
+    if (NOT CMAKE_ASM_SUPPORTS_INTEL_SYNTAX)
+      message("${CMAKE_ASM_COMPILER} too old: using ${PROJECT_SOURCE_DIR}/make/as-2.18.50")
+      set(CMAKE_ASM_COMPILER "${PROJECT_SOURCE_DIR}/make/as-2.18.50")
+    endif (NOT CMAKE_ASM_SUPPORTS_INTEL_SYNTAX)
+  endif (NOT ARM)
 endif (UNIX)
 
 if (UNIX)
@@ -581,6 +605,18 @@ if (UNIX)
   if (no_stack_protector_avail)
     set(BASE_CFLAGS "${BASE_CFLAGS} -fno-stack-protector")
   endif (no_stack_protector_avail)
+
+  # Check ARM specific flags
+  if(ARM)
+    set(ASM_FLAGS "${ASM_FLAGS} --noexecstack -march=armv7-a")
+    set(BASE_CFLAGS "${BASE_CFLAGS}")
+    set(LD_FLAGS "${LD_FLAGS}")
+    if(ARM_CROSS)
+      set(BASE_CFLAGS "${BASE_CFLAGS}")
+    endif(ARM_CROSS)
+  else(ARM)
+    set(ASM_FLAGS "-mmnemonic=intel -msyntax=intel -mnaked-reg --noexecstack")
+          # now that the user must set non-default -mNN we don't nec. need these:
   # now that the user must set non-default -mNN we don't nec. need these:
   if (X64)
     set(BASE_CFLAGS "-m64 ${BASE_CFLAGS}")
@@ -591,7 +627,15 @@ if (UNIX)
     set(BASE_CXXFLAGS "-m32")
     set(LD_FLAGS "-melf_i386")
   endif (X64)
+  endif (ARM)
+
   # there's no cmake warning control so we hardcode it
+  if(ARM)
+  else(ARM)
+    #set(WARN "-Wall -Werror")
+    #set(DBG "-g3")
+  endif(ARM)
+
   set(WARN "-Wall -Werror -Wwrite-strings")
   if (NOT CMAKE_COMPILER_IS_CLANG)
     # Old gcc's ignore unknown -W flags, but -Wall -Werror causes clang to
@@ -706,21 +750,23 @@ if (UNIX)
   CHECK_C_COMPILER_FLAG("-fvisibility=internal" HAVE_FVISIBILITY_INTERNAL)
   CHECK_C_COMPILER_FLAG("-fvisibility=hidden" HAVE_FVISIBILITY_HIDDEN)
 
-  if (HAVE_FVISIBILITY_INTERNAL)
-    set(VISIBILITY "internal")
-  elseif (HAVE_FVISIBILITY_HIDDEN)
-    set(VISIBILITY "hidden")
-  else (HAVE_FVISIBILITY_INTERNAL)
-    message("${CMAKE_C_COMPILER} missing flag -fvisibility, using linker "
-            "script instead")
-    set(VISIBILITY " ")
-  endif (HAVE_FVISIBILITY_INTERNAL)
+  if (NOT ARM)
+    if (HAVE_FVISIBILITY_INTERNAL)
+      set(VISIBILITY "internal")
+    elseif (HAVE_FVISIBILITY_HIDDEN)
+      set(VISIBILITY "hidden")
+    else (HAVE_FVISIBILITY_INTERNAL)
+      message("${CMAKE_C_COMPILER} missing flag -fvisibility, using linker "
+              "script instead")
+      set(VISIBILITY " ")
+    endif (HAVE_FVISIBILITY_INTERNAL)
 
-  if (VISIBILITY)
-    set(BASE_CFLAGS "${BASE_CFLAGS} -fvisibility=${VISIBILITY}")
-    set(BASE_CXXFLAGS "${BASE_CXXFLAGS} -fvisibility=${VISIBILITY}")
-    set(HAVE_FVISIBILITY ON)
-  endif (VISIBILITY)
+    if (VISIBILITY)
+      set(BASE_CFLAGS "${BASE_CFLAGS} -fvisibility=${VISIBILITY}")
+      set(BASE_CXXFLAGS "${BASE_CXXFLAGS} -fvisibility=${VISIBILITY}")
+      set(HAVE_FVISIBILITY ON)
+    endif (VISIBILITY)
+  endif (NOT ARM)
 
   if (NOT LINKER_IS_GNU_GOLD)
     # Better to use -dT when passing linker options through gcc, but ld

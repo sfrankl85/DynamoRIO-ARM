@@ -174,22 +174,28 @@ if ($header) {
 # look nicer than others, so we have an explicit list here:
 # Also, we now send output to multiple files, and their names are indicated
 # by comments in the header files.
+$arch = 'x86';
+print stderr "$defines{'X86'}\n";
+if (defined($defines{"ARM"})){
+    $arch = 'Arm';
+}
+
 @headers = 
     (
      "$core/instrlist.h",
      "$core/lib/globals_shared.h", # defs
      "$core/globals.h",
-     "$core/x86/arch_exports.h", # encode routines
-     "$core/x86/proc.h",
+     "$core/$arch/arch_exports.h", # encode routines
+     "$core/$arch/proc.h",
      "$core/os_shared.h",        # before instrument.h
      "$core/module_shared.h",    # before instrument.h
-     "$core/x86/instrument.h",
-     "$core/x86/instr.h",
-     "$core/x86/instr_inline.h",
-     "$core/x86/instr_create.h",
-     "$core/x86/decode.h",       # OPSZ_ consts, decode routines
-     "$core/x86/decode_fast.h",  # decode routines
-     "$core/x86/disassemble.h",  # disassemble routines
+     "$core/$arch/instrument.h",
+     "$core/$arch/instr.h",
+     "$core/$arch/instr_inline.h",
+     "$core/$arch/instr_create.h",
+     "$core/$arch/decode.h",       # OPSZ_ consts, decode routines
+     "$core/$arch/decode_fast.h",  # decode routines
+     "$core/$arch/disassemble.h",  # disassemble routines
      "$core/fragment.h",         # binary tracedump format
      "$core/win32/os_private.h", # rsrc section walking
      "$core/hotpatch.c",         # probe api
