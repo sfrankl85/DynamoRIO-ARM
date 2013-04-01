@@ -402,17 +402,32 @@ if ("${CMAKE_GENERATOR}" MATCHES "Visual Studio")
 endif ()
 
 # static decoding library
-add_library(drdecode
-  instrlist.c
-  x86/decode.c
-  x86/decode_table.c
-  x86/encode.c
-  x86/instr.c
-  x86/disassemble.c
-  x86/decode_fast.c
-  x86/mangle.c
-  x86/decodelib.c
-  )
+if (ARM)
+  add_library(drdecode
+    instrlist.c
+    arm/decode.c
+    arm/decode_table.c
+    arm/encode.c
+    arm/instr.c
+    arm/disassemble.c
+    arm/decode_fast.c
+    arm/mangle.c
+    arm/decodelib.c
+    )
+else (ARM)
+  add_library(drdecode
+    instrlist.c
+    x86/decode.c
+    x86/decode_table.c
+    x86/encode.c
+    x86/instr.c
+    x86/disassemble.c
+    x86/decode_fast.c
+    x86/mangle.c
+    x86/decodelib.c
+    )
+endif (ARM)
+
 set_target_properties(drdecode PROPERTIES
   COMPILE_FLAGS "-DNOT_DYNAMORIO_CORE_PROPER -DSTANDALONE_DECODER")
 if (UNIX)
@@ -803,6 +818,13 @@ endif (BUILD_TESTS)
 
 # Do not put core/ into the include dirs as our link.h will conflict
 # with /usr/include/link.h!
+if (ARM)
+  include_directories(BEFORE 
+    ${SYS_ROOTPATH}
+    )
+endif (ARM)
+
+
 include_directories(BEFORE 
   ${CMAKE_CURRENT_SOURCE_DIR}/lib
   ${CMAKE_CURRENT_SOURCE_DIR}/${ARCH_DIRNAME}
