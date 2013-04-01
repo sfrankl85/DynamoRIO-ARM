@@ -615,14 +615,25 @@ dr_inject_process_exit(void *data, bool terminate)
 enum { MAX_SHELL_CODE = 4096 };
 
 #ifdef X86
-# define REG_PC_FIELD IF_X64_ELSE(rip, eip)
-# define REG_SP_FIELD IF_X64_ELSE(rsp, esp)
-# define REG_RETVAL_FIELD IF_X64_ELSE(rax, eax)
+  #ifdef ARM
+    /* Need arm equivs here. use r0 as return value register??? TODO Change*/
+    #define REG_PC_FIELD uregs[15] 
+    #define REG_SP_FIELD uregs[13] 
+    #define REG_RETVAL_FIELD uregs[0]
+  #else
+    #define REG_PC_FIELD IF_X64_ELSE(rip, eip)
+    #define REG_SP_FIELD IF_X64_ELSE(rsp, esp)
+    #define REG_RETVAL_FIELD IF_X64_ELSE(rax, eax)
+  #endif
 #else
 # error "define PC, SP, and return fields of user_regs_struct"
 #endif
 
+#ifdef ARM
+enum { REG_PC_OFFSET = offsetof(struct user_regs, REG_PC_FIELD) };
+#else
 enum { REG_PC_OFFSET = offsetof(struct user_regs_struct, REG_PC_FIELD) };
+#endif
 
 #define APP  instrlist_append
 
@@ -840,7 +851,11 @@ continue_until_break(process_id_t pid)
 static ptr_int_t
 injectee_run_get_retval(dr_inject_info_t *info, void *dc, instrlist_t *ilist)
 {
+    #ifdef ARM
+    struct user_regs regs;
+    #else
     struct user_regs_struct regs;
+    #endif
     byte shellcode[MAX_SHELL_CODE];
     byte orig_code[MAX_SHELL_CODE];
     app_pc end_pc;
@@ -892,9 +907,15 @@ injectee_run_get_retval(dr_inject_info_t *info, void *dc, instrlist_t *ilist)
 
     /* Get return value. */
     ret = failure;
+#ifdef ARM
+    r = our_ptrace(PTRACE_PEEKUSER, info->pid,
+                   (void *)offsetof(struct user_regs,
+                                    REG_RETVAL_FIELD), &ret);
+#else
     r = our_ptrace(PTRACE_PEEKUSER, info->pid,
                    (void *)offsetof(struct user_regs_struct,
                                     REG_RETVAL_FIELD), &ret);
+#endif
     if (r < 0)
         return r;
 
@@ -1028,10 +1049,16 @@ injectee_prot(byte *addr, size_t size, uint prot/*MEMPROT_*/)
 /* Convert a user_regs_struct used by the ptrace API into DR's priv_mcontext_t
  * struct.
  */
+#ifdef ARM
+static void
+user_regs_to_mc(priv_mcontext_t *mc, struct user_regs *regs)
+#else
 static void
 user_regs_to_mc(priv_mcontext_t *mc, struct user_regs_struct *regs)
+#endif
 {
 #ifdef X86
+
 # ifdef X64
     mc->rip = (app_pc)regs->rip;
     mc->rax = regs->rax;
@@ -1061,6 +1088,25 @@ user_regs_to_mc(priv_mcontext_t *mc, struct user_regs_struct *regs)
     mc->esi = regs->esi;
     mc->edi = regs->edi;
 # endif
+
+#elif ARM
+    mc->r0  = (app_pc)regs->uregs[0];
+    mc->r1  = regs->uregs[1];
+    mc->r2  = regs->uregs[2];
+    mc->r3  = regs->uregs[3];
+    mc->r4  = regs->uregs[4];
+    mc->r5  = regs->uregs[5];
+    mc->r6  = regs->uregs[6];
+    mc->r7  = regs->uregs[7];
+    mc->r8  = regs->uregs[8];
+    mc->r9  = regs->uregs[9];
+    mc->r10 = regs->uregs[10];
+    mc->r11 = regs->uregs[11];
+    mc->r12 = regs->uregs[12];
+    mc->r13 = regs->uregs[13];
+    mc->r14 = regs->uregs[14];
+    mc->r15 = regs->uregs[15];
+
 #else
 # error "translate mc for non-x86 arch"
 #endif

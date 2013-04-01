@@ -202,6 +202,9 @@ if (UNIX)
     linux/nudgesig.c
     linux/native_elf.c
     )
+
+
+
   if (VMKERNEL)
     set(VMKUW_DIR ${PROJECT_SOURCE_DIR}/../internal/core/linux)
     include_directories(${VMKUW_DIR})
@@ -818,12 +821,14 @@ endif (BUILD_TESTS)
 
 # Do not put core/ into the include dirs as our link.h will conflict
 # with /usr/include/link.h!
+# Need to include ARM system headers if cross compiling
 if (ARM)
-  include_directories(BEFORE 
-    ${SYS_ROOTPATH}
-    )
+  if (ARM_CROSS)
+    include_directories(BEFORE 
+      ${SYS_ROOTPATH}
+      )
+  endif (ARM_CROSS)
 endif (ARM)
-
 
 include_directories(BEFORE 
   ${CMAKE_CURRENT_SOURCE_DIR}/lib

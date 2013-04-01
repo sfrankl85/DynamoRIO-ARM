@@ -38,70 +38,70 @@
 #define _CONFIGURE_H_ 1
 
 /* exposed options */
-#cmakedefine INTERNAL
-#cmakedefine DEBUG
-#cmakedefine DRGUI_DEMO
-#cmakedefine STATIC_LIBRARY
+/* #undef INTERNAL */
+/* #undef DEBUG */
+#define DRGUI_DEMO
+/* #undef STATIC_LIBRARY */
 
 /* target */
-#cmakedefine X64
+/* #undef X64 */
 /* Need both an ARM and X86 define */
-#cmakedefine ARM 
-#cmakedefine X86 
-#cmakedefine WINDOWS
-#cmakedefine LINUX
-#cmakedefine VMKERNEL
-#cmakedefine MACOS
+#define ARM 
+/* #undef X86 */
+/* #undef WINDOWS */
+#define LINUX
+/* #undef VMKERNEL */
+/* #undef MACOS */
 
 /* set by high-level VMAP/VMSAFE/VPS configurations */
-#cmakedefine PROGRAM_SHEPHERDING
-#cmakedefine CLIENT_INTERFACE
-#cmakedefine APP_EXPORTS
-#cmakedefine STRACE_CLIENT
-#cmakedefine HOT_PATCHING_INTERFACE
-#cmakedefine PROCESS_CONTROL
-#cmakedefine GBOP
+/* #undef PROGRAM_SHEPHERDING */
+#define CLIENT_INTERFACE
+#define APP_EXPORTS
+/* #undef STRACE_CLIENT */
+/* #undef HOT_PATCHING_INTERFACE */
+/* #undef PROCESS_CONTROL */
+/* #undef GBOP */
 
 /* for use by developers */
-#cmakedefine KSTATS
-#cmakedefine CALLPROF
+#define KSTATS
+/* #undef CALLPROF */
 #ifdef CALLPROF
 /* XXX: perhaps should rename CALLPROF cmake var to CALL_PROFILE */
 # define CALL_PROFILE
 #endif
-#cmakedefine LINKCOUNT
-#cmakedefine PARAMS_IN_REGISTRY
+/* #undef LINKCOUNT */
+/* #undef PARAMS_IN_REGISTRY */
 
 /* when packaging */
-#cmakedefine VERSION_NUMBER ${VERSION_NUMBER}
-#cmakedefine VERSION_COMMA_DELIMITED ${VERSION_COMMA_DELIMITED}
-#cmakedefine VERSION_NUMBER_INTEGER ${VERSION_NUMBER_INTEGER}
-#cmakedefine OLDEST_COMPATIBLE_VERSION ${OLDEST_COMPATIBLE_VERSION}
-#cmakedefine BUILD_NUMBER ${BUILD_NUMBER}
-#cmakedefine UNIQUE_BUILD_NUMBER ${UNIQUE_BUILD_NUMBER}
-#cmakedefine CUSTOM_PRODUCT_NAME "${CUSTOM_PRODUCT_NAME}"
+#define VERSION_NUMBER 4.0.
+#define VERSION_COMMA_DELIMITED 4,0,
+#define VERSION_NUMBER_INTEGER 400
+#define OLDEST_COMPATIBLE_VERSION 400
+/* #undef BUILD_NUMBER */
+/* #undef UNIQUE_BUILD_NUMBER */
+/* #undef CUSTOM_PRODUCT_NAME */
 
 /* features */
-#cmakedefine HAVE_FVISIBILITY
+/* #undef HAVE_FVISIBILITY */
 
 /* typedef conflicts */
-#cmakedefine DR_DO_NOT_DEFINE_bool
-#cmakedefine DR_DO_NOT_DEFINE_byte
-#cmakedefine DR_DO_NOT_DEFINE_int64
-#cmakedefine DR_DO_NOT_DEFINE_MAX_MIN
-#cmakedefine DR_DO_NOT_DEFINE_sbyte
-#cmakedefine DR_DO_NOT_DEFINE_uint
-#cmakedefine DR_DO_NOT_DEFINE_uint32
-#cmakedefine DR_DO_NOT_DEFINE_uint64
-#cmakedefine DR_DO_NOT_DEFINE_ushort
-#cmakedefine DR__Bool_EXISTS
+/* #undef DR_DO_NOT_DEFINE_bool */
+/* #undef DR_DO_NOT_DEFINE_byte */
+/* #undef DR_DO_NOT_DEFINE_int64 */
+/* #undef DR_DO_NOT_DEFINE_MAX_MIN */
+/* #undef DR_DO_NOT_DEFINE_sbyte */
+#define DR_DO_NOT_DEFINE_uint
+/* #undef DR_DO_NOT_DEFINE_uint32 */
+/* #undef DR_DO_NOT_DEFINE_uint64 */
+#define DR_DO_NOT_DEFINE_ushort
+#define DR__Bool_EXISTS
 
 /* Issue 20: we need to know lib dirs for cross-arch execve */
-#define LIBDIR_X64 ${INSTALL_LIB_X64}
-#define LIBDIR_X86 ${INSTALL_LIB_X86}
+#define LIBDIR_X64 lib64
+#define LIBDIR_X86 lib32
 
 /* i#955: private loader search paths */
-#define DR_RPATH_SUFFIX "${DR_RPATH_SUFFIX}"
+#define DR_RPATH_SUFFIX "drpath"
 
 /* dependent defines */
 /*

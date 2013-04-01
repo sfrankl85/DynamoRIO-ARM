@@ -38,70 +38,80 @@
 #define _CONFIGURE_H_ 1
 
 /* exposed options */
-#cmakedefine INTERNAL
-#cmakedefine DEBUG
-#cmakedefine DRGUI_DEMO
-#cmakedefine STATIC_LIBRARY
+/* #undef INTERNAL */
+/* #undef DEBUG */
+#define DRGUI_DEMO
+-DDRGUI_DEMO
+/* #undef STATIC_LIBRARY */
 
 /* target */
-#cmakedefine X64
+/* #undef X64 */
 /* Need both an ARM and X86 define */
-#cmakedefine ARM 
-#cmakedefine X86 
-#cmakedefine WINDOWS
-#cmakedefine LINUX
-#cmakedefine VMKERNEL
-#cmakedefine MACOS
+#define ARM 
+-DARM
+/* #undef X86 */
+/* #undef WINDOWS */
+#define LINUX
+-DLINUX
+/* #undef VMKERNEL */
+/* #undef MACOS */
 
 /* set by high-level VMAP/VMSAFE/VPS configurations */
-#cmakedefine PROGRAM_SHEPHERDING
-#cmakedefine CLIENT_INTERFACE
-#cmakedefine APP_EXPORTS
-#cmakedefine STRACE_CLIENT
-#cmakedefine HOT_PATCHING_INTERFACE
-#cmakedefine PROCESS_CONTROL
-#cmakedefine GBOP
+/* #undef PROGRAM_SHEPHERDING */
+#define CLIENT_INTERFACE
+-DCLIENT_INTERFACE
+#define APP_EXPORTS
+-DAPP_EXPORTS
+/* #undef STRACE_CLIENT */
+/* #undef HOT_PATCHING_INTERFACE */
+/* #undef PROCESS_CONTROL */
+/* #undef GBOP */
 
 /* for use by developers */
-#cmakedefine KSTATS
-#cmakedefine CALLPROF
+#define KSTATS
+-DKSTATS
+/* #undef CALLPROF */
 #ifdef CALLPROF
 /* XXX: perhaps should rename CALLPROF cmake var to CALL_PROFILE */
 # define CALL_PROFILE
+-DCALL_PROFILE
 #endif
-#cmakedefine LINKCOUNT
-#cmakedefine PARAMS_IN_REGISTRY
+/* #undef LINKCOUNT */
+/* #undef PARAMS_IN_REGISTRY */
 
 /* when packaging */
-#cmakedefine VERSION_NUMBER ${VERSION_NUMBER}
-#cmakedefine VERSION_COMMA_DELIMITED ${VERSION_COMMA_DELIMITED}
-#cmakedefine VERSION_NUMBER_INTEGER ${VERSION_NUMBER_INTEGER}
-#cmakedefine OLDEST_COMPATIBLE_VERSION ${OLDEST_COMPATIBLE_VERSION}
-#cmakedefine BUILD_NUMBER ${BUILD_NUMBER}
-#cmakedefine UNIQUE_BUILD_NUMBER ${UNIQUE_BUILD_NUMBER}
-#cmakedefine CUSTOM_PRODUCT_NAME "${CUSTOM_PRODUCT_NAME}"
+#define VERSION_NUMBER 4.0.
+#define VERSION_COMMA_DELIMITED 4,0,
+#define VERSION_NUMBER_INTEGER 400
+#define OLDEST_COMPATIBLE_VERSION 400
+/* #undef BUILD_NUMBER */
+/* #undef UNIQUE_BUILD_NUMBER */
+/* #undef CUSTOM_PRODUCT_NAME */
 
 /* features */
-#cmakedefine HAVE_FVISIBILITY
+/* #undef HAVE_FVISIBILITY */
 
 /* typedef conflicts */
-#cmakedefine DR_DO_NOT_DEFINE_bool
-#cmakedefine DR_DO_NOT_DEFINE_byte
-#cmakedefine DR_DO_NOT_DEFINE_int64
-#cmakedefine DR_DO_NOT_DEFINE_MAX_MIN
-#cmakedefine DR_DO_NOT_DEFINE_sbyte
-#cmakedefine DR_DO_NOT_DEFINE_uint
-#cmakedefine DR_DO_NOT_DEFINE_uint32
-#cmakedefine DR_DO_NOT_DEFINE_uint64
-#cmakedefine DR_DO_NOT_DEFINE_ushort
-#cmakedefine DR__Bool_EXISTS
+/* #undef DR_DO_NOT_DEFINE_bool */
+/* #undef DR_DO_NOT_DEFINE_byte */
+/* #undef DR_DO_NOT_DEFINE_int64 */
+/* #undef DR_DO_NOT_DEFINE_MAX_MIN */
+/* #undef DR_DO_NOT_DEFINE_sbyte */
+#define DR_DO_NOT_DEFINE_uint
+-DDR_DO_NOT_DEFINE_uint
+/* #undef DR_DO_NOT_DEFINE_uint32 */
+/* #undef DR_DO_NOT_DEFINE_uint64 */
+#define DR_DO_NOT_DEFINE_ushort
+-DDR_DO_NOT_DEFINE_ushort
+#define DR__Bool_EXISTS
+-DDR__Bool_EXISTS
 
 /* Issue 20: we need to know lib dirs for cross-arch execve */
-#define LIBDIR_X64 ${INSTALL_LIB_X64}
-#define LIBDIR_X86 ${INSTALL_LIB_X86}
+#define LIBDIR_X64 lib64
+#define LIBDIR_X86 lib32
 
 /* i#955: private loader search paths */
-#define DR_RPATH_SUFFIX "${DR_RPATH_SUFFIX}"
+#define DR_RPATH_SUFFIX "drpath"
 
 /* dependent defines */
 /*
@@ -211,18 +221,22 @@
 
 /* only architecture we support (this is set for X64 as well) */
 #define X86
+-DX86
 
 #ifdef WINDOWS
    /* we do not support linking to libc.  we should probably remove
     * this define from the code and eliminate it altogether.
     */
 #  define NOLIBC
+-DNOLIBC
 #endif
 
 #ifdef LINUX
 #  define ASSEMBLE_WITH_GAS
+-DASSEMBLE_WITH_GAS
 #else
 #  define ASSEMBLE_WITH_MASM
+-DASSEMBLE_WITH_MASM
 #endif
 
 /* operating system */
@@ -230,60 +244,80 @@
 
 #  ifdef VMKERNEL
 #    define VMX86_SERVER
+-DVMX86_SERVER
 #    define USERLEVEL
+-DUSERLEVEL
      /* PR 361894/388563: only on ESX4.1+ */
 #    define HAVE_TLS
+-DHAVE_TLS
 #  else
 #    ifdef MACOS
        /* FIXME NYI */
 #      define MACOS
+-DMACOS
 #    else
        /* Linux */
        /* FIXME: use cmake to discover whether these are available */
 #      define HAVE_PROC_MAPS
+-DHAVE_PROC_MAPS
 #      define HAVE_TLS
+-DHAVE_TLS
 #      define HAVE_SIGALTSTACK
+-DHAVE_SIGALTSTACK
 #    endif
 #  endif
 
 #  ifdef HAVE_FVISIBILITY
 #    define USE_VISIBILITY_ATTRIBUTES
+-DUSE_VISIBILITY_ATTRIBUTES
 #  endif
 #endif
 
 #ifdef WINDOWS
 #  define WINDOWS_PC_SAMPLE
+-DWINDOWS_PC_SAMPLE
 #endif
 
 #ifdef PROGRAM_SHEPHERDING
 #  define RETURN_AFTER_CALL
+-DRETURN_AFTER_CALL
 #  define RCT_IND_BRANCH
+-DRCT_IND_BRANCH
 #endif
 
 #ifdef CLIENT_INTERFACE
    /* standard client interface features */
 #  define DYNAMORIO_IR_EXPORTS
+-DDYNAMORIO_IR_EXPORTS
 #  define CUSTOM_TRACES
+-DCUSTOM_TRACES
 #  define CLIENT_SIDELINE
+-DCLIENT_SIDELINE
    /* PR 200409: not part of our current API, xref PR 215179 on -pad_jmps
     * issues with CUSTOM_EXIT_STUBS
 #  define CUSTOM_EXIT_STUBS
+-DCUSTOM_EXIT_STUBS
 #  define UNSUPPORTED_API
+-DUNSUPPORTED_API
     */
 #endif
 
 #if defined(HOT_PATCHING_INTERFACE) && defined(CLIENT_INTERFACE)
 #  define PROBE_API
+-DPROBE_API
 #endif
 
 #if defined(PROGRAM_SHEPHERDING) && defined(CLIENT_INTERFACE)
 /* used by libutil and tools */
 #  define MF_API
+-DMF_API
 #  define PROBE_API
+-DPROBE_API
 #endif
 
 #ifdef APP_EXPORTS
 #  define DR_APP_EXPORTS
+-DDR_APP_EXPORTS
 #endif
 
 /* FIXME: some GBOP hooks depend on hotp_only HOT_PATCHING_INTERFACE */
@@ -291,19 +325,27 @@
 #ifdef DEBUG
    /* for bug fixing this is useful so we turn on for all debug builds */
 #  define DEBUG_MEMORY
+-DDEBUG_MEMORY
 #  define STACK_GUARD_PAGE
+-DSTACK_GUARD_PAGE
 #  define HEAP_ACCOUNTING
+-DHEAP_ACCOUNTING
 #  define DEADLOCK_AVOIDANCE
+-DDEADLOCK_AVOIDANCE
 #  define MUTEX_CALLSTACK /* requires DEADLOCK_AVOIDANCE */
    /* even though only usable in all-private config useful in default builds */
 #  define SHARING_STUDY
+-DSHARING_STUDY
 #  define HASHTABLE_STATISTICS
+-DHASHTABLE_STATISTICS
 #endif
 
 #ifdef LINKCOUNT
 #  define PROFILE_LINKCOUNT
+-DPROFILE_LINKCOUNT
 /* not bothering to support 32-bit: only if we start using it again */
 #  define LINKCOUNT_64_BITS
+-DLINKCOUNT_64_BITS
 #endif
 
 #endif /* _CONFIGURE_H_ */

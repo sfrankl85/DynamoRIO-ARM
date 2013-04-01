@@ -53,6 +53,30 @@
      * See the list above of places that assume dr_mcxt_t layout.
      */
 #endif
+
+#ifdef ARM
+  /* Define ARM registers here */
+  /* Do not need unions as only supporting 32 bit arm */
+  reg_t r0;
+  reg_t r1;
+  reg_t r2;
+  reg_t r3;
+  reg_t r4;
+  reg_t r5;
+  reg_t r6;
+  reg_t r7;
+  reg_t r8;
+  reg_t r9;
+  reg_t r10;
+  reg_t r11;
+  reg_t r12;
+  reg_t r13;
+  reg_t r14;
+  reg_t r15;
+  
+  reg_t cpsr;
+  reg_t spsr;
+#else
     union {
         reg_t xdi; /**< platform-independent name for full rdi/edi register */
         reg_t IF_X64_ELSE(rdi, edi); /**< platform-dependent name for rdi/edi register */
@@ -110,6 +134,8 @@
         byte *pc; /**< platform-independent alt name for full rip/eip register */
         byte *IF_X64_ELSE(rip, eip); /**< platform-dependent name for rip/eip register */
     };
+#endif
+
     byte padding[PRE_XMM_PADDING]; /**< padding to get ymm field 32-byte aligned */
     /**
      * The SSE registers xmm0-xmm5 (-xmm15 on Linux) are volatile

@@ -46,10 +46,13 @@
 ###########################################################################
 
 # Check if ARM first
-option(ARM "build for the ARM architecture")
-if (ARM)
+option(X86 "build for X86 architecture")
+
+if (NOT X86)
+  option(ARM "build for the ARM architecture")
+  # Checking for ARM set causes it to multi cycle the cmake process
   option(ARM_CROSS "build for ARM using cross-compilation")
-endif (ARM)
+endif (NOT X86)
 
 
 if ("${CMAKE_GENERATOR}" MATCHES "Visual Studio 10")
@@ -132,7 +135,9 @@ if (ARM)
     set(CMAKE_STRIP arm-elf-strip)
     set(CMAKE_ASM_COMPILER arm-elf-as)
     set(CMAKE_LINKER arm-elf-ld)
+    set(ARCH_DIRNAME arm)
     set(SYS_ROOTPATH         /home/user/x-tools/arm-cortex_a15-linux-gnueabi/arm-cortex_a15-linux-gnueabi/sysroot) 
+    set(ARM_DIR              /home/user/Code/DynamoRIO-ARM/core/arm) 
     set(CMAKE_TOOLCHAIN_FILE /home/user/Code/DynamoRIO-ARM/toolchain-arm.cmake) 
   endif(ARM_CROSS)
   set(X64 OFF)
@@ -629,12 +634,13 @@ if (UNIX)
 
   # there's no cmake warning control so we hardcode it
   if(ARM)
+    set(WARN "-Wall -Wwrite-strings")
   else(ARM)
     #set(WARN "-Wall -Werror")
     #set(DBG "-g3")
+    set(WARN "-Wall -Werror -Wwrite-strings")
   endif(ARM)
 
-  set(WARN "-Wall -Werror -Wwrite-strings")
   if (NOT CMAKE_COMPILER_IS_CLANG)
     # Old gcc's ignore unknown -W flags, but -Wall -Werror causes clang to
     # complain that it doesn't recognize it.
