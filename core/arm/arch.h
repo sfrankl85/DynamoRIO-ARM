@@ -301,7 +301,14 @@ typedef enum {
 #endif
 
 #define NUM_XMM_REGS  NUM_XMM_SAVED
+
+/* TODO Does arm have 14 or 15 gp registers. r15 can be read/used but I dont 
+        think it is considered gp */
+#ifdef ARM
+#define NUM_GP_REGS   (1 + DR_REG_R14 - DR_REG_R0)
+#else
 #define NUM_GP_REGS   (1 + (IF_X64_ELSE(DR_REG_R15, DR_REG_XDI) - DR_REG_XAX))
+#endif
 
 /* information about each individual clean call invocation site */
 typedef struct _clean_call_info_t {

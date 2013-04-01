@@ -130,7 +130,6 @@ enum {
 #endif
     DR_REG_NULL, /**< Sentinel value indicating no register, for address modes. */
 
-#ifdef ARM
     /* Standard 32 bit ARM registers */
     DR_REG_R0,   DR_REG_R1,   DR_REG_R2,   DR_REG_R3,
     DR_REG_R4,   DR_REG_R5,   DR_REG_R6,   DR_REG_R7,
@@ -138,53 +137,12 @@ enum {
     DR_REG_R12,  DR_REG_R13,  DR_REG_R14,  DR_REG_R15,
     /* TODO Do I need special Thumb registers here or can I use 
             the ARM ones. Technically they are the same */
+    /* TODO Need to add the FPU registers + coprocessor regs here */
+    DR_SEG_XX,  
 
-#elif defined(X86)
-    /* 64-bit general purpose */
-    DR_REG_RAX,  DR_REG_RCX,  DR_REG_RDX,  DR_REG_RBX,
-    DR_REG_RSP,  DR_REG_RBP,  DR_REG_RSI,  DR_REG_RDI,
-    DR_REG_R8,   DR_REG_R9,   DR_REG_R10,  DR_REG_R11,
-    DR_REG_R12,  DR_REG_R13,  DR_REG_R14,  DR_REG_R15,
-    /* 32-bit general purpose */
-    DR_REG_EAX,  DR_REG_ECX,  DR_REG_EDX,  DR_REG_EBX,
-    DR_REG_ESP,  DR_REG_EBP,  DR_REG_ESI,  DR_REG_EDI,
-    DR_REG_R8D,  DR_REG_R9D,  DR_REG_R10D, DR_REG_R11D,
-    DR_REG_R12D, DR_REG_R13D, DR_REG_R14D, DR_REG_R15D,
-    /* 16-bit general purpose */
-    DR_REG_AX,   DR_REG_CX,   DR_REG_DX,   DR_REG_BX,
-    DR_REG_SP,   DR_REG_BP,   DR_REG_SI,   DR_REG_DI,
-    DR_REG_R8W,  DR_REG_R9W,  DR_REG_R10W, DR_REG_R11W,
-    DR_REG_R12W, DR_REG_R13W, DR_REG_R14W, DR_REG_R15W,
-    /* 8-bit general purpose */
-    DR_REG_AL,   DR_REG_CL,   DR_REG_DL,   DR_REG_BL,
-    DR_REG_AH,   DR_REG_CH,   DR_REG_DH,   DR_REG_BH,
-    DR_REG_R8L,  DR_REG_R9L,  DR_REG_R10L, DR_REG_R11L,
-    DR_REG_R12L, DR_REG_R13L, DR_REG_R14L, DR_REG_R15L,
-    DR_REG_SPL,  DR_REG_BPL,  DR_REG_SIL,  DR_REG_DIL,
-    /* 64-BIT MMX */
-    DR_REG_MM0,  DR_REG_MM1,  DR_REG_MM2,  DR_REG_MM3,
-    DR_REG_MM4,  DR_REG_MM5,  DR_REG_MM6,  DR_REG_MM7,
-    /* 128-BIT XMM */
-    DR_REG_XMM0, DR_REG_XMM1, DR_REG_XMM2, DR_REG_XMM3,
-    DR_REG_XMM4, DR_REG_XMM5, DR_REG_XMM6, DR_REG_XMM7,
-    DR_REG_XMM8, DR_REG_XMM9, DR_REG_XMM10,DR_REG_XMM11,
-    DR_REG_XMM12,DR_REG_XMM13,DR_REG_XMM14,DR_REG_XMM15,
-    /* floating point registers */
-    DR_REG_ST0,  DR_REG_ST1,  DR_REG_ST2,  DR_REG_ST3,
-    DR_REG_ST4,  DR_REG_ST5,  DR_REG_ST6,  DR_REG_ST7,
-    /* segments (order from "Sreg" description in Intel manual) */
-    DR_SEG_ES,   DR_SEG_CS,   DR_SEG_SS,   DR_SEG_DS,   DR_SEG_FS,   DR_SEG_GS,
-    /* debug & control registers (privileged access only; 8-15 for future processors) */
-    DR_REG_DR0,  DR_REG_DR1,  DR_REG_DR2,  DR_REG_DR3,
-    DR_REG_DR4,  DR_REG_DR5,  DR_REG_DR6,  DR_REG_DR7,
-    DR_REG_DR8,  DR_REG_DR9,  DR_REG_DR10, DR_REG_DR11,
-    DR_REG_DR12, DR_REG_DR13, DR_REG_DR14, DR_REG_DR15, 
-    /* cr9-cr15 do not yet exist on current x64 hardware */
-    DR_REG_CR0,  DR_REG_CR1,  DR_REG_CR2,  DR_REG_CR3,
-    DR_REG_CR4,  DR_REG_CR5,  DR_REG_CR6,  DR_REG_CR7, 
-    DR_REG_CR8,  DR_REG_CR9,  DR_REG_CR10, DR_REG_CR11,
-    DR_REG_CR12, DR_REG_CR13, DR_REG_CR14, DR_REG_CR15,
-#endif
+    DR_REG_DR0,  
+
+    DR_REG_CR0,  
 
     DR_REG_INVALID, /**< Sentinel value indicating an invalid register. */
 
@@ -205,69 +163,29 @@ enum {
 typedef byte reg_id_t; /* contains a DR_REG_ enum value */
 typedef byte opnd_size_t; /* contains a DR_REG_ or OPSZ_ enum value */
 
-/* Platform-independent full-register specifiers */
-#ifdef X64
-# define DR_REG_XAX DR_REG_RAX  /**< Platform-independent way to refer to rax/eax. */
-# define DR_REG_XCX DR_REG_RCX  /**< Platform-independent way to refer to rcx/ecx. */
-# define DR_REG_XDX DR_REG_RDX  /**< Platform-independent way to refer to rdx/edx. */
-# define DR_REG_XBX DR_REG_RBX  /**< Platform-independent way to refer to rbx/ebx. */
-# define DR_REG_XSP DR_REG_RSP  /**< Platform-independent way to refer to rsp/esp. */
-# define DR_REG_XBP DR_REG_RBP  /**< Platform-independent way to refer to rbp/ebp. */
-# define DR_REG_XSI DR_REG_RSI  /**< Platform-independent way to refer to rsi/esi. */
-# define DR_REG_XDI DR_REG_RDI  /**< Platform-independent way to refer to rdi/edi. */
-#else
-# define DR_REG_XAX DR_REG_EAX  /**< Platform-independent way to refer to rax/eax. */
-# define DR_REG_XCX DR_REG_ECX  /**< Platform-independent way to refer to rcx/ecx. */
-# define DR_REG_XDX DR_REG_EDX  /**< Platform-independent way to refer to rdx/edx. */
-# define DR_REG_XBX DR_REG_EBX  /**< Platform-independent way to refer to rbx/ebx. */
-# define DR_REG_XSP DR_REG_ESP  /**< Platform-independent way to refer to rsp/esp. */
-# define DR_REG_XBP DR_REG_EBP  /**< Platform-independent way to refer to rbp/ebp. */
-# define DR_REG_XSI DR_REG_ESI  /**< Platform-independent way to refer to rsi/esi. */
-# define DR_REG_XDI DR_REG_EDI  /**< Platform-independent way to refer to rdi/edi. */
-#endif
-
 /* DR_API EXPORT END */
 /* indexed by enum */
 extern const char * const reg_names[];
 extern const reg_id_t dr_reg_fixer[];
 /* DR_API EXPORT BEGIN */
 
-#define DR_REG_START_GPR DR_REG_XAX /**< Start of general register enum values */
-#ifdef X64
-# define DR_REG_STOP_GPR DR_REG_R15 /**< End of general register enum values */
-#else
-# define DR_REG_STOP_GPR DR_REG_XDI /**< End of general register enum values */
-#endif
+#define DR_REG_START_GPR DR_REG_R0 /**< Start of general register enum values */
+# define DR_REG_STOP_GPR DR_REG_R14 /**< End of general register enum values */
+
 /**< Number of general registers */
 #define DR_NUM_GPR_REGS (DR_REG_STOP_GPR - DR_REG_START_GPR)
-#define DR_REG_START_64    DR_REG_RAX  /**< Start of 64-bit general register enum values */
-#define DR_REG_STOP_64     DR_REG_R15  /**< End of 64-bit general register enum values */  
-#define DR_REG_START_32    DR_REG_EAX  /**< Start of 32-bit general register enum values */
-#define DR_REG_STOP_32     DR_REG_R15D /**< End of 32-bit general register enum values */  
-#define DR_REG_START_16    DR_REG_AX   /**< Start of 16-bit general register enum values */
-#define DR_REG_STOP_16     DR_REG_R15W /**< End of 16-bit general register enum values */  
-#define DR_REG_START_8     DR_REG_AL   /**< Start of 8-bit general register enum values */
-#define DR_REG_STOP_8      DR_REG_DIL  /**< End of 8-bit general register enum values */  
-#define DR_REG_START_8HL   DR_REG_AL   /**< Start of 8-bit high-low register enum values */
-#define DR_REG_STOP_8HL    DR_REG_BH   /**< End of 8-bit high-low register enum values */  
-#define DR_REG_START_x86_8 DR_REG_AH   /**< Start of 8-bit x86-only register enum values */
-#define DR_REG_STOP_x86_8  DR_REG_BH   /**< Stop of 8-bit x86-only register enum values */
-#define DR_REG_START_x64_8 DR_REG_SPL  /**< Start of 8-bit x64-only register enum values */
-#define DR_REG_STOP_x64_8  DR_REG_DIL  /**< Stop of 8-bit x64-only register enum values */
-#define DR_REG_START_MMX   DR_REG_MM0  /**< Start of mmx register enum values */
-#define DR_REG_STOP_MMX    DR_REG_MM7  /**< End of mmx register enum values */  
-#define DR_REG_START_XMM   DR_REG_XMM0 /**< Start of xmm register enum values */
-#define DR_REG_STOP_XMM    DR_REG_XMM15/**< End of xmm register enum values */  
-#define DR_REG_START_YMM   DR_REG_YMM0 /**< Start of ymm register enum values */
-#define DR_REG_STOP_YMM    DR_REG_YMM15/**< End of ymm register enum values */  
-#define DR_REG_START_FLOAT DR_REG_ST0  /**< Start of floating-point-register enum values */
-#define DR_REG_STOP_FLOAT  DR_REG_ST7  /**< End of floating-point-register enum values */  
-#define DR_REG_START_SEGMENT DR_SEG_ES /**< Start of segment register enum values */
-#define DR_REG_STOP_SEGMENT  DR_SEG_GS /**< End of segment register enum values */  
+#define DR_REG_START_32    DR_REG_R0  /**< Start of 32-bit general register enum values */
+#define DR_REG_STOP_32     DR_REG_R15 /**< End of 32-bit general register enum values */  
+#define DR_REG_START_16    DR_REG_R15   /**< Start of 16-bit general register enum values */
+#define DR_REG_STOP_16     DR_REG_R15 /**< End of 16-bit general register enum values */  
+#define DR_REG_START_FLOAT DR_REG_R15  /**< Start of floating-point-register enum values */
+#define DR_REG_STOP_FLOAT  DR_REG_R15  /**< End of floating-point-register enum values */  
+#define DR_REG_START_SEGMENT DR_SEG_XX /**< Start of segment register enum values */
+#define DR_REG_STOP_SEGMENT  DR_SEG_XX /**< End of segment register enum values */  
 #define DR_REG_START_DR    DR_REG_DR0  /**< Start of debug register enum values */
-#define DR_REG_STOP_DR     DR_REG_DR15 /**< End of debug register enum values */  
+#define DR_REG_STOP_DR     DR_REG_DR0 /**< End of debug register enum values */  
 #define DR_REG_START_CR    DR_REG_CR0  /**< Start of control register enum values */
-#define DR_REG_STOP_CR     DR_REG_CR15 /**< End of control register enum values */  
+#define DR_REG_STOP_CR     DR_REG_CR0 /**< End of control register enum values */  
 /**
  * Last valid register enum value.  Note: DR_REG_INVALID is now smaller 
  * than this value.
@@ -307,6 +225,14 @@ extern const reg_id_t dr_reg_fixer[];
 # define REG_R13             DR_REG_R13
 # define REG_R14             DR_REG_R14
 # define REG_R15             DR_REG_R15
+# define REG_START_FLOAT     DR_REG_START_FLOAT
+# define REG_STOP_FLOAT      DR_REG_STOP_FLOAT
+# define REG_START_SEGMENT   DR_REG_START_SEGMENT
+# define REG_STOP_SEGMENT    DR_REG_STOP_SEGMENT
+# define REG_START_DR        DR_REG_START_DR
+# define REG_STOP_DR         DR_REG_STOP_DR
+# define REG_START_CR        DR_REG_START_CR
+# define REG_STOP_CR         DR_REG_STOP_CR
 
 #else
 # define REG_RAX             DR_REG_RAX

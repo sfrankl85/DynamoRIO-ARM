@@ -35,7 +35,7 @@
 /* Copyright (c) 2001-2003 Massachusetts Institute of Technology */
 /* Copyright (c) 2000-2001 Hewlett-Packard Company */
 
-/* decode.c -- a full x86 decoder */
+/* decode.c -- a full arm decoder */
 
 #include "../globals.h"
 #include "arch.h"
