@@ -135,14 +135,28 @@ enum {
     DR_REG_R4,   DR_REG_R5,   DR_REG_R6,   DR_REG_R7,
     DR_REG_R8,   DR_REG_R9,   DR_REG_R10,  DR_REG_R11,
     DR_REG_R12,  DR_REG_R13,  DR_REG_R14,  DR_REG_R15,
+
+    /* 128 bit Neon registers */
+    DR_REG_N0,   DR_REG_N1,   DR_REG_N2,   DR_REG_N3,
+    DR_REG_N4,   DR_REG_N5,   DR_REG_N6,   DR_REG_N7,
+    DR_REG_N8,   DR_REG_N9,   DR_REG_N10,  DR_REG_N11,
+    DR_REG_N12,  DR_REG_N13,  DR_REG_N14,  DR_REG_N15,
+    DR_REG_N16,  DR_REG_N17,  DR_REG_N14,  DR_REG_N19,
+    DR_REG_N20,  DR_REG_N21,  DR_REG_N22,  DR_REG_N23,
+    DR_REG_N24,  DR_REG_N25,  DR_REG_N26,  DR_REG_N27,
+    DR_REG_N28,  DR_REG_N29,  DR_REG_N30,  DR_REG_N31,
+
+    /* Coprocessor registers */
+    DR_REG_C1R0, DR_REG_C1R1, DR_REG_C1R2, DR_REG_C1R3,
+    DR_REG_C1R4, DR_REG_C1R5, DR_REG_C1R6, DR_REG_C1R7,
+    DR_REG_C1R8, DR_REG_C1R9, DR_REG_C1R10,DR_REG_C1R11,
+    DR_REG_C1R12,DR_REG_C1R13,DR_REG_C1R14,DR_REG_C1R15,
+
     /* TODO Do I need special Thumb registers here or can I use 
             the ARM ones. Technically they are the same */
-    /* TODO Need to add the FPU registers + coprocessor regs here */
     DR_SEG_XX,  
 
     DR_REG_DR0,  
-
-    DR_REG_CR0,  
 
     DR_REG_INVALID, /**< Sentinel value indicating an invalid register. */
 
@@ -152,11 +166,6 @@ enum {
      * and distinguish properly.
      */
 #endif
-    /* 256-BIT YMM */
-    DR_REG_YMM0, DR_REG_YMM1, DR_REG_YMM2, DR_REG_YMM3,
-    DR_REG_YMM4, DR_REG_YMM5, DR_REG_YMM6, DR_REG_YMM7,
-    DR_REG_YMM8, DR_REG_YMM9, DR_REG_YMM10,DR_REG_YMM11,
-    DR_REG_YMM12,DR_REG_YMM13,DR_REG_YMM14,DR_REG_YMM15,
 };
 
 /* we avoid typedef-ing the enum, as its storage size is compiler-specific */
