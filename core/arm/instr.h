@@ -131,32 +131,125 @@ enum {
     DR_REG_NULL, /**< Sentinel value indicating no register, for address modes. */
 
     /* Standard 32 bit ARM registers */
-    DR_REG_R0,   DR_REG_R1,   DR_REG_R2,   DR_REG_R3,
-    DR_REG_R4,   DR_REG_R5,   DR_REG_R6,   DR_REG_R7,
-    DR_REG_R8,   DR_REG_R9,   DR_REG_R10,  DR_REG_R11,
-    DR_REG_R12,  DR_REG_R13,  DR_REG_R14,  DR_REG_R15,
+    DR_REG_R0,          DR_REG_R1,      DR_REG_R2,      DR_REG_R3,
+    DR_REG_R4,          DR_REG_R5,      DR_REG_R6,      DR_REG_R7,
+    DR_REG_R8,          DR_REG_R9,      DR_REG_R10,     DR_REG_R11,
+    DR_REG_R12,         DR_REG_R13,     DR_REG_R14,     DR_REG_R15,
 
     /* 128 bit Neon registers */
-    DR_REG_N0,   DR_REG_N1,   DR_REG_N2,   DR_REG_N3,
-    DR_REG_N4,   DR_REG_N5,   DR_REG_N6,   DR_REG_N7,
-    DR_REG_N8,   DR_REG_N9,   DR_REG_N10,  DR_REG_N11,
-    DR_REG_N12,  DR_REG_N13,  DR_REG_N14,  DR_REG_N15,
-    DR_REG_N16,  DR_REG_N17,  DR_REG_N14,  DR_REG_N19,
-    DR_REG_N20,  DR_REG_N21,  DR_REG_N22,  DR_REG_N23,
-    DR_REG_N24,  DR_REG_N25,  DR_REG_N26,  DR_REG_N27,
-    DR_REG_N28,  DR_REG_N29,  DR_REG_N30,  DR_REG_N31,
+    DR_REG_N0,          DR_REG_N1,      DR_REG_N2,      DR_REG_N3,
+    DR_REG_N4,          DR_REG_N5,      DR_REG_N6,      DR_REG_N7,
+    DR_REG_N8,          DR_REG_N9,      DR_REG_N10,     DR_REG_N11,
+    DR_REG_N12,         DR_REG_N13,     DR_REG_N14,     DR_REG_N15,
+    DR_REG_N16,         DR_REG_N17,     DR_REG_N18,     DR_REG_N19,
+    DR_REG_N20,         DR_REG_N21,     DR_REG_N22,     DR_REG_N23,
+    DR_REG_N24,         DR_REG_N25,     DR_REG_N26,     DR_REG_N27,
+    DR_REG_N28,         DR_REG_N29,     DR_REG_N30,     DR_REG_N31,
 
-    /* Coprocessor registers */
-    DR_REG_C1R0, DR_REG_C1R1, DR_REG_C1R2, DR_REG_C1R3,
-    DR_REG_C1R4, DR_REG_C1R5, DR_REG_C1R6, DR_REG_C1R7,
-    DR_REG_C1R8, DR_REG_C1R9, DR_REG_C1R10,DR_REG_C1R11,
-    DR_REG_C1R12,DR_REG_C1R13,DR_REG_C1R14,DR_REG_C1R15,
+    /* Coprocessor registers from the ARM tech manual ??? Is this right. All for CP15 */
+    /* TODO Maybe rearrange these to group by function instead of location */
+    /* c0 registers */
+    DR_REG_MIDR,        DR_REG_CTR,     DR_REG_TCMTR,   DR_REG_TLBTR,
+    DR_REG_MIDRA,       DR_REG_MPIDR,   DR_REG_REVIDR,  DR_REG_ID_PFR0,
+    DR_REG_PFR1,        DR_REG_DFR0,    DR_REG_AFR0,    DR_REG_MMFR0,
+    DR_REG_MMFR1,       DR_REG_MMFR1,   DR_REG_MMFR2,   DR_REG_MMFR3,
+    DR_REG_ISAR0,       DR_REG_ISAR1,   DR_REG_ISAR2,   DR_REG_ISAR3,
+    DR_REF_ISAR4,       DR_REG_ISAR5,   DR_REG_CCSIDR,  DR_REG_CLIDR,
+    DR_REG_AIDR,        DR_REG_CSSELR,  DR_REG_VPIDR,   DR_REGVMPIDR,
+
+    /* c1 registers */
+    DR_REG_SCTLR,       DR_REG_ACTLR,   DR_REG_CPACR,   DR_REG_SCR,
+    DR_REG_SDER,        DR_REG_NSACR,   DR_REG_HSCTLR,  DR_REG_HACTLR,
+    DR_REG_HCR,         DR_REG_HDCR,    DR_REG_HCPTR,   DR_REG_HSTR,
+    DR_REG_HACR,
+
+    /* c2 registers */
+    DR_REG_TTBR0,       DR_REG_TTBR1,   DR_REG_TTBCR,   DR_REG_HTCR,
+    DR_REG_VTCR,
+
+    /* c3 registers */
+    DR_REG_DACR,
+
+    /* c5 registers */
+    DR_REG_DFSR,        DR_REG_IFSR,    DR_REG_ADFSR,   DR_REG_AIFSR,
+    DR_REG_HADFSR,      DR_REG_HAIFSR,  DR_REG_HSR,
+
+    /* c6 registers */
+    DR_REG_DFAR,        DR_REG_IFAR,    DR_REG_HDFAR,   DR_REG_HIFAR,
+    DR_REG_HPFAR,
+
+    /* c7 registers */
+    DR_REG_NOP,       DR_REG_ICIALLUIS, DR_REG_BPIALLIS, DR_REG_PAR,
+    DR_REG_ICIALLU,   DR_REG_ICIMVAU,   DR_REG_CP15ISB, DR_REG_BPIALL,
+    DR_REG_BPIMVA,      DR_REG_DCIMVAC, DR_REG_DCISW,   DR_REG_ATS1CPR,
+    DR_REG_ATS1CPW,     DR_REG_ATS1CUR, DR_REG_ATS1CUW, DR_REG_ATS12NSOPR,
+    DR_REG_ATS12NOSPW,  DR_REG_ATS12NSOUR,DR_REG_ATS12NSOUW, DR_REG_DCCMVAC,
+    DR_REG_DCCSW,       DR_REG_CP15DSB, DR_REG_CP15DMB, DR_REG_DCCMVAU,
+    DR_REG_NOP2,        DR_REG_DCCIMVAC, DR_REG_DCCISW, DR_REG_ATS1HR,
+    DR_REG_ATS1HW,
+
+    /* c8 registers */
+    DR_REG_TLBIALLIS,   DR_REG_TLBIMVAIS,DR_REG_TLBIASIDIS, DR_REG_TLBIMVAAIS,
+    DR_REG_ITLBIALL,    DR_REG_ITLBIMVA, DR_REG_ITLBIASID, DR_REG_DTLBIALL,
+    DR_REG_DTLBIMVA,    DR_REG_DTLBIASID,DR_REG_TLBIALL,DR_REG_TLBIMVA,
+    DR_REG_ITLBIASID,   DR_REG_TLBIMVAA, DR_REG_TLBIALLHIS, DR_REG_TLBIMVAHIS,
+    DR_REG_TLBIALLNSNHIS,DR_REG_TLBIALLH,DR_REG_TLBIMVAH,DR_REG_TLBIALLNSNH,
+
+    /* c9 registers */
+    DR_REG_PMCR,        DR_REG_PMNCNTENSET,DR_REG_PMNCNTENCLR,DR_REG_PMOVSR,
+    DR_REG_PMSWINC,     DR_REG_PMSELR,  DR_REG_PMCEID0,   DR_REG_PMCEID1,
+    DR_REG_PMCCNTR,     DR_REG_PMXEVTYPER,DR_REG_PMXEVCNTR, DR_REG_PMUSERENR,
+    DR_REG_PMINTENSET,  DR_REG_PMINTENCLR, DR_REG_PMOVSSET, DR_REG_L2CTR,
+    DR_REG_L2ECTLR,
+
+    /* c10 registers */
+    DR_REG_PRRR,        DR_REG_MAIR0,   DR_REG_NMRR,    DR_REG_MAIR1,
+    DR_REG_AMAIR0,      DR_REG_AMAIR1,  DR_REG_HMAIR0,  DR_REG_HMAIR1,
+    DR_REG_HAMAIR0,     DR_REG_HAMAIR1,
+
+    /* c12 registers */
+    DR_REG_VBAR,        DR_REG_MVBAR,   DR_REG_ISR,     DR_REG_HVBAR,
+
+    /* c13 registers */
+    DR_REG_FCSEIDR,     DR_REG_CONTEXTIDR,DR_REG_TPIDRURW,DR_REG_TPIDRURO,
+    DR_REG_TPIDRPRW,    DR_REG_HTPIDR,
+
+    /* c14/generic timer registers */
+    DR_REG_CNTFRQ,      DR_REG_CNTPCT,  DR_REG_CNTKCTL, DR_REG_CNTP_TVAL,
+    DR_REG_CNTP_CTL,    DR_REG_CNTV_TVAL,DR_REG_CNTV_CTL,DR_REG_CNTVCT,
+    DR_REG_CNTP_CVAL,   DR_REG_CNTV_CVAL,DR_REG_CNTVOFF, DR_REG_CNTHCTL,
+    DR_REG_CNTHP_TVAL,  DR_REG_CNTHP_CTL, DR_REG_CNTHP_CVAL, 
+
+    /* c15 registers */
+    DR_REG_IL1DATA0,    DR_REG_IL1DATA1, DR_REG_IL1DATA2, DR_REG_DL1DATA0,
+    DR_REG_DL1DATA1,    DR_REG_DL1DATA2, DR_REG_DLDATA3,  DR_REG_RAMINDEX,
+    DR_REG_L2ACTLR,     DR_REG_L2PFR,    DR_REG_ACTLR2,   DR_REG_CBAR,
+
+    /* Debug registers for CP14 */
+    DR_REG_DBGDIDR,     DR_REG_DBGWFAR, DR_REG_DBGVCR,  DR_REG_DBGECR,
+    DR_REG_DBGDTRRX,    DR_REG_DBGITR,  DR_REG_DBGDSCR, DR_REG_DBGDSCR,
+    DR_REG_DBGTRTX,     DR_REG_DBGDRCR, DR_REG_DBGEACR, DR_REG_DBGPCSR
+    DR_REG_DBGCIDSR,    DR_REG_DBGVIDSR,DR_REG_DBGBVR0, DR_REG_DBGBVR1,
+    DR_REG_DBGBVR2,     DR_REG_DBGBVR3, DR_REG_DBGBVR4, DR_REG_DBGBVR5,
+    DR_REG_DBGVCR0,     DR_REG_DBGVCR1, DR_REG_DBGVCR2, DR_REG_DBGVCR2,
+    DR_REG_DBGVCR3,     DR_REG_DBGVCR4, DR_REG_DBGVCR5, DR_REG_DBGWVR0,
+    DR_REG_DBGWVR1,     DR_REG_DBGWVR2, DR_REG_DBGWVR3, DR_REG_DBGWCR0, 
+    DR_REG_DBGWCR1,     DR_REG_DBGWCR2, DR_REG_DBGWCR3, DR_REG_DBGXVR4,
+    DR_REG_DBGXVR5,     DR_REG_DBGOSLAR,DR_REG_DBGOSLSR,DR_REG_DBGPRCR,
+    DR_REG_DBGPRSR,     /* TODO Add processor id registers */
+    DR_REG_DBGITOCTRL,  DR_REG_DBGITISR,DR_REG_DBGITCTRL,DR_REG_DBGCLAIMSET,
+    DR_REG_DBGCLAIMCLR, DR_REG_DBGLAR,  DR_REG_DBGLSR, DR_REG_DBGAUTHSTATUS,
+    DR_REG_DBGDEVID2,   DR_REG_DBGDEVID1,DR_REG_DBGDEVID, DR_REG_DBGDEVTYPE,
+    DR_REG_DBGPID4,     DR_REG_DBGPID5, DR_REG_DBGPID6, DR_REG_DBGPID7,
+    DR_REG_DBGPID0,     DR_REG_DBGPID1, DR_REG_DBGPID2, DR_REG_DBGPID3,
+    DR_REG_DBGCID0,     DR_REG_DBGCID1, DR_REG_DBGCID2, DR_REG_DBGCID3,
+    DR_REG_DBGDSCR,     DR_REG_DBGDSCR, DR_REG_DBGDTRRX,DR_REG_DBGTRTX,
+    DR_REG_DBGDRAR,     DR_REG_DBGOSDLR,DR_REG_DBGDSAR,
+
 
     /* TODO Do I need special Thumb registers here or can I use 
             the ARM ones. Technically they are the same */
     DR_SEG_XX,  
-
-    DR_REG_DR0,  
 
     DR_REG_INVALID, /**< Sentinel value indicating an invalid register. */
 
@@ -185,16 +278,16 @@ extern const reg_id_t dr_reg_fixer[];
 #define DR_NUM_GPR_REGS (DR_REG_STOP_GPR - DR_REG_START_GPR)
 #define DR_REG_START_32    DR_REG_R0  /**< Start of 32-bit general register enum values */
 #define DR_REG_STOP_32     DR_REG_R15 /**< End of 32-bit general register enum values */  
-#define DR_REG_START_16    DR_REG_R15   /**< Start of 16-bit general register enum values */
+#define DR_REG_START_16    DR_REG_R0   /**< Start of 16-bit general register enum values */
 #define DR_REG_STOP_16     DR_REG_R15 /**< End of 16-bit general register enum values */  
-#define DR_REG_START_FLOAT DR_REG_R15  /**< Start of floating-point-register enum values */
-#define DR_REG_STOP_FLOAT  DR_REG_R15  /**< End of floating-point-register enum values */  
+#define DR_REG_START_FLOAT DR_REG_N0  /**< Start of floating-point-register enum values */
+#define DR_REG_STOP_FLOAT  DR_REG_N31  /**< End of floating-point-register enum values */  
 #define DR_REG_START_SEGMENT DR_SEG_XX /**< Start of segment register enum values */
 #define DR_REG_STOP_SEGMENT  DR_SEG_XX /**< End of segment register enum values */  
 #define DR_REG_START_DR    DR_REG_DR0  /**< Start of debug register enum values */
 #define DR_REG_STOP_DR     DR_REG_DR0 /**< End of debug register enum values */  
-#define DR_REG_START_CR    DR_REG_CR0  /**< Start of control register enum values */
-#define DR_REG_STOP_CR     DR_REG_CR0 /**< End of control register enum values */  
+#define DR_REG_START_CR    DR_REG_MIDR  /**< Start of control register enum values */
+#define DR_REG_STOP_CR     DR_REG_CBAR /**< End of control register enum values */  
 /**
  * Last valid register enum value.  Note: DR_REG_INVALID is now smaller 
  * than this value.
@@ -202,8 +295,8 @@ extern const reg_id_t dr_reg_fixer[];
 #define DR_REG_LAST_VALID_ENUM DR_REG_YMM15
 #define DR_REG_LAST_ENUM   DR_REG_YMM15 /**< Last value of register enums */
 /* DR_API EXPORT END */
-#define REG_START_SPILL   DR_REG_XAX
-#define REG_STOP_SPILL    DR_REG_XDI
+#define REG_START_SPILL   DR_REG_R7
+#define REG_STOP_SPILL    DR_REG_R14
 #define REG_SPILL_NUM     (REG_STOP_SPILL - REG_START_SPILL + 1)
 
 /* DR_API EXPORT VERBATIM */
@@ -215,8 +308,6 @@ extern const reg_id_t dr_reg_fixer[];
 #ifdef DR_REG_ENUM_COMPATIBILITY
 
 # define REG_NULL            DR_REG_NULL
-
-#ifdef ARM
 
 # define REG_R0              DR_REG_R0
 # define REG_R1              DR_REG_R1
@@ -238,206 +329,10 @@ extern const reg_id_t dr_reg_fixer[];
 # define REG_STOP_FLOAT      DR_REG_STOP_FLOAT
 # define REG_START_SEGMENT   DR_REG_START_SEGMENT
 # define REG_STOP_SEGMENT    DR_REG_STOP_SEGMENT
-# define REG_START_DR        DR_REG_START_DR
+# define REG_START_DR        DR_REG_START_DR 
 # define REG_STOP_DR         DR_REG_STOP_DR
 # define REG_START_CR        DR_REG_START_CR
 # define REG_STOP_CR         DR_REG_STOP_CR
-
-#else
-# define REG_RAX             DR_REG_RAX
-# define REG_RCX             DR_REG_RCX
-# define REG_RDX             DR_REG_RDX
-# define REG_RBX             DR_REG_RBX
-# define REG_RSP             DR_REG_RSP
-# define REG_RBP             DR_REG_RBP
-# define REG_RSI             DR_REG_RSI
-# define REG_RDI             DR_REG_RDI
-# define REG_R8              DR_REG_R8
-# define REG_R9              DR_REG_R9
-# define REG_R10             DR_REG_R10
-# define REG_R11             DR_REG_R11
-# define REG_R12             DR_REG_R12
-# define REG_R13             DR_REG_R13
-# define REG_R14             DR_REG_R14
-# define REG_R15             DR_REG_R15
-# define REG_EAX             DR_REG_EAX
-# define REG_ECX             DR_REG_ECX
-# define REG_EDX             DR_REG_EDX
-# define REG_EBX             DR_REG_EBX
-# define REG_ESP             DR_REG_ESP
-# define REG_EBP             DR_REG_EBP
-# define REG_ESI             DR_REG_ESI
-# define REG_EDI             DR_REG_EDI
-# define REG_R8D             DR_REG_R8D
-# define REG_R9D             DR_REG_R9D
-# define REG_R10D            DR_REG_R10D
-# define REG_R11D            DR_REG_R11D
-# define REG_R12D            DR_REG_R12D
-# define REG_R13D            DR_REG_R13D
-# define REG_R14D            DR_REG_R14D
-# define REG_R15D            DR_REG_R15D
-# define REG_AX              DR_REG_AX
-# define REG_CX              DR_REG_CX
-# define REG_DX              DR_REG_DX
-# define REG_BX              DR_REG_BX
-# define REG_SP              DR_REG_SP
-# define REG_BP              DR_REG_BP
-# define REG_SI              DR_REG_SI
-# define REG_DI              DR_REG_DI
-# define REG_R8W             DR_REG_R8W
-# define REG_R9W             DR_REG_R9W
-# define REG_R10W            DR_REG_R10W
-# define REG_R11W            DR_REG_R11W
-# define REG_R12W            DR_REG_R12W
-# define REG_R13W            DR_REG_R13W
-# define REG_R14W            DR_REG_R14W
-# define REG_R15W            DR_REG_R15W
-# define REG_AL              DR_REG_AL
-# define REG_CL              DR_REG_CL
-# define REG_DL              DR_REG_DL
-# define REG_BL              DR_REG_BL
-# define REG_AH              DR_REG_AH
-# define REG_CH              DR_REG_CH
-# define REG_DH              DR_REG_DH
-# define REG_BH              DR_REG_BH
-# define REG_R8L             DR_REG_R8L
-# define REG_R9L             DR_REG_R9L
-# define REG_R10L            DR_REG_R10L
-# define REG_R11L            DR_REG_R11L
-# define REG_R12L            DR_REG_R12L
-# define REG_R13L            DR_REG_R13L
-# define REG_R14L            DR_REG_R14L
-# define REG_R15L            DR_REG_R15L
-# define REG_SPL             DR_REG_SPL
-# define REG_BPL             DR_REG_BPL
-# define REG_SIL             DR_REG_SIL
-# define REG_DIL             DR_REG_DIL
-# define REG_MM0             DR_REG_MM0
-# define REG_MM1             DR_REG_MM1
-# define REG_MM2             DR_REG_MM2
-# define REG_MM3             DR_REG_MM3
-# define REG_MM4             DR_REG_MM4
-# define REG_MM5             DR_REG_MM5
-# define REG_MM6             DR_REG_MM6
-# define REG_MM7             DR_REG_MM7
-# define REG_XMM0            DR_REG_XMM0
-# define REG_XMM1            DR_REG_XMM1
-# define REG_XMM2            DR_REG_XMM2
-# define REG_XMM3            DR_REG_XMM3
-# define REG_XMM4            DR_REG_XMM4
-# define REG_XMM5            DR_REG_XMM5
-# define REG_XMM6            DR_REG_XMM6
-# define REG_XMM7            DR_REG_XMM7
-# define REG_XMM8            DR_REG_XMM8
-# define REG_XMM9            DR_REG_XMM9
-# define REG_XMM10           DR_REG_XMM10
-# define REG_XMM11           DR_REG_XMM11
-# define REG_XMM12           DR_REG_XMM12
-# define REG_XMM13           DR_REG_XMM13
-# define REG_XMM14           DR_REG_XMM14
-# define REG_XMM15           DR_REG_XMM15
-# define REG_ST0             DR_REG_ST0
-# define REG_ST1             DR_REG_ST1
-# define REG_ST2             DR_REG_ST2
-# define REG_ST3             DR_REG_ST3
-# define REG_ST4             DR_REG_ST4
-# define REG_ST5             DR_REG_ST5
-# define REG_ST6             DR_REG_ST6
-# define REG_ST7             DR_REG_ST7
-# define SEG_ES              DR_SEG_ES
-# define SEG_CS              DR_SEG_CS
-# define SEG_SS              DR_SEG_SS
-# define SEG_DS              DR_SEG_DS
-# define SEG_FS              DR_SEG_FS
-# define SEG_GS              DR_SEG_GS
-# define REG_DR0             DR_REG_DR0
-# define REG_DR1             DR_REG_DR1
-# define REG_DR2             DR_REG_DR2
-# define REG_DR3             DR_REG_DR3
-# define REG_DR4             DR_REG_DR4
-# define REG_DR5             DR_REG_DR5
-# define REG_DR6             DR_REG_DR6
-# define REG_DR7             DR_REG_DR7
-# define REG_DR8             DR_REG_DR8
-# define REG_DR9             DR_REG_DR9
-# define REG_DR10            DR_REG_DR10
-# define REG_DR11            DR_REG_DR11
-# define REG_DR12            DR_REG_DR12
-# define REG_DR13            DR_REG_DR13
-# define REG_DR14            DR_REG_DR14
-# define REG_DR15            DR_REG_DR15
-# define REG_CR0             DR_REG_CR0
-# define REG_CR1             DR_REG_CR1
-# define REG_CR2             DR_REG_CR2
-# define REG_CR3             DR_REG_CR3
-# define REG_CR4             DR_REG_CR4
-# define REG_CR5             DR_REG_CR5
-# define REG_CR6             DR_REG_CR6
-# define REG_CR7             DR_REG_CR7
-# define REG_CR8             DR_REG_CR8
-# define REG_CR9             DR_REG_CR9
-# define REG_CR10            DR_REG_CR10
-# define REG_CR11            DR_REG_CR11
-# define REG_CR12            DR_REG_CR12
-# define REG_CR13            DR_REG_CR13
-# define REG_CR14            DR_REG_CR14
-# define REG_CR15            DR_REG_CR15
-# define REG_INVALID         DR_REG_INVALID
-# define REG_XAX             DR_REG_XAX
-# define REG_XCX             DR_REG_XCX
-# define REG_XDX             DR_REG_XDX
-# define REG_XBX             DR_REG_XBX
-# define REG_XSP             DR_REG_XSP
-# define REG_XBP             DR_REG_XBP
-# define REG_XSI             DR_REG_XSI
-# define REG_XDI             DR_REG_XDI
-# define REG_START_64        DR_REG_START_64
-# define REG_STOP_64         DR_REG_STOP_64
-# define REG_START_32        DR_REG_START_32
-# define REG_STOP_32         DR_REG_STOP_32
-# define REG_START_16        DR_REG_START_16
-# define REG_STOP_16         DR_REG_STOP_16
-# define REG_START_8         DR_REG_START_8
-# define REG_STOP_8          DR_REG_STOP_8
-# define REG_START_8HL       DR_REG_START_8HL
-# define REG_STOP_8HL        DR_REG_STOP_8HL
-# define REG_START_x86_8     DR_REG_START_x86_8
-# define REG_STOP_x86_8      DR_REG_STOP_x86_8
-# define REG_START_x64_8     DR_REG_START_x64_8
-# define REG_STOP_x64_8      DR_REG_STOP_x64_8
-# define REG_START_MMX       DR_REG_START_MMX
-# define REG_STOP_MMX        DR_REG_STOP_MMX
-# define REG_START_YMM       DR_REG_START_YMM
-# define REG_STOP_YMM        DR_REG_STOP_YMM
-# define REG_START_XMM       DR_REG_START_XMM
-# define REG_STOP_XMM        DR_REG_STOP_XMM
-# define REG_START_FLOAT     DR_REG_START_FLOAT
-# define REG_STOP_FLOAT      DR_REG_STOP_FLOAT
-# define REG_START_SEGMENT   DR_REG_START_SEGMENT
-# define REG_STOP_SEGMENT    DR_REG_STOP_SEGMENT
-# define REG_START_DR        DR_REG_START_DR
-# define REG_STOP_DR         DR_REG_STOP_DR
-# define REG_START_CR        DR_REG_START_CR
-# define REG_STOP_CR         DR_REG_STOP_CR
-# define REG_LAST_VALID_ENUM DR_REG_LAST_VALID_ENUM
-# define REG_LAST_ENUM       DR_REG_LAST_ENUM
-# define REG_YMM0            DR_REG_YMM0
-# define REG_YMM1            DR_REG_YMM1
-# define REG_YMM2            DR_REG_YMM2
-# define REG_YMM3            DR_REG_YMM3
-# define REG_YMM4            DR_REG_YMM4
-# define REG_YMM5            DR_REG_YMM5
-# define REG_YMM6            DR_REG_YMM6
-# define REG_YMM7            DR_REG_YMM7
-# define REG_YMM8            DR_REG_YMM8
-# define REG_YMM9            DR_REG_YMM9
-# define REG_YMM10           DR_REG_YMM10
-# define REG_YMM11           DR_REG_YMM11
-# define REG_YMM12           DR_REG_YMM12
-# define REG_YMM13           DR_REG_YMM13
-# define REG_YMM14           DR_REG_YMM14
-# define REG_YMM15           DR_REG_YMM15
-#endif /* ARM */
 
 #endif /* DR_REG_ENUM_COMPATIBILITY */
 /* DR_API EXPORT END */
