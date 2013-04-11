@@ -332,6 +332,10 @@ extern const reg_id_t dr_reg_fixer[];
 # define REG_STOP_FLOAT      DR_REG_STOP_FLOAT
 # define REG_START_SEGMENT   DR_REG_START_SEGMENT
 # define REG_STOP_SEGMENT    DR_REG_STOP_SEGMENT
+# define REG_START_16        DR_REG_START_16
+# define REG_STOP_16         DR_REG_STOP_16
+# define REG_START_32        DR_REG_START_32
+# define REG_STOP_32         DR_REG_STOP_32
 # define REG_START_DR        DR_REG_START_DR 
 # define REG_STOP_DR         DR_REG_STOP_DR
 # define REG_START_CR        DR_REG_START_CR

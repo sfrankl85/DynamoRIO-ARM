@@ -165,6 +165,10 @@ enum {
  */
 typedef struct instr_info_t {
     int type; /* an OP_ constant or special type code below */
+    /* EVERY arm instruction has an condition. bits 31-28 */
+    byte cond;
+    /* TODO opcodes in ARM are split across multiple sections of bits. May need two variables 
+            to store or may be able to combine into one. */
     /* opcode: split into bytes
      * 0th (ms) = prefix byte, if byte 3's 1st nibble's bit 3 and bit 4 are both NOT set;
      *            modrm byte, if  byte 3's 1st nibble's bit 3 IS set.
@@ -340,8 +344,6 @@ enum {
     /* operand types */
     TYPE_NONE,
     TYPE_A, /* immediate that is absolute address */
-    TYPE_C, /* reg of modrm selects control reg */
-    TYPE_D, /* reg of modrm selects debug reg */
     TYPE_E, /* modrm selects reg or mem addr */
     /* I don't use type F, I have eflags info in separate field */
     TYPE_G, /* reg of modrm selects register */
@@ -359,71 +361,16 @@ enum {
     TYPE_W, /* modrm selects XMM or mem addr */
     TYPE_X, /* DS:(RE)(E)SI */
     TYPE_Y, /* ES:(RE)(E)SDI */
-    TYPE_P_MODRM,  /* == Intel 'N': modrm selects MMX */
-    TYPE_V_MODRM,  /* == Intel 'U': modrm selects XMM */
     TYPE_1,
     TYPE_FLOATCONST,
-    TYPE_XLAT,     /* DS:(RE)(E)BX+AL */
-    TYPE_MASKMOVQ, /* DS:(RE)(E)DI */
     TYPE_FLOATMEM,
+    /* TODO Do I need separate values here for the thumb regs. */
     TYPE_REG,     /* hardcoded register */
     TYPE_VAR_REG, /* hardcoded register, default 32 bits, but can be
                    * 16 w/ data prefix or 64 w/ rex.w: equivalent of Intel 'v'
                    * == like OPSZ_4_rex8_short2 */
-    TYPE_VARZ_REG, /* hardcoded register, default 32 bits, but can be
-                    * 16 w/ data prefix: equivalent of Intel 'z'
-                    * == like OPSZ_4_short2 */
-    TYPE_VAR_XREG, /* hardcoded register, default 32/64 bits depending on mode,
-                    * but can be 16 w/ data prefix: equivalent of Intel 'd64'
-                    * == like OPSZ_4x8_short2 */
-    TYPE_VAR_ADDR_XREG, /* hardcoded register, default 32/64 bits depending on mode,
-                         * but can be 16/32 w/ addr prefix: equivalent of Intel 'd64' */
-    /* For x64 extensions (Intel '+r.') where rex.r can select an extended
-     * register (r8-r15): we could try to add a flag that modifies the above
-     * register types, but we'd have to stick it inside some stolen bits.  For
-     * simplicity, we just make each combination a separate type:
-     */
-    TYPE_REG_EX,      /* like TYPE_REG but extendable. used for mov_imm 8-bit immed */
-    TYPE_VAR_REG_EX,  /* like TYPE_VAR_REG (OPSZ_4_rex8_short2) but extendable.
-                       * used for xchg and mov_imm 'v' immed. */
-    TYPE_VAR_XREG_EX, /* like TYPE_VAR_XREG (OPSZ_4x8_short2) but extendable.
-                       * used for pop and push. */
-    TYPE_VAR_REGX_EX, /* hardcoded register, default 32 bits, but can be 64 w/ rex.w,
-                       * and extendable.  used for bswap. 
-                       * == OPSZ_4_rex8 */
     TYPE_INDIR_E,
     TYPE_INDIR_REG,
-    TYPE_INDIR_VAR_XREG, /* indirected register that varies (by addr prefix),
-                          * with a base of 32/64 depending on the mode;
-                          * indirected size varies with data prefix */
-    TYPE_INDIR_VAR_REG, /* indirected register that varies (by addr prefix),
-                         * with a base of 32/64;
-                         * indirected size varies with data and rex prefixes */
-    TYPE_INDIR_VAR_XIREG, /* indirected register that varies (by addr prefix),
-                           * with a base of 32/64 depending on the mode;
-                           * indirected size varies w/ data prefix, except 64-bit Intel */
-    TYPE_INDIR_VAR_XREG_OFFS_1, /* TYPE_INDIR_VAR_XREG but with an offset of
-                                 * -1 * size */
-    TYPE_INDIR_VAR_XREG_OFFS_8, /* TYPE_INDIR_VAR_XREG but with an offset of
-                                 * -8 * size and a size of 8 stack slots */
-    TYPE_INDIR_VAR_XREG_OFFS_N, /* TYPE_INDIR_VAR_XREG but with an offset of
-                                 * -N * size and a size to match: i.e., it
-                                 * varies based on other operands */
-    TYPE_INDIR_VAR_XIREG_OFFS_1, /* TYPE_INDIR_VAR_XIREG but with an offset of
-                                  * -1 * size */
-    TYPE_INDIR_VAR_REG_OFFS_2,   /* TYPE_INDIR_VAR_REG but with an offset of
-                                  * -2 * size and a size of 2 stack slots */
-    /* we have to encode the memory size into the type b/c we use the size
-     * to store the base reg: but since most base regs are xsp we could
-     * encode that into the type and store the size in the size field
-     */
-    TYPE_INDIR_VAR_XREG_SIZEx8,  /* TYPE_INDIR_VAR_XREG but with a size of
-                                  * 8 * regular size */
-    TYPE_INDIR_VAR_REG_SIZEx2,   /* TYPE_INDIR_VAR_REG but with a size of
-                                  * 2 * regular size */
-    TYPE_INDIR_VAR_REG_SIZEx3x5, /* TYPE_INDIR_VAR_REG but with a size of
-                                  * 3 * regular size for 32-bit, 5 * regular
-                                  * size for 64-bit */
     /* when adding new types, update type_names[] in encode.c */
 };
 

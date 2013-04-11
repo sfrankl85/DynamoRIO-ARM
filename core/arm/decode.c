@@ -279,52 +279,18 @@ resolve_addr_size(decode_info_t *di/*IN: x86_mode, prefixes*/)
 bool
 optype_is_indir_reg(int optype)
 {
-    switch (optype) {
-    case TYPE_INDIR_VAR_XREG:
-    case TYPE_INDIR_VAR_XREG_OFFS_1:
-    case TYPE_INDIR_VAR_XREG_OFFS_N:
-    case TYPE_INDIR_VAR_XIREG:
-    case TYPE_INDIR_VAR_XIREG_OFFS_1:
-    case TYPE_INDIR_VAR_REG:
-    case TYPE_INDIR_VAR_REG_OFFS_2:
-    case TYPE_INDIR_VAR_REG_SIZEx2:
-    case TYPE_INDIR_VAR_XREG_OFFS_8:
-    case TYPE_INDIR_VAR_XREG_SIZEx8:
-    case TYPE_INDIR_VAR_REG_SIZEx3x5:
-        return true;
-    }
-    return false;
+    /* TODO All registers in ARM can be indirect registers 
+            Not every one in intel can. Is this right? */
+    return true;
 }
 
 opnd_size_t
 indir_var_reg_size(decode_info_t *di, int optype)
 {
+    /* TODO Complete this */
     switch (optype) {
-    case TYPE_INDIR_VAR_XREG:
-    case TYPE_INDIR_VAR_XREG_OFFS_1:
-    case TYPE_INDIR_VAR_XREG_OFFS_N:
-        /* non-zero immed int adds additional, but we require client to handle that
-         * b/c our decoding and encoding can't see the rest of the operands
-         */
-        return OPSZ_VARSTACK;
-
-    case TYPE_INDIR_VAR_XIREG:
-    case TYPE_INDIR_VAR_XIREG_OFFS_1:
-        return OPSZ_ret;
-
-    case TYPE_INDIR_VAR_REG:
-        return OPSZ_REXVARSTACK;
-
-    case TYPE_INDIR_VAR_REG_OFFS_2:
-    case TYPE_INDIR_VAR_REG_SIZEx2:
-        return OPSZ_8_rex16_short4;
-
-    case TYPE_INDIR_VAR_XREG_OFFS_8:
-    case TYPE_INDIR_VAR_XREG_SIZEx8:
-        return OPSZ_32_short16;
-
-    case TYPE_INDIR_VAR_REG_SIZEx3x5:
-        return OPSZ_12_rex40_short6;
+      case TYPE_REG:
+          return OPSZ_4;
 
     default: CLIENT_ASSERT(false, "internal error: invalid indir reg type");
     }
@@ -335,14 +301,7 @@ indir_var_reg_size(decode_info_t *di, int optype)
 int
 indir_var_reg_offs_factor(int optype)
 {
-    switch (optype) {
-    case TYPE_INDIR_VAR_XREG_OFFS_1:
-    case TYPE_INDIR_VAR_XREG_OFFS_8:
-    case TYPE_INDIR_VAR_XREG_OFFS_N:
-    case TYPE_INDIR_VAR_XIREG_OFFS_1:
-    case TYPE_INDIR_VAR_REG_OFFS_2:
-        return -1;
-    }
+    /* TODO ??? */
     return 0;
 }
 
@@ -1073,13 +1032,7 @@ read_instruction(byte *pc, byte *orig_pc,
 static reg_id_t
 reg8_alternative(decode_info_t *di, reg_id_t reg, uint prefixes)
 {
-    if (X64_MODE(di) && reg >= REG_START_x86_8 && reg <= REG_STOP_x86_8 &&
-        TESTANY(PREFIX_REX_ALL, prefixes)) {
-        /* for x64, if any rex prefix exists, we use SPL...SDL instead of
-         * AH..BH (this seems to be the only use of 0x40 == PREFIX_REX_GENERAL)
-         */
-        return (reg - REG_START_x86_8 + REG_START_x64_8);
-    }
+    /* TODO Any 8 bit alternatives for ARM??? No I think */
     return reg;
 }
 
@@ -1115,27 +1068,13 @@ decode_reg(decode_reg_t which_reg, decode_info_t *di, byte optype, opnd_size_t o
     switch (optype) {
     case TYPE_P:
     case TYPE_Q:
-    case TYPE_P_MODRM:
-        return (REG_START_MMX + reg); /* no x64 extensions */
     case TYPE_V:
     case TYPE_W:
-    case TYPE_V_MODRM:
-        return ((TEST(PREFIX_VEX_L, di->prefixes) &&
-                 /* we use this to indicate .LIG since all {VHW}s{sd} types
-                  * and no others are .LIG
-                  */
-                 opsize != OPSZ_4_of_16 &&
-                 opsize != OPSZ_8_of_16)?
-                (extend? (REG_START_YMM + 8 + reg) : (REG_START_YMM + reg)) :
-                (extend? (REG_START_XMM + 8 + reg) : (REG_START_XMM + reg)));
+        return 0;
     case TYPE_S:
         if (reg >= 6)
             return REG_NULL;
         return (REG_START_SEGMENT + reg);
-    case TYPE_C:
-        return (extend? (REG_START_CR + 8 + reg) : (REG_START_CR + reg));
-    case TYPE_D:
-        return (extend? (REG_START_DR + 8 + reg) : (REG_START_DR + reg));
     case TYPE_E:
     case TYPE_G:
     case TYPE_R:
@@ -1158,10 +1097,6 @@ decode_reg(decode_reg_t which_reg, decode_info_t *di, byte optype, opnd_size_t o
 
     switch (opsize) {
     case OPSZ_1:
-        if (extend)
-            return (REG_START_8 + 8 + reg);
-        else
-            return reg8_alternative(di, REG_START_8 + reg, di->prefixes);
     case OPSZ_2:
         return (extend? (REG_START_16 + 8 + reg) : (REG_START_16 + reg));
     case OPSZ_4:

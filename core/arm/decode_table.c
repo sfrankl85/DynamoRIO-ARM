@@ -1099,284 +1099,31 @@ const instr_info_t * const op_instr[] =
 
 #define xx  TYPE_NONE, OPSZ_NA
 
-/* from Intel tables, using our corresponding OPSZ constants */
-#define Ap  TYPE_A, OPSZ_6_irex10_short4 /* NOTE - not legal for 64-bit instructions */
-#define Cr  TYPE_C, OPSZ_4x8
-#define Dr  TYPE_D, OPSZ_4x8
-#define Eb  TYPE_E, OPSZ_1
-#define Ew  TYPE_E, OPSZ_2
-#define Ev  TYPE_E, OPSZ_4_rex8_short2
-#define Esv TYPE_E, OPSZ_4x8_short2 /* "stack v", or "d64" in Intel tables */
-#define Ed  TYPE_E, OPSZ_4
-#define Ep  TYPE_E, OPSZ_6_irex10_short4
-#define Ed_q TYPE_E, OPSZ_4_rex8
-#define Rd_Mb TYPE_E, OPSZ_1_reg4
-#define Rd_Mw TYPE_E, OPSZ_2_reg4
-#define Gb  TYPE_G, OPSZ_1
-#define Gw  TYPE_G, OPSZ_2
-#define Gv  TYPE_G, OPSZ_4_rex8_short2
-#define Gz  TYPE_G, OPSZ_4_short2
-#define Gd  TYPE_G, OPSZ_4
-#define Gd_q TYPE_G, OPSZ_4_rex8
-#define Gr  TYPE_G, OPSZ_4x8
-#define Ib  TYPE_I, OPSZ_1
-#define Iw  TYPE_I, OPSZ_2
-#define Iv  TYPE_I, OPSZ_4_rex8_short2
-#define Iz  TYPE_I, OPSZ_4_short2
-#define Jb  TYPE_J, OPSZ_1
-#define Jz  TYPE_J, OPSZ_4_short2xi4
-#define Ma  TYPE_M, OPSZ_8_short4
-#define Mp  TYPE_M, OPSZ_6_irex10_short4
-#define Ms  TYPE_M, OPSZ_6x10
-#define Ob  TYPE_O, OPSZ_1
-#define Ov  TYPE_O, OPSZ_4_rex8_short2
-#define Pd  TYPE_P, OPSZ_4
-#define Pq  TYPE_P, OPSZ_8
-#define Pd_q TYPE_P, OPSZ_4_of_8
-#define Ppi TYPE_P, OPSZ_8
-#define Nq  TYPE_P_MODRM, OPSZ_8
-#define Qd  TYPE_Q, OPSZ_4
-#define Qq  TYPE_Q, OPSZ_8
-#define Qpi TYPE_Q, OPSZ_8
-#define Rr  TYPE_R, OPSZ_4x8
-#define Sw  TYPE_S, OPSZ_2
-#define Vq  TYPE_V, OPSZ_8
-#define Vdq TYPE_V, OPSZ_16
-#define Vd_dq TYPE_V, OPSZ_4_of_16
-#define Vq_dq TYPE_V, OPSZ_8_of_16
-#define Vps TYPE_V, OPSZ_16
-#define Vpd TYPE_V, OPSZ_16
-#define Vss TYPE_V, OPSZ_4_of_16
-#define Vsd TYPE_V, OPSZ_8_of_16
-#define Ups TYPE_V_MODRM, OPSZ_16
-#define Upd TYPE_V_MODRM, OPSZ_16
-#define Udq TYPE_V_MODRM, OPSZ_16
-#define Uq_dq TYPE_V_MODRM, OPSZ_8_of_16
-#define Wq  TYPE_W, OPSZ_8
-#define Wdq TYPE_W, OPSZ_16
-#define Wq_dq TYPE_W, OPSZ_8_of_16
-#define Wps TYPE_W, OPSZ_16
-#define Wpd TYPE_W, OPSZ_16
-#define Wss TYPE_W, OPSZ_4_of_16
-#define Wsd TYPE_W, OPSZ_8_of_16
-#define Udq_Md TYPE_W, OPSZ_4_reg16
-#define Xb  TYPE_X, OPSZ_1
-#define Xv  TYPE_X, OPSZ_4_rex8_short2
-#define Xz  TYPE_X, OPSZ_4_short2
-#define Yb  TYPE_Y, OPSZ_1
-#define Yv  TYPE_Y, OPSZ_4_rex8_short2
-#define Yz  TYPE_Y, OPSZ_4_short2
+/* from ARM document. Couldnt find a table. Is there one? */
+#define Ra  TYPE_REG, OPSZ_32
+#define I3  TYPE_I,   OPSZ_3
+#define I4  TYPE_I,   OPSZ_4
+#define I5  TYPE_I,   OPSZ_5
+#define I8  TYPE_I,   OPSZ_8
+#define I12 TYPE_I,   OPSZ_12
 
-/* AVX additions */
-#define Vvs TYPE_V, OPSZ_16_vex32
-#define Vvd TYPE_V, OPSZ_16_vex32
-#define Vvdq TYPE_V, OPSZ_16_vex32
-#define Vqq TYPE_V, OPSZ_32
-#define Vdq_qq TYPE_V, OPSZ_16_of_32
-#define Wvs TYPE_W, OPSZ_16_vex32
-#define Wvd TYPE_W, OPSZ_16_vex32
-#define Wvdq TYPE_W, OPSZ_16_vex32
-#define Uvs TYPE_V_MODRM, OPSZ_16_vex32
-#define Uvd TYPE_V_MODRM, OPSZ_16_vex32
-#define Uss TYPE_V_MODRM, OPSZ_4_of_16
-#define Usd TYPE_V_MODRM, OPSZ_8_of_16
-#define Hvs TYPE_H, OPSZ_16_vex32
-#define Hvd TYPE_H, OPSZ_16_vex32
-#define Hss TYPE_H, OPSZ_4_of_16
-#define Hsd TYPE_H, OPSZ_8_of_16
-#define Hq_dq TYPE_H, OPSZ_8_of_16
-#define Hdq TYPE_H, OPSZ_16
-#define Hvdq TYPE_H, OPSZ_16_vex32
-#define Wvq_dq TYPE_W, OPSZ_8_of_16_vex32
-#define Mvs TYPE_M, OPSZ_16_vex32
-#define Mvd TYPE_M, OPSZ_16_vex32
-#define Mvdq TYPE_M, OPSZ_16_vex32
-#define Ldq TYPE_L, OPSZ_16 /* immed is 1 byte but reg is xmm */
-#define Lvdq TYPE_L, OPSZ_16_vex32 /* immed is 1 byte but reg is xmm/ymm */
 
-/* my own codes
- * size m = 32 or 16 bit depending on addr size attribute
- * B=ds:eDI, Z=xlat's mem, K=float in mem, i_==indirect 
- */
-#define Mb  TYPE_M, OPSZ_1
-#define Md  TYPE_M, OPSZ_4
-#define Md_q  TYPE_M, OPSZ_4_rex8
-#define Mw  TYPE_M, OPSZ_2
-#define Mm  TYPE_M, OPSZ_lea
-#define Me  TYPE_M, OPSZ_512
-#define Mxsave TYPE_M, OPSZ_xsave
-#define Mps  TYPE_M, OPSZ_16
-#define Mpd  TYPE_M, OPSZ_16
-#define Mss  TYPE_M, OPSZ_4
-#define Msd  TYPE_M, OPSZ_8
-#define Mq  TYPE_M, OPSZ_8
-#define Mdq  TYPE_M, OPSZ_16
-#define Mq_dq TYPE_M, OPSZ_8_rex16
-#define Mv  TYPE_M, OPSZ_4_rex8_short2
-#define Zb  TYPE_XLAT, OPSZ_1
-#define Bq  TYPE_MASKMOVQ, OPSZ_8
-#define Bdq  TYPE_MASKMOVQ, OPSZ_16
-#define Kw  TYPE_FLOATMEM, OPSZ_2
-#define Kd  TYPE_FLOATMEM, OPSZ_4
-#define Kq  TYPE_FLOATMEM, OPSZ_8
-#define Kx  TYPE_FLOATMEM, OPSZ_10
-#define Ky  TYPE_FLOATMEM, OPSZ_28_short14 /* _14_ if data16 */
-#define Kz  TYPE_FLOATMEM, OPSZ_108_short94 /* _98_ if data16 */
-#define i_dx  TYPE_INDIR_REG, REG_DX
-#define i_Ev  TYPE_INDIR_E, OPSZ_4_rex8_short2
-#define i_Exi  TYPE_INDIR_E, OPSZ_4x8_short2xi8
-#define i_Ep  TYPE_INDIR_E, OPSZ_6_irex10_short4
-#define i_xSP TYPE_INDIR_VAR_XREG, REG_ESP
-#define i_iSP TYPE_INDIR_VAR_XIREG, REG_ESP
-#define i_xBP TYPE_INDIR_VAR_XREG, REG_EBP
-/* negative offset from (%xsp) for pushes */
-#define i_iSPo1 TYPE_INDIR_VAR_XIREG_OFFS_1, REG_ESP
-#define i_vSPo2 TYPE_INDIR_VAR_REG_OFFS_2, REG_ESP
-#define i_xSPo1 TYPE_INDIR_VAR_XREG_OFFS_1, REG_ESP
-#define i_xSPo8 TYPE_INDIR_VAR_XREG_OFFS_8, REG_ESP
-#define i_xSPs8 TYPE_INDIR_VAR_XREG_SIZEx8, REG_ESP
-#define i_vSPs2 TYPE_INDIR_VAR_REG_SIZEx2, REG_ESP
-#define i_vSPs3 TYPE_INDIR_VAR_REG_SIZEx3x5, REG_ESP
-/* pop but unusual size */
-#define i_xSPoN TYPE_INDIR_VAR_XREG_OFFS_N, REG_ESP
-#define c1  TYPE_1, OPSZ_0
-#define cF  TYPE_FLOATCONST, OPSZ_0
-
-#ifdef IA32_ON_IA64
-#define Av TYPE_A, OPSZ_4_short2
-#endif
-
-/* registers that are base 32 but vary down or up */
-#define eAX TYPE_VAR_REG, REG_EAX
-#define eCX TYPE_VAR_REG, REG_ECX
-#define eDX TYPE_VAR_REG, REG_EDX
-#define eBX TYPE_VAR_REG, REG_EBX
-#define eSP TYPE_VAR_REG, REG_ESP
-#define eBP TYPE_VAR_REG, REG_EBP
-#define eSI TYPE_VAR_REG, REG_ESI
-#define eDI TYPE_VAR_REG, REG_EDI
-
-/* registers that are base 32 and can vary down but not up */
-#define zAX TYPE_VARZ_REG, REG_EAX
-#define zCX TYPE_VARZ_REG, REG_ECX
-#define zDX TYPE_VARZ_REG, REG_EDX
-#define zBX TYPE_VARZ_REG, REG_EBX
-#define zSP TYPE_VARZ_REG, REG_ESP
-#define zBP TYPE_VARZ_REG, REG_EBP
-#define zSI TYPE_VARZ_REG, REG_ESI
-#define zDI TYPE_VARZ_REG, REG_EDI
-
-/* registers whose base matches the mode, and can vary down but not up.
- * we use the 32-bit versions but expand in resolve_var_reg()
- */
-#define xAX TYPE_VAR_XREG, REG_EAX
-#define xCX TYPE_VAR_XREG, REG_ECX
-#define xDX TYPE_VAR_XREG, REG_EDX
-#define xBX TYPE_VAR_XREG, REG_EBX
-#define xSP TYPE_VAR_XREG, REG_ESP
-#define xBP TYPE_VAR_XREG, REG_EBP
-#define xSI TYPE_VAR_XREG, REG_ESI
-#define xDI TYPE_VAR_XREG, REG_EDI
-
-/* esp modifications in push/pop instrs operate on esp vs. sp
- * wrt addr16, not data16, so we have to special-case those esp operands
- */
-#define axSP TYPE_VAR_ADDR_XREG, REG_ESP
-#define axBP TYPE_VAR_ADDR_XREG, REG_EBP
-/* jecxz and loop* use addr16 */
-#define axCX TYPE_VAR_ADDR_XREG, REG_ECX
-/* string ops use addr16 */
-#define axSI TYPE_VAR_ADDR_XREG, REG_ESI
-#define axDI TYPE_VAR_ADDR_XREG, REG_EDI
-#define axAX TYPE_VAR_ADDR_XREG, REG_EAX
-
-/* 8-bit implicit registers (not from modrm) that can be exteded via rex.r */
-#define al_x TYPE_REG_EX, REG_AL
-#define cl_x TYPE_REG_EX, REG_CL
-#define dl_x TYPE_REG_EX, REG_DL
-#define bl_x TYPE_REG_EX, REG_BL
-#define ah_x TYPE_REG_EX, REG_AH
-#define ch_x TYPE_REG_EX, REG_CH
-#define dh_x TYPE_REG_EX, REG_DH
-#define bh_x TYPE_REG_EX, REG_BH
-
-/* 4_rex8_short2 implicit registers (not from modrm) that can be exteded via rex.r */
-#define eAX_x TYPE_VAR_REG_EX, REG_EAX
-#define eCX_x TYPE_VAR_REG_EX, REG_ECX
-#define eDX_x TYPE_VAR_REG_EX, REG_EDX
-#define eBX_x TYPE_VAR_REG_EX, REG_EBX
-#define eSP_x TYPE_VAR_REG_EX, REG_ESP
-#define eBP_x TYPE_VAR_REG_EX, REG_EBP
-#define eSI_x TYPE_VAR_REG_EX, REG_ESI
-#define eDI_x TYPE_VAR_REG_EX, REG_EDI
-
-/* 4x8_short2 implicit registers (not from modrm) that can be exteded via rex.r */
-#define xAX_x TYPE_VAR_XREG_EX, REG_EAX
-#define xCX_x TYPE_VAR_XREG_EX, REG_ECX
-#define xDX_x TYPE_VAR_XREG_EX, REG_EDX
-#define xBX_x TYPE_VAR_XREG_EX, REG_EBX
-#define xSP_x TYPE_VAR_XREG_EX, REG_ESP
-#define xBP_x TYPE_VAR_XREG_EX, REG_EBP
-#define xSI_x TYPE_VAR_XREG_EX, REG_ESI
-#define xDI_x TYPE_VAR_XREG_EX, REG_EDI
-
-/* 4_rex8 implicit registers (not from modrm) that can be exteded via rex.r */
-#define uAX_x TYPE_VAR_REGX_EX, REG_EAX
-#define uCX_x TYPE_VAR_REGX_EX, REG_ECX
-#define uDX_x TYPE_VAR_REGX_EX, REG_EDX
-#define uBX_x TYPE_VAR_REGX_EX, REG_EBX
-#define uSP_x TYPE_VAR_REGX_EX, REG_ESP
-#define uBP_x TYPE_VAR_REGX_EX, REG_EBP
-#define uSI_x TYPE_VAR_REGX_EX, REG_ESI
-#define uDI_x TYPE_VAR_REGX_EX, REG_EDI
-
-#define ax TYPE_REG, REG_AX
-#define cx TYPE_REG, REG_CX
-#define dx TYPE_REG, REG_DX
-#define bx TYPE_REG, REG_BX
-#define sp TYPE_REG, REG_SP
-#define bp TYPE_REG, REG_BP
-#define si TYPE_REG, REG_SI
-#define di TYPE_REG, REG_DI
-
-#define al TYPE_REG, REG_AL
-#define cl TYPE_REG, REG_CL
-#define dl TYPE_REG, REG_DL
-#define bl TYPE_REG, REG_BL
-#define ah TYPE_REG, REG_AH
-#define ch TYPE_REG, REG_CH
-#define dh TYPE_REG, REG_DH
-#define bh TYPE_REG, REG_BH
-
-#define eax TYPE_REG, REG_EAX
-#define ecx TYPE_REG, REG_ECX
-#define edx TYPE_REG, REG_EDX
-#define ebx TYPE_REG, REG_EBX
-#define esp TYPE_REG, REG_ESP
-#define ebp TYPE_REG, REG_EBP
-#define esi TYPE_REG, REG_ESI
-#define edi TYPE_REG, REG_EDI
-
-#define xsp TYPE_REG, REG_XSP
-#define xcx TYPE_REG, REG_XCX
-
-#define cs  TYPE_REG, SEG_CS
-#define ss  TYPE_REG, SEG_SS
-#define ds  TYPE_REG, SEG_DS
-#define es  TYPE_REG, SEG_ES
-#define fs  TYPE_REG, SEG_FS
-#define gs  TYPE_REG, SEG_GS
-
-#define st0 TYPE_REG, REG_ST0
-#define st1 TYPE_REG, REG_ST1
-#define st2 TYPE_REG, REG_ST2
-#define st3 TYPE_REG, REG_ST3
-#define st4 TYPE_REG, REG_ST4
-#define st5 TYPE_REG, REG_ST5
-#define st6 TYPE_REG, REG_ST6
-#define st7 TYPE_REG, REG_ST7
-
-#define xmm0 TYPE_REG, REG_XMM0
+#define r0  TYPE_REG, REG_R0
+#define r1  TYPE_REG, REG_R1
+#define r2  TYPE_REG, REG_R2
+#define r3  TYPE_REG, REG_R3
+#define r4  TYPE_REG, REG_R4
+#define r5  TYPE_REG, REG_R5
+#define r6  TYPE_REG, REG_R6
+#define r7  TYPE_REG, REG_R7
+#define r8  TYPE_REG, REG_R8
+#define r9  TYPE_REG, REG_R9
+#define r10 TYPE_REG, REG_R10
+#define r11 TYPE_REG, REG_R11
+#define r12 TYPE_REG, REG_R12
+#define r13 TYPE_REG, REG_R13
+#define r14 TYPE_REG, REG_R14
+#define r15 TYPE_REG, REG_R15
 
 /* flags */
 #define no       0
@@ -1448,15 +1195,30 @@ const instr_info_t * const op_instr[] =
 const instr_info_t invalid_instr =
     {OP_INVALID,  0x000000, "(bad)", xx, xx, xx, xx, xx, no, x, NA};
 
+/* KEY: imm=immediate, rsr=register shifted register, reg=register, sp=stackpointer */
 /* All ARM instructions are fixed length at 32 bits. 
    The opcode is split across multiple bits. TODO may need another opcode */
 /* TODO Add them alphabeticaly for the moment as this is how they are declared inside 
         the ARM tech manual. Change to numerical ordering?? */
 const instr_info_t armv7a_instrs[] = {
-    {OP_and,  0x000000, "add",  Eb, xx, Gb, Eb, xx, mrm, fW6, tex[1][0]},
+    {OP_adc,  0x000015, "adc",  Ra, xx, Ra,  I12, xx,  mrm, fW6, END_LIST}, /*ADC(imm)*/
+    {OP_adc,  0x000005, "adc",  Ra, xx, Ra,  Ra,  xx,  mrm, fW6, END_LIST}, /*ADC(reg)*/
+    {OP_adc,  0x000005, "adc",  Ra, xx, Ra,  Ra,  Ra,  mrm, fW6, END_LIST}, /*ADC(rsr)*/
+    {OP_add,  0x000014, "add",  Ra, xx, Ra,  I12, xx,  mrm, fW6, END_LIST}, /*ADD(imm)*/
+    {OP_add,  0x000004, "add",  Ra, xx, Ra,  Ra,  xx,  mrm, fW6, END_LIST}, /*ADD(reg)*/
+    {OP_add,  0x000004, "add",  Ra, xx, Ra,  Ra,  Ra,  mrm, fW6, END_LIST}, /*ADD(rsr)*/
+    {OP_add,  0x000014, "add",  Ra, xx, I12, xx,  xx,  mrm, fW6, END_LIST}, /*ADD(sp+imm)*/
+    {OP_adr,  0x000004, "adr",  Ra, xx, I12, xx,  xx,  mrm, fW6, END_LIST}, /*ADR()*/
+    {OP_and,  0x000010, "and",  Ra, xx, Ra,  I12, xx,  mrm, fW6, END_LIST}, /*AND(imm)*/
+    {OP_and,  0x000000, "and",  Ra, xx, Ra,  Ra,  xx,  mrm, fW6, END_LIST}, /*AND(reg)*/
+    {OP_and,  0x000000, "and",  Ra, xx, Ra,  Ra,  Ra,  mrm, fW6, END_LIST}, /*AND(rsr)*/
+    {OP_asr,  0x00000D, "asr",  Ra, xx, Ra,  I5,  xx,  mrm, fW6, END_LIST}, /*ASR(imm)*/
+    {OP_asr,  0x00000D, "asr",  Ra, xx, Ra,  Ra,  xx,  mrm, fW6, END_LIST}, /*ASR(reg)*/
+    {OP_b,    0x00000A, "b",    xx, xx, xx,  xx,  xx,  mrm, fW6, END_LIST}, /*B()*/
 };
 
 const instr_info_t thumb_instrs[] = {
+    {OP_and,  0x000000, "add",  Eb, xx, Gb, Eb, xx, mrm, fW6, tex[1][0]},
 };
 
 /****************************************************************************
@@ -1474,7 +1236,6 @@ const instr_info_t first_byte[] = {
     {OP_add,  0x050000, "add", eAX, xx, Iz, eAX, xx, no,  fW6, tfb[0x04]},
     {OP_push, 0x060000, "push", axSP, i_xSPo1, es, axSP, xx, i64, x, tfb[0x0e]},
     {OP_pop,  0x070000, "pop", es, axSP, axSP, i_xSP, xx, i64, x, tsb[0xa1]},
-    /* 08 */
 };
 
 /****************************************************************************
