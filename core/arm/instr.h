@@ -136,15 +136,34 @@ enum {
     DR_REG_R8,          DR_REG_R9,      DR_REG_R10,     DR_REG_R11,
     DR_REG_R12,         DR_REG_R13,     DR_REG_R14,     DR_REG_R15,
 
-    /* 128 bit Neon registers */
-    DR_REG_N0,          DR_REG_N1,      DR_REG_N2,      DR_REG_N3,
-    DR_REG_N4,          DR_REG_N5,      DR_REG_N6,      DR_REG_N7,
-    DR_REG_N8,          DR_REG_N9,      DR_REG_N10,     DR_REG_N11,
-    DR_REG_N12,         DR_REG_N13,     DR_REG_N14,     DR_REG_N15,
-    DR_REG_N16,         DR_REG_N17,     DR_REG_N18,     DR_REG_N19,
-    DR_REG_N20,         DR_REG_N21,     DR_REG_N22,     DR_REG_N23,
-    DR_REG_N24,         DR_REG_N25,     DR_REG_N26,     DR_REG_N27,
-    DR_REG_N28,         DR_REG_N29,     DR_REG_N30,     DR_REG_N31,
+    /* All the neon/vfp registers below refer to the same registers but
+       depending on the mode, different views are available. */
+    /* NEON/VFPv3 16 * 128bit(quadword) shared registers */
+    DR_REG_Q0,          DR_REG_Q1,      DR_REG_Q2,      DR_REG_Q3,
+    DR_REG_Q4,          DR_REG_Q5,      DR_REG_Q6,      DR_REG_Q7,
+    DR_REG_Q8,          DR_REG_Q9,      DR_REG_Q10,     DR_REG_Q11,
+    DR_REG_Q12,         DR_REG_Q13,     DR_REG_Q14,     DR_REG_Q15,
+ 
+    /* NEON/VFPv3 32 * 64bit(doubleword) shared registers */ 
+    DR_REG_D0,          DR_REG_D1,      DR_REG_D2,      DR_REG_D3,
+    DR_REG_D4,          DR_REG_D5,      DR_REG_D6,      DR_REG_D7,
+    DR_REG_D8,          DR_REG_D9,      DR_REG_D10,     DR_REG_D11,
+    DR_REG_D12,         DR_REG_D13,     DR_REG_D14,     DR_REG_D15,
+    DR_REG_D16,         DR_REG_D17,     DR_REG_D18,     DR_REG_D19,
+    DR_REG_D20,         DR_REG_D21,     DR_REG_D22,     DR_REG_D23,
+    DR_REG_D24,         DR_REG_D25,     DR_REG_D26,     DR_REG_D27,
+    DR_REG_D28,         DR_REG_D29,     DR_REG_D30,     DR_REG_D31,
+
+    /* NEON/VFPv3 32 * 32bit(singleword) shared registers */ 
+    DR_REG_S0,          DR_REG_S1,      DR_REG_S2,      DR_REG_S3,
+    DR_REG_S4,          DR_REG_S5,      DR_REG_S6,      DR_REG_S7,
+    DR_REG_S8,          DR_REG_S9,      DR_REG_S10,     DR_REG_S11,
+    DR_REG_S12,         DR_REG_S13,     DR_REG_S14,     DR_REG_S15,
+    DR_REG_S16,         DR_REG_S17,     DR_REG_S18,     DR_REG_S19,
+    DR_REG_S20,         DR_REG_S21,     DR_REG_S22,     DR_REG_S23,
+    DR_REG_S24,         DR_REG_S25,     DR_REG_S26,     DR_REG_S27,
+    DR_REG_S28,         DR_REG_S29,     DR_REG_S30,     DR_REG_S31,
+
 
     /* Coprocessor registers from the ARM tech manual ??? Is this right. All for CP15 */
     /* TODO Maybe rearrange these to group by function instead of location */
