@@ -1104,8 +1104,11 @@ const instr_info_t * const op_instr[] =
 #define I3  TYPE_I,   OPSZ_3
 #define I4  TYPE_I,   OPSZ_4
 #define I5  TYPE_I,   OPSZ_5
+#define I6  TYPE_I,   OPSZ_6
 #define I8  TYPE_I,   OPSZ_8
 #define I12 TYPE_I,   OPSZ_12
+#define I16 TYPE_I,   OPSZ_16
+#define I24 TYPE_I,   OPSZ_24
 
 
 #define r0  TYPE_REG, REG_R0
@@ -1201,26 +1204,61 @@ const instr_info_t invalid_instr =
 /* TODO Add them alphabeticaly for the moment as this is how they are declared inside 
         the ARM tech manual. Change to numerical ordering?? */
 const instr_info_t armv7a_instrs[] = {
-    {OP_adc,  0x000015, "adc",  Ra, xx, Ra,  I12, xx,  mrm, fW6, END_LIST}, /*ADC(imm)*/
-    {OP_adc,  0x000005, "adc",  Ra, xx, Ra,  Ra,  xx,  mrm, fW6, END_LIST}, /*ADC(reg)*/
-    {OP_adc,  0x000005, "adc",  Ra, xx, Ra,  Ra,  Ra,  mrm, fW6, END_LIST}, /*ADC(rsr)*/
-    {OP_add,  0x000014, "add",  Ra, xx, Ra,  I12, xx,  mrm, fW6, END_LIST}, /*ADD(imm)*/
-    {OP_add,  0x000004, "add",  Ra, xx, Ra,  Ra,  xx,  mrm, fW6, END_LIST}, /*ADD(reg)*/
-    {OP_add,  0x000004, "add",  Ra, xx, Ra,  Ra,  Ra,  mrm, fW6, END_LIST}, /*ADD(rsr)*/
-    {OP_add,  0x000014, "add",  Ra, xx, I12, xx,  xx,  mrm, fW6, END_LIST}, /*ADD(sp+imm)*/
-    {OP_adr,  0x000004, "adr",  Ra, xx, I12, xx,  xx,  mrm, fW6, END_LIST}, /*ADR()*/
-    {OP_and,  0x000010, "and",  Ra, xx, Ra,  I12, xx,  mrm, fW6, END_LIST}, /*AND(imm)*/
-    {OP_and,  0x000000, "and",  Ra, xx, Ra,  Ra,  xx,  mrm, fW6, END_LIST}, /*AND(reg)*/
-    {OP_and,  0x000000, "and",  Ra, xx, Ra,  Ra,  Ra,  mrm, fW6, END_LIST}, /*AND(rsr)*/
-    {OP_asr,  0x00000D, "asr",  Ra, xx, Ra,  I5,  xx,  mrm, fW6, END_LIST}, /*ASR(imm)*/
-    {OP_asr,  0x00000D, "asr",  Ra, xx, Ra,  Ra,  xx,  mrm, fW6, END_LIST}, /*ASR(reg)*/
-    {OP_b,    0x00000A, "b",    xx, xx, xx,  xx,  xx,  mrm, fW6, END_LIST}, /*B()*/
+    {OP_adc,  0x000015, "adc",  Ra, xx, Ra,  I12, xx,  0x0,  mrm, fW6, END_LIST}, /*ADC(imm)*/
+    {OP_adc,  0x000005, "adc",  Ra, xx, Ra,  Ra,  xx,  0x0,  mrm, fW6, END_LIST}, /*ADC(reg)*/
+    {OP_adc,  0x000005, "adc",  Ra, xx, Ra,  Ra,  Ra,  0x0,  mrm, fW6, END_LIST}, /*ADC(rsr)*/
+    {OP_add,  0x000014, "add",  Ra, xx, Ra,  I12, xx,  0x0,  mrm, fW6, END_LIST}, /*ADD(imm)*/
+    {OP_add,  0x000004, "add",  Ra, xx, Ra,  Ra,  xx,  0x0,  mrm, fW6, END_LIST}, /*ADD(reg)*/
+    {OP_add,  0x000004, "add",  Ra, xx, Ra,  Ra,  Ra,  0x0,  mrm, fW6, END_LIST}, /*ADD(rsr)*/
+    {OP_add,  0x000014, "add",  Ra, xx, I12, xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*ADD(sp+imm)*/
+    {OP_adr,  0x000004, "adr",  Ra, xx, I12, xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*ADR()*/
+    {OP_and,  0x000010, "and",  Ra, xx, Ra,  I12, xx,  0x0,  mrm, fW6, END_LIST}, /*AND(imm)*/
+    {OP_and,  0x000000, "and",  Ra, xx, Ra,  Ra,  xx,  0x0,  mrm, fW6, END_LIST}, /*AND(reg)*/
+    {OP_and,  0x000000, "and",  Ra, xx, Ra,  Ra,  Ra,  0x0,  mrm, fW6, END_LIST}, /*AND(rsr)*/
+    {OP_asr,  0x00000D, "asr",  Ra, xx, Ra,  I5,  xx,  0x4,  mrm, fW6, END_LIST}, /*ASR(imm)*/
+    {OP_asr,  0x00000D, "asr",  Ra, xx, Ra,  Ra,  xx,  0x5,  mrm, fW6, END_LIST}, /*ASR(reg)*/
+    {OP_b,    0x00000A, "b",    xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*B()*/
+    {OP_bfc,  0x00003E, "bfc",  Ra, xx, I5,  I5,  xx,  0x1,  mrm, fW6, END_LIST}, /*BFC()*/
+    {OP_bfi,  0x00003E, "bfc",  Ra, xx, Ra,  I5,  I5,  0x1,  mrm, fW6, END_LIST}, /*BFI()*/
+    {OP_bic,  0x00001E, "bic",  Ra, xx, Ra,  I12, xx,  0x0,  mrm, fW6, END_LIST}, /*BIC(imm)*/
+    {OP_bic,  0x00000E, "bic",  Ra, xx, Ra,  Ra,  I5,  0x0,  mrm, fW6, END_LIST}, /*BIC(reg)*/
+    {OP_bic,  0x00000E, "bic",  Ra, xx, Ra,  Ra,  Ra,  0x0,  mrm, fW6, END_LIST}, /*BIC(rsr)*/
+    {OP_bkpt, 0x000012, "bkpt", I16,xx, xx,  xx,  xx,  0x7,  mrm, fW6, END_LIST}, /*BKPT()*/
+    {OP_bl,   0x00000B, "bl",   I24,xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*BL(imm)*/
+    {OP_blx,  0x000005, "blx",  I24,xx, xx,  xx,  xx,  0x3,  mrm, fW6, END_LIST}, /*BLX(imm)*/
+    {OP_bx,   0x000012, "bx",   Ra, xx, xx,  xx,  xx,  0x1,  mrm, fW6, END_LIST}, /*BX(reg)*/
+    {OP_bxj,  0x000012, "bxj",  Ra, xx, xx,  xx,  xx,  0x2,  mrm, fW6, END_LIST}, /*BXJ(reg)*/
+    {OP_cdp,  0x00000E, "cdp",  I4, Ra, Ra,  I4,  Ra,  0x0,  mrm, fW6, END_LIST}, /*CDP(reg)*/
+    {OP_cdp2, 0x00000E, "cdp2", I4, Ra, Ra,  I4,  Ra,  0x0,  mrm, fW6, END_LIST}, /*CDP2(reg)*/
+    {OP_clrex,0x000057, "clrex",xx, xx, xx,  xx,  xx,  0x1,  mrm, fW6, END_LIST}, /*CLREX(reg)*/
+    {OP_clz,  0x000016, "clz",  Ra, xx, Ra,  xx,  xx,  0x1,  mrm, fW6, END_LIST}, /*CLZ(reg)*/
+    {OP_cmn,  0x000037, "cmn",  Ra, xx, I12, xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*CMN(imm)*/
+    {OP_cmn,  0x000017, "cmn",  Ra, xx, Ra,  I5,  xx,  0x0,  mrm, fW6, END_LIST}, /*CMN(reg)*/
+    {OP_cmn,  0x000017, "cmn",  Ra, xx, Ra,  Ra,  xx,  0x0,  mrm, fW6, END_LIST}, /*CMN(reg)*/
+    {OP_cmp,  0x000035, "cmp",  Ra, xx, I12, xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*CMP(imm)*/
+    {OP_cmp,  0x000015, "cmp",  Ra, xx, Ra,  I5,  xx,  0x0,  mrm, fW6, END_LIST}, /*CMP(reg)*/
+    {OP_cmp,  0x000032, "cmp",  Ra, xx, Ra,  Ra,  xx,  0x0,  mrm, fW6, END_LIST}, /*CMP(rsr)*/
+    {OP_dbg,  0x000032, "dbg",  xx, xx, xx,  xx,  xx,  0xF,  mrm, fW6, END_LIST}, /*DBG(rsr)*/
+    {OP_dmb,  0x000057, "dmb",  xx, xx, xx,  xx,  xx,  0x5,  mrm, fW6, END_LIST}, /*DMB(rsr)*/
+    {OP_dsb,  0x000057, "dsb",  xx, xx, xx,  xx,  xx,  0x4,  mrm, fW6, END_LIST}, /*DMB(rsr)*/
+    {OP_eor,  0x000011, "eor",  Ra, xx, Ra,  I12, xx,  0x0,  mrm, fW6, END_LIST}, /*EOR(imm)*/
+    {OP_eor,  0x000001, "eor",  Ra, xx, Ra,  Ra,  I5,  0x0,  mrm, fW6, END_LIST}, /*EOR(reg)*/
+    {OP_eor,  0x000001, "eor",  Ra, xx, Ra,  Ra,  Ra,  0x0,  mrm, fW6, END_LIST}, /*EOR(rsr)*/
+/* At intruction F* page A8-100 in ARMv7-A tech manual. */
+/* TODO FInish this struct */
+/* SJF Only add instruction needed for fib program for now. */
+    
+   
+
 };
 
 const instr_info_t thumb_instrs[] = {
-    {OP_and,  0x000000, "add",  Eb, xx, Gb, Eb, xx, mrm, fW6, tex[1][0]},
+    {OP_and,  0x000000, "add",  Ra, xx, Ra, Ra, xx, mrm, fW6, tex[1][0]},
 };
 
+
+#ifdef NO
+SJF Remove all the intel spcific structures
 /****************************************************************************
  * One-byte opcodes
  * This is from Tables A-2 & A-3
@@ -5101,3 +5139,4 @@ const instr_info_t extra_operands[] =
     {OP_CONTD,0x663a6018, "<vpcmpestri cont'd", xx, xx, eax, edx, xx, mrm|vex|reqp, fW6, END_LIST},
 };
 
+#endif

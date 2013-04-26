@@ -104,9 +104,11 @@
  */
 #define PREFIX_SIGNIFICANT (PREFIX_LOCK|PREFIX_JCC_TAKEN|PREFIX_JCC_TAKEN)
 
-/* branch hints show up as segment modifiers */
+/* branch hints show up as segment modifiers 
 #define SEG_JCC_NOT_TAKEN     SEG_CS
 #define SEG_JCC_TAKEN         SEG_DS
+SJF no longer needed
+*/ 
 
 /*
  o get rid of sI?  I sign-extend all the Ib's on decoding, many are
@@ -164,9 +166,10 @@ enum {
  *   gives size x (not present in Intel's table)
  */
 typedef struct instr_info_t {
-    int type; /* an OP_ constant or special type code below */
-    /* EVERY arm instruction has an condition. bits 31-28 */
+    unsigned int type; /* an OP_ constant or special type code below */
+    /* EVERY arm instruction has an condition. bits 31-28 SJF TODO Commented out for now
     byte cond;
+     */
     /* TODO opcodes in ARM are split across multiple sections of bits. May need two variables 
             to store or may be able to combine into one. */
     /* opcode: split into bytes
@@ -193,7 +196,7 @@ typedef struct instr_info_t {
      *                       3 bytes, with the first being an implied 0x0f (so
      *                       the 2nd byte is stored as "1st" and 3rd as "2nd").
      */
-    uint opcode;
+    unsigned int opcode;
     const char *name;
     /* operands
      * the opnd_size_t will instead be reg_id_t for TYPE_*REG*
@@ -203,6 +206,11 @@ typedef struct instr_info_t {
     byte src1_type;  opnd_size_t src1_size;
     byte src2_type;  opnd_size_t src2_size;
     byte src3_type;  opnd_size_t src3_size;
+
+    /* ARM opcodes are split across multiple bits. Soemtimes the second
+       one isnt even used. It is used for regs or imms or whatever. */ 
+    unsigned int opcode2;
+
     byte flags; /* modrm and extra operand flags */
     uint eflags; /* combination of read & write flags from instr.h */
     ptr_int_t code; /* for PREFIX: one of the PREFIX_ constants, or SEG_ constant
@@ -414,19 +422,21 @@ enum {
     OPSZ_FIRST = OPSZ_NA,
     OPSZ_0,  /**< Intel 'm': "sizeless": used for both start addresses
               * (lea, invlpg) and implicit constants (rol, fldl2e, etc.) */
-    OPSZ_1,  /**< Intel 'b': 1 byte */
-    OPSZ_2,  /**< Intel 'w': 2 bytes */
-    OPSZ_4,  /**< Intel 'd','si': 4 bytes */
-    OPSZ_6,  /**< Intel 'p','s': 6 bytes */
-    OPSZ_8,  /**< Intel 'q','pi': 8 bytes */
-    OPSZ_10, /**< Intel 's' 64-bit, or double extended precision floating point
-              * (latter used by fld, fstp, fbld, fbstp) */
-    OPSZ_16, /**< Intel 'dq','ps','pd','ss','sd': 16 bytes */
-    OPSZ_14, /**< FPU operating environment with short data size (fldenv, fnstenv) */
-    OPSZ_28, /**< FPU operating environment with normal data size (fldenv, fnstenv) */
-    OPSZ_94,  /**< FPU state with short data size (fnsave, frstor) */
-    OPSZ_108, /**< FPU state with normal data size (fnsave, frstor) */
-    OPSZ_512, /**< FPU, MMX, XMM state (fxsave, fxrstor) */
+    OPSZ_1, 
+    OPSZ_2,
+    OPSZ_4,
+    OPSZ_5,
+    OPSZ_6,
+    OPSZ_8,
+    OPSZ_10,
+           
+    OPSZ_16,
+    OPSZ_14, 
+    OPSZ_24, 
+    OPSZ_28, 
+    OPSZ_94, 
+    OPSZ_108, 
+    OPSZ_512, 
     /**
      * The following sizes (OPSZ_*_short*) vary according to the cs segment and the
      * operand size prefix.  This IR assumes that the cs segment is set to the

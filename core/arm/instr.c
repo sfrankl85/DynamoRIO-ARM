@@ -4748,22 +4748,22 @@ reg_is_segment(reg_id_t reg)
 }
 
 bool
-reg_is_ymm(reg_id_t reg)
+reg_is_qwr(reg_id_t reg)
 {
-    return (reg>=REG_START_YMM && reg<=REG_STOP_YMM);
+    return (reg>=REG_START_QWR && reg<=REG_STOP_QWR);
 }
 
 bool
-reg_is_xmm(reg_id_t reg)
+reg_is_dwr(reg_id_t reg)
 {
-    return (reg>=REG_START_XMM && reg<=REG_STOP_XMM) ||
-        reg_is_ymm(reg);
+    return (reg>=REG_START_DWR && reg<=REG_STOP_DWR) ||
+        reg_is_qwr(reg);
 }
 
 bool
-reg_is_mmx(reg_id_t reg)
+reg_is_swr(reg_id_t reg)
 {
-    return (reg>=REG_START_MMX && reg<=REG_STOP_MMX);
+    return (reg>=REG_START_SWR && reg<=REG_STOP_SWR);
 }
 
 bool

@@ -266,25 +266,7 @@ template_optype_is_reg(int optype)
     switch (optype) {
     case TYPE_REG:
     case TYPE_VAR_REG:
-    case TYPE_VARZ_REG:
-    case TYPE_VAR_XREG:
-    case TYPE_VAR_ADDR_XREG:
     case TYPE_INDIR_REG:
-    case TYPE_INDIR_VAR_XREG:
-    case TYPE_INDIR_VAR_REG:
-    case TYPE_INDIR_VAR_XIREG:
-    case TYPE_INDIR_VAR_XREG_OFFS_1:
-    case TYPE_INDIR_VAR_XREG_OFFS_8:
-    case TYPE_INDIR_VAR_XREG_OFFS_N:
-    case TYPE_INDIR_VAR_XIREG_OFFS_1:
-    case TYPE_INDIR_VAR_REG_OFFS_2:
-    case TYPE_INDIR_VAR_XREG_SIZEx8:
-    case TYPE_INDIR_VAR_REG_SIZEx2:
-    case TYPE_INDIR_VAR_REG_SIZEx3x5:
-    case TYPE_REG_EX:
-    case TYPE_VAR_REG_EX:
-    case TYPE_VAR_XREG_EX:
-    case TYPE_VAR_REGX_EX:
         return true;
     }
     return false;
@@ -298,9 +280,8 @@ template_optype_is_reg(int optype)
 static bool
 type_instr_uses_reg_bits(int type)
 {
+    /* SJF TODO Removed values from here. Is this func needed ?*/
     switch (type) {
-    case TYPE_C:
-    case TYPE_D: 
     case TYPE_G:
     case TYPE_P: 
     case TYPE_S:
@@ -314,6 +295,7 @@ type_instr_uses_reg_bits(int type)
 static bool
 type_uses_modrm_bits(int type)
 {
+    /* SJF TODO Removed values here. Needed? */
     switch (type) {
     case TYPE_E:
     case TYPE_M: 
@@ -321,8 +303,6 @@ type_uses_modrm_bits(int type)
     case TYPE_R: 
     case TYPE_W:
     case TYPE_INDIR_E:
-    case TYPE_P_MODRM:
-    case TYPE_V_MODRM:
         return true;
     default:
         return false;
@@ -788,24 +768,27 @@ reg_size_ok(decode_info_t *di/*prefixes field is IN/OUT; x86_mode is IN*/,
             reg_id_t reg, int optype, opnd_size_t opsize, bool addr)
 {
     /* It's ok to have an operand of type mmx or xmm but half-size (e.g., movddup) */ 
+    /* SJF TODO CHECK THIS IS CORRECT. This func needs to work */
     if (opsize == OPSZ_4_of_8 &&
-        (optype == TYPE_P || optype == TYPE_Q || optype == TYPE_P_MODRM))
-        return (reg >= REG_START_MMX && reg <= REG_STOP_MMX);
+        (optype == TYPE_P || optype == TYPE_Q ))
+        return (reg >= REG_START_DWR && reg <= REG_STOP_DWR);
     if ((opsize == OPSZ_4_of_16 || opsize == OPSZ_8_of_16) &&
-        (optype == TYPE_V || optype == TYPE_V_MODRM || optype == TYPE_W ||
+        (optype == TYPE_V || optype == TYPE_W ||
          optype == TYPE_H || optype == TYPE_L))
-        return (reg >= REG_START_XMM && reg <= REG_STOP_XMM);
+        return (reg >= REG_START_DWR && reg <= REG_STOP_DWR);
     if (opsize == OPSZ_8_of_16_vex32) {
-        if (reg >= REG_START_XMM && reg <= REG_STOP_XMM)
+        if (reg >= REG_START_DWR && reg <= REG_STOP_DWR)
             return !TEST(PREFIX_VEX_L, di->prefixes);
-        if (reg >= REG_START_YMM && reg <= REG_STOP_YMM) {
+        if (reg >= REG_START_QWR && reg <= REG_STOP_QWR) {
             di->prefixes |= PREFIX_VEX_L;
             return true;
         }
         return false;
     }
+    /* Surely this isnt right for ARM. No 32 byte registers(256 bit) 
+       highest is 128 bit quad word simd regs SJF TODO */
     if (opsize == OPSZ_16_of_32) {
-        if (reg >= REG_START_YMM && reg <= REG_STOP_YMM) {
+        if (reg >= REG_START_QWR && reg <= REG_STOP_QWR) {
             /* Set VEX.L since required for some opcodes and the rest don't care */
             di->prefixes |= PREFIX_VEX_L;
             return true;
@@ -818,7 +801,7 @@ reg_size_ok(decode_info_t *di/*prefixes field is IN/OUT; x86_mode is IN*/,
     if (opsize == OPSZ_6_irex10_short4)
         return false; /* no register of size p */
     if (size_ok(di, reg_get_size(reg), resolve_var_reg_size(opsize, true), addr)) {
-        if (reg >= REG_START_YMM && reg <= REG_STOP_YMM) {
+        if (reg >= REG_START_QWR && reg <= REG_STOP_QWR) {
             /* Set VEX.L since required for some opcodes and the rest don't care */
             di->prefixes |= PREFIX_VEX_L;
         }
@@ -830,9 +813,9 @@ reg_size_ok(decode_info_t *di/*prefixes field is IN/OUT; x86_mode is IN*/,
 static bool
 reg_rm_selectable(reg_id_t reg)
 {
-    /* assumption: GPR registers (of all sizes) and mmx and xmm are all in a row */
-    return (reg >= REG_START_64 && reg <= REG_STOP_XMM) ||
-         (reg >= REG_START_YMM && reg <= REG_STOP_YMM);
+    /* TODO SJF Check */
+    return (reg >= REG_START_64 && reg <= REG_STOP_DWR) ||
+         (reg >= REG_START_QWR && reg <= REG_STOP_QWR);
 }
 
 static bool
@@ -861,6 +844,7 @@ static bool
 opnd_type_ok(decode_info_t *di/*prefixes field is IN/OUT; x86_mode is IN*/,
              opnd_t opnd, int optype, opnd_size_t opsize)
 {
+
     DOLOG(ENC_LEVEL, LOG_EMIT, {
         dcontext_t *dcontext = get_thread_private_dcontext();
         LOG(THREAD, LOG_EMIT, ENC_LEVEL, "opnd_type_ok on operand ");
@@ -878,6 +862,7 @@ opnd_type_ok(decode_info_t *di/*prefixes field is IN/OUT; x86_mode is IN*/,
             template_optype_is_reg(optype) ?
             opnd_size_in_bytes(reg_get_size(opsize)) : opnd_size_in_bytes(opsize));
     });
+
     switch (optype) {
     case TYPE_NONE: 
         return opnd_is_null(opnd);
@@ -891,6 +876,8 @@ opnd_type_ok(decode_info_t *di/*prefixes field is IN/OUT; x86_mode is IN*/,
                 opnd_get_reg(opnd) == resolve_var_reg(di, opsize, false, true
                                                       _IF_X64(false) _IF_X64(true)
                                                       _IF_X64(false/*!extendable*/)));
+#ifdef NO
+/* SJF TODO Commented these out as removed from the TYPE_ enum */
     case TYPE_VARZ_REG:
         return (opnd_is_reg(opnd) &&
                 reg_size_ok(di, opnd_get_reg(opnd), optype, OPSZ_4_short2,
@@ -944,6 +931,7 @@ opnd_type_ok(decode_info_t *di/*prefixes field is IN/OUT; x86_mode is IN*/,
                 opnd_get_reg(opnd) == resolve_var_reg(di, opsize, false, false
                                                       _IF_X64(false) _IF_X64(true)
                                                       _IF_X64(true/*extendable*/)));
+#endif
     case TYPE_FLOATMEM:
     case TYPE_M:
         return mem_size_ok(di, opnd, optype, opsize);
@@ -955,10 +943,12 @@ opnd_type_ok(decode_info_t *di/*prefixes field is IN/OUT; x86_mode is IN*/,
                 (opnd_is_reg(opnd) &&
                  reg_size_ok(di, opnd_get_reg(opnd), optype, opsize, false/*!addr*/) &&
                  reg_rm_selectable(opnd_get_reg(opnd))));
+#ifdef NO
     case TYPE_G:
     case TYPE_P:
     case TYPE_V:
     case TYPE_R:
+/* SJF TODO Removed */ 
     case TYPE_P_MODRM:
     case TYPE_V_MODRM:
         /* We are able to rule out segment registers b/c they should use TYPE_S
@@ -980,6 +970,7 @@ opnd_type_ok(decode_info_t *di/*prefixes field is IN/OUT; x86_mode is IN*/,
                 reg_size_ok(di, opnd_get_reg(opnd), optype, opsize,
                             false/*!addr*/) &&
                 opnd_get_reg(opnd) >= REG_START_DR && opnd_get_reg(opnd) <= REG_STOP_DR);
+#endif
     case TYPE_S:
         return (opnd_is_reg(opnd) &&
                 opnd_get_reg(opnd) >= REG_START_SEGMENT &&
@@ -1041,6 +1032,8 @@ opnd_type_ok(decode_info_t *di/*prefixes field is IN/OUT; x86_mode is IN*/,
 #endif
                  (!X64_MODE(di) && opnd_is_mem_instr(opnd))) &&
                 size_ok(di, opnd_get_size(opnd), opsize, false/*!addr*/));
+#ifdef NO
+/* SJF TODO Work out what all these TYPEs mean */
     case TYPE_X:
         /* this means the memory address DS:(RE)(E)SI */
         if (opnd_is_far_base_disp(opnd)) {
@@ -1106,6 +1099,7 @@ opnd_type_ok(decode_info_t *di/*prefixes field is IN/OUT; x86_mode is IN*/,
         } else {
             return false;
         }
+#endif
     case TYPE_INDIR_REG:
         /* far_ ok */
         return (opnd_is_base_disp(opnd) &&
@@ -1114,6 +1108,8 @@ opnd_type_ok(decode_info_t *di/*prefixes field is IN/OUT; x86_mode is IN*/,
                 opnd_get_disp(opnd) == 0 &&
                 /* FIXME: how know data size?  for now just use reg size... */
                 size_ok(di, opnd_get_size(opnd), reg_get_size(opsize), false/*!addr*/));
+#ifdef NO
+/* SJF TODO */
     case TYPE_INDIR_VAR_XREG: /* indirect reg that varies (by addr16), base is 4x8,
                                * opsize that varies by data16 */
     case TYPE_INDIR_VAR_REG: /* indrect reg that varies (by addr16), base is 4x8,
@@ -1158,6 +1154,7 @@ opnd_type_ok(decode_info_t *di/*prefixes field is IN/OUT; x86_mode is IN*/,
         } else {
             return false;
         }
+#endif
     case TYPE_H:
     case TYPE_L:
         return (opnd_is_reg(opnd) &&
@@ -1612,6 +1609,8 @@ encode_base_disp(decode_info_t * di, opnd_t opnd)
             di->disp = disp;
         }
     } else {
+#ifdef NO
+/* SJF TODO Commented out */
         if (disp == 0 &&
             /* must use 8-bit disp for 0x0(%ebp) or 0x0(%r13) */
             ((!addr16 && base != REG_EBP /* x64 w/ addr prefix => ebp */
@@ -1621,8 +1620,9 @@ encode_base_disp(decode_info_t * di, opnd_t opnd)
             !opnd_is_disp_encode_zero(opnd)) {
             /* no disp */
             di->mod = 0;
-            di->has_disp = false;
-        } else if (disp >= INT8_MIN && disp <= INT8_MAX &&
+            di->has_disp = false;}else
+#endif
+         if (disp >= INT8_MIN && disp <= INT8_MAX &&
                    !opnd_is_disp_force_full(opnd)) {
             /* 8-bit disp */
             di->mod = 1;
@@ -1634,6 +1634,8 @@ encode_base_disp(decode_info_t * di, opnd_t opnd)
             di->has_disp = true;
             di->disp = disp;
         }
+#ifdef NO
+/* TODO SJF Surely this is going to break stuff */
         if (addr16) {
             di->has_sib = false;
             if (base == REG_BX && index == REG_SI)
@@ -1709,6 +1711,7 @@ encode_base_disp(decode_info_t * di, opnd_t opnd)
                 di->base = reg_get_bits(base);
             }
         }
+#endif
     }
 }
 
@@ -1741,12 +1744,15 @@ encode_operand(decode_info_t *di, int optype, opnd_size_t opsize, opnd_t opnd)
     case TYPE_NONE: 
     case TYPE_REG:
     case TYPE_VAR_REG:
+/*
     case TYPE_VARZ_REG:
     case TYPE_VAR_XREG:
     case TYPE_VAR_ADDR_XREG:
     case TYPE_1:
     case TYPE_FLOATCONST:
+*/
     case TYPE_INDIR_REG:
+/*
     case TYPE_INDIR_VAR_XREG:
     case TYPE_INDIR_VAR_REG:
     case TYPE_INDIR_VAR_XIREG:
@@ -1758,13 +1764,16 @@ encode_operand(decode_info_t *di, int optype, opnd_size_t opsize, opnd_t opnd)
     case TYPE_INDIR_VAR_XREG_SIZEx8:
     case TYPE_INDIR_VAR_REG_SIZEx2:
     case TYPE_INDIR_VAR_REG_SIZEx3x5:
+*/
         return;
+/*
     case TYPE_REG_EX:
     case TYPE_VAR_REG_EX:
     case TYPE_VAR_XREG_EX:
     case TYPE_VAR_REGX_EX:
         encode_reg_ext_prefixes(di, opnd_get_reg(opnd), PREFIX_REX_B);
         return;
+*/
     case TYPE_FLOATMEM:
     case TYPE_M:
         CLIENT_ASSERT(opnd_is_memory_reference(opnd),
@@ -1775,8 +1784,10 @@ encode_operand(decode_info_t *di, int optype, opnd_size_t opsize, opnd_t opnd)
     case TYPE_Q:
     case TYPE_W:
     case TYPE_R: /* we already ensured this is a reg, not memory */
-    case TYPE_P_MODRM: /* we already ensured this is a reg, not memory */
-    case TYPE_V_MODRM: /* we already ensured this is a reg, not memory */
+/* TODO SJF Removed 
+    case TYPE_P_MODRM: 
+    case TYPE_V_MODRM: 
+*/
         if (opnd_is_memory_reference(opnd)) {
             if (opnd_is_far_memory_reference(opnd)) {
                 di->seg_override = opnd_get_segment(opnd);
@@ -1825,8 +1836,9 @@ encode_operand(decode_info_t *di, int optype, opnd_size_t opsize, opnd_t opnd)
     case TYPE_P:
     case TYPE_V:
     case TYPE_S:
-    case TYPE_C:
+    /*case TYPE_C:SJF Removed TODO 
     case TYPE_D:
+*/
         {
             CLIENT_ASSERT(opnd_is_reg(opnd), "encode error: operand must be a register");
             if (di->reg < 8) {
@@ -2015,8 +2027,11 @@ encode_operand(decode_info_t *di, int optype, opnd_size_t opsize, opnd_t opnd)
     /* assume that opnd_type_ok has already been called --
      * nothing to do unless has an override, these are implicit operands */
     case TYPE_X: /* this means the memory address DS:(RE)(E)SI */
+#ifdef NO
+/* SJF TODO */
     case TYPE_XLAT: /* this means the memory address DS:(RE)(E)BX+AL */
     case TYPE_MASKMOVQ: /* this means the memory address DS:(RE)(E)DI */
+#endif
         if (opnd_get_segment(opnd) != SEG_DS)
             di->seg_override = opnd_get_segment(opnd);
         return;
@@ -2026,8 +2041,8 @@ encode_operand(decode_info_t *di, int optype, opnd_size_t opsize, opnd_t opnd)
     case TYPE_L:
         {
             reg_id_t reg = opnd_get_reg(opnd);
-            ptr_int_t immed = (reg_is_ymm(reg) ? (reg - REG_START_YMM) :
-                               (reg - REG_START_XMM));
+            ptr_int_t immed = (reg_is_qwr(reg) ? (reg - REG_START_QWR) :
+                               (reg - REG_START_DWR));
             immed = (immed << 4);
             set_immed(di, immed, OPSZ_1);
             return;
@@ -2035,8 +2050,8 @@ encode_operand(decode_info_t *di, int optype, opnd_size_t opsize, opnd_t opnd)
     case TYPE_H:
         {
             reg_id_t reg = opnd_get_reg(opnd);
-            di->vex_vvvv = (reg_is_ymm(reg) ? (reg - REG_START_YMM) :
-                            (reg - REG_START_XMM));
+            di->vex_vvvv = (reg_is_qwr(reg) ? (reg - REG_START_QWR) :
+                            (reg - REG_START_QWR));
             di->vex_vvvv = (~di->vex_vvvv) & 0xf;
             return;
         }
@@ -2340,6 +2355,8 @@ instr_encode_common(dcontext_t *dcontext, instr_t *instr, byte *copy_pc, byte *f
     }
     CLIENT_ASSERT(instr_operands_valid(instr), "instr_encode error: operands invalid");
     opc = instr_get_opcode(instr);
+#ifdef NO
+/* TODO SJF Eh? */
     if ((instr_is_cbr(instr) &&
          (!instr_is_cti_loop(instr) ||
           /* no addr16 */
@@ -2352,6 +2369,7 @@ instr_encode_common(dcontext_t *dcontext, instr_t *instr, byte *copy_pc, byte *f
                               _IF_DEBUG(assert_reachable));
         }
     } 
+#endif
 
     /* else really encode */
     info = instr_get_instr_info(instr);

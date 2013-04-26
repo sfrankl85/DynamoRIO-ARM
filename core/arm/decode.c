@@ -1098,7 +1098,6 @@ decode_reg(decode_reg_t which_reg, decode_info_t *di, byte optype, opnd_size_t o
     switch (opsize) {
     case OPSZ_1:
     case OPSZ_2:
-        return (extend? (REG_START_16 + 8 + reg) : (REG_START_16 + reg));
     case OPSZ_4:
         return (extend? (REG_START_32 + 8 + reg) : (REG_START_32 + reg));
     case OPSZ_8:
@@ -1115,6 +1114,7 @@ decode_reg(decode_reg_t which_reg, decode_info_t *di, byte optype, opnd_size_t o
     }
 }
 
+#ifdef NO 
 static bool
 decode_modrm(decode_info_t *di, byte optype, opnd_size_t opsize,
              opnd_t *reg_opnd, opnd_t *rm_opnd)
@@ -1277,6 +1277,7 @@ decode_modrm(decode_info_t *di, byte optype, opnd_size_t opsize,
     }
     return true;
 }
+#endif
 
 static ptr_int_t
 get_immed(decode_info_t *di, opnd_size_t opsize)
@@ -1377,6 +1378,7 @@ decode_operand(decode_info_t *di, byte optype, opnd_size_t opsize, opnd_t *opnd)
                                  _IF_X64(false/*d32*/) _IF_X64(true/*growable*/)
                                  _IF_X64(false/*!extendable*/)));
         return true;
+#ifdef NO
     case TYPE_VARZ_REG:
         *opnd = opnd_create_reg(resolve_var_reg
                                 (di, opsize, false/*!addr*/, true/*shrinkable*/
@@ -1419,12 +1421,16 @@ decode_operand(decode_info_t *di, byte optype, opnd_size_t opsize, opnd_t *opnd)
                                  _IF_X64(false/*d64*/) _IF_X64(true/*growable*/)
                                  _IF_X64(true/*extendable*/)));
         return true;
+#endif
     case TYPE_FLOATMEM:
     case TYPE_M:
         /* ensure referencing memory */
         if (di->mod >= 3)
             return false;
         /* fall through */
+
+/* SJF Comment this out as no modrm in ARM. Uses combination 
+   of other values to determine what the operans are. i.e. I(imm) bit.
     case TYPE_E:
     case TYPE_Q:
     case TYPE_W:
@@ -1432,7 +1438,6 @@ decode_operand(decode_info_t *di, byte optype, opnd_size_t opsize, opnd_t *opnd)
     case TYPE_R:
     case TYPE_P_MODRM:
     case TYPE_V_MODRM:
-        /* ensure referencing a register */
         if (di->mod != 3)
             return false;
         return decode_modrm(di, optype, opsize, NULL, opnd);
@@ -1443,6 +1448,7 @@ decode_operand(decode_info_t *di, byte optype, opnd_size_t opsize, opnd_t *opnd)
     case TYPE_C:
     case TYPE_D:
         return decode_modrm(di, optype, opsize, opnd, NULL);
+*/
     case TYPE_I:
         *opnd = opnd_create_immed_int(get_immed(di, opsize), ressize);
         return true;
@@ -1456,37 +1462,11 @@ decode_operand(decode_info_t *di, byte optype, opnd_size_t opsize, opnd_t *opnd)
         *opnd = opnd_create_immed_float_zero();
         return true;
     case TYPE_J:
-        if (di->seg_override == SEG_JCC_NOT_TAKEN ||
-            di->seg_override == SEG_JCC_TAKEN) {
-            /* SEG_DS - taken,     pt */
-            /* SEG_CS - not taken, pn */
-            /* starting from RH9 I see code using this */
-            LOG(THREAD_GET, LOG_EMIT, 5, "disassemble: branch hint %s:\n",
-                di->seg_override == SEG_JCC_TAKEN ? "pt" : "pn");
-            if (di->seg_override == SEG_JCC_NOT_TAKEN)
-                di->prefixes |= PREFIX_JCC_NOT_TAKEN;
-            else
-                di->prefixes |= PREFIX_JCC_TAKEN;
-            di->seg_override = REG_NULL;
-            STATS_INC(num_branch_hints);
-        }
         /* just ignore other segment prefixes -- don't assert */
         *opnd = opnd_create_pc((app_pc)get_immed(di, opsize));
         return true;
     case TYPE_A: 
         {
-#ifdef IA32_ON_IA64
-            if (opsize == OPSZ_4_short2) {
-                if (di->seg_override == SEG_CS || di->seg_override == SEG_DS) {
-                    /* branch hint! just delete it? FIXME! */
-                    di->seg_override = REG_NULL;
-                    ASSERT_CURIOSITY(false); /* see if this ever happens */
-                }
-                /* just ignore other segment prefixes -- don't assert */
-                *opnd = opnd_create_pc((app_pc)get_immed(di, opsize));
-                return true;
-            }
-#endif
             /* ok since instr_info_t fields */
             CLIENT_ASSERT(!X64_MODE(di), "x64 has no type A instructions");
             CLIENT_ASSERT(opsize == OPSZ_6_irex10_short4, "decode A operand error");
@@ -1517,6 +1497,7 @@ decode_operand(decode_info_t *di, byte optype, opnd_size_t opsize, opnd_t *opnd)
             *opnd = opnd_create_far_abs_addr(di->seg_override, (void *) immed, ressize);
             return true;
         }
+#ifdef NO
     case TYPE_X:
         /* this means the memory address DS:(E)SI */
         if (!X64_MODE(di) && TEST(PREFIX_ADDR, di->prefixes))
@@ -1553,11 +1534,14 @@ decode_operand(decode_info_t *di, byte optype, opnd_size_t opsize, opnd_t *opnd)
         else
             *opnd = opnd_create_far_base_disp(ds_seg(di), REG_RDI, REG_NULL,0,0,ressize);
         return true;
+#endif
     case TYPE_INDIR_REG:
         /* FIXME: how know data size?  for now just use reg size: our only use
          * of this does not have a varying hardcoded reg, fortunately. */
         *opnd = opnd_create_base_disp(opsize, REG_NULL, 0, 0, reg_get_size(opsize));
         return true;
+#ifdef NO
+    /* SJF TODO this was removed  and I only allowed one indirect reg type */
     case TYPE_INDIR_VAR_XREG: /* indirect reg varies by addr16 not data16, base is 4x8,
                                * opsize varies by data16 */
     case TYPE_INDIR_VAR_REG: /* indirect reg varies by addr16 not data16, base is 4x8,
@@ -1594,31 +1578,31 @@ decode_operand(decode_info_t *di, byte optype, opnd_size_t opsize, opnd_t *opnd)
          * besides, Ap is just as indirect as i_Ep!
          */
         return decode_operand(di, TYPE_E, opsize, opnd);
+#endif
     case TYPE_L:
         {
             /* part of AVX: top 4 bits of 8-bit immed select xmm/ymm register */
             ptr_int_t immed = get_immed(di, OPSZ_1);
             reg_id_t reg = (reg_id_t) (immed & 0xf0) >> 4;
-            *opnd = opnd_create_reg(((TEST(di->prefixes, PREFIX_VEX_L) &&
-                                      /* we use this to indicate .LIG since all
-                                       * {VHW}s{sd} types and no others are .LIG
-                                       */
-                                      opsize != OPSZ_4_of_16 &&
-                                      opsize != OPSZ_8_of_16) ?
-                                     REG_START_YMM : REG_START_XMM) + reg);
+            *opnd = opnd_create_reg( REG_START_QWR + reg );
+	    /* SJF Changde this to only use the quad word regs */
             return true;
         }
     case TYPE_H:
         {
             /* part of AVX: vex.vvvv selects xmm/ymm register */
             reg_id_t reg = (~di->vex_vvvv) & 0xf; /* bit-inverted */
+	    opnd_create_reg( REG_START_QWR + reg );
+
+/*
             *opnd = opnd_create_reg(((TEST(di->prefixes, PREFIX_VEX_L) &&
-                                      /* we use this to indicate .LIG since all
+                                       * we use this to indicate .LIG since all
                                        * {VHW}s{sd} types and no others are .LIG
-                                       */
+                                       *
                                       opsize != OPSZ_4_of_16 &&
                                       opsize != OPSZ_8_of_16) ?
                                      REG_START_YMM : REG_START_XMM) + reg);
+*/
             return true;
         }
     default:
@@ -1844,10 +1828,9 @@ decode_common(dcontext_t *dcontext, byte *pc, byte *orig_pc, instr_t *instr)
     if (TEST(PREFIX_LOCK, di.prefixes)) {
         /* check for invalid opcode, list on p3-397 of IA-32 vol 2 */
         switch (instr_get_opcode(instr)) {
-        case OP_add: case OP_adc: case OP_and: case OP_btc: case OP_btr: case OP_bts:
-        case OP_cmpxchg: case OP_cmpxchg8b: case OP_dec: case OP_inc: case OP_neg:
-        case OP_not: case OP_or: case OP_sbb: case OP_sub: case OP_xor: case OP_xadd:
-        case OP_xchg: {
+	/* SJF TODO Removed instruction from here. Readd if necessary */
+        case OP_add: case OP_adc: case OP_and: 
+        {
             /* still illegal unless dest is mem op rather than src */
             CLIENT_ASSERT(instr->num_dsts > 0, "internal lock prefix check error");
             if (!opnd_is_memory_reference(instr->dsts[0])) {
