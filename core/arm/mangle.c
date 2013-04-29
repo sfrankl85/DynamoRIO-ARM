@@ -308,6 +308,7 @@ convert_to_near_rel_common(dcontext_t *dcontext, instrlist_t *ilist, instr_t *in
     DEBUG_DECLARE(const instr_info_t * info = instr_get_instr_info(instr);)
     app_pc target = NULL;
 
+#ifdef NO
     if (opcode == OP_jmp_short) {
         instr_set_opcode(instr, OP_jmp);
         return instr;
@@ -433,6 +434,7 @@ convert_to_near_rel_common(dcontext_t *dcontext, instrlist_t *ilist, instr_t *in
         instr_set_operands_valid(instr, true);
         return instr;
     }
+#endif
 
     LOG(THREAD, LOG_INTERP, 1, "convert_to_near_rel: unknown opcode: %d %s\n",
         opcode, info->name);

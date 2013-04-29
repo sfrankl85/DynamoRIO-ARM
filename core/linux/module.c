@@ -36,7 +36,11 @@
 #include "../module_shared.h"
 #include "os_private.h"
 #include "../utils.h"
+#ifdef ARM
+#include "../arm/instrument.h"
+#else
 #include "../x86/instrument.h"
+#endif
 #include <string.h>
 #include <stddef.h> /* offsetof */
 #include <link.h>   /* Elf_Symndx */

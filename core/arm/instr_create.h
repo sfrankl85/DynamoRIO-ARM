@@ -241,13 +241,11 @@
  * Creates an instr_t for a conditional branch instruction with the given opcode
  * and target operand.
  * \param dc The void * dcontext used to allocate memory for the instr_t.
- * \param op The OP_xxx opcode for the conditional branch, which should be
- * in the range [OP_b].
  * \param t The opnd_t target operand for the instruction, which can be either
  * a pc (opnd_create_pc()) or an instr_t (opnd_create_instr()).
  */
-#define INSTR_CREATE_b(dc, op, t) \
-  instr_create_0dst_1src((dc), (op), (t))
+#define INSTR_CREATE_b(dc, t) \
+  instr_create_0dst_1src((dc), OP_b, (t))
 /** @name One explicit source */
 /* @{ */ /* doxygen start group; w/ DISTRIBUTE_GROUP_DOC=YES, one comment suffices. */
 /**
@@ -1466,6 +1464,7 @@
 
 
 #ifdef NO
+/* TODO SJF */
 /** @name 1 destination, 1 explicit source that is cl, an immediate, or a constant */
 /* @{ */ /* doxygen start group; w/ DISTRIBUTE_GROUP_DOC=YES, one comment suffices. */
 /**
@@ -2624,7 +2623,9 @@ INSTR_CREATE_nop2byte_reg(dcontext_t *dcontext, reg_id_t reg)
         return in;
     } else {
 #endif
-        return INSTR_CREATE_mov_st(dcontext, opnd_create_reg(reg), opnd_create_reg(reg));
+        // TODO SJF Fixme
+        //return INSTR_CREATE_mov_st(dcontext, opnd_create_reg(reg), opnd_create_reg(reg));
+        return NULL;
 #ifdef X64
         /* XXX: could have INSTR_CREATE_nop{1,2,3}byte() pick DR_REG_EDI for x86
          * mode, or could call instr_shrink_to_32_bits() here, but we aren't planning

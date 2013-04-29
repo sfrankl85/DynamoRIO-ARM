@@ -160,10 +160,18 @@ START_FILE
 # define dstack_OFFSET     (PRIV_MCXT_SIZE+UPCXT_EXTRA+3*ARG_SZ)
 # define MCONTEXT_PC_OFFS  (17*ARG_SZ)
 #else
+/* SJF Changed */
+#ifdef ARM 
+# define PUSHGPR \
+        stmda   r13!, {r0-r12} 
+# define POPGPR  \
+        ldmib   r13!, {r0-r12} 
+#else
 # define PUSHGPR \
         pusha
 # define POPGPR  \
         popa
+#endif
 # define PRIV_MCXT_SIZE (10*ARG_SZ + PRE_XMM_PADDING + XMM_SAVED_SIZE)
 # define dstack_OFFSET     (PRIV_MCXT_SIZE+UPCXT_EXTRA+3*ARG_SZ)
 # define MCONTEXT_PC_OFFS  (9*ARG_SZ)
@@ -1063,75 +1071,52 @@ GLOBAL_LABEL(dynamorio_syscall_wow64_noedx:)
         DECLARE_FUNC(dynamorio_syscall)
 GLOBAL_LABEL(dynamorio_syscall:)
         /* x64 kernel doesn't clobber all the callee-saved registers */
-        push     REG_XBX
-# ifdef X64
-        /* reverse order so we don't clobber earlier args */
-        mov      REG_XBX, ARG2 /* put num_args where we can reference it longer */
-        mov      rax, ARG1 /* sysnum: only need eax, but need rax to use ARG1 (or movzx) */
-        cmp      REG_XBX, 0
-        je       syscall_ready
-        mov      ARG1, ARG3
-        cmp      REG_XBX, 1
-        je       syscall_ready
-        mov      ARG2, ARG4
-        cmp      REG_XBX, 2
-        je       syscall_ready
-        mov      ARG3, ARG5
-        cmp      REG_XBX, 3
-        je       syscall_ready
-        mov      ARG4, ARG6
-        cmp      REG_XBX, 4
-        je       syscall_ready
-        mov      ARG5, [2*ARG_SZ + REG_XSP] /* arg7: above xbx and retaddr */
-        cmp      REG_XBX, 5
-        je       syscall_ready
-        mov      ARG6, [3*ARG_SZ + REG_XSP] /* arg8: above arg7, xbx, retaddr */
-syscall_ready:
-        mov      r10, rcx
-        syscall
-# else
-        push     REG_XBP
-        push     REG_XSI
-        push     REG_XDI
+        str      REG_R3, [r13]
+        sub	 r13, r13, #0x4
+        str      REG_R6, [r13]
+        sub	 r13, r13, #0x4
+        str      REG_R7, [r13]
+        sub	 r13, r13, #0x4
         /* add 16 to skip the 4 pushes 
          * FIXME: rather than this dispatch, could have separate routines 
          * for each #args, or could just blindly read upward on the stack. 
          * for dispatch, if assume size of mov instr can do single ind jmp */
-        mov      ecx, [16+ 8 + esp] /* num_args */
-        cmp      ecx, 0
-        je       syscall_0args
-        cmp      ecx, 1
-        je       syscall_1args
-        cmp      ecx, 2
-        je       syscall_2args
-        cmp      ecx, 3
-        je       syscall_3args
-        cmp      ecx, 4
-        je       syscall_4args
-        cmp      ecx, 5
-        je       syscall_5args
-        mov      ebp, [16+32 + esp] /* arg6 */
+        ldr      r1, [r13, #24] /* num_args */
+        cmp      r1, #0
+        beq      syscall_0args
+        cmp      r1, #1
+        beq      syscall_1args
+        cmp      r1, #2
+        beq      syscall_2args
+        cmp      r1, #3
+        beq      syscall_3args
+        cmp      r1, #4
+        beq      syscall_4args
+        cmp      r1, #5
+        beq      syscall_5args
+        ldr      r3, [r13, #48] /* arg6 */
 syscall_5args:
-        mov      edi, [16+28 + esp] /* arg5 */
+        ldr      r7, [r13, #44] /* arg5 */
 syscall_4args:
-        mov      esi, [16+24 + esp] /* arg4 */
+        ldr      r6, [r13, #40] /* arg4 */
 syscall_3args:
-        mov      edx, [16+20 + esp] /* arg3 */
+        ldr      r2, [r13, #36] /* arg3 */
 syscall_2args:
-        mov      ecx, [16+16 + esp] /* arg2 */
+        ldr      r1, [r13, #32] /* arg2 */
 syscall_1args:
-        mov      ebx, [16+12 + esp] /* arg1 */
+        ldr      r3, [r13, #28] /* arg1 */
 syscall_0args:
-        mov      eax, [16+ 4 + esp] /* sysnum */
+        ldr      r0, [r13, #20] /* sysnum */
         /* PR 254280: we assume int$80 is ok even for LOL64 */
-        int      HEX(80)
-        pop      REG_XDI
-        pop      REG_XSI
-        pop      REG_XBP
-# endif /* X64 */
-        pop      REG_XBX
+        /*int      HEX(80) TODO SJF What is this? No interrupt for ARM*/
+        ldr      REG_R3, [r13]
+        add	 r13, r13, #0x4
+        ldr      REG_R6, [r13]
+        add	 r13, r13, #0x4
+        ldr      REG_R7, [r13]
+        add	 r13, r13, #0x4
         /* return val is in eax for us */
-        ret
+        mov	 r15, r14 
         END_FUNC(dynamorio_syscall)
 
 /* FIXME: this function should be in #ifdef CLIENT_INTERFACE
@@ -1141,11 +1126,13 @@ syscall_0args:
 /* i#555: to avoid client use app's vsyscall, we enforce all clients 
  * use int 0x80 for system call.
  */
+/* TODO SJF No interrupt on ARM 
         DECLARE_FUNC(client_int_syscall)
 GLOBAL_LABEL(client_int_syscall:)
         int      HEX(80)
         ret
         END_FUNC(client_int_syscall)
+*/
 #endif /* LINUX */
 #ifndef NOT_DYNAMORIO_CORE_PROPER
 #ifdef LINUX
@@ -1157,15 +1144,12 @@ GLOBAL_LABEL(client_int_syscall:)
  */
         DECLARE_FUNC(_start)
 GLOBAL_LABEL(_start:)
-        xor     REG_XBP, REG_XBP  /* Terminate stack traces at NULL. */
-#ifdef X64
-        mov     ARG1, REG_XSP
-#else
-        push    REG_XSP
-#endif
-        call    privload_early_inject
-        jmp     unexpected_return
+        eor     REG_R5, REG_R5  /* Terminate stack traces at NULL. */
+        mov     ARG1, REG_R13
+        b       privload_early_inject
+        b       unexpected_return
         END_FUNC(_start)
+
 #endif /* !STANDALONE_UNIT_TEST && !STATIC_LIBRARY */
 
 /* while with pre-2.6.9 kernels we were able to rely on the kernel's
@@ -1175,18 +1159,12 @@ GLOBAL_LABEL(_start:)
  */
         DECLARE_FUNC(dynamorio_sigreturn)
 GLOBAL_LABEL(dynamorio_sigreturn:)
-#ifdef X64
-        mov      eax, HEX(f)
-        mov      r10, rcx
-        syscall
-#else
-        mov      eax, HEX(ad)
+        mov      r0, HEX(ad)
         /* PR 254280: we assume int$80 is ok even for LOL64 */
-        int      HEX(80)
-#endif
+        /*int      HEX(80) TODO Replace with hard coded undefined*/
         /* should not return.  if we somehow do,infinite loop is intentional.
          * FIXME: do better in release build! FIXME - why not an int3? */
-        jmp      unexpected_return
+        b       unexpected_return
         END_FUNC(dynamorio_sigreturn)
         
 /* we need to exit without using any stack, to support
@@ -1194,20 +1172,13 @@ GLOBAL_LABEL(dynamorio_sigreturn:)
  */
         DECLARE_FUNC(dynamorio_sys_exit)
 GLOBAL_LABEL(dynamorio_sys_exit:)
-#ifdef X64
-        mov      edi, 0 /* exit code: hardcoded */
-        mov      eax, HEX(3c) /* SYS_exit */
-        mov      r10, rcx
-        syscall
-#else
-        mov      ebx, 0 /* exit code: hardcoded */
-        mov      eax, HEX(1) /* SYS_exit */
+        mov      r3, 0 /* exit code: hardcoded */
+        mov      r0, HEX(1) /* SYS_exit */
         /* PR 254280: we assume int$80 is ok even for LOL64 */
-        int      HEX(80)
-#endif
+        /*int      HEX(80) TODO Replace with hard coded undefined*/
         /* should not return.  if we somehow do, infinite loop is intentional.
          * FIXME: do better in release build! FIXME - why not an int3? */
-        jmp      unexpected_return
+        b        unexpected_return
         END_FUNC(dynamorio_sys_exit)
         
 /* we need to call futex_wakeall without using any stack, to support
@@ -1216,28 +1187,16 @@ GLOBAL_LABEL(dynamorio_sys_exit:)
  */
         DECLARE_FUNC(dynamorio_futex_wake_and_exit)
 GLOBAL_LABEL(dynamorio_futex_wake_and_exit:)
-#ifdef X64
-        mov      ARG6, 0
-        mov      ARG5, 0
-        mov      ARG4, 0
-        mov      ARG3, 0x7fffffff /* arg3 = INT_MAX */
-        mov      ARG2, 1 /* arg2 = FUTEX_WAKE */
-        mov      ARG1, rax /* &futex, passed in rax */
-        mov      rax, 202 /* SYS_futex */
-        mov      r10, rcx
-        syscall
-#else
-        mov      ebp, 0 /* arg6 */
-        mov      edi, 0 /* arg5 */
-        mov      esi, 0 /* arg4 */
-        mov      edx, 0x7fffffff /* arg3 = INT_MAX */
-        mov      ecx, 1 /* arg2 = FUTEX_WAKE */
-        mov      ebx, eax /* arg1 = &futex, passed in eax */
-        mov      eax, 240 /* SYS_futex */
+        mov      r5, #0 /* arg6 */
+        mov      r7, #0 /* arg5 */
+        mov      r6, #0 /* arg4 */
+        mov      r2, #0x7fffffff /* arg3 = INT_MAX */
+        mov      r1, #1 /* arg2 = FUTEX_WAKE */
+        mov      r3, r0 /* arg1 = &futex, passed in eax */
+        mov      r0, #240 /* SYS_futex */
         /* PR 254280: we assume int$80 is ok even for LOL64 */
-        int      HEX(80)
-#endif
-        jmp dynamorio_sys_exit
+        /*int      HEX(80) TODO Replace with hard coded undefined*/
+        b        dynamorio_sys_exit
         END_FUNC(dynamorio_futex_wake_and_exit)
 
 /* exit entire group without using any stack, in case something like
@@ -1245,20 +1204,13 @@ GLOBAL_LABEL(dynamorio_futex_wake_and_exit:)
  */
         DECLARE_FUNC(dynamorio_sys_exit_group)
 GLOBAL_LABEL(dynamorio_sys_exit_group:)
-#ifdef X64
-        mov      edi, 0 /* exit code: hardcoded */
-        mov      eax, HEX(e7) /* SYS_exit_group */
-        mov      r10, rcx
-        syscall
-#else
-        mov      ebx, 0 /* exit code: hardcoded */
-        mov      eax, HEX(fc) /* SYS_exit_group */
+        mov      r3, #0 /* exit code: hardcoded */
+        mov      r0, HEX(fc) /* SYS_exit_group */
         /* PR 254280: we assume int$80 is ok even for LOL64 */
-        int      HEX(80)
-#endif
+        /*int      HEX(80)*/
         /* should not return.  if we somehow do, infinite loop is intentional.
          * FIXME: do better in release build! FIXME - why not an int3? */
-        jmp      unexpected_return
+        b      unexpected_return
         END_FUNC(dynamorio_sys_exit_group)
 
 #ifndef X64
@@ -1267,13 +1219,13 @@ GLOBAL_LABEL(dynamorio_sys_exit_group:)
  */
         DECLARE_FUNC(dynamorio_nonrt_sigreturn)
 GLOBAL_LABEL(dynamorio_nonrt_sigreturn:)
-        pop      eax /* I don't understand why */
-        mov      eax, HEX(77)
+        /*pop      eax  DB Comment: I don't understand why */
+        mov      r0, HEX(77)
         /* PR 254280: we assume int$80 is ok even for LOL64 */
-        int      HEX(80)
+        /*int      HEX(80) TODO Replace with hard coded undefined*/
         /* should not return.  if we somehow do,infinite loop is intentional.
          * FIXME: do better in release build! FIXME - why not an int3? */
-        jmp      unexpected_return
+        b      unexpected_return
         END_FUNC(dynamorio_sigreturn)
 #endif
 
@@ -1288,18 +1240,12 @@ GLOBAL_LABEL(dynamorio_nonrt_sigreturn:)
  */
         DECLARE_FUNC(master_signal_handler)
 GLOBAL_LABEL(master_signal_handler:)
-#ifdef X64
-        mov      ARG4, REG_XSP /* pass as 4th arg */
-        jmp      master_signal_handler_C
-        /* master_signal_handler_C will do the ret */
-#else
         /* We need to pass in xsp.  The easiest way is to create an
          * intermediate frame.
          */
-        mov      REG_XAX, REG_XSP
-        CALLC1(master_signal_handler_C, REG_XAX)
-        ret
-#endif
+        mov      REG_R0, REG_R13
+        CALLC1(master_signal_handler_C, REG_R0)
+        mov 	 r15, r14 
         END_FUNC(master_signal_handler)
 
 #else /* !HAVE_SIGALTSTACK */

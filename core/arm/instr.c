@@ -1291,6 +1291,9 @@ reg_get_value_priv(reg_id_t reg, priv_mcontext_t *mc)
         return reg_get_value_helper(reg, mc);
     }
 #endif
+
+#ifdef NO
+/* TODO SJF Removed 8 bit regs */
     if (reg >= REG_START_8 && reg <= REG_STOP_8) {
         reg_t val = reg_get_value_helper(dr_reg_fixer[reg], mc);
         if (reg >= REG_AH && reg <= REG_BH)
@@ -1298,6 +1301,8 @@ reg_get_value_priv(reg_id_t reg, priv_mcontext_t *mc)
         else /* all others are the lower 8 bits */
             return (val & 0x000000ff);
     }
+#endif
+
     if (reg >= REG_START_16 && reg <= REG_STOP_16) {
         reg_t val = reg_get_value_helper(dr_reg_fixer[reg], mc);
         return (val & 0x0000ffff);
@@ -1424,6 +1429,8 @@ reg_32_to_16(reg_id_t reg)
     return (reg - REG_START_32) + REG_START_16;
 }
 
+/* No 8 bit registers any more TODO SJF */
+#ifdef NO
 reg_id_t
 reg_32_to_8(reg_id_t reg)
 {
@@ -1440,6 +1447,7 @@ reg_32_to_8(reg_id_t reg)
     }
     return r8;
 }
+#endif
 
 #ifdef X64
 reg_id_t
@@ -1575,10 +1583,13 @@ reg_overlap(reg_id_t r1, reg_id_t r2)
     /* The XH registers do NOT overlap with the XL registers; else, the
      * dr_reg_fixer is the answer.
      */
+/* TODO SJF Removed 8 bt reg ref */
+#ifdef NO
     if ((r1 >= REG_START_8HL && r1 <= REG_STOP_8HL) &&
         (r2 >= REG_START_8HL && r2 <= REG_STOP_8HL) &&
         r1 != r2)
         return false;
+#endif
     return (dr_reg_fixer[r1] == dr_reg_fixer[r2]);
 }
 
@@ -1595,22 +1606,26 @@ reg_get_bits(reg_id_t reg)
 #endif
     if (reg >= REG_START_32 && reg <= REG_STOP_32)
         return (byte) ((reg - REG_START_32) % 8);
+/* TODO SJF
     if (reg >= REG_START_8 && reg <= REG_R15L)
         return (byte) ((reg - REG_START_8) % 8);
+*/
 #ifdef X64
     if (reg >= REG_START_x64_8 && reg <= REG_STOP_x64_8) /* alternates to AH-BH */
         return (byte) ((reg - REG_START_x64_8 + 4) % 8);
 #endif
     if (reg >= REG_START_16 && reg <= REG_STOP_16)
         return (byte) ((reg - REG_START_16) % 8);
-    if (reg >= REG_START_MMX && reg <= REG_STOP_MMX)
-        return (byte) ((reg - REG_START_MMX) % 8);
-    if (reg >= REG_START_XMM && reg <= REG_STOP_XMM)
-        return (byte) ((reg - REG_START_XMM) % 8);
-    if (reg >= REG_START_YMM && reg <= REG_STOP_YMM)
-        return (byte) ((reg - REG_START_YMM) % 8);
+    if (reg >= REG_START_QWR && reg <= REG_STOP_QWR)
+        return (byte) ((reg - REG_START_QWR) % 8);
+    if (reg >= REG_START_DWR && reg <= REG_STOP_DWR)
+        return (byte) ((reg - REG_START_DWR) % 8);
+    if (reg >= REG_START_SWR && reg <= REG_STOP_SWR)
+        return (byte) ((reg - REG_START_SWR) % 8);
+/* TODO SJF Do we have segments 
     if (reg >= REG_START_SEGMENT && reg <= REG_STOP_SEGMENT)
         return (byte) ((reg - REG_START_SEGMENT) % 8);
+*/
     if (reg >= REG_START_DR && reg <= REG_STOP_DR)
         return (byte) ((reg - REG_START_DR) % 8);
     if (reg >= REG_START_CR && reg <= REG_STOP_CR)
@@ -1629,29 +1644,33 @@ reg_get_size(reg_id_t reg)
 #endif
     if (reg >= REG_START_32 && reg <= REG_STOP_32)
         return OPSZ_4;
+/* TODO SJF
     if (reg >= REG_START_8 && reg <= REG_STOP_8)
         return OPSZ_1;
+*/
 #ifdef X64
     if (reg >= REG_START_x64_8 && reg <= REG_STOP_x64_8) /* alternates to AH-BH */
         return OPSZ_1;
 #endif
     if (reg >= REG_START_16 && reg <= REG_STOP_16)
         return OPSZ_2;
-    if (reg >= REG_START_MMX && reg <= REG_STOP_MMX)
-        return OPSZ_8;
-    if (reg >= REG_START_XMM && reg <= REG_STOP_XMM)
+    if (reg >= REG_START_QWR && reg <= REG_STOP_QWR)
         return OPSZ_16;
-    if (reg >= REG_START_YMM && reg <= REG_STOP_YMM)
-        return OPSZ_32;
+    if (reg >= REG_START_DWR && reg <= REG_STOP_DWR)
+        return OPSZ_8;
+    if (reg >= REG_START_SWR && reg <= REG_STOP_SWR)
+        return OPSZ_4;
     if (reg >= REG_START_SEGMENT && reg <= REG_STOP_SEGMENT)
         return OPSZ_2;
     if (reg >= REG_START_DR && reg <= REG_STOP_DR)
-        return IF_X64_ELSE(OPSZ_8, OPSZ_4);
+        return OPSZ_4;
     if (reg >= REG_START_CR && reg <= REG_STOP_CR)
-        return IF_X64_ELSE(OPSZ_8, OPSZ_4);
+        return OPSZ_4;
     /* i#176 add reg size handling for floating point registers */
+/* TODO SJF Comment out 
     if (reg >= REG_START_FLOAT && reg <= REG_STOP_FLOAT)
         return OPSZ_10;
+*/
     CLIENT_ASSERT(false, "reg_get_size: invalid register");
     return OPSZ_NA;
 }
@@ -2698,6 +2717,10 @@ instr_length(dcontext_t *dcontext, instr_t *instr)
     if (!instr_needs_encoding(instr))
         return instr->length;
 
+    /* SJF All 4 bytes */
+    return 4;
+#ifdef NO
+/* TODO SJF Only instruciton length is 4 bytes for ARM 2 for THUMB */
     /* hardcode length for cti */
     switch (instr_get_opcode(instr)) {
     case OP_jmp:
@@ -2732,8 +2755,10 @@ instr_length(dcontext_t *dcontext, instr_t *instr)
         return 0;
     }
 
+
     /* else, encode to find length */
     return private_instr_encode(dcontext, instr, false/*don't need to cache*/);
+#endif
 }
 
 /***********************************************************************/
@@ -3244,8 +3269,10 @@ bool
 instr_reg_in_src(instr_t *instr, reg_id_t reg)
 {
     int i;
+/* TODO SJF Removed 
     if (instr_get_opcode(instr) == OP_nop_modrm)
         return false;
+*/
     for (i =0; i<instr_num_srcs(instr); i++)
         if (opnd_uses_reg(instr_get_src(instr, i), reg))
             return true;
@@ -3358,12 +3385,14 @@ bool instr_reads_memory(instr_t *instr)
     opnd_t curop;
     int opc = instr_get_opcode(instr);
 
+#ifdef NO
     /* lea has a mem_ref source operand, but doesn't actually read */
     if (opc == OP_lea)
         return false;
     /* The multi-byte nop has a mem/reg operand, but it does not read. */
     if (opc == OP_nop_modrm)
         return false;
+#endif
 
     for (a=0; a<instr_num_srcs(instr); a++) {
         curop = instr_get_src(instr,a);
@@ -3546,6 +3575,7 @@ instr_compute_address_ex_priv(instr_t *instr, priv_mcontext_t *mc, uint index,
             }
         }
     }
+#ifdef NO
     /* lea has a mem_ref source operand, but doesn't actually read */
     if (memcount != (int)index && instr_get_opcode(instr) != OP_lea) {
         for (i=0; i<instr_num_srcs(instr); i++) {
@@ -3557,6 +3587,7 @@ instr_compute_address_ex_priv(instr_t *instr, priv_mcontext_t *mc, uint index,
             }
         }
     }
+#endif
     if (memcount != (int)index)
         return false;
     if (addr != NULL)
@@ -3671,6 +3702,11 @@ uint
 instr_branch_type(instr_t *cti_instr)
 {
     switch (instr_get_opcode(cti_instr)) {
+    case OP_b:
+        return LINK_DIRECT|LINK_JMP;     /* unconditional */
+
+
+#ifdef NO
     case OP_call:
         return LINK_DIRECT|LINK_CALL;     /* unconditional */
     case OP_jmp_short: case OP_jmp:
@@ -3705,6 +3741,8 @@ instr_branch_type(instr_t *cti_instr)
         return LINK_INDIRECT|LINK_CALL|LINK_FAR;
     case OP_ret_far: case OP_iret:
         return LINK_INDIRECT|LINK_RETURN|LINK_FAR;
+#endif
+
     default:
         LOG(THREAD_GET, LOG_ALL, 0, "branch_type: unknown opcode: %d\n",
             instr_get_opcode(cti_instr));
@@ -3760,20 +3798,28 @@ bool
 instr_is_mov(instr_t *instr)
 {
     int opc = instr_get_opcode(instr);
-    return (opc == OP_mov_st ||
-            opc == OP_mov_ld ||
-            opc == OP_mov_imm ||
-            opc == OP_mov_seg ||
-            opc == OP_mov_priv);
+    return (opc == OP_mov); 
 }
 
 static bool
+opcode_is_branch(int opc)
+{
+    return (opc == OP_b);
+}
+
+bool
+instr_is_branch(instr_t *instr)
+{
+    int opc = instr_get_opcode(instr);
+    return opcode_is_branch(opc);
+}
+
+
+#ifdef NO
+static bool
 opcode_is_call(int opc)
 {
-    return (opc == OP_call ||
-            opc == OP_call_far ||
-            opc == OP_call_ind ||
-            opc == OP_call_far_ind);
+    return (opc == OP_call) 
 }
 
 bool 
@@ -3810,9 +3856,11 @@ instr_is_return(instr_t *instr)
     int opc = instr_get_opcode(instr);
     return (opc == OP_ret || opc == OP_ret_far || opc == OP_iret);
 }
+#endif
 
 /*** WARNING!  The following rely on ordering of opcodes! ***/
 
+#ifdef NO
 static bool
 opcode_is_cbr(int opc)
 {
@@ -4017,6 +4065,7 @@ instr_get_interrupt_number(instr_t *instr)
         return 0;
     }
 }
+#endif
 
 bool
 instr_is_syscall(instr_t *instr)
@@ -4024,8 +4073,10 @@ instr_is_syscall(instr_t *instr)
     int opc = instr_get_opcode(instr);
     /* FIXME: Intel processors treat "syscall" as invalid in 32-bit mode;
      * do we need to treat it specially? */
-    if (opc == OP_sysenter || opc == OP_syscall)
+    if (opc == OP_svc)
         return true;
+#ifdef NO
+/* SJF Cannot call an interrupt instr in ARM. and no windows support yet */ 
     if (opc == OP_int) {
         int num = instr_get_interrupt_number(instr);
 #ifdef WINDOWS
@@ -4043,6 +4094,8 @@ instr_is_syscall(instr_t *instr)
     if (instr_is_wow64_syscall(instr))
         return true;
 #endif
+
+#endif //NO
     return false;
 }
 
@@ -4081,13 +4134,13 @@ bool
 instr_is_mov_constant(instr_t *instr, ptr_int_t *value)
 {
     int opc = instr_get_opcode(instr);
-    if (opc == OP_xor) {
+    if (opc == OP_eor) {
         if (opnd_same(instr_get_src(instr, 0), instr_get_dst(instr, 0))) {
             *value = 0;
             return true;
         } else
             return false;
-    } else if (opc == OP_mov_imm || opc == OP_mov_st) {
+    } else if (opc == OP_mov) {
         opnd_t op = instr_get_src(instr, 0);
         if (opnd_is_immed_int(op)) {
             *value = opnd_get_immed_int(op);
@@ -4098,6 +4151,8 @@ instr_is_mov_constant(instr_t *instr, ptr_int_t *value)
     return false;
 }
 
+#ifdef NO
+/* TODO SJF Commented out */
 bool instr_is_prefetch(instr_t *instr)
 {
     int opcode=instr_get_opcode(instr);
@@ -4112,6 +4167,7 @@ bool instr_is_prefetch(instr_t *instr)
 
     return false;
 }
+#endif
 
 bool
 instr_is_floating_ex(instr_t *instr, dr_fp_type_t *type OUT)
@@ -4119,6 +4175,8 @@ instr_is_floating_ex(instr_t *instr, dr_fp_type_t *type OUT)
     int opc = instr_get_opcode(instr);
 
     switch (opc) {
+#ifdef NO
+/* TODO SJF Add all the fp instructions here */
     case OP_fxsave:          case OP_fxrstor:
     case OP_ldmxcsr:         case OP_stmxcsr:
     case OP_fldenv:          case OP_fldcw:
@@ -4345,6 +4403,7 @@ instr_is_floating_ex(instr_t *instr, dr_fp_type_t *type OUT)
             *type = DR_FP_MATH;
         return true;
     }
+#endif
 
     default: return false;
     }
@@ -4356,6 +4415,7 @@ instr_is_floating(instr_t *instr)
     return instr_is_floating_ex(instr, NULL);
 }
 
+#ifdef NO
 bool
 opcode_is_mmx(int op)
 {
@@ -4444,6 +4504,7 @@ instr_is_mov_imm_to_tos(instr_t *instr)
         opnd_get_index(instr_get_dst(instr, 0)) == REG_NULL &&
         opnd_get_disp(instr_get_dst(instr, 0)) == 0;
 }
+#endif
 
 /* Returns true iff instr is a label meta-instruction */
 bool 
@@ -4457,8 +4518,7 @@ bool
 instr_is_undefined(instr_t *instr)
 {
     return (instr_opcode_valid(instr) &&
-            (instr_get_opcode(instr) == OP_ud2a ||
-             instr_get_opcode(instr) == OP_ud2b));
+            (instr_get_opcode(instr) == OP_ud2)); 
 }
 
 DR_API
@@ -4493,41 +4553,9 @@ instr_invert_cbr(instr_t *instr)
             instr_set_raw_byte(instr, 1, (byte)2);
             instr_set_raw_byte(instr, 3, (byte)5);
         }
-    } else if ((opc >= OP_jo && opc <= OP_jnle) ||
-               (opc >= OP_jo_short && opc <= OP_jnle_short)) {
+    } else if (opc == OP_b) {
         switch (opc) {
-        case OP_jb:   opc = OP_jnb; break;
-        case OP_jnb:  opc = OP_jb; break;
-        case OP_jbe:  opc = OP_jnbe; break;
-        case OP_jnbe: opc = OP_jbe; break;
-        case OP_jl:   opc = OP_jnl; break;
-        case OP_jnl:  opc = OP_jl; break;
-        case OP_jle:  opc = OP_jnle; break;
-        case OP_jnle: opc = OP_jle; break;
-        case OP_jo:   opc = OP_jno; break;
-        case OP_jno:  opc = OP_jo; break;
-        case OP_jp:   opc = OP_jnp; break;
-        case OP_jnp:  opc = OP_jp; break;
-        case OP_js:   opc = OP_jns; break;
-        case OP_jns:  opc = OP_js; break;
-        case OP_jz:   opc = OP_jnz; break;
-        case OP_jnz:  opc = OP_jz; break;
-        case OP_jb_short:   opc = OP_jnb_short; break;
-        case OP_jnb_short:  opc = OP_jb_short; break;
-        case OP_jbe_short:  opc = OP_jnbe_short; break;
-        case OP_jnbe_short: opc = OP_jbe_short; break;
-        case OP_jl_short:   opc = OP_jnl_short; break;
-        case OP_jnl_short:  opc = OP_jl_short; break;
-        case OP_jle_short:  opc = OP_jnle_short; break;
-        case OP_jnle_short: opc = OP_jle_short; break;
-        case OP_jo_short:   opc = OP_jno_short; break;
-        case OP_jno_short:  opc = OP_jo_short; break;
-        case OP_jp_short:   opc = OP_jnp_short; break;
-        case OP_jnp_short:  opc = OP_jp_short; break;
-        case OP_js_short:   opc = OP_jns_short; break;
-        case OP_jns_short:  opc = OP_js_short; break;
-        case OP_jz_short:   opc = OP_jnz_short; break;
-        case OP_jnz_short:  opc = OP_jz_short; break;
+        case OP_b:   opc = OP_b; break;
         default: CLIENT_ASSERT(false, "instr_invert_cbr: unknown opcode"); break;
         }
         instr_set_opcode(instr, opc);
@@ -4580,6 +4608,7 @@ instr_cbr_taken(instr_t *instr, priv_mcontext_t *mcontext, bool pre)
     if (instr_is_cti_loop(instr)) {
         uint opc = instr_get_opcode(instr);
         switch (opc) {
+/* TODO SJF No such opcodes 
         case OP_loop:
             return (mcontext->xcx != (pre ? 1U : 0U));
         case OP_loope:
@@ -4590,19 +4619,25 @@ instr_cbr_taken(instr_t *instr, priv_mcontext_t *mcontext, bool pre)
                     mcontext->xcx != (pre ? 1U : 0U));
         case OP_jecxz:
             return (mcontext->xcx == 0U);
+*/
         default:
             CLIENT_ASSERT(false, "instr_cbr_taken: unknown opcode");
             return false;
         }
     }
-    return instr_jcc_taken(instr, mcontext->xflags);
+    return instr_jcc_taken(instr, mcontext->cpsr);
 }
 
 /* Given eflags, returns whether or not the conditional branch opc would be taken */
+/* TODO Need to pass cond codes in here maybe instead of opcode. */
 static bool
-opc_jcc_taken(int opc, reg_t eflags)
+opc_jcc_taken(int opc, reg_t cpsr)
 {
     switch (opc) {
+    case OP_b: 
+      return false; 
+
+/* TODO SJF REmoved 
     case OP_jo: case OP_jo_short:
         return TEST(EFLAGS_OF, eflags);
     case OP_jno: case OP_jno_short:
@@ -4637,6 +4672,7 @@ opc_jcc_taken(int opc, reg_t eflags)
     case OP_jnle: case OP_jnle_short:
         return (!TEST(EFLAGS_ZF, eflags) &&
                 TEST(EFLAGS_SF, eflags) == TEST(EFLAGS_OF, eflags));
+*/
     default:
         CLIENT_ASSERT(false, "instr_jcc_taken: unknown opcode");
         return false;
@@ -4661,6 +4697,9 @@ int
 instr_cmovcc_to_jcc(int cmovcc_opcode)
 {
     int jcc_opc = OP_INVALID;
+/* TODO SJF is this necessary anymore?? cond codes determine the 
+	conditions the opcode has nothing to do with it anymore.
+	So conversion between opcodes seems useless 
     if (cmovcc_opcode >= OP_cmovo && cmovcc_opcode <= OP_cmovnle) {
         jcc_opc = cmovcc_opcode - OP_cmovo + OP_jo;
     } else {
@@ -4678,6 +4717,7 @@ instr_cmovcc_to_jcc(int cmovcc_opcode)
             return OP_INVALID;
         }
     }
+*/
     return jcc_opc;
 }
 
@@ -4728,9 +4768,11 @@ instr_uses_fp_reg(instr_t *instr)
 bool
 reg_is_gpr(reg_id_t reg)
 {
-    return (reg >= REG_RAX && reg <= REG_DIL);
+    return (reg >= REG_R0 && reg <= REG_R15);
 }
 
+
+/*TODO SJG Segments ??? */
 bool
 reg_is_segment(reg_id_t reg)
 {
@@ -5026,6 +5068,7 @@ instr_create_4dst_4src(dcontext_t *dcontext, int opcode,
     return in;
 }
 
+/* TODO SJF No pop or push instrs in ARM
 instr_t *
 instr_create_popa(dcontext_t *dcontext)
 {
@@ -5060,6 +5103,7 @@ instr_create_pusha(dcontext_t *dcontext)
     instr_set_src(in, 7, opnd_create_reg(REG_EDI));
     return in;
 }
+*/
 
 /****************************************************************************/
 /* build instructions from raw bits
@@ -5215,9 +5259,10 @@ instr_is_nop(instr_t *inst)
 {
     /* XXX: could check raw bits for 0x90 to avoid the decoding if raw */
     int opcode = instr_get_opcode(inst);
-    if (opcode == OP_nop || opcode == OP_nop_modrm)
+    if (opcode == OP_nop)
         return true;
-    if ((opcode == OP_mov_ld || opcode == OP_mov_st) && 
+#ifdef NO
+    if ((opcode == OP_mov) && 
         opnd_same(instr_get_src(inst, 0), instr_get_dst(inst, 0))
         /* for 64-bit, targeting a 32-bit register zeroes the top bits => not a nop! */
         IF_X64(&& (instr_get_x86_mode(inst) ||
@@ -5238,6 +5283,7 @@ instr_is_nop(instr_t *inst)
           opnd_get_base(instr_get_src(inst, 0)) == REG_NULL && 
           opnd_get_scale(instr_get_src(inst, 0)) == 1)))
         return true;
+#endif
     return false;
 }
 

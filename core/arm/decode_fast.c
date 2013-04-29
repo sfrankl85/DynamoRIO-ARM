@@ -945,6 +945,7 @@ decode_cti(dcontext_t *dcontext, byte *pc, instr_t *instr)
      * FIXME - could be done in decode_sizeof which is already walking these
      * bytes, but would need to complicate its interface and prefixes are
      * fairly rare to begin with. */
+/* TODO SJF No segmetns in ARM ??? 
     if (prefixes > 0) {
         for (i = 0; i < prefixes; i++, pc++) {
             switch (*pc) {
@@ -959,6 +960,7 @@ decode_cti(dcontext_t *dcontext, byte *pc, instr_t *instr)
             }
         }
     }
+*/
 
     byte0 = *pc;
     byte1 = *(pc + 1);
@@ -1063,6 +1065,8 @@ decode_cti(dcontext_t *dcontext, byte *pc, instr_t *instr)
 
     /* prefixes won't make a difference for 8-bit-offset jumps */
 
+#ifdef NO
+/* TODO SJF Change all these to the correct opcodes */
     if (byte0 == 0xeb) {                /* jmp_short */
         app_pc tgt = convert_8bit_offset(pc, byte1, 2);
         instr_set_opcode(instr, OP_jmp_short);
@@ -1285,6 +1289,7 @@ decode_cti(dcontext_t *dcontext, byte *pc, instr_t *instr)
         return (start_pc + sz);
     }
 #endif
+#endif //NO
 
     /* all non-pc-relative instructions */
     /* assumption: opcode already OP_UNDECODED */

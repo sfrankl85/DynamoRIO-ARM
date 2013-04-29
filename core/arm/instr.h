@@ -284,7 +284,8 @@ enum {
 };
 
 /* we avoid typedef-ing the enum, as its storage size is compiler-specific */
-typedef byte reg_id_t; /* contains a DR_REG_ enum value */
+/* TODO SJF Changed byte to int as num of regs is now > 255 */
+typedef int reg_id_t; /* contains a DR_REG_ enum value */
 /* Changed this to an int as a byte is too small to store all the new registers.
    TODO This may need changing back depending on whether my values in DR_REG_XXX 
         are correct or not */
@@ -307,12 +308,12 @@ extern const reg_id_t dr_reg_fixer[];
 #define DR_REG_STOP_32     DR_REG_R15 /**< End of 32-bit general register enum values */  
 #define DR_REG_START_16    DR_REG_R0   /**< Start of 16-bit general register enum values */
 #define DR_REG_STOP_16     DR_REG_R15 /**< End of 16-bit general register enum values */  
-#define DR_REG_START_FLOAT DR_REG_N0  /**< Start of floating-point-register enum values */
-#define DR_REG_STOP_FLOAT  DR_REG_N31  /**< End of floating-point-register enum values */  
+#define DR_REG_START_FLOAT DR_REG_Q0  /**< Start of floating-point-register enum values */
+#define DR_REG_STOP_FLOAT  DR_REG_S31  /**< End of floating-point-register enum values */  
 #define DR_REG_START_SEGMENT DR_SEG_XX /**< Start of segment register enum values */
 #define DR_REG_STOP_SEGMENT  DR_SEG_XX /**< End of segment register enum values */  
-#define DR_REG_START_DR    DR_REG_DR0  /**< Start of debug register enum values */
-#define DR_REG_STOP_DR     DR_REG_DR0 /**< End of debug register enum values */  
+#define DR_REG_START_DR    DR_REG_MIDR  /**< Start of debug register enum values */
+#define DR_REG_STOP_DR     DR_REG_DBGDSAR /**< End of debug register enum values */  
 #define DR_REG_START_CR    DR_REG_MIDR  /**< Start of control register enum values */
 #define DR_REG_STOP_CR     DR_REG_CBAR /**< End of control register enum values */  
 /* VFPv3/NEON registers */
@@ -4143,6 +4144,8 @@ enum {
     OP_wfe,
     OP_wfi,
     OP_yield,
+
+    OP_ud2,
 
     OP_AFTER_LAST,
     OP_FIRST = OP_add,            /**< First real opcode. */

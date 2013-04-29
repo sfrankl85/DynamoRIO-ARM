@@ -2531,7 +2531,11 @@ dr_app_start_helper(priv_mcontext_t *mc)
         /* Adjust the app stack to account for the return address + alignment.
          * See dr_app_start in x86.asm.
          */
+#ifdef ARM
+        mc->r13 += DYNAMO_START_XSP_ADJUST;
+#else
         mc->xsp += DYNAMO_START_XSP_ADJUST;
+#endif
         dynamo_start(mc);
         /* the interpreter takes over from here */
     }
@@ -2672,7 +2676,11 @@ dynamorio_app_take_over_helper(priv_mcontext_t *mc)
         /* Adjust the app stack to account for the return address + alignment.
          * See dynamorio_app_take_over in x86.asm.
          */
+#ifdef ARM
+        mc->r13 += DYNAMO_START_XSP_ADJUST;
+#else
         mc->xsp += DYNAMO_START_XSP_ADJUST;
+#endif
 
         /* For hotp_only and thin_client, the app should run native, except 
          * for our hooks. 

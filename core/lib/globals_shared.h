@@ -571,6 +571,17 @@ typedef struct _instr_t instr_t;
 # define IF_NOT_X64(x) x
 # define _IF_NOT_X64(x) , x
 #endif
+
+#ifdef ARM
+# define IF_ARM(x) x
+# define IF_ARM_ELSE(x, y) x
+# define IF_NOT_ARM(x)
+#else
+# define IF_ARM(x)
+# define IF_ARM_ELSE(x, y) y
+# define IF_NOT_ARM(x) x
+#endif
+
 /* DR_API EXPORT END */
 
 typedef enum {

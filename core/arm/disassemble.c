@@ -733,6 +733,7 @@ instr_implicit_reg(instr_t *instr)
 {
     /* instrs that have multiple encodings whose reg opnds are always implicit */
     switch (instr_get_opcode(instr)) {
+/*TODO SJF commented out
     case OP_ins: case OP_rep_ins:
     case OP_outs: case OP_rep_outs:
     case OP_movs: case OP_rep_movs:
@@ -741,6 +742,7 @@ instr_implicit_reg(instr_t *instr)
     case OP_cmps: case OP_rep_cmps: case OP_repne_cmps:
     case OP_scas: case OP_rep_scas: case OP_repne_scas:
         return true;
+*/
     }
     return false;
 }
@@ -753,23 +755,13 @@ opnd_disassemble_noimplicit(char *buf, size_t bufsz, size_t *sofar INOUT,
     switch (optype) {
     case TYPE_REG:
     case TYPE_VAR_REG:
-    case TYPE_VARZ_REG:
-    case TYPE_VAR_XREG:
-    case TYPE_REG_EX:
-    case TYPE_VAR_REG_EX:
-    case TYPE_VAR_XREG_EX:
-    case TYPE_VAR_REGX_EX:
         /* we do want to print implicit operands for opcode-decides-register
          * instrs like inc-reg and pop-reg, but not for say lahf, aaa, or cdq.
          */
-        if (!multiple_encodings || instr_implicit_reg(instr) ||
-            /* if has implicit st0 then don't print it */
-            (opnd_get_reg(opnd) == REG_ST0 && instr_memory_reference_size(instr) > 0))
+        if (!multiple_encodings || instr_implicit_reg(instr)) 
             return false;
         /* else fall through */
     case TYPE_A:
-    case TYPE_C:
-    case TYPE_D:
     case TYPE_E:
     case TYPE_INDIR_E:
     case TYPE_G:
@@ -785,8 +777,6 @@ opnd_disassemble_noimplicit(char *buf, size_t bufsz, size_t *sofar INOUT,
     case TYPE_S:
     case TYPE_V:
     case TYPE_W:
-    case TYPE_P_MODRM:
-    case TYPE_V_MODRM:
     case TYPE_FLOATMEM:
     case TYPE_1:
         if (prev)
@@ -794,8 +784,6 @@ opnd_disassemble_noimplicit(char *buf, size_t bufsz, size_t *sofar INOUT,
         internal_opnd_disassemble(buf, bufsz, sofar, dcontext, opnd);
         return true;
     case TYPE_X:
-    case TYPE_XLAT:
-    case TYPE_MASKMOVQ:
         if (opnd_get_segment(opnd) != SEG_DS) {
             /* FIXME: really we should put before opcode */
             if (prev)
@@ -805,20 +793,7 @@ opnd_disassemble_noimplicit(char *buf, size_t bufsz, size_t *sofar INOUT,
             return true;
         }
     case TYPE_Y:
-    case TYPE_FLOATCONST:
-    case TYPE_VAR_ADDR_XREG:
     case TYPE_INDIR_REG:
-    case TYPE_INDIR_VAR_XREG:
-    case TYPE_INDIR_VAR_REG:
-    case TYPE_INDIR_VAR_XIREG:
-    case TYPE_INDIR_VAR_XREG_OFFS_1:
-    case TYPE_INDIR_VAR_XREG_OFFS_8:
-    case TYPE_INDIR_VAR_XREG_OFFS_N:
-    case TYPE_INDIR_VAR_XIREG_OFFS_1:
-    case TYPE_INDIR_VAR_REG_OFFS_2:
-    case TYPE_INDIR_VAR_XREG_SIZEx8:
-    case TYPE_INDIR_VAR_REG_SIZEx2:
-    case TYPE_INDIR_VAR_REG_SIZEx3x5:
         /* implicit operand */
         return false;
     default:
@@ -896,19 +871,9 @@ instr_opcode_name(instr_t *instr, const instr_info_t *info)
     if (DYNAMO_OPTION(syntax_intel)) {
         switch (instr_get_opcode(instr)) {
         /* remove "l" prefix */
-        case OP_call_far: return "call";
-        case OP_call_far_ind: return "call";
-        case OP_jmp_far: return "jmp";
-        case OP_jmp_far_ind: return "jmp";
-        case OP_ret_far: return "retf";
+        /*case OP_jmp_far_ind: return "jmp";*/
         }
     }
-#ifdef X64
-    if (!instr_get_x86_mode(instr) && instr_get_opcode(instr) == OP_jecxz &&
-        reg_is_pointer_sized(opnd_get_reg(instr_get_src(instr, 1)))) {
-        return "jrcxz";
-    }
-#endif
     return info->name;
 }
 
@@ -918,6 +883,7 @@ instr_opcode_name_suffix(instr_t *instr)
     if (DYNAMO_OPTION(syntax_intel) || DYNAMO_OPTION(syntax_att)) {
         /* add "b" or "d" suffix */
         switch (instr_get_opcode(instr)) {
+/* TODO SJF 
         case OP_pushf: case OP_popf:
         case OP_xlat:
         case OP_ins: case OP_rep_ins:
@@ -954,6 +920,7 @@ instr_opcode_name_suffix(instr_t *instr)
                 else if (sz == 40)
                     return "q";
         }
+*/
         }
     }
     if (DYNAMO_OPTION(syntax_att) && instr_operands_valid(instr)) {

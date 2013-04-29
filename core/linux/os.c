@@ -4552,6 +4552,16 @@ typedef struct {
 #endif /* !NOT_DYNAMORIO_CORE_PROPER: around most of file, to exclude preload */
 
 const reg_id_t syscall_regparms[MAX_SYSCALL_ARGS] = {
+#ifdef ARM
+    DR_REG_R3,
+    DR_REG_R1,
+    DR_REG_R2,
+    DR_REG_R6,
+    DR_REG_R7,
+    DR_REG_R5
+
+#else
+
 #ifdef X64
     DR_REG_RDI,
     DR_REG_RSI,
@@ -4567,6 +4577,7 @@ const reg_id_t syscall_regparms[MAX_SYSCALL_ARGS] = {
     DR_REG_EDI,
     DR_REG_EBP
 #endif
+#endif//ARM
 };
 
 #ifndef NOT_DYNAMORIO_CORE_PROPER

@@ -746,7 +746,6 @@ ptrace_write_memory(pid_t pid, void *dst, void *src, size_t len)
     return true;
 }
 
-#ifdef X86
 
 /* Push a pointer to a string to the stack.  We create a fake instruction with
  * raw bytes equal to the string we want to put in the injectee.  The call will
@@ -758,7 +757,13 @@ gen_push_string(void *dc, instrlist_t *ilist, const char *msg)
 {
     instr_t *after_msg = INSTR_CREATE_label(dc);
     instr_t *msg_instr = instr_build_bits(dc, OP_UNDECODED, strlen(msg) + 1);
+/* TODO SJF Check this */
+/* For ARM use a brance instruction to hold the value */
+#ifdef ARM
+    APP(ilist, INSTR_CREATE_b(dc, opnd_create_instr(after_msg)));
+#else
     APP(ilist, INSTR_CREATE_call(dc, opnd_create_instr(after_msg)));
+#endif
     instr_set_raw_bytes(msg_instr, (byte*)msg, strlen(msg) + 1);
     instr_set_raw_bits_valid(msg_instr, true);
     APP(ilist, msg_instr);
@@ -771,14 +776,14 @@ gen_syscall(void *dc, instrlist_t *ilist, int sysnum, uint num_opnds,
 {
     uint i;
     ASSERT(num_opnds <= MAX_SYSCALL_ARGS);
-    APP(ilist, INSTR_CREATE_mov_imm
-        (dc, opnd_create_reg(DR_REG_XAX), OPND_CREATE_INTPTR(sysnum)));
+    APP(ilist, INSTR_CREATE_mov
+        (dc, opnd_create_reg(IF_ARM_ELSE(DR_REG_R0, DR_REG_XAX)), OPND_CREATE_INTPTR(sysnum)));
     for (i = 0; i < num_opnds; i++) {
         if (opnd_is_immed_int(args[i]) || opnd_is_instr(args[i])) {
-            APP(ilist, INSTR_CREATE_mov_imm
+            APP(ilist, INSTR_CREATE_mov
                 (dc, opnd_create_reg(syscall_regparms[i]), args[i]));
         } else if (opnd_is_base_disp(args[i])) {
-            APP(ilist, INSTR_CREATE_mov_ld
+            APP(ilist, INSTR_CREATE_mov
                 (dc, opnd_create_reg(syscall_regparms[i]), args[i]));
         }
     }
@@ -790,7 +795,6 @@ gen_syscall(void *dc, instrlist_t *ilist, int sysnum, uint num_opnds,
 # endif
 }
 
-#endif /* X86 */
 
 #if 0  /* Useful for debugging gen_syscall and gen_push_string. */
 static void
@@ -938,7 +942,7 @@ injectee_open(dr_inject_info_t *info, const char *path, int flags, mode_t mode)
     opnd_t args[MAX_SYSCALL_ARGS];
     int num_args = 0;
     gen_push_string(dc, ilist, path);
-    args[num_args++] = OPND_CREATE_MEMPTR(DR_REG_XSP, 0);
+    args[num_args++] = OPND_CREATE_MEMPTR(IF_ARM_ELSE(DR_REG_R5, DR_REG_XSP), 0);
     args[num_args++] = OPND_CREATE_INTPTR(flags);
     args[num_args++] = OPND_CREATE_INTPTR(mode);
     ASSERT(num_args <= MAX_SYSCALL_ARGS);
@@ -1057,7 +1061,26 @@ static void
 user_regs_to_mc(priv_mcontext_t *mc, struct user_regs_struct *regs)
 #endif
 {
-#ifdef X86
+#ifdef ARM 
+    mc->r0  = (app_pc)regs->uregs[0];
+    mc->r1  = regs->uregs[1];
+    mc->r2  = regs->uregs[2];
+    mc->r3  = regs->uregs[3];
+    mc->r4  = regs->uregs[4];
+    mc->r5  = regs->uregs[5];
+    mc->r6  = regs->uregs[6];
+    mc->r7  = regs->uregs[7];
+    mc->r8  = regs->uregs[8];
+    mc->r9  = regs->uregs[9];
+    mc->r10 = regs->uregs[10];
+    mc->r11 = regs->uregs[11];
+    mc->r12 = regs->uregs[12];
+    mc->r13 = regs->uregs[13];
+    mc->r14 = regs->uregs[14];
+    mc->r15 = regs->uregs[15];
+
+
+#else
 
 # ifdef X64
     mc->rip = (app_pc)regs->rip;
@@ -1089,26 +1112,6 @@ user_regs_to_mc(priv_mcontext_t *mc, struct user_regs_struct *regs)
     mc->edi = regs->edi;
 # endif
 
-#elif ARM
-    mc->r0  = (app_pc)regs->uregs[0];
-    mc->r1  = regs->uregs[1];
-    mc->r2  = regs->uregs[2];
-    mc->r3  = regs->uregs[3];
-    mc->r4  = regs->uregs[4];
-    mc->r5  = regs->uregs[5];
-    mc->r6  = regs->uregs[6];
-    mc->r7  = regs->uregs[7];
-    mc->r8  = regs->uregs[8];
-    mc->r9  = regs->uregs[9];
-    mc->r10 = regs->uregs[10];
-    mc->r11 = regs->uregs[11];
-    mc->r12 = regs->uregs[12];
-    mc->r13 = regs->uregs[13];
-    mc->r14 = regs->uregs[14];
-    mc->r15 = regs->uregs[15];
-
-#else
-# error "translate mc for non-x86 arch"
 #endif
 }
 
@@ -1161,7 +1164,11 @@ inject_ptrace(dr_inject_info_t *info, const char *library_path)
 {
     long r;
     int dr_fd;
+#ifdef ARM
+    struct user_regs regs;
+#else
     struct user_regs_struct regs;
+#endif
     ptrace_stack_args_t args;
     app_pc injected_base;
     app_pc injected_dr_start;

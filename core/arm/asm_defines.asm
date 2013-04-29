@@ -134,6 +134,9 @@
 #define FRAME_ALIGNMENT 16
 
 /* From globals_shared.h, but we can't include that into asm code. */
+# define IF_ARM(x)
+# define IF_ARM_ELSE(x, y) y
+# define IF_NOT_ARM(x) x
 # define IF_X64(x)
 # define IF_X64_ELSE(x, y) y
 # define IF_NOT_X64(x) x
@@ -142,7 +145,7 @@
 #  define STACK_UNPAD(tot, gt4) \
         mov    REG_R5, tot \
         mov    REG_R6, ARG_SZ \
-        mul    REG_R6, REG_R5, REG_R6 \ 
+        mul    REG_R6, REG_R5, REG_R6 \
         add    REG_R13, REG_R6 
 
 #  define STACK_PAD_LE4 /* nothing */

@@ -74,8 +74,6 @@
   reg_t r14;
   reg_t r15;
   
-  reg_t cpsr;
-  reg_t spsr;
 #else
     union {
         reg_t xdi; /**< platform-independent name for full rdi/edi register */
@@ -119,11 +117,19 @@
     reg_t r14; /**< r14 register. \note For 64-bit DR builds only. */
     reg_t r15; /**< r15 register. \note For 64-bit DR builds only. */
 #endif
+
+#endif
+
+#ifdef ARM
+    reg_t cpsr; /**< platform-independent name for full cpsr register */
+    reg_t spsr; /**< platform-independent name for full cpsr register */
+#else
     union {
         reg_t xflags; /**< platform-independent name for full rflags/eflags register */
         reg_t IF_X64_ELSE(rflags, eflags); /**< platform-dependent name for
                                                 rflags/eflags register */
     }; /**< anonymous union of alternative names for rflags/eflags register */
+
     /**
      * Anonymous union of alternative names for the program counter /
      * instruction pointer (eip/rip).  This field is not always set or 

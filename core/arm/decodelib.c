@@ -135,7 +135,8 @@ proc_restore_fpstate(byte *buf)
 priv_mcontext_t *
 dr_mcontext_as_priv_mcontext(dr_mcontext_t *mc)
 {
-    return (priv_mcontext_t*)(&mc->xdi);
+    /* TODO SJF Changed xdi to r0 */
+    return (priv_mcontext_t*)(&mc->r0);
 }
 
 /* XXX: duplicated from instrument.c, for convert_to_near_rel_common() */

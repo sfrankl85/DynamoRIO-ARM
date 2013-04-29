@@ -177,7 +177,7 @@ if ($header) {
 $arch = 'x86';
 print stderr "$defines{'X86'}\n";
 if (defined($defines{"ARM"})){
-    $arch = 'Arm';
+    $arch = 'arm';
 }
 
 @headers = 
