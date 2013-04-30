@@ -325,7 +325,8 @@ static inline bool atomic_dec_becomes_zero(volatile int *var) {
 /* returns true if var was equal to compare */
 static inline bool atomic_compare_exchange_int(volatile int *var,
                                            int compare, int exchange) {
-    return (ATOMIC_COMPARE_EXCHANGE_int(*(var), compare, exchange) == (compare));
+    int         tmp;
+    return (ATOMIC_COMPARE_EXCHANGE_int(*(var), compare, exchange, tmp) == (compare));
 }
 static inline bool atomic_compare_exchange_int64(volatile int64 *var,
                                                  int64 compare, int64 exchange) {
@@ -334,105 +335,108 @@ static inline bool atomic_compare_exchange_int64(volatile int64 *var,
 }
 /* atomically adds value to memory location var and returns the sum */
 static inline int atomic_add_exchange_int(volatile int *var, int value) {
-    return ((value) + ATOMIC_ADD(int, *(var), value));
+    int tmp;
+    return ((value) + ATOMIC_ADD(int, *(var), value, tmp));
 }
 # ifdef X64 /* 64-bit intrinsics only avail on x64 */
 static inline int64 atomic_add_exchange_int64(volatile int64 *var, int64 value) {
-    return ((value) + ATOMIC_ADD(int64, *(var), value));
+    int         tmp;
+    return ((value) + ATOMIC_ADD(int64, *(var), value, tmp));
 }
 # endif
 # define atomic_add_exchange atomic_add_exchange_int
 
 #else /* LINUX */
+/* TODO SJF Check all this is corect */
+/* TODO SJF Commented all this shit out. Need it to compile */
 # define ATOMIC_4BYTE_WRITE(target, value, hot_patch) do {           \
     ASSERT(sizeof(value) == 4);                                      \
     /* test that we aren't crossing a cache line boundary */         \
     CHECK_JMP_TARGET_ALIGNMENT(target, 4, hot_patch);                \
-    __asm__ __volatile__("xchgl (%0), %1" : : "r" (target), "r" (value) : "memory"); \
+    __asm__ __volatile__("swp (%0), (%0), %1" : : "r" (target), "r" (value) : "memory"); \
   } while (0)
-# ifdef X64
-#  define ATOMIC_8BYTE_WRITE(target, value, hot_patch) do {         \
-    ASSERT(sizeof(value) == 8);                                     \
-    /* Not currently used to write code */                          \
-    ASSERT_CURIOSITY(!hot_patch);                                   \
-    /* test that we aren't crossing a cache line boundary */        \
-    CHECK_JMP_TARGET_ALIGNMENT(target, 8, hot_patch);               \
-    __asm__ __volatile__("xchgq (%0), %1" : : "r" (target), "r" (value) : "memory"); \
-  } while (0)
-# endif
 # define ATOMIC_INC_suffix(suffix, var) \
-    __asm__ __volatile__("lock inc" suffix " %0" : "=m" (var) : : "memory")
-# define ATOMIC_INC_int(var) ATOMIC_INC_suffix("l", var)
+    __asm__ __volatile__("add" suffix " %0, %0, #1" : "=r" (var) : : "memory")
+# define ATOMIC_INC_int(var) ATOMIC_INC_suffix("", var)
 # define ATOMIC_INC_int64(var) ATOMIC_INC_suffix("q", var)
 # define ATOMIC_INC(type, var) ATOMIC_INC_##type(var)
 # define ATOMIC_DEC_suffix(suffix, var) \
-    __asm__ __volatile__("lock dec" suffix " %0" : "=m" (var) : : "memory")
-# define ATOMIC_DEC_int(var) ATOMIC_DEC_suffix("l", var)
+    __asm__ __volatile__("sub" suffix " %0, %0, #1" : "=r" (var) : : "memory")
+# define ATOMIC_DEC_int(var) ATOMIC_DEC_suffix("", var)
 # define ATOMIC_DEC_int64(var) ATOMIC_DEC_suffix("q", var)
 # define ATOMIC_DEC(type, var) ATOMIC_DEC_##type(var)
 /* with just "r" gcc will put $0 from PROBE_WRITE_PC into %eax
  * and then complain that "lock addq" can't take %eax!
  * so we use "ri":
  */
-# define ATOMIC_ADD_suffix(suffix, var, value)                 \
-   __asm__ __volatile__("lock add" suffix " %1, %0"            \
-                        : "=m" (var) : "ri" (value) : "memory")
-# define ATOMIC_ADD_int(var, val) ATOMIC_ADD_suffix("l", var, val)
-# define ATOMIC_ADD_int64(var, val) ATOMIC_ADD_suffix("q", var, val)
-# define ATOMIC_ADD(type, var, val) ATOMIC_ADD_##type(var, val)
-# ifdef X64
-#  define ATOMIC_ADD_PTR(type, var, val) ATOMIC_ADD_int64(var, val)
-# else
-#  define ATOMIC_ADD_PTR(type, var, val) ATOMIC_ADD_int(var, val)
-# endif
+# define ATOMIC_ADD_suffix(suffix, var, value, res, tmp)             \
+   __asm__ __volatile__("ldr %2, %0\n"                          \
+                        "add" suffix " %1, %2, %3"              \
+                        : "=m" (var), "=r" (res), "=r" (tmp): "r" (value) : "memory")
+# define ATOMIC_ADD_int(var, val, res, tmp) ATOMIC_ADD_suffix("", var, val, res, tmp)
+# define ATOMIC_ADD_int64(var, val, res, tmp) ATOMIC_ADD_suffix("q", var, val, res, tmp)
+# define ATOMIC_ADD(type, var, val, res, tmp) ATOMIC_ADD_##type(var, val, res, tmp)
+# define ATOMIC_ADD_PTR(type, var, val, res, tmp) ATOMIC_ADD_int(var, val, res, tmp)
 /* Not safe for general use, just for atomic_add_exchange(), undefed below */
-# define ATOMIC_ADD_EXCHANGE_suffix(suffix, var, value, result) \
-   __asm__ __volatile__("lock xadd" suffix " %1, %0"            \
-                        : "=m" (*var), "=r" (result) : "1" (value) : "memory")
-# define ATOMIC_ADD_EXCHANGE_int(var, val, res) \
-    ATOMIC_ADD_EXCHANGE_suffix("l", var, val, res)
-# define ATOMIC_ADD_EXCHANGE_int64(var, val, res) \
-    ATOMIC_ADD_EXCHANGE_suffix("q", var, val, res)
-# define ATOMIC_COMPARE_EXCHANGE_suffix(suffix, var, compare, exchange) \
-   __asm__ __volatile__ ("lock cmpxchg" suffix " %2,%0"         \
-                         : "=m" (var)                           \
-                         : "a" (compare), "r" (exchange)        \
-                         : "memory")
-# define ATOMIC_COMPARE_EXCHANGE_int(var, compare, exchange) \
-    ATOMIC_COMPARE_EXCHANGE_suffix("l", var, compare, exchange)
-# define ATOMIC_COMPARE_EXCHANGE_int64(var, compare, exchange) \
-    ATOMIC_COMPARE_EXCHANGE_suffix("q", var, compare, exchange)
+# define ATOMIC_ADD_EXCHANGE_suffix(suffix, var, value, res, tmp)             \
+   __asm__ __volatile__("ldr %2, %0\n"                          \
+                        "str %3, %0\n"                          \
+                        "add" suffix " %1, %2, %3"              \
+                        : "=m" (var), "=r" (res), "=r" (tmp): "r" (value) : "memory")
+# define ATOMIC_ADD_EXCHANGE_int(var, val, res, tmp) \
+    ATOMIC_ADD_EXCHANGE_suffix("", var, val, res, tmp)
+# define ATOMIC_ADD_EXCHANGE_int64(var, val, res, tmp) \
+    ATOMIC_ADD_EXCHANGE_suffix("q", var, val, res, tmp)
+# define ATOMIC_COMPARE_EXCHANGE_suffix(suffix, var, compare, exchange, tmp) \
+   __asm__ __volatile__("1:     ldrex" suffix "   %0, %3\n"   \
+                        "       strex   %1, %2, %3\n"         \
+                        "       teq     %1, #0\n"               \
+                        "       bne     1b"                     \
+                        : "=&r" (var), "=&r" (tmp)              \
+                        : "r" (compare), "m" (exchange)         \
+                        : "memory", "cc")
+
+# define ATOMIC_COMPARE_EXCHANGE_int(var, compare, exchange, tmp) \
+    ATOMIC_COMPARE_EXCHANGE_suffix("", var, compare, exchange, tmp)
 # define ATOMIC_COMPARE_EXCHANGE ATOMIC_COMPARE_EXCHANGE_int
-# ifdef X64
-#  define ATOMIC_COMPARE_EXCHANGE_PTR ATOMIC_COMPARE_EXCHANGE_int64
-# else
-#  define ATOMIC_COMPARE_EXCHANGE_PTR ATOMIC_COMPARE_EXCHANGE
-# endif
+
+# define ATOMIC_COMPARE_EXCHANGE_PTR ATOMIC_COMPARE_EXCHANGE
+
 # define ATOMIC_EXCHANGE(var, newval, result)     \
-    __asm __volatile ("xchgl %0, %1"              \
+    __asm __volatile ("swp %0, %0, %1"              \
                       : "=r" (result), "=m" (var) \
                       : "0" (newval), "m" (var))
 
+/* TODO SJF No rdtsc equiv in ARM 
 # define SPINLOCK_PAUSE()   __asm__ __volatile__("pause")
 # define RDTSC_LL(llval)                        \
     __asm__ __volatile__                        \
     ("rdtsc" : "=A" (llval))
+
 # define SERIALIZE_INSTRUCTIONS()                                       \
     __asm__ __volatile__                                                \
     ("xor %%eax, %%eax; cpuid" : : : "eax", "ebx", "ecx", "edx");
-# define GET_FRAME_PTR(var) asm("mov %%"IF_X64_ELSE("rbp","ebp")", %0" : "=m"(var))
-# define GET_STACK_PTR(var) asm("mov %%"IF_X64_ELSE("rsp","esp")", %0" : "=m"(var))
+*/
+/* TODO SJF Check this. r11 as frame pointer? r13 should be correct */
+# define GET_FRAME_PTR(var) asm("mov %0, r11 " : "=r"(var))
+# define GET_STACK_PTR(var) asm("mov %0, sp" : "=r"(var))
 
-# define SET_FLAG(cc, flag) __asm__ __volatile__("set"#cc " %0" :"=qm" (flag) )
-# define SET_IF_NOT_ZERO(flag) SET_FLAG(nz, flag)
-# define SET_IF_NOT_LESS(flag) SET_FLAG(nl, flag)
+/* TODO SJF Fix this 
+# define SET_FLAG(cc, nc, flag) __asm__ __volatile__("mov"#cc " %0, #1\n"         \
+                                                     "mov"#nc " %0, #0"         \
+                                                     :"=r" (flag) )
+*/
+# define SET_FLAG(cc, nc, flag) __asm__ __volatile__("mov %0, #1\n"         \
+                                                     :"=r" (flag) )
+# define SET_IF_NOT_ZERO(flag) SET_FLAG(ne, eq, flag)
+# define SET_IF_NOT_LESS(flag) SET_FLAG(gt, lt, flag)
 
 /* Atomically increments *var by 1
  * Returns true if the resulting value is zero, otherwise returns false
  */ 
 static inline bool atomic_inc_and_test(volatile int *var)
 {
-    unsigned char c;
+    unsigned char c = 1;
 
     ATOMIC_INC(int, *var);
     /* flags should be set according to resulting value, now we convert that back to C */
@@ -463,7 +467,6 @@ static inline bool atomic_dec_and_test(volatile int *var)
 static inline bool atomic_dec_becomes_zero(volatile int *var)
 {
     unsigned char c;
-
     ATOMIC_DEC(int, *var);
     /* result should be set according to value after change, now we convert that back to C */
     SET_IF_NOT_ZERO(c);
@@ -480,7 +483,8 @@ static inline bool atomic_compare_exchange_int(volatile int *var,
                                                int compare, int exchange)
 {
     unsigned char c;
-    ATOMIC_COMPARE_EXCHANGE(*var, compare, exchange);
+    int          tmp;
+    ATOMIC_COMPARE_EXCHANGE(*var, compare, exchange, tmp);
     /* ZF is set if matched, all other flags are as if a normal compare happened */
     /* we convert ZF value back to C */
     SET_IF_NOT_ZERO(c);
@@ -507,7 +511,8 @@ static inline bool atomic_compare_exchange_int64(volatile int64 *var,
                                                  int64 exchange)
 {
     unsigned char c;
-    ATOMIC_COMPARE_EXCHANGE_int64(*var, compare, exchange);
+    int           tmp; 
+    ATOMIC_COMPARE_EXCHANGE_int64(*var, compare, exchange. tmp);
     /* ZF is set if matched, all other flags are as if a normal compare happened */
     /* we convert ZF value back to C */
     SET_IF_NOT_ZERO(c);
@@ -521,13 +526,15 @@ static inline bool atomic_compare_exchange_int64(volatile int64 *var,
 static inline int atomic_add_exchange_int(volatile int *var, int value)
 {
     int temp;
-    ATOMIC_ADD_EXCHANGE_int(var, value, temp);
+    int tmp;
+    ATOMIC_ADD_EXCHANGE_int(var, value, temp, tmp);
     return (temp + value);
 }
 static inline int64 atomic_add_exchange_int64(volatile int64 *var, int64 value)
 {
     int64 temp;
-    ATOMIC_ADD_EXCHANGE_int64(var, value, temp);
+    int   tmp;
+    ATOMIC_ADD_EXCHANGE_int64(var, value, temp, tmp);
     return (temp + value);
 }
 # define atomic_add_exchange atomic_add_exchange_int

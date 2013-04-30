@@ -345,23 +345,22 @@ extern const reg_id_t dr_reg_fixer[];
 #ifdef DR_REG_ENUM_COMPATIBILITY
 
 # define REG_NULL            DR_REG_NULL
-
-# define REG_R0              DR_REG_R0
-# define REG_R1              DR_REG_R1
-# define REG_R2              DR_REG_R2
-# define REG_R3              DR_REG_R3
-# define REG_R4              DR_REG_R4
-# define REG_R5              DR_REG_R5
-# define REG_R6              DR_REG_R6
-# define REG_R7              DR_REG_R7
-# define REG_R8              DR_REG_R8
-# define REG_R9              DR_REG_R9
-# define REG_R10             DR_REG_R10
-# define REG_R11             DR_REG_R11
-# define REG_R12             DR_REG_R12
-# define REG_R13             DR_REG_R13
-# define REG_R14             DR_REG_R14
-# define REG_R15             DR_REG_R15
+# define REG_RR0              DR_REG_R0
+# define REG_RR1              DR_REG_R1
+# define REG_RR2              DR_REG_R2
+# define REG_RR3              DR_REG_R3
+# define REG_RR4              DR_REG_R4
+# define REG_RR5              DR_REG_R5
+# define REG_RR6              DR_REG_R6
+# define REG_RR7              DR_REG_R7
+# define REG_RR8              DR_REG_R8
+# define REG_RR9              DR_REG_R9
+# define REG_RR10             DR_REG_R10
+# define REG_RR11             DR_REG_R11
+# define REG_RR12             DR_REG_R12
+# define REG_RR13             DR_REG_R13
+# define REG_RR14             DR_REG_R14
+# define REG_RR15             DR_REG_R15
 # define REG_INVALID         DR_REG_INVALID
 # define REG_START_FLOAT     DR_REG_START_FLOAT
 # define REG_STOP_FLOAT      DR_REG_STOP_FLOAT
@@ -392,6 +391,10 @@ extern const reg_id_t dr_reg_fixer[];
 
 
 #endif /* DR_REG_ENUM_COMPATIBILITY */
+
+/* ^^^^^ SJF renamed all the R E G_ R x to D R E D_Rx as compiler was 
+             complaining about duplicates in ucontext.h */
+
 /* DR_API EXPORT END */
 
 #ifndef INT8_MIN

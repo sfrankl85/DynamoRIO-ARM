@@ -63,7 +63,8 @@
 /* #undef GBOP */
 
 /* for use by developers */
-#define KSTATS
+/* SJF TODO Comment out stats for now */
+//#define KSTATS
 /* #undef CALLPROF */
 #ifdef CALLPROF
 /* XXX: perhaps should rename CALLPROF cmake var to CALL_PROFILE */

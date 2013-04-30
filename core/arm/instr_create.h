@@ -2574,6 +2574,8 @@
  */
 #define INSTR_CREATE_popa(dc)   instr_create_popa((dc))
 
+#endif //NO
+
 /****************************************************************************/
 
 /** @name Nops */
@@ -2588,13 +2590,12 @@
  * \param dc The void * dcontext used to allocate memory for the instr_t.
  */
 #define INSTR_CREATE_nop1byte(dc) INSTR_CREATE_nop(dc)
-#define INSTR_CREATE_nop2byte(dc) INSTR_CREATE_nop2byte_reg(dc, DR_REG_XDI)
-#define INSTR_CREATE_nop3byte(dc) INSTR_CREATE_nop3byte_reg(dc, DR_REG_XDI)
+#define INSTR_CREATE_nop2byte(dc) INSTR_CREATE_nop2byte_reg(dc, DR_REG_R7)
+#define INSTR_CREATE_nop3byte(dc) INSTR_CREATE_nop3byte_reg(dc, DR_REG_R7)
 /* @} */ /* end doxygen group */
 /** @name 2-byte reg nops */
 /* @{ */ /* doxygen start group; w/ DISTRIBUTE_GROUP_DOC=YES, one comment suffices. */
 
-#endif
 /**
  * Convenience routine for nop of certain size.
  * Note that Intel now recommends a different set of multi-byte nops,

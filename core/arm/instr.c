@@ -1527,22 +1527,22 @@ opnd_get_reg_dcontext_offs(reg_id_t reg)
     switch (reg) {
 
 #ifdef ARM
-    case REG_R0:  return  R0_OFFSET;
-    case REG_R1:  return  R1_OFFSET;
-    case REG_R2:  return  R2_OFFSET;
-    case REG_R3:  return  R3_OFFSET;
-    case REG_R4:  return  R4_OFFSET;
-    case REG_R5:  return  R5_OFFSET;
-    case REG_R6:  return  R6_OFFSET;
-    case REG_R7:  return  R7_OFFSET;
-    case REG_R8:  return  R8_OFFSET;
-    case REG_R9:  return  R9_OFFSET;
-    case REG_R10: return R10_OFFSET;
-    case REG_R11: return R11_OFFSET;
-    case REG_R12: return R12_OFFSET;
-    case REG_R13: return R13_OFFSET;
-    case REG_R14: return R14_OFFSET;
-    case REG_R15: return R15_OFFSET;
+    case REG_RR0:  return  R0_OFFSET;
+    case REG_RR1:  return  R1_OFFSET;
+    case REG_RR2:  return  R2_OFFSET;
+    case REG_RR3:  return  R3_OFFSET;
+    case REG_RR4:  return  R4_OFFSET;
+    case REG_RR5:  return  R5_OFFSET;
+    case REG_RR6:  return  R6_OFFSET;
+    case REG_RR7:  return  R7_OFFSET;
+    case REG_RR8:  return  R8_OFFSET;
+    case REG_RR9:  return  R9_OFFSET;
+    case REG_RR10: return R10_OFFSET;
+    case REG_RR11: return R11_OFFSET;
+    case REG_RR12: return R12_OFFSET;
+    case REG_RR13: return R13_OFFSET;
+    case REG_RR14: return R14_OFFSET;
+    case REG_RR15: return R15_OFFSET;
 #else
     case REG_XAX: return XAX_OFFSET;
     case REG_XBX: return XBX_OFFSET;
@@ -4768,7 +4768,7 @@ instr_uses_fp_reg(instr_t *instr)
 bool
 reg_is_gpr(reg_id_t reg)
 {
-    return (reg >= REG_R0 && reg <= REG_R15);
+    return (reg >= REG_RR0 && reg <= REG_RR15);
 }
 
 
