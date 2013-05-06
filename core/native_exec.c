@@ -271,7 +271,11 @@ back_from_native_common(dcontext_t *dcontext, priv_mcontext_t *mc, app_pc target
 
     *get_mcontext(dcontext) = *mc;
     /* clear pc */
-    get_mcontext(dcontext)->pc = 0;
+    #ifdef ARM
+      get_mcontext(dcontext)->r15 = 0;
+    #else
+      get_mcontext(dcontext)->pc = 0;
+    #endif
 
     call_switch_stack(dcontext, dcontext->dstack, dispatch,
                       false/*not on initstack*/, false/*shouldn't return*/);
@@ -317,7 +321,11 @@ return_from_native(priv_mcontext_t *mc)
     ASSERT(dcontext != NULL);
     SYSLOG_INTERNAL_WARNING_ONCE("returned from at least one native module");
     retidx = native_get_retstack_idx(mc);
-    target = pop_retaddr_for_index(dcontext, retidx, (app_pc) mc->xsp);
+    #ifdef ARM
+      target = pop_retaddr_for_index(dcontext, retidx, (app_pc) mc->r13);
+    #else
+      target = pop_retaddr_for_index(dcontext, retidx, (app_pc) mc->xsp);
+    #endif
     ASSERT(!is_native_pc(target) &&
            "shouldn't return from native to native PC (i#1090?)");
     LOG(THREAD, LOG_ASYNCH, 1, "\n!!!! Returned from NATIVE module to "PFX"\n",
@@ -350,7 +358,11 @@ native_module_callout(priv_mcontext_t *mc, app_pc target)
 void
 interpret_back_from_native(dcontext_t *dcontext)
 {
-    app_pc xsp = (app_pc) get_mcontext(dcontext)->xsp;
+    #ifdef ARM
+      app_pc xsp = (app_pc) get_mcontext(dcontext)->r15;
+    #else
+      app_pc xsp = (app_pc) get_mcontext(dcontext)->xsp;
+    #endif
     ptr_int_t offset = dcontext->next_tag - retstub_start;
     int retidx;
     ASSERT(native_exec_is_back_from_native(dcontext->next_tag));

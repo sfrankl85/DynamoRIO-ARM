@@ -2057,7 +2057,7 @@ instrument_nudge(dcontext_t *dcontext, client_id_t id, uint64 arg)
                   "internal inconsistency in where mcontext is");
     dcontext->client_data->mcontext_in_dcontext = true;
     /* officially get_mcontext() doesn't always set xip: we do anyway */
-    get_mcontext(dcontext)->xip = dcontext->next_tag;
+    get_mcontext(dcontext)->cpsr = dcontext->next_tag;
 #endif
 
     call_all(client_libs[i].nudge_callbacks, int (*)(void *, uint64), 
@@ -4007,6 +4007,7 @@ dr_suspend_all_other_threads(OUT void ***drcontexts,
                              OUT uint *num_suspended,
                              OUT uint *num_unsuspended)
 {
+#ifdef NO
     uint out_suspended = 0, out_unsuspended = 0;
     thread_record_t **threads;
     int num_threads;
@@ -4101,12 +4102,14 @@ dr_suspend_all_other_threads(OUT void ***drcontexts,
     if (num_unsuspended != NULL)
         *num_unsuspended = out_unsuspended;
     return true;
+#endif //NO
 }
 
 bool
 dr_resume_all_other_threads(IN void **drcontexts,
                             IN uint num_suspended)
 {
+#ifdef NO
     thread_record_t **threads;
     int num_threads;
     uint i;
@@ -4124,6 +4127,7 @@ dr_resume_all_other_threads(IN void **drcontexts,
                      HEAPACCT(ACCT_THREAD_MGT));
     end_synch_with_all_threads(threads, num_threads, true/*resume*/);
     return true;
+#endif
 }
 
 # ifdef LINUX
@@ -4304,7 +4308,7 @@ cleanup_after_call_ex(dcontext_t *dcontext, clean_call_info_t *cci,
                       "cleanup_after_call_ex: sizeof_param_area must be <= 127");
         /* mark it meta down below */
         instrlist_preinsert(ilist, where,
-            INSTR_CREATE_add(dcontext, opnd_create_reg(REG_XSP),
+            INSTR_CREATE_add(dcontext, opnd_create_reg(REG_R13),
                              OPND_CREATE_INT8(sizeof_param_area)));
     }
     cleanup_after_clean_call(dcontext, cci, ilist, where);
@@ -4323,7 +4327,7 @@ cleanup_after_call_ex(dcontext_t *dcontext, clean_call_info_t *cci,
  * by an app save and restore.
  * If "save_fpstate" is true, saves the fp/mmx/sse state.
  *
- * NOTE : this routine clobbers TLS_XAX_SLOT and the XSP mcontext slot via
+ * NOTE : this routine clobbers TLS_R0_SLOT and the XSP mcontext slot via
  * dr_prepare_for_call(). We guarantee to clients that all other slots
  * (except the XAX mcontext slot) will remain untouched.
  */
@@ -4431,10 +4435,10 @@ dr_insert_clean_call_ex_varg(void *drcontext, instrlist_t *ilist, instr_t *where
         pad = ALIGN_FORWARD_UINT(dstack_offs, 16) - dstack_offs;
         IF_X64(CLIENT_ASSERT(CHECK_TRUNCATE_TYPE_int(buf_sz + pad),
                              "dr_insert_clean_call: internal truncation error"));
-        MINSERT(ilist, where, INSTR_CREATE_sub(dcontext, opnd_create_reg(REG_XSP),
+        MINSERT(ilist, where, INSTR_CREATE_sub(dcontext, opnd_create_reg(REG_R13),
                                                OPND_CREATE_INT32((int)(buf_sz + pad))));
         dr_insert_save_fpstate(drcontext, ilist, where,
-                               opnd_create_base_disp(REG_XSP, REG_NULL, 0, 0,
+                               opnd_create_base_disp(REG_R13, REG_NULL, 0, 0,
                                                      OPSZ_512));
     }
 
@@ -4460,9 +4464,9 @@ dr_insert_clean_call_ex_varg(void *drcontext, instrlist_t *ilist, instr_t *where
 
     if (save_fpstate) {
         dr_insert_restore_fpstate(drcontext, ilist, where,
-                                  opnd_create_base_disp(REG_XSP, REG_NULL, 0, 0,
+                                  opnd_create_base_disp(REG_R13, REG_NULL, 0, 0,
                                                         OPSZ_512));
-        MINSERT(ilist, where, INSTR_CREATE_add(dcontext, opnd_create_reg(REG_XSP),
+        MINSERT(ilist, where, INSTR_CREATE_add(dcontext, opnd_create_reg(REG_R13),
                                                OPND_CREATE_INT32(buf_sz + pad)));
     }
     cleanup_after_call_ex(dcontext, &cci, ilist, where, 0);
@@ -4496,7 +4500,7 @@ dr_insert_clean_call(void *drcontext, instrlist_t *ilist, instr_t *where,
  * Returns the size of the data stored on the DR stack (in case the caller
  * needs to align the stack pointer).  XSP and XAX are modified by this call.
  * 
- * NOTE : this routine clobbers TLS_XAX_SLOT and the XSP mcontext slot via
+ * NOTE : this routine clobbers TLS_R0_SLOT and the XSP mcontext slot via
  * prepare_for_clean_call(). We guarantee to clients that all other slots
  * (except the XAX mcontext slot) will remain untouched.
  */
@@ -4534,23 +4538,23 @@ dr_swap_to_clean_stack(void *drcontext, instrlist_t *ilist, instr_t *where)
      */
     if (SCRATCH_ALWAYS_TLS()) {
         MINSERT(ilist, where, instr_create_save_to_tls
-                (dcontext, REG_XAX, TLS_XAX_SLOT));
-        insert_get_mcontext_base(dcontext, ilist, where, REG_XAX);
+                (dcontext, REG_R0, TLS_R0_SLOT));
+        insert_get_mcontext_base(dcontext, ilist, where, REG_R0);
         /* save app xsp, and then bring in dstack to xsp */
         MINSERT(ilist, where, instr_create_save_to_dc_via_reg
-                (dcontext, REG_XAX, REG_XSP, XSP_OFFSET));
+                (dcontext, REG_R0, REG_R13, R13_OFFSET));
         /* DSTACK_OFFSET isn't within the upcontext so if it's separate this won't
          * work right.  FIXME - the dcontext accessing routines are a mess of shared
          * vs. no shared support, separate context vs. no separate context support etc. */
         ASSERT_NOT_IMPLEMENTED(!TEST(SELFPROT_DCONTEXT, dynamo_options.protect_mask));
         MINSERT(ilist, where, instr_create_restore_from_dc_via_reg
-                (dcontext, REG_XAX, REG_XSP, DSTACK_OFFSET));
+                (dcontext, REG_R0, REG_R13, DSTACK_OFFSET));
         MINSERT(ilist, where, instr_create_restore_from_tls
-                (dcontext, REG_XAX, TLS_XAX_SLOT));
+                (dcontext, REG_R0, TLS_R0_SLOT));
     }
     else {
         MINSERT(ilist, where, instr_create_save_to_dcontext
-                (dcontext, REG_XSP, XSP_OFFSET));
+                (dcontext, REG_R13, R13_OFFSET));
         MINSERT(ilist, where, instr_create_restore_dynamo_stack(dcontext));
     }
 }
@@ -4565,31 +4569,31 @@ dr_restore_app_stack(void *drcontext, instrlist_t *ilist, instr_t *where)
     /* restore stack */
     if (SCRATCH_ALWAYS_TLS()) {
         /* use the register we're about to clobber as scratch space */        
-        insert_get_mcontext_base(dcontext, ilist, where, REG_XSP);
+        insert_get_mcontext_base(dcontext, ilist, where, REG_R13);
         MINSERT(ilist, where, instr_create_restore_from_dc_via_reg
-                (dcontext, REG_XSP, REG_XSP, XSP_OFFSET));
+                (dcontext, REG_R13, REG_R13, R13_OFFSET));
     } else {
         MINSERT(ilist, where, instr_create_restore_from_dcontext
-                (dcontext, REG_XSP, XSP_OFFSET));
+                (dcontext, REG_R13, R13_OFFSET));
     }
 }
 
 #define SPILL_SLOT_TLS_MAX 2
 #define NUM_TLS_SPILL_SLOTS (SPILL_SLOT_TLS_MAX + 1)
 #define NUM_SPILL_SLOTS (SPILL_SLOT_MAX + 1)
-/* The three tls slots we make available to clients.  We reserve TLS_XAX_SLOT for our
+/* The three tls slots we make available to clients.  We reserve TLS_R0_SLOT for our
  * own use in dr convenience routines. Note the +1 is because the max is an array index
  * (so zero based) while array size is number of slots.  We don't need to +1 in 
  * SPILL_SLOT_MC_REG because subtracting SPILL_SLOT_TLS_MAX already accounts for it. */
 static const ushort SPILL_SLOT_TLS_OFFS[NUM_TLS_SPILL_SLOTS] =
-    { TLS_XDX_SLOT, TLS_XCX_SLOT, TLS_XBX_SLOT };
+    { TLS_R2_SLOT, TLS_R1_SLOT, TLS_R3_SLOT };
 /* The dcontext reg slots we make available to clients.  We reserve XAX and XSP for
  * our own use in dr convenience routines. */
 static const reg_id_t SPILL_SLOT_MC_REG[NUM_SPILL_SLOTS - NUM_TLS_SPILL_SLOTS] = { 
 #ifdef X64
     REG_R15, REG_R14, REG_R13, REG_R12, REG_R11, REG_R10, REG_R9, REG_R8,
 #endif
-    REG_XDI, REG_XSI, REG_XBP, REG_XDX, REG_XCX, REG_XBX };
+    REG_R7, REG_R6, REG_R5, REG_R2, REG_R1, REG_R3 };
 
 DR_API void 
 dr_save_reg(void *drcontext, instrlist_t *ilist, instr_t *where, reg_id_t reg,
@@ -4617,10 +4621,10 @@ dr_save_reg(void *drcontext, instrlist_t *ilist, instr_t *where, reg_id_t reg,
             /* PR 219620: For thread-shared, we need to get the dcontext
              * dynamically rather than use the constant passed in here.
              */
-            reg_id_t tmp = (reg == REG_XAX) ? REG_XBX : REG_XAX;
+            reg_id_t tmp = (reg == REG_R0) ? REG_R3 : REG_R0;
             
             MINSERT(ilist, where, instr_create_save_to_tls
-                    (dcontext, tmp, TLS_XAX_SLOT));
+                    (dcontext, tmp, TLS_R0_SLOT));
 
             insert_get_mcontext_base(dcontext, ilist, where, tmp);
 
@@ -4628,7 +4632,7 @@ dr_save_reg(void *drcontext, instrlist_t *ilist, instr_t *where, reg_id_t reg,
                     (dcontext, tmp, reg, offs));
 
             MINSERT(ilist, where, instr_create_restore_from_tls
-                    (dcontext, tmp, TLS_XAX_SLOT));
+                    (dcontext, tmp, TLS_R0_SLOT));
         } else {
             MINSERT(ilist, where, instr_create_save_to_dcontext(dcontext, reg, offs));
         }
@@ -4818,10 +4822,10 @@ dr_insert_write_tls_field(void *drcontext, instrlist_t *ilist, instr_t *where,
     CLIENT_ASSERT(reg_is_pointer_sized(reg),
                   "must use a pointer-sized general-purpose register");
     if (SCRATCH_ALWAYS_TLS()) {
-        reg_id_t spill = REG_XAX;
+        reg_id_t spill = REG_R0;
         if (reg == spill) /* don't need sub-reg test b/c we know it's pointer-sized */
-            spill = REG_XDI;
-        MINSERT(ilist, where, instr_create_save_to_tls(dcontext, spill, TLS_XAX_SLOT));
+            spill = REG_R7;
+        MINSERT(ilist, where, instr_create_save_to_tls(dcontext, spill, TLS_R0_SLOT));
         MINSERT(ilist, where, instr_create_restore_from_tls
                 (dcontext, spill, TLS_DCONTEXT_SLOT));
         MINSERT(ilist, where, instr_create_restore_from_dc_via_reg
@@ -4831,7 +4835,7 @@ dr_insert_write_tls_field(void *drcontext, instrlist_t *ilist, instr_t *where,
                                               offsetof(client_data_t, user_field)),
                  opnd_create_reg(reg)));
         MINSERT(ilist, where,
-                instr_create_restore_from_tls(dcontext, spill, TLS_XAX_SLOT));
+                instr_create_restore_from_tls(dcontext, spill, TLS_R0_SLOT));
     } else {
         MINSERT(ilist, where, INSTR_CREATE_mov_st
                 (dcontext, OPND_CREATE_ABSMEM
@@ -4851,7 +4855,7 @@ dr_save_arith_flags(void *drcontext, instrlist_t *ilist, instr_t *where,
     CLIENT_ASSERT(slot <= SPILL_SLOT_MAX,
                   "dr_save_arith_flags: invalid spill slot selection");
 
-    dr_save_reg(drcontext, ilist, where, REG_XAX, slot);
+    dr_save_reg(drcontext, ilist, where, REG_R0, slot);
     dr_save_arith_flags_to_xax(drcontext, ilist, where);
 }
 
@@ -4867,12 +4871,13 @@ dr_restore_arith_flags(void *drcontext, instrlist_t *ilist, instr_t *where,
                   "dr_restore_arith_flags: invalid spill slot selection");
 
     dr_restore_arith_flags_from_xax(drcontext, ilist, where);
-    dr_restore_reg(drcontext, ilist, where, REG_XAX, slot);
+    dr_restore_reg(drcontext, ilist, where, REG_R0, slot);
 }
 
 DR_API void 
 dr_save_arith_flags_to_xax(void *drcontext, instrlist_t *ilist, instr_t *where)
 {
+#ifdef NO
     dcontext_t *dcontext = (dcontext_t *) drcontext;
     CLIENT_ASSERT(drcontext != NULL,
                   "dr_save_arith_flags_to_xax: drcontext cannot be NULL");
@@ -4886,12 +4891,14 @@ dr_save_arith_flags_to_xax(void *drcontext, instrlist_t *ilist, instr_t *where)
     MINSERT(ilist, where, INSTR_CREATE_lahf(dcontext));
     MINSERT(ilist, where,
             INSTR_CREATE_setcc(dcontext, OP_seto, opnd_create_reg(REG_AL)));
+#endif
 }
 
 DR_API void 
 dr_restore_arith_flags_from_xax(void *drcontext, instrlist_t *ilist,
                                 instr_t *where)
 {
+#ifdef NO
     dcontext_t *dcontext = (dcontext_t *) drcontext;
     CLIENT_ASSERT(drcontext != NULL,
                   "dr_restore_arith_flags_from_xax: drcontext cannot be NULL");
@@ -4908,11 +4915,12 @@ dr_restore_arith_flags_from_xax(void *drcontext, instrlist_t *ilist,
     MINSERT(ilist, where,
             INSTR_CREATE_add(dcontext, opnd_create_reg(REG_AL), OPND_CREATE_INT8(0x7f)));
     MINSERT(ilist, where, INSTR_CREATE_sahf(dcontext));
+#endif
 }
 
 /* providing functionality of old -instr_calls and -instr_branches flags
  *
- * NOTE : this routine clobbers TLS_XAX_SLOT and the XSP mcontext slot via
+ * NOTE : this routine clobbers TLS_R0_SLOT and the XSP mcontext slot via
  * dr_insert_clean_call(). We guarantee to clients that all other slots
  * (except the XAX mcontext slot) will remain untouched.
  */
@@ -4920,6 +4928,7 @@ DR_API void
 dr_insert_call_instrumentation(void *drcontext, instrlist_t *ilist, instr_t *instr,
                                void *callee)
 {
+#ifdef NO
     ptr_uint_t target, address;
     CLIENT_ASSERT(drcontext != NULL,
                   "dr_insert_call_instrumentation: drcontext cannot be NULL");
@@ -4958,9 +4967,10 @@ dr_insert_call_instrumentation(void *drcontext, instrlist_t *ilist, instr_t *ins
                          OPND_CREATE_INTPTR(address),
                          /* call target is 2nd parameter */
                          OPND_CREATE_INTPTR(target));
+#endif
 }
 
-/* NOTE : this routine clobbers TLS_XAX_SLOT and the XSP mcontext slot via
+/* NOTE : this routine clobbers TLS_R0_SLOT and the XSP mcontext slot via
  * dr_insert_clean_call(). We guarantee to clients that all other slots
  * (except the XAX mcontext slot) will remain untouched. Since we need another
  * tls spill slot in this routine we require the caller to give us one. */
@@ -4968,6 +4978,7 @@ DR_API void
 dr_insert_mbr_instrumentation(void *drcontext, instrlist_t *ilist, instr_t *instr,
                               void *callee, dr_spill_slot_t scratch_slot)
 {
+#ifdef NO
     dcontext_t *dcontext = (dcontext_t *) drcontext;
     ptr_uint_t address = (ptr_uint_t) instr_get_translation(instr);
     opnd_t tls_opnd;
@@ -5001,7 +5012,7 @@ dr_insert_mbr_instrumentation(void *drcontext, instrlist_t *ilist, instr_t *inst
     /* Note that since we're using a client exposed slot we know it will be
      * preserved across the clean call. */
     tls_opnd = dr_reg_spill_slot_opnd(drcontext, scratch_slot);
-    newinst = INSTR_CREATE_mov_st(dcontext, tls_opnd, opnd_create_reg(REG_XCX));
+    newinst = INSTR_CREATE_mov_st(dcontext, tls_opnd, opnd_create_reg(REG_R1));
 
     /* PR 214962: ensure we'll properly translate the de-ref of app
      * memory by marking the spill and de-ref as INSTR_OUR_MANGLING.
@@ -5015,12 +5026,12 @@ dr_insert_mbr_instrumentation(void *drcontext, instrlist_t *ilist, instr_t *inst
         opnd_size_t sz = opnd_get_size(retaddr);
         /* even for far ret and iret, retaddr is at TOS */
         newinst = instr_create_1dst_1src(dcontext, sz == OPSZ_2 ? OP_movzx : OP_mov_ld,
-                                         opnd_create_reg(REG_XCX), retaddr);
+                                         opnd_create_reg(REG_R1), retaddr);
     } else {
         /* call* or jmp* */
         opnd_t src = instr_get_src(instr, 0);
         opnd_size_t sz = opnd_get_size(src);
-        reg_id_t reg_target = REG_XCX;
+        reg_id_t reg_target = REG_R1;
         /* if a far cti, we can't fit it into a register: asserted above.
          * in release build we'll get just the address here.
          */
@@ -5033,7 +5044,7 @@ dr_insert_mbr_instrumentation(void *drcontext, instrlist_t *ilist, instr_t *inst
                 reg_target = REG_ECX;
             } else /* target has OPSZ_4 */ {
                 sz = OPSZ_2;
-                reg_target = REG_XCX; /* we use movzx below */
+                reg_target = REG_R1; /* we use movzx below */
             }
             opnd_set_size(&src, sz);
         }
@@ -5048,22 +5059,24 @@ dr_insert_mbr_instrumentation(void *drcontext, instrlist_t *ilist, instr_t *inst
      * instr_is_reg_spill_or_restore().
      */
     MINSERT(ilist, instr,
-            INSTR_CREATE_xchg(dcontext, tls_opnd, opnd_create_reg(REG_XCX)));
+            INSTR_CREATE_xchg(dcontext, tls_opnd, opnd_create_reg(REG_R1)));
 
     dr_insert_clean_call(drcontext, ilist, instr, callee, false/*no fpstate*/, 2,
                          /* address of mbr is 1st param */
                          OPND_CREATE_INTPTR(address),
                          /* indirect target (in tls, xchg-d from ecx) is 2nd param */
                          tls_opnd);
+#endif
 }
 
-/* NOTE : this routine clobbers TLS_XAX_SLOT and the XSP mcontext slot via
+/* NOTE : this routine clobbers TLS_R0_SLOT and the XSP mcontext slot via
  * dr_insert_clean_call(). We guarantee to clients that all other slots
  * (except the XAX mcontext slot) will remain untouched. */
 DR_API void
 dr_insert_cbr_instrumentation(void *drcontext, instrlist_t *ilist, instr_t *instr,
                               void *callee)
 {
+#ifdef NO
     dcontext_t *dcontext = (dcontext_t *) drcontext;
     ptr_uint_t address, target;
     int opc;
@@ -5097,7 +5110,7 @@ dr_insert_cbr_instrumentation(void *drcontext, instrlist_t *ilist, instr_t *inst
                          /* target is 2nd parameter */
                          OPND_CREATE_INTPTR(target),
                          /* branch direction (put in ebx below) is 3rd parameter */
-                         opnd_create_reg(REG_XBX));
+                         opnd_create_reg(REG_R3));
 
     /* calculate whether branch taken or not
      * since the clean call mechanism clobbers eflags, we
@@ -5136,7 +5149,7 @@ dr_insert_cbr_instrumentation(void *drcontext, instrlist_t *ilist, instr_t *inst
     /* move a few instrs back till right before push xbx or mov rbx => r3 */
     if (instr_get_opcode(app_flags_ok) == OP_call) {
         while (app_flags_ok != NULL) {
-            if (instr_reg_in_src(app_flags_ok, DR_REG_XBX))
+            if (instr_reg_in_src(app_flags_ok, DR_REG_R3))
                 break;
             app_flags_ok = instr_get_prev(app_flags_ok);
         }
@@ -5190,6 +5203,7 @@ dr_insert_cbr_instrumentation(void *drcontext, instrlist_t *ilist, instr_t *inst
     }
 
     /* now branch dir is in ebx and will be passed to clean call */
+#endif
 }
 
 DR_API void
@@ -5209,6 +5223,7 @@ bool
 dr_clobber_retaddr_after_read(void *drcontext, instrlist_t *ilist, instr_t *instr,
                               ptr_uint_t value)
 {
+#ifdef NO
     /* the client could be using note fields so we use a label and xfer to
      * a note field during the mangling pass
      */
@@ -5229,6 +5244,7 @@ dr_clobber_retaddr_after_read(void *drcontext, instrlist_t *ilist, instr_t *inst
         return true;
     }
     return false;
+#endif
 }
 
 DR_API bool
@@ -5302,9 +5318,9 @@ dr_get_mcontext_priv(dcontext_t *dcontext, dr_mcontext_t *dmc, priv_mcontext_t *
 
     /* esp is a dstack value -- get the app stack's esp from the dcontext */
     if (mc != NULL)
-        mc->xsp = get_mcontext(dcontext)->xsp;
+        mc->r13 = get_mcontext(dcontext)->r13;
     else if (TEST(DR_MC_CONTROL, dmc->flags))
-        dmc->xsp = get_mcontext(dcontext)->xsp;
+        dmc->r13 = get_mcontext(dcontext)->r13;
 
     /* XXX: should we set the pc field? */
 
@@ -5352,7 +5368,7 @@ dr_set_mcontext(void *drcontext, dr_mcontext_t *context)
 
     if (TEST(DR_MC_CONTROL, context->flags)) {
         /* esp will be restored from a field in the dcontext */
-        get_mcontext(dcontext)->xsp = context->xsp;
+        get_mcontext(dcontext)->r13 = context->r13;
     }
 
     /* XXX: should we support setting the pc field? */
@@ -5381,7 +5397,7 @@ dr_redirect_execution(dr_mcontext_t *mcontext)
         trace_abort(dcontext);
     }
 
-    dcontext->next_tag = mcontext->pc;
+    dcontext->next_tag = mcontext->r15;
     dcontext->whereami = WHERE_FCACHE;
     set_last_exit(dcontext, (linkstub_t *)get_client_linkstub());
     transfer_to_dispatch(dcontext, dr_mcontext_as_priv_mcontext(mcontext),

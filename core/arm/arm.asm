@@ -272,6 +272,8 @@ DECL_EXTERN(syscall_argsz)
 # endif
 #endif
         
+#if NO
+/*TODO SJF */
 
 #ifdef WINDOWS
 /* dynamo_auto_start: used for non-early follow children.
@@ -1152,6 +1154,7 @@ GLOBAL_LABEL(_start:)
 
 #endif /* !STANDALONE_UNIT_TEST && !STATIC_LIBRARY */
 
+#ifdef NO
 /* while with pre-2.6.9 kernels we were able to rely on the kernel's
  * default sigreturn code sequence and be more platform independent,
  * case 6700 necessitates having our own code, which for now, like
@@ -1427,6 +1430,7 @@ GLOBAL_LABEL(nt_continue_dynamo_start:)
  * back_from_native, this code is executed natively by the app, so we assume the
  * app stack is valid and can be clobbered.
  */
+#ifdef NO
         DECLARE_FUNC(back_from_native_retstubs)
 GLOBAL_LABEL(back_from_native_retstubs:)
 #ifndef ASSEMBLE_WITH_GAS
@@ -2649,4 +2653,7 @@ dynamorio_earliest_init_repeatme:
 
 #endif /* WINDOWS */
 
+#endif /*NO*/
+#endif /*NO*/
+#endif /*NO*/
 END_FILE

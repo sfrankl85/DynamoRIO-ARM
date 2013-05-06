@@ -254,8 +254,6 @@
  * \param dc The void * dcontext used to allocate memory for the instr_t.
  * \param s The opnd_t explicit source operand for the instruction.
  */
-#ifdef NO
-/* TODO SJF */
 
 #define INSTR_CREATE_lldt(dc, s) \
   instr_create_0dst_1src((dc), OP_lldt, (s))
@@ -269,6 +267,9 @@
   instr_create_0dst_1src((dc), OP_vmptrld, (s))
 #define INSTR_CREATE_vmxon(dc, s) \
   instr_create_0dst_1src((dc), OP_vmxon, (s))
+
+#ifdef NO
+/* TODO SJF */
 /**
  * This INSTR_CREATE_xxx macro creates an instr_t with opcode OP_xxx and
  * the given explicit operands, automatically supplying any implicit operands.

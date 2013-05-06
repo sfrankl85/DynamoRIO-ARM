@@ -164,7 +164,7 @@ char **our_environ;
 # define DOSTATS(...) /* nothing */
 #else /* !NOT_DYNAMORIO_CORE_PROPER: around most of file, to exclude preload */
 
-#include <asm/ldt.h>
+//#include <asm/ldt.h> TODO SJF Remove this
 /* The ldt struct in ldt.h used to be just "struct modify_ldt_ldt_s"; then that
  * was also typdef-ed as modify_ldt_t; then it was just user_desc.
  * To compile on old and new we inline our own copy of the struct:
@@ -205,6 +205,14 @@ typedef struct _our_modify_ldt_t {
 #define GDT_NUM_TLS_SLOTS 3
 #define GDT_ENTRY_TLS_MIN_32 6
 #define GDT_ENTRY_TLS_MIN_64 12
+
+
+/* SJF New defines here */
+void *
+os_get_dr_seg_base(dcontext_t *dcontext, reg_id_t seg);
+void *
+os_get_app_seg_base(dcontext_t *dcontext, reg_id_t seg);
+
 /* when x86-64 emulate i386, it still use 12-14, so using ifdef x64
  * cannot detect the right value.
  * The actual value will be updated later in os_tls_app_seg_init.
@@ -1035,7 +1043,10 @@ find_stack_bottom()
     int depth = 0;
     reg_t *fp;
     /* from dump_dr_callstack() */
+  #ifdef NO
+  // TODO SJF ASM
     asm("mov  %%"ASM_XBP", %0" : "=m"(fp));
+  #endif
 
     LOG(THREAD_GET, LOG_ALL, 3, "Find stack bottom:\n");
     while (fp != NULL && is_readable_without_exception((byte *)fp, sizeof(reg_t)*2)) {
@@ -1288,7 +1299,9 @@ initialize_ldt_struct(our_modify_ldt_t *ldt, void *base, size_t size, uint index
     IF_X64(ASSERT(CHECK_TRUNCATE_TYPE_uint(size)));
     ldt->limit = size;
     ldt->seg_32bit = IF_X64_ELSE(0, 1);
+/* TODO SJF
     ldt->contents = MODIFY_LDT_CONTENTS_DATA;
+*/
     ldt->read_exec_only = 0;
     ldt->limit_in_pages = (size == GDT_NO_SIZE_LIMIT) ? 1 : 0;
     ldt->seg_not_present = 0;
@@ -1339,6 +1352,8 @@ clear_ldt_entry(uint index)
 #define GDT_SELECTOR(idx) ((idx) << 3 | ((GDT_NOT_LDT) << 2) | (USER_PRIVILEGE))
 #define SELECTOR_INDEX(sel) ((sel) >> 3)
 
+#ifdef NO
+// TODO SJF ASM
 #define WRITE_DR_SEG(val) \
     ASSERT(sizeof(val) == sizeof(reg_t));                           \
     asm volatile("mov %0,%%"ASM_XAX"; mov %%"ASM_XAX", %"ASM_SEG";" \
@@ -1348,15 +1363,20 @@ clear_ldt_entry(uint index)
     ASSERT(sizeof(val) == sizeof(reg_t));                               \
     asm volatile("mov %0,%%"ASM_XAX"; mov %%"ASM_XAX", %"LIB_ASM_SEG";" \
                  : : "m" ((val)) : ASM_XAX);
+#endif
 
 static uint
 read_selector(reg_id_t seg)
 {
     uint sel;
     if (seg == SEG_FS) {
+#ifdef NO
         asm volatile("movl %%fs, %0" : "=r"(sel));
+#endif
     } else if (seg == SEG_GS) {
+#ifdef NO
         asm volatile("movl %%gs, %0" : "=r"(sel));
+#endif
     } else {
         ASSERT_NOT_REACHED();
         return 0;
@@ -1432,6 +1452,8 @@ typedef struct _os_local_state_t {
  * precise constraint, then the compiler would be able to optimize better.  See
  * glibc comments on THREAD_SELF.
  */
+#ifdef NO
+//TODO SJF ASM
 #define WRITE_TLS_SLOT_IMM(imm, var)                                  \
     IF_NOT_HAVE_TLS(ASSERT_NOT_REACHED());                            \
     ASSERT(sizeof(var) == sizeof(void*));                             \
@@ -1457,6 +1479,7 @@ typedef struct _os_local_state_t {
     asm("movzw"IF_X64_ELSE("q","l")" %0, %%"ASM_XAX : : "m"((idx)) : ASM_XAX); \
     asm("mov %"ASM_SEG":(%%"ASM_XAX"), %%"ASM_XAX : : : ASM_XAX);  \
     asm("mov %%"ASM_XAX", %0" : "=m"((var)) : : ASM_XAX);
+#endif
 
 /* FIXME: assumes that fs/gs is not already in use by app */
 static bool
@@ -4587,7 +4610,18 @@ sys_param_addr(dcontext_t *dcontext, int num)
 {
     /* we force-inline get_mcontext() and so don't take it as a param */
     priv_mcontext_t *mc = get_mcontext(dcontext);
-#ifdef X64
+#ifdef ARM 
+    switch (num) {
+    case 0: return &mc->r3;
+    case 1: return &mc->r6;
+    case 2: return &mc->r2;
+    case 3: return &mc->r10; /* since rcx holds retaddr for syscall instr */
+    case 4: return &mc->r8;
+    case 5: return &mc->r9;
+    default: CLIENT_ASSERT(false, "invalid system call parameter number");
+    }
+#else
+# ifdef X64
     switch (num) {
     case 0: return &mc->xdi;
     case 1: return &mc->xsi;
@@ -4597,7 +4631,7 @@ sys_param_addr(dcontext_t *dcontext, int num)
     case 5: return &mc->r9;
     default: CLIENT_ASSERT(false, "invalid system call parameter number");
     }
-#else
+# else
     /* even for vsyscall where ecx (syscall) or esp (sysenter) are saved into
      * ebp, the original parameter registers are not yet changed pre-syscall,
      * except for ebp, which is pushed on the stack:
@@ -4622,6 +4656,7 @@ sys_param_addr(dcontext_t *dcontext, int num)
     case 5: return (dcontext->sys_was_int ? &mc->xbp : ((reg_t*)mc->xsp));
     default: CLIENT_ASSERT(false, "invalid system call parameter number");
     }
+# endif
 #endif
     return 0;
 }
@@ -4633,7 +4668,11 @@ sys_param(dcontext_t *dcontext, int num)
 }
 
 /* since always coming from dispatch now, only need to set mcontext */
-#define SET_RETURN_VAL(dc, val)  get_mcontext(dc)->xax = (val);
+#ifdef ARM
+  #define SET_RETURN_VAL(dc, val)  get_mcontext(dc)->r0 = (val);
+#else
+  #define SET_RETURN_VAL(dc, val)  get_mcontext(dc)->xax = (val);
+#endif
 
 #ifdef CLIENT_INTERFACE
 DR_API
@@ -4664,7 +4703,11 @@ dr_syscall_get_result(void *drcontext)
     dcontext_t *dcontext = (dcontext_t *) drcontext;
     CLIENT_ASSERT(dcontext->client_data->in_post_syscall,
                   "dr_syscall_get_param() can only be called from post-syscall event");
+#ifdef ARM
+    return get_mcontext(dcontext)->r0;
+#else
     return get_mcontext(dcontext)->xax;
+#endif
 }
 
 DR_API
@@ -4687,7 +4730,11 @@ dr_syscall_set_sysnum(void *drcontext, int new_num)
     CLIENT_ASSERT(dcontext->client_data->in_pre_syscall ||
                   dcontext->client_data->in_post_syscall,
                   "dr_syscall_set_sysnum() can only be called from a syscall event");
+#ifdef ARM
+    mc->r0 = new_num;
+#else
     mc->xax = new_num;
+#endif
 }
 
 DR_API
@@ -4702,7 +4749,11 @@ dr_syscall_invoke_another(void *drcontext)
     if (get_syscall_method() == SYSCALL_METHOD_SYSENTER) {
         priv_mcontext_t *mc = get_mcontext(dcontext);
         /* restore xbp to xsp */
+        #ifdef ARM
+        mc->r3 = mc->r13;
+        #else
         mc->xbp = mc->xsp;
+        #endif
     }
     /* for x64 we don't need to copy xcx into r10 b/c we use r10 as our param */
 }
@@ -4720,7 +4771,11 @@ bool
 is_clone_thread_syscall(dcontext_t *dcontext)
 {
     priv_mcontext_t *mc = get_mcontext(dcontext);
+#ifdef ARM
+    return is_clone_thread_syscall_helper(mc->r0, sys_param(dcontext, 0));
+#else
     return is_clone_thread_syscall_helper(mc->xax, sys_param(dcontext, 0));
+#endif
 }
 
 bool
@@ -4741,7 +4796,11 @@ bool
 is_sigreturn_syscall(dcontext_t *dcontext)
 {
     priv_mcontext_t *mc = get_mcontext(dcontext);
+#ifdef ARM
+    return is_sigreturn_syscall_helper(mc->r0);
+#else
     return is_sigreturn_syscall_helper(mc->xax);
+#endif
 }
 
 bool
@@ -5236,7 +5295,11 @@ handle_exit(dcontext_t *dcontext)
     priv_mcontext_t *mc = get_mcontext(dcontext);
     bool exit_process = false;
 
+#ifdef ARM
+    if (mc->r0 == SYS_exit_group) {
+#else
     if (mc->xax == SYS_exit_group) {
+#endif
         /* We can have multiple thread groups within the same address space.
          * We need to know whether this is the only group left.
          * FIXME: we can have races where new threads are created after our
@@ -5268,7 +5331,11 @@ handle_exit(dcontext_t *dcontext)
                 "threads in group\n", get_process_id(), get_thread_id());
             /* Set where we are to handle reciprocal syncs */
             copy_mcontext(mc, &mcontext);
+#ifdef ARM 
+            mc->r15 = SYSCALL_PC(dcontext);
+#else
             mc->pc = SYSCALL_PC(dcontext);
+#endif
             for (i=0; i<num_threads; i++) {
                 if (threads[i]->id != myid && threads[i]->pid == mypid) {
                     /* See comments in dynamo_process_exit_cleanup(): we terminate
@@ -5297,10 +5364,17 @@ handle_exit(dcontext_t *dcontext)
     }
 
     if (is_last_app_thread() && !dynamo_exited) {
+#ifdef ARM 
+        LOG(THREAD, LOG_TOP|LOG_SYSCALLS, 1,
+            "SYS_exit%s(%d) in final thread %d of %d => exiting DynamoRIO\n",
+            (mc->r0 == SYS_exit_group) ? "_group" : "", mc->r0,
+            get_thread_id(), get_process_id());
+#else
         LOG(THREAD, LOG_TOP|LOG_SYSCALLS, 1,
             "SYS_exit%s(%d) in final thread %d of %d => exiting DynamoRIO\n",
             (mc->xax == SYS_exit_group) ? "_group" : "", mc->xax,
             get_thread_id(), get_process_id());
+#endif
         /* we want to clean up even if not automatic startup! */
         automatic_startup = true;
         exit_process = true;
@@ -5313,8 +5387,13 @@ handle_exit(dcontext_t *dcontext)
     }
     KSTOP(num_exits_dir_syscall);
 
+#ifdef ARM
+    cleanup_and_terminate(dcontext, mc->r0, sys_param(dcontext, 0),
+                          sys_param(dcontext, 1), exit_process);
+#else
     cleanup_and_terminate(dcontext, mc->xax, sys_param(dcontext, 0),
                           sys_param(dcontext, 1), exit_process);
+#endif
 }
 
 bool
@@ -5524,9 +5603,15 @@ pre_system_call(dcontext_t *dcontext)
     /* save key register values for post_system_call (they get clobbered
      * in syscall itself)
      */
+#ifdef ARM
+    dcontext->sys_num = mc->r0;
+#else
     dcontext->sys_num = mc->xax;
+#endif
 
+#ifdef NO
     RSTATS_INC(pre_syscall);
+#endif //NO
     DOSTATS({
         if (ignorable_system_call(mc->xax))
             STATS_INC(pre_syscall_ignorable);
@@ -5538,19 +5623,36 @@ pre_system_call(dcontext_t *dcontext)
      * Once we have PR 288330 we can remove this.
      */
     if (should_syscall_method_be_sysenter() && !dcontext->sys_was_int) {
+#ifdef ARM
+        dcontext->sys_xbp = mc->r5;
+#else
         dcontext->sys_xbp = mc->xbp;
+#endif
         /* not using SAFE_READ due to performance concerns (we do this for
          * every single system call on systems where we can't hook vsyscall!)
          */
+#ifdef ARM
+        TRY_EXCEPT(dcontext, /* try */ {
+            mc->r5 = *(reg_t*)mc->r13;
+        }, /* except */ {
+            ASSERT_NOT_REACHED();
+            mc->r5 = 0;
+        });
+#else
         TRY_EXCEPT(dcontext, /* try */ {
             mc->xbp = *(reg_t*)mc->xsp;
         }, /* except */ {
             ASSERT_NOT_REACHED();
             mc->xbp = 0;
         });
+#endif
     }
 
+#ifdef ARM
+    switch (mc->r0) {
+#else
     switch (mc->xax) {
+#endif
 
     case SYS_exit_group:
 # ifdef VMX86_SERVER
@@ -5865,8 +5967,13 @@ pre_system_call(dcontext_t *dcontext)
          * structure to child.  See SYS_clone for info about i#149/PR 403015.
          */
         if (is_clone_thread_syscall(dcontext)) {
+#ifdef ARM
+            dcontext->sys_param1 = mc->r13; /* for restoring in parent */
+            create_clone_record(dcontext, (reg_t *)&mc->r13 /*child uses parent sp*/);
+#else
             dcontext->sys_param1 = mc->xsp; /* for restoring in parent */
             create_clone_record(dcontext, (reg_t *)&mc->xsp /*child uses parent sp*/);
+#endif
         }
         /* We switch the lib tls segment back to app's segment.
          * Please refer to comment on os_switch_lib_tls.
@@ -6704,7 +6811,12 @@ post_system_call(dcontext_t *dcontext)
      * appear to be failures but are not. They are handled on a
      * case-by-case basis in the switch statement below.
      */
+#ifdef ARM
+    ptr_int_t result = (ptr_int_t) mc->r0; /* signed */
+#else
     ptr_int_t result = (ptr_int_t) mc->xax; /* signed */
+#endif
+
     bool success = (result >= 0);
     app_pc base;
     size_t size;
@@ -6729,7 +6841,11 @@ post_system_call(dcontext_t *dcontext)
      *   0xffffe40f <__kernel_vsyscall+15>:      ret
      */
     if (should_syscall_method_be_sysenter() && !dcontext->sys_was_int) {
+#ifdef ARM
+        mc->r5 = dcontext->sys_xbp;
+#else
         mc->xbp = dcontext->sys_xbp;
+#endif
     }
 
 
@@ -6796,7 +6912,11 @@ post_system_call(dcontext_t *dcontext)
         uint flags;
         DEBUG_DECLARE(const char *map_type;)
         RSTATS_INC(num_app_mmaps);
+#ifdef ARM
+        base = (app_pc) mc->r0; /* For mmap, it's NOT arg->addr! */
+#else
         base = (app_pc) mc->xax; /* For mmap, it's NOT arg->addr! */
+#endif
         /* mmap isn't simply a user-space wrapper for mmap2. It's called
          * directly when dynamically loading an SO, i.e., dlopen(). */
         success = mmap_syscall_succeeded((app_pc)result);
@@ -6873,7 +6993,11 @@ post_system_call(dcontext_t *dcontext)
     case SYS_mremap: {
         app_pc old_base = (app_pc) dcontext->sys_param0;
         size_t old_size = (size_t) dcontext->sys_param1;
+#ifdef ARM
+        base = (app_pc) mc->r0;
+#else
         base = (app_pc) mc->xax;
+#endif
         size = (size_t) dcontext->sys_param2;
         /* even if no shift, count as munmap plus mmap */
         RSTATS_INC(num_app_munmaps);
@@ -7066,20 +7190,40 @@ post_system_call(dcontext_t *dcontext)
     }
 
     case SYS_fork: {
+#ifdef ARM
+        LOG(THREAD, LOG_SYSCALLS, 2, "syscall: fork returned "PFX"\n", mc->r0);
+#else
         LOG(THREAD, LOG_SYSCALLS, 2, "syscall: fork returned "PFX"\n", mc->xax);
+#endif
         break;
     }
 
     case SYS_vfork: {
+#ifdef ARM
+        LOG(THREAD, LOG_SYSCALLS, 2, "syscall: vfork returned "PFX"\n", mc->r0);
+#else
         LOG(THREAD, LOG_SYSCALLS, 2, "syscall: vfork returned "PFX"\n", mc->xax);
+#endif
         if (was_clone_thread_syscall(dcontext)) {
+#ifdef ARM
+            /* restore xsp in parent */
+            LOG(THREAD, LOG_SYSCALLS, 2,
+                "vfork: restoring xsp from "PFX" to "PFX"\n",
+                mc->r13, dcontext->sys_param1);
+            mc->r13 = dcontext->sys_param1;
+#else
             /* restore xsp in parent */
             LOG(THREAD, LOG_SYSCALLS, 2,
                 "vfork: restoring xsp from "PFX" to "PFX"\n",
                 mc->xsp, dcontext->sys_param1);
             mc->xsp = dcontext->sys_param1;
+#endif
         }
+#ifdef ARM
+        if (mc->r0 != 0) {
+#else
         if (mc->xax != 0) {
+#endif
             /* We switch the lib tls segment back to dr's segment.
              * Please refer to comment on os_switch_lib_tls.
              * It is only called in parent thread.
@@ -8370,6 +8514,15 @@ get_stack_bounds(dcontext_t *dcontext, byte **base, byte **top)
          /* store stack info at thread startup, since stack can get fragmented in
           * /proc/self/maps w/ later mprotects and it can be hard to piece together later
           */
+#ifdef ARM
+         if (DYNAMO_OPTION(use_all_memory_areas)) {
+             ok = get_memory_info((app_pc)get_mcontext(dcontext)->r13,
+                                  &ostd->stack_base, &size, NULL);
+         } else {
+             ok = get_memory_info_from_os((app_pc)get_mcontext(dcontext)->r13,
+                                          &ostd->stack_base, &size, NULL);
+         }
+#else
          if (DYNAMO_OPTION(use_all_memory_areas)) {
              ok = get_memory_info((app_pc)get_mcontext(dcontext)->xsp,
                                   &ostd->stack_base, &size, NULL);
@@ -8377,6 +8530,7 @@ get_stack_bounds(dcontext_t *dcontext, byte **base, byte **top)
              ok = get_memory_info_from_os((app_pc)get_mcontext(dcontext)->xsp,
                                           &ostd->stack_base, &size, NULL);
          }
+#endif
          ASSERT(ok);
          ostd->stack_top = ostd->stack_base + size;
          LOG(THREAD, LOG_THREADS, 1, "App stack is "PFX"-"PFX"\n",
@@ -9200,7 +9354,11 @@ os_thread_take_over(priv_mcontext_t *mc)
     dc_mc = get_mcontext(dcontext);
     *dc_mc = *mc;
     dcontext->whereami = WHERE_APP;
+#ifdef ARM
+    dcontext->next_tag = mc->r15;
+#else
     dcontext->next_tag = mc->pc;
+#endif
 
     /* Wake up the thread that initiated the take over. */
     mytid = get_thread_id();
@@ -9458,8 +9616,11 @@ uint64_divmod(uint64 dividend, uint64 divisor64, uint32 *remainder)
      * The outputs precede the inputs in gcc inline asm syntax, and so to put
      * inputs in EAX and EDX we use "0" and "1".
      */
+#ifdef NO
+//TODO SJF ASM
     asm ("divl %2" : "=a" (res.lo), "=d" (*remainder) :
          "rm" (divisor), "0" (res.lo), "1" (upper));
+#endif
     return res.v64;
 }
 

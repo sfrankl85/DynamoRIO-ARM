@@ -812,6 +812,8 @@ union i387_union {
 static uint
 twd_fxsr_to_i387(struct i387_fxsave_struct *fxsave)
 {
+#ifdef NO
+//TODO SJF
     struct _fpxreg *st = NULL;
     uint twd = (uint) fxsave->twd;
     uint tag;
@@ -850,6 +852,7 @@ twd_fxsr_to_i387(struct i387_fxsave_struct *fxsave)
         twd = twd >> 1;
     }
     return ret;
+#endif
 }
 
 static void
@@ -857,7 +860,8 @@ convert_fxsave_to_fpstate(struct _fpstate *fpstate,
                           struct i387_fxsave_struct *fxsave)
 {
     int i;
-
+#ifdef NO
+//TODO SJF NON-ARM
     fpstate->cw = (uint)fxsave->cwd | 0xffff0000;
     fpstate->sw = (uint)fxsave->swd | 0xffff0000;
     fpstate->tag = twd_fxsr_to_i387(fxsave);
@@ -875,12 +879,14 @@ convert_fxsave_to_fpstate(struct _fpstate *fpstate,
 
     memcpy(&fpstate->_fxsr_env[0], fxsave,
            sizeof(struct i387_fxsave_struct));
+#endif
 }
 #endif /* !X64 */
 
 static void
 save_xmm(dcontext_t *dcontext, sigframe_rt_t *frame)
 {
+#ifdef NO
     /* see comments at call site: can't just do xsave */
     int i;
     struct sigcontext *sc = get_sigcontext_from_rt_frame(frame);
@@ -892,8 +898,11 @@ save_xmm(dcontext_t *dcontext, sigframe_rt_t *frame)
          * in xstate is the xgetbv.
          */
         uint bv_high, bv_low;
+#ifdef NO
+// TODO SJF ASM
         asm volatile("mov $0, %%ecx; xgetbv; mov %%edx, %0; mov %%eax, %1"
                      : "=m" (bv_high), "=m" (bv_low) : : "eax","edx","ecx");
+#endif
         xstate->xstate_hdr.xstate_bv = (((uint64)bv_high)<<32) | bv_low;
     }
     for (i=0; i<NUM_XMM_SAVED; i++) {
@@ -918,6 +927,7 @@ save_xmm(dcontext_t *dcontext, sigframe_rt_t *frame)
         }
 #endif
     }
+#endif
 }
 
 /* We can't tell whether the app has used fpstate yet so we preserve every time
@@ -926,6 +936,8 @@ save_xmm(dcontext_t *dcontext, sigframe_rt_t *frame)
 static void
 save_fpstate(dcontext_t *dcontext, sigframe_rt_t *frame)
 {
+#ifdef NO
+//TODO SJF NON-ARM
     /* FIXME: is there a better way to align this thing?
      * the __attribute__ on the struct above doesn't do it
      */
@@ -950,15 +962,21 @@ save_fpstate(dcontext_t *dcontext, sigframe_rt_t *frame)
 #ifdef X64
         /* this is "unlazy_fpu" */
         /* fxsaveq is only supported with gas >= 2.16 but we have that */
+#ifdef NO
+// TODO SJF ASM
         asm volatile( "fxsaveq %0 ; fnclex"
                       : "=m" (temp->fxsave) );
+#endif
         /* now convert into struct _fpstate form */
         ASSERT(sizeof(struct _fpstate) == sizeof(struct i387_fxsave_struct));
         memcpy(sc->fpstate, &temp->fxsave, sizeof(struct i387_fxsave_struct));
 #else
         /* this is "unlazy_fpu" */
+#ifdef NO
+// TODO SJF ASM
         asm volatile( "fxsave %0 ; fnclex"
                       : "=m" (temp->fxsave) );
+#endif
         /* now convert into struct _fpstate form */
         convert_fxsave_to_fpstate(sc->fpstate, &temp->fxsave);
 #endif
@@ -966,8 +984,11 @@ save_fpstate(dcontext_t *dcontext, sigframe_rt_t *frame)
         /* FIXME NYI: need to convert to fxsave format for sc->fpstate */
         IF_X64(ASSERT_NOT_IMPLEMENTED(false));
         /* this is "unlazy_fpu" */
+#ifdef NO
+// TODO SJF ASM
         asm volatile( "fnsave %0 ; fwait"
                       : "=m" (temp->fsave) );
+#endif
         /* now convert into struct _fpstate form */
         temp->fsave.status = temp->fsave.swd;
         memcpy(sc->fpstate, &temp->fsave, sizeof(struct i387_fsave_struct));
@@ -983,6 +1004,7 @@ save_fpstate(dcontext_t *dcontext, sigframe_rt_t *frame)
      * to avoid for now.
      */
     save_xmm(dcontext, frame);
+#endif //NO
 }
 
 /**** top-level routines ***********************************************/
@@ -2379,7 +2401,28 @@ is_on_alt_stack(dcontext_t *dcontext, byte *sp)
 void
 sigcontext_to_mcontext(priv_mcontext_t *mc, struct sigcontext *sc)
 {
+#ifdef NO
+//TODO SJF NON-ARM
     ASSERT(mc != NULL && sc != NULL);
+#ifdef ARM
+    mc->r0 = sc->r0;
+    mc->r1 = sc->r1;
+    mc->r2 = sc->r2;
+    mc->r3 = sc->r3;
+    mc->r4 = sc->r4;
+    mc->r5 = sc->r5;
+    mc->r6 = sc->r6;
+    mc->r7 = sc->r7;
+    mc->r8  = sc->r8;
+    mc->r9  = sc->r9;
+    mc->r10 = sc->r10;
+    mc->r11 = sc->r11;
+    mc->r12 = sc->r12;
+    mc->r13 = sc->r13;
+    mc->r14 = sc->r14;
+    mc->r15 = sc->r15;
+
+#else
     mc->xax = sc->SC_XAX;
     mc->xbx = sc->SC_XBX;
     mc->xcx = sc->SC_XCX;
@@ -2400,6 +2443,7 @@ sigcontext_to_mcontext(priv_mcontext_t *mc, struct sigcontext *sc)
     mc->r14 = sc->r14;
     mc->r15 = sc->r15;
 #endif
+#endif//ARM
     if (sc->fpstate != NULL) {
         int i;
         for (i=0; i<NUM_XMM_SLOTS; i++) {
@@ -2421,6 +2465,7 @@ sigcontext_to_mcontext(priv_mcontext_t *mc, struct sigcontext *sc)
             }
         }
     }
+#endif
 }
 
 /* Note that unlike mcontext_to_context(), this routine does not fill in
@@ -2432,6 +2477,8 @@ sigcontext_to_mcontext(priv_mcontext_t *mc, struct sigcontext *sc)
 void
 mcontext_to_sigcontext(struct sigcontext *sc, priv_mcontext_t *mc)
 {
+#ifdef NO
+//TODO SJF NON-ARM
     sc->SC_XAX = mc->xax;
     sc->SC_XBX = mc->xbx;
     sc->SC_XCX = mc->xcx;
@@ -2473,6 +2520,7 @@ mcontext_to_sigcontext(struct sigcontext *sc, priv_mcontext_t *mc)
             }
         }
     }
+#endif //NO
 }
 
 /* Returns whether successful.  If avoid_failure, tries to translate
@@ -2482,6 +2530,8 @@ static bool
 translate_sigcontext(dcontext_t *dcontext,  struct sigcontext *sc, bool avoid_failure,
                      fragment_t *f)
 {
+#ifdef NO
+//TODO SJF NON-ARM
     bool success = false;
     priv_mcontext_t mcontext;
  
@@ -2523,12 +2573,15 @@ translate_sigcontext(dcontext_t *dcontext,  struct sigcontext *sc, bool avoid_fa
     LOG(THREAD, LOG_ASYNCH, 3,
         "\ttranslate_sigcontext: just set frame's eip to "PFX"\n", sc->SC_XIP);
     return success;
+#endif
 }
 
 /* Takes an os-specific context */
 void
 thread_set_self_context(void *cxt)
 {
+#ifdef NO
+//TODO SJF NON-ARM
     dcontext_t *dcontext = get_thread_private_dcontext();
     /* Unlike Windows we can't say "only set this subset of the
      * full machine state", so we need to get the rest of the state,
@@ -2560,9 +2613,13 @@ thread_set_self_context(void *cxt)
     LOG(THREAD_GET, LOG_ASYNCH, 2, "thread_set_self_context: pc="PFX"\n", sc->SC_XIP);
     /* set up xsp to point at &frame + sizeof(char*) */
     xsp_for_sigreturn = ((app_pc)&frame) + sizeof(char*);
+#ifdef NO
+// TODO SJF ASM
     asm("mov  %0, %%"ASM_XSP : : "m"(xsp_for_sigreturn));
     asm("jmp dynamorio_sigreturn");
+#endif
     ASSERT_NOT_REACHED();
+#endif //NO
 }
 
 /* Takes a priv_mcontext_t */
@@ -2578,6 +2635,8 @@ thread_set_self_mcontext(priv_mcontext_t *mc)
 static bool
 sig_has_restorer(thread_sig_info_t *info, int sig)
 {
+#ifdef NO
+//TODO SJF NON-ARM
 #ifdef VMX86_SERVER
     /* vmkernel ignores SA_RESTORER (PR 405694) */
     return false;
@@ -2620,6 +2679,7 @@ sig_has_restorer(thread_sig_info_t *info, int sig)
             info->restorer_valid[sig] = 0;
     }
     return (info->restorer_valid[sig] == 1);
+#endif
 }
 
 /* Returns the size of the frame for delivering to the app.
@@ -2669,6 +2729,8 @@ get_sigcontext_from_pending(thread_sig_info_t *info, int sig)
 static byte *
 get_sigstack_frame_ptr(dcontext_t *dcontext, int sig, sigframe_rt_t *frame)
 {
+#ifdef NO
+//TODO SJF NON-ARM
     thread_sig_info_t *info = (thread_sig_info_t *) dcontext->signal_field;
     struct sigcontext *sc = (frame == NULL) ?
         get_sigcontext_from_pending(info, sig) :
@@ -2741,6 +2803,7 @@ get_sigstack_frame_ptr(dcontext_t *dcontext, int sig, sigframe_rt_t *frame)
     sp = (byte *) ALIGN_BACKWARD(sp, 16);
     sp -= sizeof(reg_t);  /* Model retaddr. */
     return sp;
+#endif
 }
 
 #ifndef X64
@@ -2748,6 +2811,8 @@ static void
 convert_frame_to_nonrt(dcontext_t *dcontext, int sig, sigframe_rt_t *f_old,
                        sigframe_plain_t *f_new)
 {
+#ifdef NO
+//TODO SJF NON-ARM
     struct sigcontext *sc_old = get_sigcontext_from_rt_frame(f_old);
     f_new->pretcode = f_old->pretcode;
     f_new->sig = f_old->sig;
@@ -2766,6 +2831,7 @@ convert_frame_to_nonrt(dcontext_t *dcontext, int sig, sigframe_rt_t *f_old,
     LOG(THREAD, LOG_ASYNCH, 3, "\tconverted rt frame to non-rt frame\n");
     /* now fill in our extra field */
     f_new->sig_noclobber = f_new->sig;
+#endif
 }
 
 /* separated out to avoid the stack size cost on the common path */
@@ -2773,10 +2839,13 @@ static void
 convert_frame_to_nonrt_partial(dcontext_t *dcontext, int sig, sigframe_rt_t *f_old,
                                sigframe_plain_t *f_new, size_t size)
 {
+#ifdef NO
+//TODO SJF NON-ARM
     char frame_plus_xstate[sizeof(sigframe_plain_t) + AVX_FRAME_EXTRA];
     sigframe_plain_t *f_plain = (sigframe_plain_t *) frame_plus_xstate;
     convert_frame_to_nonrt(dcontext, sig, f_old, f_plain);
     memcpy(f_new, f_plain, size);
+#endif
 }
 #endif
 
@@ -2790,6 +2859,8 @@ void
 fixup_rtframe_pointers(dcontext_t *dcontext, int sig,
                        sigframe_rt_t *f_old, sigframe_rt_t *f_new, bool for_app)
 {
+#ifdef NO
+//TODO SJF NON-ARM
     if (dcontext == NULL)
         dcontext = get_thread_private_dcontext();
     ASSERT(dcontext != NULL);
@@ -2856,6 +2927,7 @@ fixup_rtframe_pointers(dcontext_t *dcontext, int sig,
 #endif
     /* 32-bit kernel copies to aligned buf first */
     IF_X64(ASSERT(ALIGNED(f_new->uc.uc_mcontext.fpstate, 16)));
+#endif
 }
 
 /* Copies frame to sp.
@@ -2869,6 +2941,8 @@ fixup_rtframe_pointers(dcontext_t *dcontext, int sig,
 static void
 copy_frame_to_stack(dcontext_t *dcontext, int sig, sigframe_rt_t *frame, byte *sp)
 {
+#ifdef NO
+//TODO SJF NON-ARM
     thread_sig_info_t *info = (thread_sig_info_t *) dcontext->signal_field;
     bool rtframe = IS_RT_FOR_APP(info, sig);
     uint frame_size = get_app_frame_size(info, sig);
@@ -2986,6 +3060,7 @@ copy_frame_to_stack(dcontext_t *dcontext, int sig, sigframe_rt_t *frame, byte *s
         /* 32-bit kernel copies to aligned buf so no assert on fpstate alignment */
 #endif
     }
+#endif //NO
 }
 
 /* Copies frame to pending slot.
@@ -2997,6 +3072,8 @@ static void
 copy_frame_to_pending(dcontext_t *dcontext, int sig, sigframe_rt_t *frame
                       _IF_CLIENT(byte *access_address))
 {
+#ifdef NO
+//TODO SJF NON-ARM
     thread_sig_info_t *info = (thread_sig_info_t *) dcontext->signal_field;
     sigframe_rt_t *dst = &(info->sigpending[sig]->rt_frame);
     LOG(THREAD, LOG_ASYNCH, 3, "copy_frame_to_pending\n");
@@ -3027,6 +3104,7 @@ copy_frame_to_pending(dcontext_t *dcontext, int sig, sigframe_rt_t *frame
 #ifdef CLIENT_INTERFACE
     info->sigpending[sig]->access_address = access_address;
 #endif
+#endif// NO
 }
 
 /**** real work ***********************************************/
@@ -3037,6 +3115,8 @@ send_signal_to_client(dcontext_t *dcontext, int sig, sigframe_rt_t *frame,
                       struct sigcontext *raw_sc, byte *access_address,
                       bool blocked, fragment_t *fragment)
 {
+#ifdef NO
+//TODO SJF NON-ARM
     struct sigcontext *sc = (struct sigcontext *) &(frame->uc.uc_mcontext);
     dr_siginfo_t si;
     dr_signal_action_t action;
@@ -3105,6 +3185,7 @@ send_signal_to_client(dcontext_t *dcontext, int sig, sigframe_rt_t *frame,
     heap_free(dcontext, si.mcontext, sizeof(*si.mcontext) HEAPACCT(ACCT_OTHER));
     heap_free(dcontext, si.raw_mcontext, sizeof(*si.raw_mcontext) HEAPACCT(ACCT_OTHER));
     return action;
+#endif
 }
 
 /* Returns false if caller should exit */
@@ -3113,6 +3194,8 @@ handle_client_action_from_cache(dcontext_t *dcontext, int sig, dr_signal_action_
                                 sigframe_rt_t *our_frame, struct sigcontext *sc_orig,
                                 bool blocked)
 {
+#ifdef NO
+//TODO SJF NON-ARM
     thread_sig_info_t *info = (thread_sig_info_t *) dcontext->signal_field;
     struct sigcontext *sc = get_sigcontext_from_rt_frame(our_frame);
     /* in order to pass to the client, we come all the way here for signals
@@ -3162,6 +3245,7 @@ handle_client_action_from_cache(dcontext_t *dcontext, int sig, dr_signal_action_
     }
     CLIENT_ASSERT(action == DR_SIGNAL_DELIVER, "invalid signal event return value");
     return true;
+#endif
 }
 #endif
 
@@ -3169,6 +3253,8 @@ static void
 abort_on_fault(dcontext_t *dcontext, uint dumpcore_flag, app_pc pc, struct sigcontext *sc,
                const char *prefix, const char *signame, const char *where)
 {
+#ifdef NO
+//TODO SJF NON-ARM
     const char *fmt =
         "%s at PC "PFX"\n"
         "Received SIG%s at%s pc "PFX" in thread %d\n"
@@ -3194,6 +3280,7 @@ abort_on_fault(dcontext_t *dcontext, uint dumpcore_flag, app_pc pc, struct sigco
                              sc->SC_XFLAGS);
     os_terminate(dcontext, TERMINATE_PROCESS);
     ASSERT_NOT_REACHED();
+#endif
 }
 
 static void
@@ -3265,6 +3352,7 @@ static bool
 interrupted_inlined_syscall(dcontext_t *dcontext, fragment_t *f,
                             byte *pc/*interruption pc*/)
 {
+#ifdef NO
     bool pre_or_post_syscall = false;
     if (TEST(FRAG_HAS_SYSCALL, f->flags)) {
         /* PR 596147: if the thread is currently in an inlined
@@ -3306,6 +3394,7 @@ interrupted_inlined_syscall(dcontext_t *dcontext, fragment_t *f,
         instr_free(dcontext, &instr);
     }
     return pre_or_post_syscall;
+#endif //NO
 }
 
 static void
@@ -3313,6 +3402,8 @@ record_pending_signal(dcontext_t *dcontext, int sig, kernel_ucontext_t *ucxt,
                       sigframe_rt_t *frame, bool forged
                       _IF_CLIENT(byte *access_address))
 {
+#ifdef NO
+//TODO SJF NON-ARM
     thread_sig_info_t *info = (thread_sig_info_t *) dcontext->signal_field;
     os_thread_data_t *ostd = (os_thread_data_t *) dcontext->os_field;
     struct sigcontext *sc = (struct sigcontext *) &(ucxt->uc_mcontext);
@@ -3639,6 +3730,7 @@ record_pending_signal(dcontext_t *dcontext, int sig, kernel_ucontext_t *ucxt,
             dcontext->signals_pending = true;
     }
     ostd->processing_signal--;
+#endif
 }
 
 /* Distinguish SYS_kill-generated from instruction-generated signals.
@@ -3672,6 +3764,8 @@ static byte *
 compute_memory_target(dcontext_t *dcontext, cache_pc instr_cache_pc,
                       struct sigcontext *sc, siginfo_t *si, bool *write)
 {
+#ifdef NO
+//TODO SJF NON-ARM
     byte *target = NULL;
     instr_t instr;
     priv_mcontext_t mc;
@@ -3776,12 +3870,14 @@ compute_memory_target(dcontext_t *dcontext, cache_pc instr_cache_pc,
     });
     instr_free(dcontext, &instr);
     return target;
+#endif
 }
 
 static bool
 check_for_modified_code(dcontext_t *dcontext, cache_pc instr_cache_pc,
                         struct sigcontext *sc, byte *target)
 {
+#ifdef NO
     /* special case: we expect a seg fault for executable regions
      * that were writable and marked read-only by us.
      * have to figure out the target address!
@@ -3852,6 +3948,7 @@ check_for_modified_code(dcontext_t *dcontext, cache_pc instr_cache_pc,
         }
     }
     return false;
+#endif
 }
 
 #ifndef HAVE_SIGALTSTACK
@@ -3867,6 +3964,7 @@ struct clone_and_swap_args {
 bool
 sig_should_swap_stack(struct clone_and_swap_args *args, kernel_ucontext_t *ucxt)
 {
+#ifdef NO
     byte *cur_esp;
     dcontext_t *dcontext = get_thread_private_dcontext();
     if (dcontext == NULL)
@@ -3885,6 +3983,7 @@ sig_should_swap_stack(struct clone_and_swap_args *args, kernel_ucontext_t *ucxt)
         return true;
     } else
         return false;
+#endif
 }
 #endif
 
@@ -3904,8 +4003,10 @@ sig_take_over(struct sigcontext *sc)
 static bool
 is_safe_read_ucxt(kernel_ucontext_t *ucxt)
 {
+#ifdef NO
     app_pc pc = (app_pc)ucxt->uc_mcontext.SC_XIP;
     return is_safe_read_pc(pc);
+#endif
 }
 
 /* the master signal handler
@@ -3925,6 +4026,8 @@ void
 master_signal_handler_C(byte *xsp)
 #endif
 {
+#ifdef NO
+//TODO SJF NON-ARM MASTER SIGNAL HANDLER 
     sigframe_rt_t *frame = (sigframe_rt_t *) xsp;
 #ifndef X64
     /* Read the normal arguments from the frame. */
@@ -4314,6 +4417,7 @@ master_signal_handler_C(byte *xsp)
     if (local)
         SELF_PROTECT_LOCAL(dcontext, READONLY);
     EXITING_DR();
+#endif
 }
 
 static void
@@ -4321,6 +4425,8 @@ execute_handler_from_cache(dcontext_t *dcontext, int sig, sigframe_rt_t *our_fra
                            struct sigcontext *sc_orig, fragment_t *f
                            _IF_CLIENT(byte *access_address))
 {
+#ifdef NO
+//TODO SJF NON-ARM
     thread_sig_info_t *info = (thread_sig_info_t *) dcontext->signal_field;
     /* we want to modify the sc in DR's frame */
     struct sigcontext *sc = get_sigcontext_from_rt_frame(our_frame);
@@ -4424,11 +4530,14 @@ execute_handler_from_cache(dcontext_t *dcontext, int sig, sigframe_rt_t *our_fra
 
     LOG(THREAD, LOG_ASYNCH, 3, "\tset next_tag to handler "PFX", xsp to "PFX"\n",
         info->app_sigaction[sig]->handler, xsp);
+#endif
 }
 
 static bool
 execute_handler_from_dispatch(dcontext_t *dcontext, int sig)
 {
+#ifdef NO
+//TODO SJF NON-ARM
     thread_sig_info_t *info = (thread_sig_info_t *) dcontext->signal_field;
     handler_t handler;
     byte *xsp = get_sigstack_frame_ptr(dcontext, sig, NULL);
@@ -4596,12 +4705,15 @@ execute_handler_from_dispatch(dcontext_t *dcontext, int sig)
 
     LOG(THREAD, LOG_ASYNCH, 3, "\tset xsp to "PFX"\n", xsp);
     return true;
+#endif
 }
 
 static bool
 execute_default_action(dcontext_t *dcontext, int sig, sigframe_rt_t *frame,
                        struct sigcontext *sc_orig, bool from_dispatch)
 {
+#ifdef NO
+//TODO SJF NON-ARM
     thread_sig_info_t *info = (thread_sig_info_t *) dcontext->signal_field;
     struct sigcontext *sc = get_sigcontext_from_rt_frame(frame);
     byte *pc = (byte *) sc->SC_XIP;
@@ -4781,6 +4893,7 @@ execute_default_action(dcontext_t *dcontext, int sig, sigframe_rt_t *frame,
 
     /* now continue at the interruption point and re-raise the signal */
     return true;
+#endif
 }
 
 static bool
@@ -4799,6 +4912,8 @@ execute_default_from_dispatch(dcontext_t *dcontext, int sig, sigframe_rt_t *fram
 void
 receive_pending_signal(dcontext_t *dcontext)
 {
+#ifdef NO
+//TODO SJF NON-ARM
     thread_sig_info_t *info = (thread_sig_info_t *) dcontext->signal_field;
     sigpending_t *temp;
     int sig;
@@ -4830,7 +4945,10 @@ receive_pending_signal(dcontext_t *dcontext)
      */
     info->accessing_sigpending = true;
     /* barrier to prevent compiler from moving the above write below the loop */
+#ifdef NO
+// TODO SJF ASM
     __asm__ __volatile__("" : : : "memory");
+#endif
     for (sig = 1; sig <= MAX_SIGNUM; sig++) {
         if (info->sigpending[sig] != NULL) {
             bool executing = true;
@@ -4850,7 +4968,10 @@ receive_pending_signal(dcontext_t *dcontext)
         }
     }
     /* barrier to prevent compiler from moving the below write above the loop */
+#ifdef NO
+// TODO SJF ASM
     __asm__ __volatile__("" : : : "memory");
+#endif
     info->accessing_sigpending = false;
 
     /* we only clear this on a call to us where we find NO pending signals */
@@ -4858,12 +4979,15 @@ receive_pending_signal(dcontext_t *dcontext)
         LOG(THREAD, LOG_ASYNCH, 3, "\tclearing signals_pending flag\n");
         dcontext->signals_pending = false;
     }
+#endif
 }
 
 /* Returns false if should NOT issue syscall. */
 bool
 handle_sigreturn(dcontext_t *dcontext, bool rt)
 {
+#ifdef NO
+//TODO SJF NON-ARM
     thread_sig_info_t *info = (thread_sig_info_t *) dcontext->signal_field;
     struct sigcontext *sc;
     int sig = 0;
@@ -5003,11 +5127,13 @@ handle_sigreturn(dcontext_t *dcontext, bool rt)
         next_pc, sc->SC_XIP);
 
     return IF_VMX86_ELSE(false, true);
+#endif
 }
 
 bool
 is_signal_restorer_code(byte *pc, size_t *len)
 {
+#ifdef NO
     /* is this a sigreturn pattern placed by kernel on the stack or vsyscall page?
      * for non-rt frame:
      *    0x58           popl %eax
@@ -5046,12 +5172,14 @@ is_signal_restorer_code(byte *pc, size_t *len)
     }
 #endif
     return false;
+#endif //NO
 }
 
 
 void
 os_forge_exception(app_pc target_pc, exception_type_t type)
 {
+#ifdef NO
     /* PR 205136:
      * We want to deliver now, and the caller expects us not to return.
      * We have two alternatives:
@@ -5132,6 +5260,7 @@ os_forge_exception(app_pc target_pc, exception_type_t type)
                          cur_whereami != WHERE_SIGNAL_HANDLER
                          /*full_DR_state*/);
     ASSERT_NOT_REACHED();
+#endif
 }
 
 void
@@ -5754,12 +5883,18 @@ handle_suspend_signal(dcontext_t *dcontext, kernel_ucontext_t *ucxt)
              *   futex_wake_all(&ostd->terminated);
              */
             volatile int *term = &ostd->terminated;
+#ifdef NO
+// TODO SJF ASM
             asm("mov %0, %%"ASM_XAX : : "m"(term));
             asm("movl $1,(%"ASM_XAX")");
-            asm("jmp dynamorio_futex_wake_and_exit");
+            asm("b dynamorio_futex_wake_and_exit");
+#endif
         } else {
             ostd->terminated = 1;
-            asm("jmp dynamorio_sys_exit");
+#ifdef NO
+// TODO SJF ASM
+            asm("b dynamorio_sys_exit");
+#endif
         }
         ASSERT_NOT_REACHED();
         return false;
@@ -5852,6 +5987,8 @@ dr_setjmp_sigmask(dr_jmp_buf_t *buf)
 static bool
 handle_nudge_signal(dcontext_t *dcontext, siginfo_t *siginfo, kernel_ucontext_t *ucxt)
 {
+#ifdef NO
+//TODO SJF Nudge handler
     struct sigcontext *sc = (struct sigcontext *) &(ucxt->uc_mcontext);
     nudge_arg_t *arg = (nudge_arg_t *) siginfo;
     instr_t instr;
@@ -5948,4 +6085,5 @@ handle_nudge_signal(dcontext_t *dcontext, siginfo_t *siginfo, kernel_ucontext_t 
     nudge_add_pending(dcontext, arg);
 
     return false; /* do not pass to app */
+#endif
 }

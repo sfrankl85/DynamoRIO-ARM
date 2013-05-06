@@ -536,6 +536,8 @@ bb_add_native_direct_xfer(dcontext_t *dcontext, build_bb_t *bb, bool appended)
 static inline bool
 check_for_stopping_point(dcontext_t *dcontext, build_bb_t *bb)
 {
+#ifdef NO
+//TODO SJF
 #ifdef DR_APP_EXPORTS
     if (must_escape_from(bb->cur_pc)) {
         BBPRINT(bb, 3, "interp: emergency exit from "PFX"\n", bb->cur_pc);
@@ -563,6 +565,7 @@ check_for_stopping_point(dcontext_t *dcontext, build_bb_t *bb)
         SYSLOG_INTERNAL_WARNING("encountered longjmp, which will cause ret mismatch!");
     }
 #endif
+#endif //NO
 
     return is_stopping_point(dcontext, bb->cur_pc);
 }
@@ -582,6 +585,8 @@ check_for_stopping_point(dcontext_t *dcontext, build_bb_t *bb)
 static inline int
 eflags_analysis(instr_t *instr, int status, uint *eflags_6)
 {
+#ifdef NO
+//TODO SJF
     uint e6 = *eflags_6; /* local copy */
     uint e6_w2r = EFLAGS_WRITE_TO_READ(e6);
     uint instr_eflags = instr_get_arith_flags(instr);
@@ -624,6 +629,7 @@ eflags_analysis(instr_t *instr, int status, uint *eflags_6)
         }
     }
     return status;
+#endif //NO
 }
 
 
@@ -713,6 +719,8 @@ check_new_page_contig(dcontext_t *dcontext, build_bb_t *bb, app_pc new_pc)
 static bool
 check_new_page_jmp(dcontext_t *dcontext, build_bb_t *bb, app_pc new_pc)
 {
+#ifdef NO
+//TODO SJF
     /* For tracking purposes, check the last byte of the cti. */
     bool ok = check_new_page_contig(dcontext, bb, bb->cur_pc-1);
     ASSERT(ok && "should have checked cur_pc-1 in decode loop");
@@ -761,12 +769,14 @@ check_new_page_jmp(dcontext_t *dcontext, build_bb_t *bb, app_pc new_pc)
     bb->flags |= FRAG_HAS_DIRECT_CTI;
     bb->last_page = new_pc; /* update even if not new page, for walk_app_bb */
     return true;
+#endif //NO
 }
 
 static inline void
 bb_process_invalid_instr(dcontext_t *dcontext, build_bb_t *bb)
 {
-    
+    #ifdef NO
+    // TODO SJF 
     /* invalid instr: end bb BEFORE the instr, we'll throw exception if we
      * reach the instr itself
      */
@@ -836,6 +846,7 @@ bb_process_invalid_instr(dcontext_t *dcontext, build_bb_t *bb)
         instr_destroy(dcontext, bb->instr);
         bb->instr = NULL;
     }
+   #endif
 }
 
 /* returns true to indicate "elide and continue" and false to indicate "end bb now"
@@ -873,6 +884,8 @@ follow_direct_jump(dcontext_t *dcontext, build_bb_t *bb,
 static inline bool
 bb_process_ubr(dcontext_t *dcontext, build_bb_t *bb)
 {
+#ifdef NO
+//TODO SJF
     app_pc tgt = (byte *) opnd_get_pc(instr_get_target(bb->instr));
     BBPRINT(bb, 4, "interp: direct jump at "PFX"\n", bb->instr_start);
     if (must_not_be_elided(tgt)) {
@@ -955,6 +968,7 @@ bb_process_ubr(dcontext_t *dcontext, build_bb_t *bb)
         return false; /* end bb */
     }
     return true; /* keep bb going */
+#endif
 }
 
 
@@ -1079,9 +1093,9 @@ bb_verify_sysenter_pattern(dcontext_t *dcontext, build_bb_t *bb)
     if (!(instr != NULL && instr_get_opcode(instr) == OP_mov_ld &&
           instr_num_srcs(instr) == 1 && instr_num_dsts(instr) == 1 &&
           opnd_is_reg(instr_get_dst(instr, 0)) &&
-          opnd_get_reg(instr_get_dst(instr, 0)) == REG_XDX &&
+          opnd_get_reg(instr_get_dst(instr, 0)) == REG_R2 &&
           opnd_is_reg(instr_get_src(instr, 0)) &&
-          opnd_get_reg(instr_get_src(instr, 0)) == REG_XSP)) {
+          opnd_get_reg(instr_get_src(instr, 0)) == REG_R13)) {
         BBPRINT(bb, 3, "bb_verify_sysenter_pattern -- mov didn't match\n");
         return NULL;
     }
@@ -1093,14 +1107,14 @@ bb_verify_sysenter_pattern(dcontext_t *dcontext, build_bb_t *bb)
           instr_is_call_indirect(instr) &&
           /* The 2nd src operand should always be %xsp. */
           opnd_is_reg(instr_get_src(instr, 1)) &&
-          opnd_get_reg(instr_get_src(instr, 1)) == REG_XSP &&
+          opnd_get_reg(instr_get_src(instr, 1)) == REG_R13 &&
           /* Match 'call (%xdx)' for post-SP2. */
           ((opnd_is_near_base_disp(instr_get_src(instr, 0)) &&
-            opnd_get_base(instr_get_src(instr, 0)) == REG_XDX &&
+            opnd_get_base(instr_get_src(instr, 0)) == REG_R2 &&
             opnd_get_disp(instr_get_src(instr, 0)) == 0) ||
            /* Match 'call %xdx' for pre-SP2. */
            (opnd_is_reg(instr_get_src(instr, 0)) &&
-            opnd_get_reg(instr_get_src(instr, 0)) == REG_XDX)))) {
+            opnd_get_reg(instr_get_src(instr, 0)) == REG_R2)))) {
         BBPRINT(bb, 3, "bb_verify_sysenter_pattern -- call didn't match\n");
         return NULL;
     }
@@ -1681,6 +1695,8 @@ static bool
 bb_process_non_ignorable_syscall(dcontext_t *dcontext, build_bb_t *bb,
                                  int sysnum)
 {
+#ifdef NO
+//TODO SJF
     BBPRINT(bb, 3, "found non-ignorable system call 0x%04x\n", sysnum);
     STATS_INC(non_ignorable_syscalls);
     bb->exit_type |= LINK_NI_SYSCALL;
@@ -1700,6 +1716,7 @@ bb_process_non_ignorable_syscall(dcontext_t *dcontext, build_bb_t *bb,
     /* this block must be the last one in a trace */
     bb->flags |= FRAG_MUST_END_TRACE;
     return false; /* end bb now */
+#endif
 }
 
 /* returns true to indicate "continue bb" and false to indicate "end bb now" */
@@ -1729,6 +1746,7 @@ bb_process_syscall(dcontext_t *dcontext, build_bb_t *bb)
      */
     sysnum = find_syscall_num(dcontext, bb->ilist, bb->instr);
 #ifdef VMX86_SERVER
+#ifdef NO
     DOSTATS({
         if (instr_get_opcode(bb->instr) == OP_int &&
             instr_get_interrupt_number(bb->instr) == VMKUW_SYSCALL_GATEWAY) {
@@ -1736,6 +1754,7 @@ bb_process_syscall(dcontext_t *dcontext, build_bb_t *bb)
             LOG(THREAD, LOG_SYSCALLS, 2, "vmkuw system call site: #=%d\n", sysnum);
         }
     });
+#endif//NO
 #endif
     BBPRINT(bb, 3, "syscall # is %d\n", sysnum);
 #ifdef CLIENT_INTERFACE 
@@ -1745,6 +1764,7 @@ bb_process_syscall(dcontext_t *dcontext, build_bb_t *bb)
         sysnum = -1;
     }
 #endif
+#ifdef NO
     if (sysnum > -1 &&
         DYNAMO_OPTION(ignore_syscalls) && 
         ignorable_system_call(sysnum)
@@ -1763,6 +1783,7 @@ bb_process_syscall(dcontext_t *dcontext, build_bb_t *bb)
             return continue_bb;
         }
     }
+#endif
 #ifdef WINDOWS
     if (sysnum > -1 && DYNAMO_OPTION(shared_syscalls) &&
         optimizable_system_call(sysnum)) {
@@ -1837,6 +1858,8 @@ bb_process_interrupt(dcontext_t *dcontext, build_bb_t *bb)
 static bool
 bb_process_convertible_indcall(dcontext_t *dcontext, build_bb_t *bb)
 {
+#ifdef NO
+//TODO SJF
     /* We perform several levels of checking, each increasingly more stringent
      * and expensive, with a false return should any fail.
      */
@@ -1862,7 +1885,7 @@ bb_process_convertible_indcall(dcontext_t *dcontext, build_bb_t *bb)
 #ifdef WINDOWS
           /* Match 'call (%xdx)' for a post-SP2 indirect call to sysenter. */
           (opnd_is_near_base_disp(instr_get_src(instr, 0)) &&
-           opnd_get_base(instr_get_src(instr, 0)) == REG_XDX &&
+           opnd_get_base(instr_get_src(instr, 0)) == REG_R2 &&
            opnd_get_disp(instr_get_src(instr, 0)) == 0) ||
 #endif
           /* Match 'call %reg'. */
@@ -1928,7 +1951,7 @@ bb_process_convertible_indcall(dcontext_t *dcontext, build_bb_t *bb)
      * context in an SP2 os. It's a hold-over from pre-SP2.
      */
     else if (get_syscall_method() == SYSCALL_METHOD_SYSENTER
-             && call_src_reg == REG_XDX
+             && call_src_reg == REG_R2
              && opnd_get_immed_int(instr_get_src(instr, 0)) == 
              (ptr_int_t)VSYSCALL_BOOTSTRAP_ADDR) {
         /* Extract the target address. We expect that the memory read using the
@@ -2050,6 +2073,7 @@ bb_process_convertible_indcall(dcontext_t *dcontext, build_bb_t *bb)
         }
     });;
     return false; /* stop bb */
+#endif
 }
 
 /* if we make the IAT sections unreadable we will need to map to proper location */
@@ -2158,6 +2182,8 @@ static bool
 bb_process_IAT_convertible_indjmp(dcontext_t *dcontext, build_bb_t *bb,
                                   bool *elide_continue)
 {
+#ifdef NO
+//TODO SJF
     app_pc iat_reference;
     app_pc target;
     ASSERT(DYNAMO_OPTION(IAT_convert));
@@ -2285,6 +2311,7 @@ bb_process_IAT_convertible_indjmp(dcontext_t *dcontext, build_bb_t *bb,
     bb->exit_target = target;   
     *elide_continue = false;    /* matching, but should stop bb */
     return true;               /* matching */
+#endif
 }
 
 /* Returns true if the current instr in the BB is an indirect call
@@ -2297,6 +2324,8 @@ static bool
 bb_process_IAT_convertible_indcall(dcontext_t *dcontext, build_bb_t *bb,
                                    bool *elide_continue)
 {
+#ifdef NO
+//TODO SJF
     app_pc iat_reference;
     app_pc target;
     ASSERT(DYNAMO_OPTION(IAT_convert));
@@ -2390,6 +2419,7 @@ bb_process_IAT_convertible_indcall(dcontext_t *dcontext, build_bb_t *bb,
      */
     *elide_continue = false;    /* matching, but should stop bb */
     return true;                /* converted indirect to direct */
+#endif //NO
 }
 
 static bool
@@ -2410,6 +2440,8 @@ static bool
 client_check_syscall(instrlist_t *ilist, instr_t *inst,
                      bool *found_syscall, bool *found_int)
 {
+#ifdef NO
+//TODO SJF
     /* We do consider the wow64 call* a syscall here (it is both
      * a syscall and a call*: PR 240258).
      */
@@ -2445,6 +2477,7 @@ client_check_syscall(instrlist_t *ilist, instr_t *inst,
         }
     }
     return true;
+#endif
 }
 
 /* Pass bb to client, and afterward check for criteria we require and rescan for
@@ -2453,6 +2486,8 @@ client_check_syscall(instrlist_t *ilist, instr_t *inst,
 static void
 client_process_bb(dcontext_t *dcontext, build_bb_t *bb)
 {
+#ifdef NO
+//TODO SJF
     dr_emit_flags_t emitflags = DR_EMIT_DEFAULT;
     instr_t *inst;
     bool found_exit_cti = false;
@@ -2756,6 +2791,7 @@ client_process_bb(dcontext_t *dcontext, build_bb_t *bb)
         /* i#848: let client terminate traces */
         bb->flags |= FRAG_MUST_END_TRACE;
     }
+#endif//NO
 }
 #endif /* CLIENT_INTERFACE */
 
@@ -2788,6 +2824,8 @@ client_process_bb(dcontext_t *dcontext, build_bb_t *bb)
 static void
 build_bb_ilist(dcontext_t *dcontext, build_bb_t *bb)
 {
+#ifdef NO
+//TODO SJF
     /* Design decision: we will not try to identify branches that target
      * instructions in this basic block, when we take those branches we will
      * just make a new basic block and duplicate part of this one
@@ -3761,6 +3799,7 @@ build_bb_ilist(dcontext_t *dcontext, build_bb_t *bb)
         build_bb_ilist(dcontext, bb);
         return;
     }
+#endif
 }
 
 /* Call when about to throw exception or other drastic action in the
@@ -3769,6 +3808,8 @@ build_bb_ilist(dcontext_t *dcontext, build_bb_t *bb)
 void
 bb_build_abort(dcontext_t *dcontext, bool clean_vmarea)
 {
+#ifdef NO
+//TODO SJF
     ASSERT(dcontext->bb_build_info != NULL); /* caller should check */
     if (dcontext->bb_build_info != NULL) {
         build_bb_t *bb = (build_bb_t *) dcontext->bb_build_info;
@@ -3800,6 +3841,7 @@ bb_build_abort(dcontext_t *dcontext, bool clean_vmarea)
             ASSERT_DO_NOT_OWN_MUTEX(USE_BB_BUILDING_LOCK(), &bb_building_lock);
         dcontext->bb_build_info = NULL;
     }
+#endif
 }
 
 bool
@@ -3822,6 +3864,8 @@ expand_should_set_translation(dcontext_t *dcontext)
 static bool
 mangle_bb_ilist(dcontext_t *dcontext, build_bb_t *bb)
 {
+#ifdef NO
+//TODO SJF
     if (TEST(FRAG_SELFMOD_SANDBOXED, bb->flags)) {
         byte *selfmod_start, *selfmod_end;
         /* sandbox requires that bb have no direct cti followings!
@@ -3878,6 +3922,7 @@ mangle_bb_ilist(dcontext_t *dcontext, build_bb_t *bb)
         instrlist_disassemble(dcontext, bb->start_pc, bb->ilist, THREAD);
     });
     return true;
+#endif
 }
 
 /* Interprets the application's instructions until the end of a basic
@@ -4030,6 +4075,8 @@ report_native_module(dcontext_t *dcontext, app_pc modpc)
 static void
 build_native_exec_bb(dcontext_t *dcontext, build_bb_t *bb)
 {
+#ifdef NO
+//TODO SJF
     instr_t *in;
     opnd_t jmp_tgt;
 #ifdef X64
@@ -4076,7 +4123,7 @@ build_native_exec_bb(dcontext_t *dcontext, build_bb_t *bb)
 
     append_shared_get_dcontext(dcontext, bb->ilist, true/*save xdi*/);
     instrlist_append(bb->ilist, instr_create_save_to_dc_via_reg
-                     (dcontext, REG_NULL/*default*/, REG_XAX, XAX_OFFSET));
+                     (dcontext, REG_NULL/*default*/, REG_R0, R0_OFFSET));
 
     /* need some cleanup prior to native: turn off asynch, clobber trace, etc.
      * Now that we have a stack of native retaddrs, we save the app retaddr in C
@@ -4085,36 +4132,16 @@ build_native_exec_bb(dcontext_t *dcontext, build_bb_t *bb)
     if (bb->native_call) {
         dr_insert_clean_call(dcontext, bb->ilist, NULL,
                              (void *)call_to_native, false/*!fp*/, 1,
-                             opnd_create_reg(REG_XSP));
+                             opnd_create_reg(REG_R13));
     } else {
         dr_insert_clean_call(dcontext, bb->ilist, NULL,
                              (void *) return_to_native, false/*!fp*/, 0);
     }
 
-#ifdef X64
-    if (!reachable) {
-        /* best to store the target at the end of the bb, to keep it readonly,
-         * but that requires a post-pass to patch its value: since native_exec
-         * is already hacky we just go through TLS and ignore multi-thread selfmod.
-         */
-        instrlist_append(bb->ilist, INSTR_CREATE_mov_imm
-                         (dcontext, opnd_create_reg(REG_XAX),
-                          OPND_CREATE_INTPTR((ptr_int_t)bb->start_pc)));
-        if (X64_CACHE_MODE_DC(dcontext) && !X64_MODE_DC(dcontext)) {
-            jmp_tgt = opnd_create_reg(REG_R9);
-        } else {
-            jmp_tgt = opnd_create_tls_slot(os_tls_offset(MANGLE_XCX_SPILL_SLOT));
-        }
-        instrlist_append(bb->ilist, INSTR_CREATE_mov_st
-                         (dcontext, jmp_tgt, opnd_create_reg(REG_XAX)));
-    } else
-#endif
-    {
-        jmp_tgt = opnd_create_pc(bb->start_pc);
-    }
+    jmp_tgt = opnd_create_pc(bb->start_pc);
 
     instrlist_append(bb->ilist, instr_create_restore_from_dc_via_reg
-                     (dcontext, REG_NULL/*default*/, REG_XAX, XAX_OFFSET));
+                     (dcontext, REG_NULL/*default*/, REG_R0, R0_OFFSET));
     append_shared_restore_dcontext_reg(dcontext, bb->ilist);
 
     /* this is the jump to native code */
@@ -4154,6 +4181,7 @@ build_native_exec_bb(dcontext_t *dcontext, build_bb_t *bb)
         bb->flags &= ~FRAG_SELFMOD_SANDBOXED;
     DEBUG_DECLARE(ok = ) mangle_bb_ilist(dcontext, bb);
     ASSERT(ok);
+#endif
 }
 
 static bool
@@ -4252,7 +4280,7 @@ at_native_exec_gateway(dcontext_t *dcontext, app_pc start, bool *is_call
             /* if unknown last exit, or last exit was jmp*, examine TOS and guess
              * whether it's a retaddr
              */
-            app_pc *tos = (app_pc *) get_mcontext(dcontext)->xsp;
+            app_pc *tos = (app_pc *) get_mcontext(dcontext)->r13;
             STATS_INC(num_native_entrance_TOS_checks);
             /* vector check cheaper than is_readable syscall, etc. so do it before them,
              * but after last_exit checks above since overlap is more costly
@@ -5029,12 +5057,12 @@ insert_restore_spilled_xcx(dcontext_t *dcontext, instrlist_t *trace, instr_t *ne
     if (DYNAMO_OPTION(private_ib_in_tls)) {
         if (X64_CACHE_MODE_DC(dcontext) && !X64_MODE_DC(dcontext)) {
             added_size += tracelist_add(dcontext, trace, next,
-                INSTR_CREATE_mov_ld(dcontext, opnd_create_reg(REG_XCX),
+                INSTR_CREATE_mov_ld(dcontext, opnd_create_reg(REG_R1),
                                     opnd_create_reg(REG_R9)));
         } else {
             added_size += tracelist_add(dcontext, trace, next,
                 INSTR_CREATE_mov_ld(dcontext,
-                                    opnd_create_reg(REG_XCX),
+                                    opnd_create_reg(REG_R1),
                                     opnd_create_tls_slot
                                     (os_tls_offset(MANGLE_XCX_SPILL_SLOT))));
         }
@@ -5044,7 +5072,7 @@ insert_restore_spilled_xcx(dcontext_t *dcontext, instrlist_t *trace, instr_t *ne
          */
         added_size += tracelist_add(dcontext, trace, next,
                                     instr_create_restore_from_dcontext
-                                    (dcontext, REG_XCX, XCX_OFFSET));
+                                    (dcontext, REG_R1, R1_OFFSET));
     }
 
     return added_size;
@@ -5060,6 +5088,8 @@ insert_transparent_comparison(dcontext_t *dcontext, instrlist_t *trace,
                               instr_t *targeter, /* exit CTI */
                               app_pc speculative_tag)
 {
+#ifdef NO
+//TODO SJF
     int added_size = 0;
     instr_t *jecxz;
     instr_t *continue_label = INSTR_CREATE_label(dcontext);
@@ -5079,8 +5109,8 @@ insert_transparent_comparison(dcontext_t *dcontext, instrlist_t *trace,
     added_size += tracelist_add
         (dcontext, trace, targeter,
          INSTR_CREATE_lea
-         (dcontext, opnd_create_reg(REG_ECX),
-          opnd_create_base_disp(REG_ECX, REG_NULL, 0,
+         (dcontext, opnd_create_reg(REG_R1),
+          opnd_create_base_disp(REG_R1, REG_NULL, 0,
                                 -((int)(ptr_int_t)speculative_tag), OPSZ_lea)));
     jecxz = INSTR_CREATE_jecxz(dcontext, opnd_create_instr(continue_label));
     /* do not treat jecxz as exit cti! */
@@ -5096,6 +5126,7 @@ insert_transparent_comparison(dcontext_t *dcontext, instrlist_t *trace,
                                 ((int)(ptr_int_t)speculative_tag), OPSZ_lea)));
     added_size += tracelist_add_after(dcontext, trace, targeter, continue_label);
     return added_size;
+#endif
 }
 
 #ifdef X64
@@ -5103,21 +5134,23 @@ static int
 mangle_x64_ib_in_trace(dcontext_t *dcontext, instrlist_t *trace,
                        instr_t *targeter, app_pc next_tag)
 {
+#ifdef NO
+//TODO SJF
     int added_size = 0;
     if (X64_MODE_DC(dcontext)) {
         added_size += tracelist_add
             (dcontext, trace, targeter, INSTR_CREATE_mov_st
              (dcontext, opnd_create_tls_slot(os_tls_offset(PREFIX_XAX_SPILL_SLOT)),
-              opnd_create_reg(REG_XAX)));
+              opnd_create_reg(REG_R0)));
         added_size += tracelist_add
             (dcontext, trace, targeter, INSTR_CREATE_mov_imm
-             (dcontext, opnd_create_reg(REG_XAX),
+             (dcontext, opnd_create_reg(REG_R0),
               OPND_CREATE_INTPTR((ptr_int_t)next_tag)));
     } else {
         ASSERT(X64_CACHE_MODE_DC(dcontext));
         added_size += tracelist_add
             (dcontext, trace, targeter, INSTR_CREATE_mov_ld
-             (dcontext, opnd_create_reg(REG_R8), opnd_create_reg(REG_XAX)));
+             (dcontext, opnd_create_reg(REG_R8), opnd_create_reg(REG_R0)));
         added_size += tracelist_add
             (dcontext, trace, targeter, INSTR_CREATE_mov_imm
              (dcontext, opnd_create_reg(REG_R10),
@@ -5132,7 +5165,7 @@ mangle_x64_ib_in_trace(dcontext_t *dcontext, instrlist_t *trace,
                 (dcontext, trace, targeter, INSTR_CREATE_mov_st
                  (dcontext, opnd_create_tls_slot
                   (os_tls_offset(INDIRECT_STUB_SPILL_SLOT)),
-                  opnd_create_reg(REG_XAX)));
+                  opnd_create_reg(REG_R0)));
         }
         /* FIXME: share w/ insert_save_eflags() */
         added_size += tracelist_add
@@ -5146,20 +5179,20 @@ mangle_x64_ib_in_trace(dcontext_t *dcontext, instrlist_t *trace,
         if (X64_MODE_DC(dcontext)) {
             added_size += tracelist_add
                 (dcontext, trace, targeter,
-                 INSTR_CREATE_cmp(dcontext, opnd_create_reg(REG_XCX),
+                 INSTR_CREATE_cmp(dcontext, opnd_create_reg(REG_R1),
                                   opnd_create_tls_slot(os_tls_offset
                                                        (INDIRECT_STUB_SPILL_SLOT))));
         } else {
             added_size += tracelist_add
                 (dcontext, trace, targeter,
-                 INSTR_CREATE_cmp(dcontext, opnd_create_reg(REG_XCX),
+                 INSTR_CREATE_cmp(dcontext, opnd_create_reg(REG_R1),
                                   opnd_create_reg(REG_R10)));
         }
     } else {
         added_size += tracelist_add
             (dcontext, trace, targeter,
-             INSTR_CREATE_cmp(dcontext, opnd_create_reg(REG_XCX),
-                              X64_MODE_DC(dcontext) ? opnd_create_reg(REG_XAX)
+             INSTR_CREATE_cmp(dcontext, opnd_create_reg(REG_R1),
+                              X64_MODE_DC(dcontext) ? opnd_create_reg(REG_R0)
                                                     : opnd_create_reg(REG_R10)));
     }
     /* change jmp into jne to trace cmp entry of ibl routine (special entry
@@ -5174,6 +5207,7 @@ mangle_x64_ib_in_trace(dcontext_t *dcontext, instrlist_t *trace,
     instr_exit_branch_set_type(targeter, instr_exit_branch_type(targeter) |
                                INSTR_TRACE_CMP_EXIT);
     return added_size;
+#endif //NO
 }
 #endif
 
@@ -5186,6 +5220,8 @@ mangle_indirect_branch_in_trace(dcontext_t *dcontext, instrlist_t *trace,
                                 instr_t *targeter, app_pc next_tag, uint next_flags,
                                 instr_t **delete_after/*OUT*/, instr_t *end_instr)
 {
+#ifdef NO
+//TODO SJF
     int added_size = 0;
     instr_t *next = instr_get_next(targeter);
     /* all indirect branches should be ubrs */
@@ -5280,8 +5316,8 @@ mangle_indirect_branch_in_trace(dcontext_t *dcontext, instrlist_t *trace,
             removed_ret = true;
             added_size += tracelist_add
                 (dcontext, trace, targeter,
-                 INSTR_CREATE_lea(dcontext, opnd_create_reg(REG_ESP),
-                                  opnd_create_base_disp(REG_ESP, REG_NULL, 0,
+                 INSTR_CREATE_lea(dcontext, opnd_create_reg(REG_R13),
+                                  opnd_create_base_disp(REG_R13, REG_NULL, 0,
                                                         esp_add, OPSZ_lea)));
         }
     }
@@ -5347,8 +5383,8 @@ mangle_indirect_branch_in_trace(dcontext_t *dcontext, instrlist_t *trace,
             instr_destroy(dcontext, ret);
             added_size += tracelist_add
                 (dcontext, trace, targeter,
-                 INSTR_CREATE_lea(dcontext, opnd_create_reg(REG_ESP),
-                                  opnd_create_base_disp(REG_ESP, REG_NULL, 0,
+                 INSTR_CREATE_lea(dcontext, opnd_create_reg(REG_R13),
+                                  opnd_create_base_disp(REG_R13, REG_NULL, 0,
                                                         (int)4, OPSZ_lea)));
             instrlist_remove(trace, targeter);
             instr_destroy(dcontext, targeter);
@@ -5466,12 +5502,12 @@ mangle_indirect_branch_in_trace(dcontext_t *dcontext, instrlist_t *trace,
         if (X64_MODE_DC(dcontext)) {
             added_size += tracelist_add
                 (dcontext, trace, next, INSTR_CREATE_mov_ld
-                 (dcontext, opnd_create_reg(REG_XAX),
+                 (dcontext, opnd_create_reg(REG_R0),
                   opnd_create_tls_slot(os_tls_offset(PREFIX_XAX_SPILL_SLOT))));
         } else {
             added_size += tracelist_add
                 (dcontext, trace, next, INSTR_CREATE_mov_ld
-                 (dcontext, opnd_create_reg(REG_XAX), opnd_create_reg(REG_R8)));
+                 (dcontext, opnd_create_reg(REG_R0), opnd_create_reg(REG_R8)));
         }
     }
 #endif
@@ -5495,6 +5531,7 @@ mangle_indirect_branch_in_trace(dcontext_t *dcontext, instrlist_t *trace,
     }
 #endif
     return added_size;
+#endif //NO
 }
 
 /* This routine handles the mangling of the cti at the end of the
@@ -5780,7 +5817,7 @@ append_trace_speculate_last_ibl(dcontext_t *dcontext, instrlist_t *trace,
                 tracelist_add(dcontext, trace, where, 
                               INSTR_CREATE_mov_st(dcontext,
                                                   opnd_create_tls_slot(tls_stat_scratch_slot),
-                                                  opnd_create_reg(REG_XCX)));
+                                                  opnd_create_reg(REG_R1)));
             added_size += 
                 insert_increment_stat_counter(dcontext, trace, where, 
                                               &get_ibl_per_type_statistics(dcontext, 
@@ -5789,7 +5826,7 @@ append_trace_speculate_last_ibl(dcontext_t *dcontext, instrlist_t *trace,
             added_size += 
                 tracelist_add(dcontext, trace, where, 
                               INSTR_CREATE_mov_ld(dcontext,
-                                                  opnd_create_reg(REG_XCX),
+                                                  opnd_create_reg(REG_R1),
                                                   opnd_create_tls_slot(tls_stat_scratch_slot)));
         }
     });
@@ -5833,7 +5870,7 @@ append_trace_speculate_last_ibl(dcontext_t *dcontext, instrlist_t *trace,
             added_size += 
                 tracelist_add(dcontext, trace, next, 
                               INSTR_CREATE_mov_ld(dcontext,
-                                                  opnd_create_reg(REG_XCX),
+                                                  opnd_create_reg(REG_R1),
                                                   opnd_create_tls_slot(tls_stat_scratch_slot)));
         }
     });        
@@ -5924,14 +5961,14 @@ append_ib_trace_last_ibl_exit_stat(dcontext_t *dcontext, instrlist_t *trace,
     added_size += tracelist_add(dcontext, trace, where, 
                                 INSTR_CREATE_mov_st(dcontext,
                                                     opnd_create_tls_slot(tls_stat_scratch_slot),
-                                                    opnd_create_reg(REG_XCX)));
+                                                    opnd_create_reg(REG_R1)));
     added_size += 
         insert_increment_stat_counter(dcontext, trace, where, 
                                       &get_ibl_per_type_statistics(dcontext, ibl_type.branch_type)
                                       ->ib_trace_last_ibl_exit);
     added_size += tracelist_add(dcontext, trace, where, 
                                 INSTR_CREATE_mov_ld(dcontext,
-                                                    opnd_create_reg(REG_XCX),
+                                                    opnd_create_reg(REG_R1),
                                                     opnd_create_tls_slot(tls_stat_scratch_slot)));
 
     if (speculate_next_tag != NULL) {
@@ -6118,6 +6155,8 @@ create_exit_jmp(dcontext_t *dcontext, app_pc target, app_pc translation,
 bool
 mangle_trace(dcontext_t *dcontext, instrlist_t *ilist, monitor_data_t *md)
 {
+#ifdef NO
+//TODO SJF
     instr_t *inst, *next_inst, *start_instr, *jmp;
     uint blk, num_exits_deleted;
     app_pc fallthrough = NULL;
@@ -6380,6 +6419,7 @@ mangle_trace(dcontext_t *dcontext, instrlist_t *ilist, monitor_data_t *md)
         return false;
     }
     return true;
+#endif
 }
 
 /****************************************************************************
@@ -6868,7 +6908,7 @@ decode_fragment(dcontext_t *dcontext, fragment_t *f, byte *buf, /*IN/OUT*/uint *
                     /* now append our new xcx save */
                     instrlist_append(ilist,
                                      instr_create_save_to_dcontext
-                                     (dcontext, REG_XCX, XCX_OFFSET));
+                                     (dcontext, REG_R1, R1_OFFSET));
                     /* make sure skip current instr */
                     cur_buf += (int)(pc - prev_pc);
                     raw_start_pc = pc;
@@ -7434,6 +7474,8 @@ add_profile_call(dcontext_t *dcontext)
 app_pc
 emulate(dcontext_t *dcontext, app_pc pc, priv_mcontext_t *mc)
 {
+#ifdef NO
+//TODO SJF
     instr_t instr;
     app_pc next_pc = NULL;
     uint opc;
@@ -7515,4 +7557,5 @@ emulate(dcontext_t *dcontext, app_pc pc, priv_mcontext_t *mc)
  emulate_failure:
     instr_free(dcontext, &instr);
     return next_pc;
+#endif
 }

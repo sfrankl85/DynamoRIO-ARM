@@ -175,6 +175,7 @@ struct _fpstate {
 /*
  * User-space might still rely on the old definition:
  */
+#ifdef NO //TODO SJF Conflicts with sys defined version
 struct sigcontext {
 	unsigned long r8;
 	unsigned long r9;
@@ -205,6 +206,7 @@ struct sigcontext {
 	struct _fpstate *fpstate;	/* zero when no FPU context */
 	unsigned long reserved1[8];
 };
+#endif
 
 #endif /* !__i386__ */
 

@@ -164,7 +164,8 @@ endif ()
 
 if (UNIX)
   if (ARM)
-    set(ASM_FLAGS "-march=armv7-a -mcpu=cortex-a15 --noexecstack")
+    # SJF Set to compile for a9 here. A15 is actual goals
+    set(ASM_FLAGS "-mcpu=cortex-a9 --noexecstack")
   else (ARM)
     set(ASM_FLAGS "-mmnemonic=intel -msyntax=intel -mnaked-reg --noexecstack")
   endif (ARM)

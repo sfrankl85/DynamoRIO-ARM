@@ -103,6 +103,8 @@ module_contains_pc(module_area_t *ma, app_pc pc)
 static app_pc
 find_dl_fixup(dcontext_t *dcontext, app_pc resolver)
 {
+#ifdef NO
+//TODO SJF
     instr_t instr;
     int max_decodes = 30;
     int i = 0;
@@ -129,6 +131,7 @@ find_dl_fixup(dcontext_t *dcontext, app_pc resolver)
     }
     instr_free(dcontext, &instr);
     return fixup;
+#endif
 }
 
 /* Creates a template stub copied repeatedly for each stub we need to create.

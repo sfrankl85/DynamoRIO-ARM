@@ -1125,7 +1125,10 @@ redirect____tls_get_addr()
     /* XXX: in some version of ___tls_get_addr, ti is passed via xax 
      * How can I generalize it?
      */
+  #ifdef NO
+  // TODO SJF ASM 
     asm("mov %%"ASM_XAX", %0" : "=m"((ti)) : : ASM_XAX);
+  #endif
     LOG(GLOBAL, LOG_LOADER, 4, "__tls_get_addr: module: %d, offset: %d\n",
         ti->ti_module, ti->ti_offset);
     ASSERT(ti->ti_module < tls_info.num_mods);
@@ -1382,13 +1385,24 @@ privload_early_inject(void **sp)
          * if the app has been mapped correctly without involving DR's code
          * cache.
          */
+
+  #ifdef NO
+  // TODO SJF ASM 
         asm ("mov %0, %%"ASM_XSP"\n\t"
              "jmp *%1\n\t"
              : : "r"(sp), "r"(entry));
+  #endif
     }
 
     memset(&mc, 0, sizeof(mc));
+
+#ifdef ARM
+    mc.r13 = (reg_t) sp;
+    mc.r15 = entry;
+#else
     mc.xsp = (reg_t) sp;
     mc.pc = entry;
+#endif
+
     dynamo_start(&mc);
 }

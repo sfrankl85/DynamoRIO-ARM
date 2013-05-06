@@ -1526,7 +1526,6 @@ opnd_get_reg_dcontext_offs(reg_id_t reg)
 {
     switch (reg) {
 
-#ifdef ARM
     case REG_RR0:  return  R0_OFFSET;
     case REG_RR1:  return  R1_OFFSET;
     case REG_RR2:  return  R2_OFFSET;
@@ -1543,27 +1542,6 @@ opnd_get_reg_dcontext_offs(reg_id_t reg)
     case REG_RR13: return R13_OFFSET;
     case REG_RR14: return R14_OFFSET;
     case REG_RR15: return R15_OFFSET;
-#else
-    case REG_XAX: return XAX_OFFSET;
-    case REG_XBX: return XBX_OFFSET;
-    case REG_XCX: return XCX_OFFSET;
-    case REG_XDX: return XDX_OFFSET;
-    case REG_XSP: return XSP_OFFSET;
-    case REG_XBP: return XBP_OFFSET;
-    case REG_XSI: return XSI_OFFSET;
-    case REG_XDI: return XDI_OFFSET;
-  #ifdef X64
-    case REG_R8:  return  R8_OFFSET;
-    case REG_R9:  return  R9_OFFSET;
-    case REG_R10: return R10_OFFSET;
-    case REG_R11: return R11_OFFSET;
-    case REG_R12: return R12_OFFSET;
-    case REG_R13: return R13_OFFSET;
-    case REG_R14: return R14_OFFSET;
-    case REG_R15: return R15_OFFSET;
-  #endif
-
-#endif
     default: CLIENT_ASSERT(false, "opnd_get_reg_dcontext_offs: invalid reg");
         return -1;
     }
@@ -2746,7 +2724,7 @@ instr_length(dcontext_t *dcontext, instr_t *instr)
     case OP_loop:
     case OP_loope:
     case OP_loopne: 
-        if (opnd_get_reg(instr_get_src(instr, 1)) != REG_XCX
+        if (opnd_get_reg(instr_get_src(instr, 1)) != REG_R1
             IF_X64(&& !instr_get_x86_mode(instr)))
             return 3; /* need addr prefix */
         else
@@ -4500,7 +4478,7 @@ instr_is_mov_imm_to_tos(instr_t *instr)
         (opnd_is_immed(instr_get_src(instr, 0)) ||
          opnd_is_near_instr(instr_get_src(instr, 0))) &&
         opnd_is_near_base_disp(instr_get_dst(instr, 0)) &&
-        opnd_get_base(instr_get_dst(instr, 0)) == REG_ESP &&
+        opnd_get_base(instr_get_dst(instr, 0)) == REG_R13 &&
         opnd_get_index(instr_get_dst(instr, 0)) == REG_NULL &&
         opnd_get_disp(instr_get_dst(instr, 0)) == 0;
 }
@@ -5073,7 +5051,7 @@ instr_t *
 instr_create_popa(dcontext_t *dcontext)
 {
     instr_t *in = instr_build(dcontext, OP_popa, 8, 2);
-    instr_set_dst(in, 0, opnd_create_reg(REG_ESP));
+    instr_set_dst(in, 0, opnd_create_reg(REG_R13));
     instr_set_dst(in, 1, opnd_create_reg(REG_EAX));
     instr_set_dst(in, 2, opnd_create_reg(REG_EBX));
     instr_set_dst(in, 3, opnd_create_reg(REG_ECX));
@@ -5081,8 +5059,8 @@ instr_create_popa(dcontext_t *dcontext)
     instr_set_dst(in, 5, opnd_create_reg(REG_EBP));
     instr_set_dst(in, 6, opnd_create_reg(REG_ESI));
     instr_set_dst(in, 7, opnd_create_reg(REG_EDI));
-    instr_set_src(in, 0, opnd_create_reg(REG_ESP));
-    instr_set_src(in, 1, opnd_create_base_disp(REG_ESP, REG_NULL, 0, 0, OPSZ_32_short16));
+    instr_set_src(in, 0, opnd_create_reg(REG_R13));
+    instr_set_src(in, 1, opnd_create_base_disp(REG_R13, REG_NULL, 0, 0, OPSZ_32_short16));
     return in;
 }
 
@@ -5090,10 +5068,10 @@ instr_t *
 instr_create_pusha(dcontext_t *dcontext)
 {
     instr_t *in = instr_build(dcontext, OP_pusha, 2, 8);
-    instr_set_dst(in, 0, opnd_create_reg(REG_ESP));
-    instr_set_dst(in, 1, opnd_create_base_disp(REG_ESP, REG_NULL, 0, -32,
+    instr_set_dst(in, 0, opnd_create_reg(REG_R13));
+    instr_set_dst(in, 1, opnd_create_base_disp(REG_R13, REG_NULL, 0, -32,
                                                OPSZ_32_short16));
-    instr_set_src(in, 0, opnd_create_reg(REG_ESP));
+    instr_set_src(in, 0, opnd_create_reg(REG_R13));
     instr_set_src(in, 1, opnd_create_reg(REG_EAX));
     instr_set_src(in, 2, opnd_create_reg(REG_EBX));
     instr_set_src(in, 3, opnd_create_reg(REG_ECX));
@@ -5302,7 +5280,7 @@ dcontext_opnd_common(dcontext_t *dcontext, bool absolute, reg_id_t basereg,
     if (TEST(SELFPROT_DCONTEXT, dynamo_options.protect_mask) &&
         offs < sizeof(unprotected_context_t)) {
         return opnd_create_base_disp(absolute ? REG_NULL :
-                                     ((basereg == REG_NULL) ? REG_XSI : basereg),
+                                     ((basereg == REG_NULL) ? REG_R6 : basereg),
                                      REG_NULL, 0,
                                      ((int)(ptr_int_t)(absolute ?
                                             dcontext->upcontext.separate_upcontext : 0))
@@ -5311,7 +5289,7 @@ dcontext_opnd_common(dcontext_t *dcontext, bool absolute, reg_id_t basereg,
         if (offs >= sizeof(unprotected_context_t))
             offs -= sizeof(unprotected_context_t);
         return opnd_create_base_disp(absolute ? REG_NULL :
-                                     ((basereg == REG_NULL) ? REG_XDI : basereg),
+                                     ((basereg == REG_NULL) ? REG_R7 : basereg),
                                      REG_NULL, 0,
                                      ((int)(ptr_int_t)
                                       (absolute ? dcontext : 0)) + offs, size);
@@ -5356,10 +5334,13 @@ instr_create_restore_from_dcontext(dcontext_t *dcontext, reg_id_t reg, int offs)
 {
     opnd_t memopnd = opnd_create_dcontext_field(dcontext, offs);
     /* use movd for xmm/mmx */
+#ifdef NO
+//TODO SJF
     if (reg_is_xmm(reg) || reg_is_mmx(reg))
         return INSTR_CREATE_movd(dcontext, opnd_create_reg(reg), memopnd);
     else
         return INSTR_CREATE_mov_ld(dcontext, opnd_create_reg(reg), memopnd);
+#endif
 }
 
 instr_t *
@@ -5434,21 +5415,21 @@ instr_create_jump_via_dcontext(dcontext_t *dcontext, int offs)
 instr_t *
 instr_create_restore_dynamo_stack(dcontext_t *dcontext)
 {
-    return instr_create_restore_from_dcontext(dcontext, REG_ESP, DSTACK_OFFSET);
+    return instr_create_restore_from_dcontext(dcontext, REG_R13, DSTACK_OFFSET);
 }
 
 #ifdef RETURN_STACK
 instr_t *
 instr_create_restore_dynamo_return_stack(dcontext_t *dcontext)
 {
-    return instr_create_restore_from_dcontext(dcontext, REG_ESP,
+    return instr_create_restore_from_dcontext(dcontext, REG_R13,
                                               TOP_OF_RSTACK_OFFSET);
 }
 
 instr_t *
 instr_create_save_dynamo_return_stack(dcontext_t *dcontext)
 {
-    return instr_create_save_to_dcontext(dcontext, REG_ESP,
+    return instr_create_save_to_dcontext(dcontext, REG_R13,
                                          TOP_OF_RSTACK_OFFSET);
 }
 #endif
@@ -5504,7 +5485,7 @@ opnd_create_sized_tls_slot(int offs, opnd_size_t size)
 bool
 instr_raw_is_tls_spill(byte *pc, reg_id_t reg, ushort offs)
 {
-    ASSERT_NOT_IMPLEMENTED(reg != REG_XAX);
+    ASSERT_NOT_IMPLEMENTED(reg != REG_R0);
 #ifdef X64
     /* match insert_jmp_to_ibl */
     if     (*pc == TLS_SEG_OPCODE && 
@@ -5542,6 +5523,8 @@ instr_check_tls_spill_restore(instr_t *instr, bool *spill, reg_id_t *reg, int *o
     opnd_t regop, memop;
     CLIENT_ASSERT(instr != NULL,
                   "internal error: tls spill/restore check: NULL argument");
+#ifdef NO
+//TODO SJF INSTR
     if (instr_get_opcode(instr) == OP_mov_st) {
         regop = instr_get_src(instr, 0);
         memop = instr_get_dst(instr, 0);
@@ -5570,6 +5553,7 @@ instr_check_tls_spill_restore(instr_t *instr, bool *spill, reg_id_t *reg, int *o
             *offs = opnd_get_disp(memop);
         return true;
     }
+#endif
     return false;
 }
 
@@ -5609,9 +5593,9 @@ instr_is_tls_xcx_spill(instr_t *instr)
     if (instr_raw_bits_valid(instr)) {
         /* avoid upgrading instr */
         return instr_raw_is_tls_spill(instr_get_raw_bits(instr),
-                                      REG_ECX, MANGLE_XCX_SPILL_SLOT);
+                                      REG_R1, MANGLE_XCX_SPILL_SLOT);
     } else
-        return instr_is_tls_spill(instr, REG_ECX, MANGLE_XCX_SPILL_SLOT);
+        return instr_is_tls_spill(instr, REG_R1, MANGLE_XCX_SPILL_SLOT);
 }
 
 /* this routine may upgrade a level 1 instr */
@@ -5619,10 +5603,8 @@ static bool
 instr_check_mcontext_spill_restore(dcontext_t *dcontext, instr_t *instr,
                                    bool *spill, reg_id_t *reg, int *offs)
 {
-#ifdef X64
-    /* PR 244737: we always use tls for x64 */
-    return false;
-#else
+#ifdef NO
+//TODO SJF
     opnd_t regop, memop;
     if (instr_get_opcode(instr) == OP_mov_st) {
         regop = instr_get_src(instr, 0);
@@ -5747,6 +5729,8 @@ instr_raw_is_rip_rel_lea(byte *pc, byte *read_end)
 uint
 move_mm_reg_opcode(bool aligned16, bool aligned32)
 {
+#ifdef NO
+//TODO SJF
     if (YMM_ENABLED()) {
         /* must preserve ymm registers */
         return (aligned32 ? OP_vmovdqa : OP_vmovdqu);
@@ -5757,6 +5741,7 @@ move_mm_reg_opcode(bool aligned16, bool aligned32)
         CLIENT_ASSERT(proc_has_feature(FEATURE_SSE), "running on unsupported processor");
         return (aligned16 ? OP_movaps : OP_movups);
     }
+#endif
 }
 
 #endif /* !STANDALONE_DECODER */

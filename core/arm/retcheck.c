@@ -427,6 +427,8 @@ check_return_too_deep(dcontext_t *dcontext,
     /* move from registers into memory where we can work with it */
     /* FIXME: align xmm so can use movdqa! */
 #ifdef LINUX
+  #ifdef NO
+  // TODO SJF ASM 
     asm("movdqu %%xmm0, %0" : "=m"(xmm[0]));
     asm("movdqu %%xmm1, %0" : "=m"(xmm[1]));
     asm("movdqu %%xmm2, %0" : "=m"(xmm[2]));
@@ -435,6 +437,7 @@ check_return_too_deep(dcontext_t *dcontext,
     asm("movdqu %%xmm5, %0" : "=m"(xmm[5]));
     asm("movdqu %%xmm6, %0" : "=m"(xmm[6]));
     asm("movdqu %%xmm7, %0" : "=m"(xmm[7]));
+  #endif
 #else
 #error NYI
 #endif
@@ -472,12 +475,15 @@ check_return_too_deep(dcontext_t *dcontext,
 
     /* move back into registers */
 #ifdef LINUX
+  #ifdef NO
+  // TODO SJF ASM 
     asm("movdqu %0, %%xmm0" : : "m"(xmm[0][0]));
     asm("movdqu %0, %%xmm1" : : "m"(xmm[1][0]));
     asm("movdqu %0, %%xmm2" : : "m"(xmm[2][0]));
     asm("movdqu %0, %%xmm3" : : "m"(xmm[3][0]));
     asm("movl $30, %eax");
     asm("pinsrw $7,%eax,%xmm7");
+  #endif
 #else
 #error NYI
 #endif
@@ -514,8 +520,11 @@ check_return_too_shallow(dcontext_t *dcontext,
          * in a ret addr that will match, namely the real ret addr, sitting in edx
          */
 #ifdef LINUX
+  #ifdef NO
+  // TODO SJF ASM 
         asm("movl %0, %%eax" : : "m"(reg_edx));
         asm("pinsrw $0,%eax,%xmm0");
+  #endif
 #else
 #error NYI
 #endif
@@ -526,11 +535,14 @@ check_return_too_shallow(dcontext_t *dcontext,
         ASSERT(stack != NULL);
         /* move back into registers */
 #ifdef LINUX
+  #ifdef NO
+  // TODO SJF ASM 
         asm("movl %0, %%eax" : : "m"(stack->retaddr));
         asm("movdqu (%eax),     %xmm0");
         asm("movdqu 0x10(%eax), %xmm1");
         asm("movdqu 0x20(%eax), %xmm2");
         asm("movdqu 0x30(%eax), %xmm3");
+  #endif
 #else
 #error NYI
 #endif
@@ -583,8 +595,11 @@ check_return_ra_mangled(dcontext_t *dcontext,
     if (stats->loglevel >= 3 && (stats->logmask & LOG_ALL) != 0) {
         int idx;
 # ifdef LINUX
+  #ifdef NO
+  // TODO SJF ASM 
         asm("pextrw $7,%xmm7,%eax");
         asm("movl %%eax, %0" : "=m"(idx));
+  #endif
 # else
 # error NYI
 # endif
@@ -724,6 +739,8 @@ check_debug(dcontext_t *dcontext,
         byte xmm[8][16]; /* each sse2 is 128 bits = 16 bytes */
         /* move from registers into memory where we can work with it */
 #ifdef LINUX
+  #ifdef NO
+  // TODO SJF ASM 
         asm("movdqu %%xmm0, %0" : "=m"(xmm[0]));
         asm("movdqu %%xmm1, %0" : "=m"(xmm[1]));
         asm("movdqu %%xmm2, %0" : "=m"(xmm[2]));
@@ -732,6 +749,7 @@ check_debug(dcontext_t *dcontext,
         asm("movdqu %%xmm5, %0" : "=m"(xmm[5]));
         asm("movdqu %%xmm6, %0" : "=m"(xmm[6]));
         asm("movdqu %%xmm7, %0" : "=m"(xmm[7]));
+  #endif
 #else
 #error NYI
 #endif
@@ -933,6 +951,8 @@ check_return_too_deep(dcontext_t *dcontext,
     /* move from registers into memory where we can work with it */
     /* FIXME: align xmm so can use movdqa! */
 #ifdef LINUX
+  #ifdef NO
+  // TODO SJF ASM 
     asm("movdqu %%xmm0, %0" : "=m"(xmm[0]));
     asm("movdqu %%xmm1, %0" : "=m"(xmm[1]));
     asm("movdqu %%xmm2, %0" : "=m"(xmm[2]));
@@ -941,6 +961,7 @@ check_return_too_deep(dcontext_t *dcontext,
     asm("movdqu %%xmm5, %0" : "=m"(xmm[5]));
     asm("movdqu %%xmm6, %0" : "=m"(xmm[6]));
     asm("movdqu %%xmm7, %0" : "=m"(xmm[7]));
+  #endif
 #else
 #error NYI
 #endif

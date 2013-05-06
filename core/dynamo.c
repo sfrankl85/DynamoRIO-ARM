@@ -1624,8 +1624,11 @@ initialize_dynamo_context(dcontext_t *dcontext)
      * go ahead and use eax, it's dead (about to return)
      */
 # ifdef LINUX
+  #ifdef NO
+  // TODO SJF ASM 
     asm("movl $0, %eax");
     asm("pinsrw $7,%eax,%xmm7");
+  #endif
 # else
 # error NYI
 # endif
@@ -1961,8 +1964,10 @@ add_thread(IF_WINDOWS_ELSE_NP(HANDLE hthread, process_id_t pid),
     tr->next = all_threads[hindex];
     all_threads[hindex] = tr;
     /* must be inside all_threads_lock to avoid race w/ get_list_of_threads */
+#ifdef NO //SJF TODO
     RSTATS_ADD_PEAK(num_threads, 1);
     RSTATS_INC(num_threads_created);
+#endif
     num_known_threads++;
     mutex_unlock(&all_threads_lock);
 }
@@ -1984,7 +1989,9 @@ remove_thread(IF_WINDOWS_(HANDLE hthread) thread_id_t tid)
             else
                 all_threads[hindex] = tr->next;
             /* must be inside all_threads_lock to avoid race w/ get_list_of_threads */
+#ifdef NO//SJF TODO
             RSTATS_DEC(num_threads);
+#endif
 #ifdef LINUX
             if (tr->execve) {
                 ASSERT(num_execve_threads > 0);
@@ -2466,8 +2473,11 @@ dynamo_other_thread_exit(thread_record_t *tr _IF_WINDOWS(bool detach_stacked_cal
     /* FIXME: Usually a safe spot for cleaning other threads should be
      * under num_exits_dir_syscall, but for now rewinding all the way
      */
+#ifdef NO
+// TODO SJF ASM
     KSTOP_REWIND_DC(tr->dcontext, thread_measured);
     KSTART_DC(tr->dcontext, thread_measured);
+#endif
     return dynamo_thread_exit_common(tr->dcontext, tr->id,
                                      IF_WINDOWS_(detach_stacked_callbacks) true);
 }
@@ -3017,10 +3027,13 @@ get_data_section_bounds(uint sec)
  * but the VAR_IN_SECTION does the real work for us, just so long as we have one
  * .section decl somewhere.
  */
+#ifdef NO
+// TODO SJF ASM
 DECLARE_DATA_SECTION(RARELY_PROTECTED_SECTION, "w")
 DECLARE_DATA_SECTION(FREQ_PROTECTED_SECTION, "w")
 DECLARE_DATA_SECTION(NEVER_PROTECTED_SECTION, "w")
 END_DATA_SECTION_DECLARATIONS()
+#endif //SJF
 #endif
 
 static void
@@ -3182,8 +3195,10 @@ is_on_dstack(dcontext_t *dcontext, byte *esp)
 bool
 is_currently_on_dstack(dcontext_t *dcontext)
 {
-    byte *cur_esp;
+    byte *cur_esp = NULL;
+/* TODO SJF
     GET_STACK_PTR(cur_esp);
+*/
     return is_on_dstack(dcontext, cur_esp);
 }
 

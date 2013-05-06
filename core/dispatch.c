@@ -573,7 +573,10 @@ dispatch_at_stopping_point(dcontext_t *dcontext)
      */
     {
         byte *app_esp = get_mcontext(dcontext)->xsp;
+  #ifdef NO
+  // TODO SJF ASM 
         asm("movl %0, %%esp" : : "m"(app_esp));
+  #endif
         dynamorio_app_exit();
         exit(0);
     }
@@ -1654,7 +1657,11 @@ handle_system_call(dcontext_t *dcontext)
          * set up a separate exit stub but this is simpler) */
         dcontext->sys_was_int = true;
 # ifdef VMX86_SERVER
-        if (is_vmkuw_sysnum(mc->xax)) {
+        #ifdef ARM
+          if (is_vmkuw_sysnum(mc->r0)) {
+        #else
+          if (is_vmkuw_sysnum(mc->xax)) {
+        #endif
             /* Even w/ syscall # shift int80 => ENOSYS */
             do_syscall = get_do_vmkuw_syscall_entry(dcontext);
             LOG(THREAD, LOG_SYSCALLS, 2, "Using do_vmkuw_syscall\n");
@@ -1678,10 +1685,19 @@ handle_system_call(dcontext_t *dcontext)
     /* set pc so client can tell where syscall invoked from.
      * note that this is pc _after_ syscall instr.
      */
-    get_mcontext(dcontext)->xip = get_fcache_target(dcontext);
+    #ifdef ARM
+      get_mcontext(dcontext)->cpsr = get_fcache_target(dcontext);
+    #else
+      get_mcontext(dcontext)->xip = get_fcache_target(dcontext);
+    #endif
+
     /* i#202: ignore native syscalls in early_inject_init() */
     if (IF_WINDOWS(dynamo_initialized &&)
-        !instrument_pre_syscall(dcontext, (int) mc->xax)) {
+        #ifdef ARM
+          !instrument_pre_syscall(dcontext, (int) mc->r0)) {
+        #else
+          !instrument_pre_syscall(dcontext, (int) mc->xax)) {
+        #endif
         /* we won't execute post-syscall so we do not need to store
          * dcontext->sys_*
          */
@@ -1907,7 +1923,11 @@ handle_post_system_call(dcontext_t *dcontext)
     /* restore mcontext values prior to invoking instrument_post_syscall() */
     if (was_sigreturn_syscall(dcontext)) {
         /* restore app xax */
-        mc->xax = dcontext->sys_param1;
+        #ifdef ARM 
+          mc->r0 = dcontext->sys_param1;
+        #else
+          mc->xax = dcontext->sys_param1;
+        #endif
     }
 #endif
 

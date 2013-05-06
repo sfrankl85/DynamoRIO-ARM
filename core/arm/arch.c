@@ -108,10 +108,10 @@ int
 reg_spill_tls_offs(reg_id_t reg)
 {
     switch (reg) {
-    case REG_XAX: return TLS_XAX_SLOT;
-    case REG_XBX: return TLS_XBX_SLOT;
-    case REG_XCX: return TLS_XCX_SLOT;
-    case REG_XDX: return TLS_XDX_SLOT;
+    case REG_R0: return TLS_R0_SLOT;
+    case REG_R3: return TLS_R3_SLOT;
+    case REG_R1: return TLS_R1_SLOT;
+    case REG_R2: return TLS_R2_SLOT;
     }
     /* don't assert if another reg passed: used on random regs looking for spills */
     return -1;
@@ -2397,7 +2397,7 @@ set_fcache_target(dcontext_t *dcontext, cache_pc value)
      */
     dcontext->next_tag = value;
     /* set eip as well to complete mcontext state */
-    get_mcontext(dcontext)->pc = value;
+    get_mcontext(dcontext)->r15 = value;
 }
 
 /***************************************************************************
@@ -2452,6 +2452,8 @@ translate_walk_init(translate_walk_t *walk, byte *start_cache, byte *end_cache,
 static inline bool
 instr_check_xsp_mangling(dcontext_t *dcontext, instr_t *inst, int *xsp_adjust)
 {
+#ifdef NO
+// TODO SJF INSTR 
     ASSERT(xsp_adjust != NULL);
     if (instr_get_opcode(inst) == OP_push ||
         instr_get_opcode(inst) == OP_push_imm) {
@@ -2518,6 +2520,7 @@ instr_check_xsp_mangling(dcontext_t *dcontext, instr_t *inst, int *xsp_adjust)
     } else {
         return false;
     }
+#endif
     return true;
 }
 
@@ -2530,6 +2533,8 @@ instr_is_trace_cmp(dcontext_t *dcontext, instr_t *inst)
     if (!instr_is_our_mangling(inst))
         return false;
     return
+#ifdef NO
+// TODO SJF INSTR
 #ifdef X64
         instr_get_opcode(inst) == OP_mov_imm ||
         /* mov %rax -> xbx-tls-spill-slot */
@@ -2545,6 +2550,7 @@ instr_is_trace_cmp(dcontext_t *dcontext, instr_t *inst)
         instr_get_opcode(inst) == OP_jecxz ||
         instr_get_opcode(inst) == OP_jmp
 #endif
+#endif //NO
         ;
 }
 
@@ -2562,12 +2568,15 @@ instr_is_seg_ref_load(dcontext_t *dcontext, instr_t *inst)
                              os_tls_offset(os_get_app_seg_base_offset(SEG_GS))))
         return true;
     /* Look for the lea */
+#ifdef NO
+//TODO SJF INSTR
     if (instr_get_opcode(inst) == OP_lea) {
         opnd_t mem = instr_get_src(inst, 0);
         if (opnd_get_scale(mem) == 1 &&
             opnd_get_index(mem) == opnd_get_reg(instr_get_dst(inst, 0)))
             return true;
     }
+#endif
     return false;
 }
 #endif
@@ -2575,6 +2584,8 @@ instr_is_seg_ref_load(dcontext_t *dcontext, instr_t *inst)
 static void
 translate_walk_track(dcontext_t *tdcontext, instr_t *inst, translate_walk_t *walk)
 {
+#ifdef NO
+// TODO SJF INSTR
     reg_id_t reg, r;
     bool spill, spill_tls;
 
@@ -2723,6 +2734,7 @@ translate_walk_track(dcontext_t *tdcontext, instr_t *inst, translate_walk_t *wal
             walk->unsupported_mangle = true;
         }
     }
+#endif //NO
 }
 
 static bool
@@ -2783,10 +2795,10 @@ translate_walk_restore(dcontext_t *tdcontext, translate_walk_t *walk,
      * the restore_memory param.
      */
     if (walk->xsp_adjust != 0) {
-        walk->mc->xsp -= walk->xsp_adjust; /* negate to undo */
+        walk->mc->r13 -= walk->xsp_adjust; /* negate to undo */
         LOG(THREAD_GET, LOG_INTERP, 2,
-            "\tundoing push/pop by %d: xsp now "PFX"\n",
-            walk->xsp_adjust, walk->mc->xsp);
+            "\tundoing push/pop by %d: r13 now "PFX"\n",
+            walk->xsp_adjust, walk->mc->r13);
     }
 }
 
@@ -2821,7 +2833,7 @@ recreate_app_state_from_info(dcontext_t *tdcontext, const translation_info_t *in
 {
     byte *answer = NULL;
     byte *cpc, *prev_cpc;
-    cache_pc target_cache = mc->pc;
+    cache_pc target_cache = mc->r15;
     uint i;
     bool contig = true, ours = false;
     recreate_success_t res = (just_pc ? RECREATE_SUCCESS_PC : RECREATE_SUCCESS_STATE);
@@ -2939,7 +2951,7 @@ recreate_app_state_from_info(dcontext_t *tdcontext, const translation_info_t *in
         translate_walk_restore(tdcontext, &walk, answer);
     LOG(THREAD_GET, LOG_INTERP, 2,
         "recreate_app -- found ok pc "PFX"\n", answer);
-    mc->pc = answer;
+    mc->r15 = answer;
     return res;
 }
 
@@ -2957,7 +2969,7 @@ recreate_app_state_from_ilist(dcontext_t *tdcontext, instrlist_t *ilist,
     byte *answer = NULL;
     byte *cpc, *prev_bytes;
     instr_t *inst, *prev_ok;
-    cache_pc target_cache = mc->pc;
+    cache_pc target_cache = mc->r15;
     recreate_success_t res = (just_pc ? RECREATE_SUCCESS_PC : RECREATE_SUCCESS_STATE);
     translate_walk_t walk;
 
@@ -3091,6 +3103,8 @@ recreate_app_state_from_ilist(dcontext_t *tdcontext, instrlist_t *ilist,
                         "recreate_app -- found valid state pc "PFX"\n", answer);
                 } else {
                     int op = instr_get_opcode(inst);
+#ifdef NO
+// TODO SJF INSTR
                     if (TEST(FRAG_SELFMOD_SANDBOXED, flags) &&
                         (op == OP_rep_ins || op == OP_rep_movs || op == OP_rep_stos)) {
                         /* i#398: xl8 selfmod: rep string instrs have xbx spilled in
@@ -3119,13 +3133,14 @@ recreate_app_state_from_ilist(dcontext_t *tdcontext, instrlist_t *ilist,
                             "recreate_app -- not able to fully recreate "
                             "context, pc is in added instruction from mangling\n");
                     }
+#endif // NO
                 }
             }
             if (!just_pc)
                 translate_walk_restore(tdcontext, &walk, answer);
             LOG(THREAD_GET, LOG_INTERP, 2,
                 "recreate_app -- found ok pc "PFX"\n", answer);
-            mc->pc = answer;
+            mc->r15 = answer;
             return res;
         }
         /* we only use translation pointers, never just raw bit pointers */
@@ -3164,7 +3179,7 @@ recreate_app_state_from_ilist(dcontext_t *tdcontext, instrlist_t *ilist,
     ASSERT_NOT_REACHED();
     if (just_pc) {
         /* just guess */
-        mc->pc = answer;
+        mc->r15 = answer;
     }
     return RECREATE_FAILURE;
 }
@@ -3252,14 +3267,14 @@ recreate_app_state_internal(dcontext_t *tdcontext, priv_mcontext_t *mcontext,
          * distinguish those: but for now if a sysenter instruction is used it
          * has to be do_syscall since DR's own syscalls are ints.
          */
-        (mcontext->pc == vsyscall_sysenter_return_pc ||
-         is_after_main_do_syscall_addr(tdcontext, mcontext->pc))) {
+        (mcontext->r15 == vsyscall_sysenter_return_pc ||
+         is_after_main_do_syscall_addr(tdcontext, mcontext->r15))) {
         LOG(THREAD_GET, LOG_INTERP|LOG_SYNCH, 2, 
             "recreate_app no translation needed (at syscall)\n");
         return res;
     }
 #endif
-    else if (is_after_syscall_that_rets(tdcontext, mcontext->pc)) {
+    else if (is_after_syscall_that_rets(tdcontext, mcontext->r15)) {
             /* suspended inside kernel at syscall
              * all registers have app values for syscall */
             LOG(THREAD_GET, LOG_INTERP|LOG_SYNCH, 2, 
@@ -3273,15 +3288,15 @@ recreate_app_state_internal(dcontext_t *tdcontext, priv_mcontext_t *mcontext,
                  * sygate hack are in effect so need to check top of stack to see
                  * if we are returning to dr or do/share syscall (generated
                  * routines) */
-                if (!in_generated_routine(tdcontext, *(app_pc *)mcontext->xsp)) {
+                if (!in_generated_routine(tdcontext, *(app_pc *)mcontext->r13)) {
                     /* this must be a dynamo system call! */
                     LOG(THREAD_GET, LOG_INTERP|LOG_SYNCH, 2, 
                         "recreate_app at dynamo system call\n");
                     return RECREATE_FAILURE;
                 }
-                ASSERT(*(app_pc *)mcontext->xsp == 
+                ASSERT(*(app_pc *)mcontext->r13 == 
                        after_do_syscall_code(tdcontext) ||
-                       *(app_pc *)mcontext->xsp == 
+                       *(app_pc *)mcontext->r13 == 
                        after_shared_syscall_code(tdcontext));
                 if (!just_pc) {
                     /* This is an int system call and since for sygate
@@ -3291,21 +3306,21 @@ recreate_app_state_internal(dcontext_t *tdcontext, priv_mcontext_t *mcontext,
                 }
             }
 #endif
-            mcontext->pc = POST_SYSCALL_PC(tdcontext);
+            mcontext->r15 = POST_SYSCALL_PC(tdcontext);
             return res;
-    } else if (mcontext->pc == get_reset_exit_stub(tdcontext)) {
+    } else if (mcontext->r15 == get_reset_exit_stub(tdcontext)) {
         LOG(THREAD_GET, LOG_INTERP|LOG_SYNCH, 2, 
             "recreate_app at reset exit stub => using next_tag "PFX"\n",
             tdcontext->next_tag);
         /* context is completely native except the pc */
-        mcontext->pc = tdcontext->next_tag;
+        mcontext->r15 = tdcontext->next_tag;
         return res;
-    } else if (in_generated_routine(tdcontext, mcontext->pc)) {
+    } else if (in_generated_routine(tdcontext, mcontext->r15)) {
         LOG(THREAD_GET, LOG_INTERP|LOG_SYNCH, 2, 
             "recreate_app state at untranslatable address in "
             "generated routines for thread "IDFMT"\n", tdcontext->owning_thread);
         return RECREATE_FAILURE;
-    } else if (in_fcache(mcontext->pc)) {
+    } else if (in_fcache(mcontext->r15)) {
         /* FIXME: what if pc is in separate direct stub??? 
          * do we have to read the &l from the stub to find linkstub_t and thus
          * fragment_t owner?
@@ -3337,7 +3352,7 @@ recreate_app_state_internal(dcontext_t *tdcontext, priv_mcontext_t *mcontext,
          * asking to recreate the ilist
          */
         if (f == NULL)
-            f = fragment_pclookup_with_linkstubs(tdcontext, mcontext->pc, &alloc);
+            f = fragment_pclookup_with_linkstubs(tdcontext, mcontext->r15, &alloc);
 
         /* If the passed-in fragment is fake, we need to get the linkstubs */
         if (f != NULL && TEST(FRAG_FAKE, f->flags)) {
@@ -3348,7 +3363,7 @@ recreate_app_state_internal(dcontext_t *tdcontext, priv_mcontext_t *mcontext,
 
         /* Whether a bb or trace, this routine will recreate the entire ilist. */
         if (f == NULL) {
-            ilist = recreate_fragment_ilist(tdcontext, mcontext->pc, &f, &alloc,
+            ilist = recreate_fragment_ilist(tdcontext, mcontext->r15, &f, &alloc,
                                             true/*mangle*/ _IF_CLIENT(true/*client*/));
         } else if (FRAGMENT_TRANSLATION_INFO(f) == NULL) {
             if (TEST(FRAG_SELFMOD_SANDBOXED, f->flags)) {
@@ -3393,7 +3408,7 @@ recreate_app_state_internal(dcontext_t *tdcontext, priv_mcontext_t *mcontext,
                  * that only does one stub check up front, and then find the
                  * exact stub if pc is beyond the end of the body.
                  */
-                if (mcontext->pc < EXIT_STUB_PC(tdcontext, f, l))
+                if (mcontext->r15 < EXIT_STUB_PC(tdcontext, f, l))
                     break;
                 cti_pc = EXIT_CTI_PC(f, l);
             }
@@ -3406,14 +3421,14 @@ recreate_app_state_internal(dcontext_t *tdcontext, priv_mcontext_t *mcontext,
                 /* FIXME : translate from exit stub */
                 LOG(THREAD_GET, LOG_INTERP|LOG_SYNCH, 2, 
                     "recreate_app_helper -- can't full recreate state, pc "PFX" "
-                    "is in exit stub\n", mcontext->pc);
+                    "is in exit stub\n", mcontext->r15);
                 res = RECREATE_SUCCESS_PC; /* failed on full state, but pc good */
                 goto recreate_app_state_done;
             }
             LOG(THREAD_GET, LOG_INTERP|LOG_SYNCH, 2,
                 "\ttarget "PFX" is inside an exit stub, looking for its cti "
-                " "PFX"\n", mcontext->pc, cti_pc);
-            mcontext->pc = cti_pc;
+                " "PFX"\n", mcontext->r15, cti_pc);
+            mcontext->r15 = cti_pc;
         }
        
         /* Recreate in same mode as original fragment */
@@ -3524,7 +3539,7 @@ recreate_app_pc(dcontext_t *tdcontext, cache_pc pc, fragment_t *f)
         "recreate_app_pc -- translating from pc="PFX"\n", pc);
 
     memset(&mc, 0, sizeof(mc)); /* ensures esp is NULL */
-    mc.pc = pc;
+    mc.r15 = pc;
 
     res = recreate_app_state_internal(tdcontext, &mc, true, f, false);
     if (res != RECREATE_SUCCESS_PC) {
@@ -3534,7 +3549,7 @@ recreate_app_pc(dcontext_t *tdcontext, cache_pc pc, fragment_t *f)
          * pc is in a fragment that is pending deletion FIXME, most callers
          * aren't able to recover! */
         ASSERT_CURIOSITY(res && "Unable to translate pc");
-        mc.pc = NULL;
+        mc.r15 = NULL;
     }
     
     LOG(THREAD_GET, LOG_INTERP, 2,
@@ -3544,7 +3559,7 @@ recreate_app_pc(dcontext_t *tdcontext, cache_pc pc, fragment_t *f)
     if (swap_peb)
         swap_peb_pointer(tdcontext, false/*to app*/);
 #endif
-    return mc.pc;
+    return mc.r15;
 }
 
 /* Translates the code cache state in mcontext into what it would look like
@@ -4166,6 +4181,8 @@ hook_vsyscall(dcontext_t *dcontext)
         "Hooking vsyscall page @ "PFX"\n", vsyscall_sysenter_return_pc);
 
     /* The 5 bytes we'll clobber: */
+#ifdef NO
+// TODO SJF INSTR
     instr_reset(dcontext, &instr);
     pc = decode(dcontext, pc, &instr);
     CHECK(instr_get_opcode(&instr) == OP_pop);
@@ -4178,6 +4195,7 @@ hook_vsyscall(dcontext_t *dcontext)
     instr_reset(dcontext, &instr);
     pc = decode(dcontext, pc, &instr);
     CHECK(instr_get_opcode(&instr) == OP_ret);
+#endif
     /* Sometimes the next byte is a nop, sometimes it's non-code */
     ASSERT(*pc == RAW_OPCODE_nop || *pc == 0);
 
@@ -4247,6 +4265,8 @@ void
 check_syscall_method(dcontext_t *dcontext, instr_t *instr)
 {
     int new_method = SYSCALL_METHOD_UNINITIALIZED;
+#ifdef NO
+// TODO SJF INSTR
     if (instr_get_opcode(instr) == OP_int)
         new_method = SYSCALL_METHOD_INT;
     else if (instr_get_opcode(instr) == OP_sysenter)
@@ -4258,6 +4278,7 @@ check_syscall_method(dcontext_t *dcontext, instr_t *instr)
         new_method = SYSCALL_METHOD_WOW64;
 #endif
     else
+#endif //NO
         ASSERT_NOT_REACHED();
 
     if (new_method == SYSCALL_METHOD_SYSENTER ||
@@ -4500,17 +4521,20 @@ dr_mcontext_to_priv_mcontext(priv_mcontext_t *dst, dr_mcontext_t *src)
     if (src->size != sizeof(dr_mcontext_t))
         return false;
     if (TESTALL(DR_MC_ALL, src->flags))
-        *dst = *(priv_mcontext_t*)(&src->xdi);
+        *dst = *(priv_mcontext_t*)(&src->r2);
     else {
         if (TEST(DR_MC_INTEGER, src->flags)) {
-            memcpy(&dst->xdi, &src->xdi, offsetof(priv_mcontext_t, xsp));
-            memcpy(&dst->xbx, &src->xbx, offsetof(priv_mcontext_t, xflags) -
-                   offsetof(priv_mcontext_t, xbx));
+            memcpy(&dst->r2, &src->r2, offsetof(priv_mcontext_t, r13));
+#ifdef NO
+// TODO SJF 
+            memcpy(&dst->r3, &src->r3, offsetof(priv_mcontext_t, xflags) -
+                   offsetof(priv_mcontext_t, r3));
+#endif
         }
         if (TEST(DR_MC_CONTROL, src->flags)) {
-            dst->xsp = src->xsp;
-            dst->xflags = src->xflags;
-            dst->xip = src->xip;
+            dst->r13 = src->r13;
+            //dst->xflags = src->xflags;
+            dst->cpsr = src->cpsr;
         }
         if (TEST(DR_MC_MULTIMEDIA, src->flags)) {
             memcpy(&dst->ymm, &src->ymm, sizeof(dst->ymm));
@@ -4529,17 +4553,20 @@ priv_mcontext_to_dr_mcontext(dr_mcontext_t *dst, priv_mcontext_t *src)
     if (dst->size != sizeof(dr_mcontext_t))
         return false;
     if (TESTALL(DR_MC_ALL, dst->flags))
-        *(priv_mcontext_t*)(&dst->xdi) = *src;
+        *(priv_mcontext_t*)(&dst->r2) = *src;
     else {
         if (TEST(DR_MC_INTEGER, dst->flags)) {
-            memcpy(&dst->xdi, &src->xdi, offsetof(priv_mcontext_t, xsp));
-            memcpy(&dst->xbx, &src->xbx, offsetof(priv_mcontext_t, xflags) -
-                   offsetof(priv_mcontext_t, xbx));
+            memcpy(&dst->r2, &src->r2, offsetof(priv_mcontext_t, r13));
+#ifdef NO
+//TODO SJF INSTR
+            memcpy(&dst->r3, &src->r3, offsetof(priv_mcontext_t, xflags) -
+                   offsetof(priv_mcontext_t, r3));
+#endif
         }
         if (TEST(DR_MC_CONTROL, dst->flags)) {
-            dst->xsp = src->xsp;
-            dst->xflags = src->xflags;
-            dst->xip = src->xip;
+            dst->r13 = src->r13;
+            //dst->xflags = src->xflags;
+            dst->cpsr = src->cpsr;
         }
         if (TEST(DR_MC_MULTIMEDIA, dst->flags)) {
             memcpy(&dst->ymm, &src->ymm, sizeof(dst->ymm));
@@ -4556,7 +4583,7 @@ dr_mcontext_as_priv_mcontext(dr_mcontext_t *mc)
      */
     CLIENT_ASSERT(TESTALL(DR_MC_CONTROL|DR_MC_INTEGER, mc->flags),
                   "dr_mcontext_t.flags must include DR_MC_CONTROL and DR_MC_INTEGER");
-    return (priv_mcontext_t*)(&mc->xdi);
+    return (priv_mcontext_t*)(&mc->r2);
 }
 
 void
@@ -4572,28 +4599,24 @@ dump_mcontext(priv_mcontext_t *context, file_t f, bool dump_xml)
 {
     print_file(f, dump_xml ? 
                "\t<priv_mcontext_t value=\"@"PFX"\""
-               "\n\t\txax=\""PFX"\"\n\t\txbx=\""PFX"\""
-               "\n\t\txcx=\""PFX"\"\n\t\txdx=\""PFX"\""
-               "\n\t\txsi=\""PFX"\"\n\t\txdi=\""PFX"\""
-               "\n\t\txbp=\""PFX"\"\n\t\txsp=\""PFX"\""
-#ifdef X64
+               "\n\t\tr0=\""PFX"\"\n\t\tr3=\""PFX"\""
+               "\n\t\tr1=\""PFX"\"\n\t\tr2=\""PFX"\""
+               "\n\t\tr6=\""PFX"\"\n\t\tr7=\""PFX"\""
+               "\n\t\tr5=\""PFX"\"\n\t\tr13=\""PFX"\""
                "\n\t\tr8=\""PFX"\"\n\t\tr9=\""PFX"\""
                "\n\t\tr10=\""PFX"\"\n\t\tr11=\""PFX"\""
                "\n\t\tr12=\""PFX"\"\n\t\tr13=\""PFX"\""
                "\n\t\tr14=\""PFX"\"\n\t\tr15=\""PFX"\""
-#endif
                : 
                "priv_mcontext_t @"PFX"\n"
-               "\txax = "PFX"\n\txbx = "PFX"\n\txcx = "PFX"\n\txdx = "PFX"\n"
-               "\txsi = "PFX"\n\txdi = "PFX"\n\txbp = "PFX"\n\txsp = "PFX"\n"
-#ifdef X64
+               "\tr0 = "PFX"\n\tr3 = "PFX"\n\tr1 = "PFX"\n\tr2 = "PFX"\n"
+               "\tr6 = "PFX"\n\tr7 = "PFX"\n\tr5 = "PFX"\n\tr13 = "PFX"\n"
                "\tr8  = "PFX"\n\tr9  = "PFX"\n\tr10 = "PFX"\n\tr11 = "PFX"\n"
                "\tr12 = "PFX"\n\tr13 = "PFX"\n\tr14 = "PFX"\n\tr15 = "PFX"\n"
-#endif
                ,
                context, 
-               context->xax, context->xbx, context->xcx, context->xdx,
-               context->xsi, context->xdi, context->xbp, context->xsp 
+               context->r0, context->r3, context->r1, context->r2,
+               context->r6, context->r7, context->r5, context->r13 
 #ifdef X64
                , context->r8,  context->r9,  context->r10,  context->r11,
                context->r12, context->r13, context->r14,  context->r15
@@ -4619,10 +4642,10 @@ dump_mcontext(priv_mcontext_t *context, file_t f, bool dump_xml)
         }
     }
     print_file(f, dump_xml ? 
-               "\n\t\teflags=\""PFX"\"\n\t\tpc=\""PFX"\" />\n"
+               "\n\t\tcpsr=\""PFX"\"\n\t\tpc=\""PFX"\" />\n"
                :
-               "\teflags = "PFX"\n\tpc     = "PFX"\n",
-               context->xflags, context->pc);
+               "\tcpsr = "PFX"\n\tpc     = "PFX"\n",
+               context->cpsr, context->r15);
 }
 
 
@@ -4632,7 +4655,10 @@ dump_mcontext(priv_mcontext_t *context, file_t f, bool dump_xml)
 __inline__ uint64 get_time()
 {
     uint64 x;
+#ifdef NO
+// SJF TODO ASM
     __asm__ volatile (".byte 0x0f, 0x31" : "=A" (x));
+#endif
     return x;
 }
 #else /* WINDOWS */

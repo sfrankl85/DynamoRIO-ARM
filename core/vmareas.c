@@ -3781,7 +3781,11 @@ static bool
 is_on_stack(dcontext_t *dcontext, app_pc pc, vm_area_t *area)
 {
     byte *stack_base, *stack_top; /* "official" stack */
-    byte *esp = (byte *) get_mcontext(dcontext)->xsp;
+    #ifdef ARM
+      byte *esp = (byte *) get_mcontext(dcontext)->r13;
+    #else
+      byte *esp = (byte *) get_mcontext(dcontext)->xsp;
+    #endif
     byte *esp_base;
     size_t size;
     bool ok, query_esp = true;

@@ -90,11 +90,12 @@ bool is_thread_terminated(dcontext_t *dcontext);
 void os_wait_thread_terminated(dcontext_t *dcontext);
 void os_tls_pre_init(int gdt_index);
 /* XXX: reg_id_t is not defined here, use unsigned char instead */
-ushort os_get_app_seg_base_offset(unsigned char seg);
-ushort os_get_app_seg_offset(unsigned char seg);
-void *os_get_dr_seg_base(dcontext_t *dcontext, unsigned char seg);
-void *os_get_app_seg_base(dcontext_t *dcontext, unsigned char seg);
-bool os_file_has_elf_so_header(const char *filename);
+/* TODO SJF Compiler complains as defs dont match so Im commented them out */
+//ushort os_get_app_seg_base_offset(unsigned char seg);
+//ushort os_get_app_seg_offset(unsigned char seg);
+//void *os_get_dr_seg_base(dcontext_t *dcontext, unsigned char seg);
+//void *os_get_app_seg_base(dcontext_t *dcontext, unsigned char seg);
+//bool os_file_has_elf_so_header(const char *filename);
 
 /* We do NOT want our libc routines wrapped by pthreads, so we use
  * our own syscall wrappers.
@@ -132,6 +133,8 @@ int our_unsetenv(const char *name);
  * section goes -- for cl, order linked seems to do it, but for linux 
  * will need a linker script (see linux/os.c for the nspdata problem)
  */
+#ifdef NO
+// TODO SJF ASM
 #define DECLARE_DATA_SECTION(name, wx) \
      asm(".section "name", \"a"wx"\", @progbits"); \
      asm(".align 0x1000");
@@ -146,6 +149,7 @@ int our_unsetenv(const char *name);
      asm(".section .data"); \
      asm(".align 0x1000"); \
      asm(".text");
+#endif
 
 /* the VAR_IN_SECTION macro change where each var goes */
 #define START_DATA_SECTION(name, wx) /* nothing */

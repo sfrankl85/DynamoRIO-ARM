@@ -618,13 +618,19 @@ proc_save_fpstate(byte *buf)
 #ifdef WINDOWS
         dr_fxsave(buf);
 #else
+  #ifdef NO
+  // TODO SJF 
         asm volatile("fxsave %0 ; fnclex ; finit"  : "=m" ((*buf)));
+  #endif
 #endif
     } else {
 #ifdef WINDOWS
         dr_fnsave(buf);
 #else
+  #ifdef NO
+  // TODO SJF 
         asm volatile("fnsave %0 ; fwait" : "=m" ((*buf)));
+  #endif
 #endif
     }
     return proc_fpstate_save_size();
@@ -646,13 +652,19 @@ proc_restore_fpstate(byte *buf)
 #ifdef WINDOWS
         dr_fxrstor(buf);
 #else
+  #ifdef NO
+  // TODO SJF
         asm volatile("fxrstor %0" : : "m" ((*buf)));
+  #endif
 #endif
     } else {
 #ifdef WINDOWS
         dr_frstor(buf);
 #else
+  #ifdef NO
+  // TODO SJF
         asm volatile("frstor %0" : : "m" ((*buf)));
+  #endif
 #endif
     }
 }

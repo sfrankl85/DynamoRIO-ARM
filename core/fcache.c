@@ -52,7 +52,11 @@
 #include <limits.h> /* for UCHAR_MAX */
 #include "perscache.h"
 #include "synch.h"
-#include "x86/instrument.h"
+#ifdef ARM
+  #include "arm/instrument.h"
+#else
+  #include "x86/instrument.h"
+#endif
 
 /* A code cache is made up of multiple separate mmapped units
  * We grow a unit by resizing, shifting, and relinking, up to a maximum size,
@@ -909,7 +913,10 @@ remove_unit_from_cache(fcache_unit_t *u)
 {
     ASSERT(u->cache != NULL);
     u->cache->size -= u->size;
+#ifdef NO
+// TODO SJF ASM
     RSTATS_DEC(fcache_num_live);
+#endif
     STATS_FCACHE_SUB(u->cache, capacity, u->size);
 #ifdef WINDOWS_PC_SAMPLE
     /* Units moved to units_to_{flush,free} can't have their profile stopped
@@ -943,7 +950,10 @@ fcache_really_free_unit(fcache_unit_t *u, bool on_dead_list, bool dealloc_unit)
     if (on_dead_list) {
         ASSERT(u->cache == NULL);
         allunits->num_dead--;
+#ifdef NO
+// TODO SJF ASM
         RSTATS_DEC(fcache_num_free);
+#endif
         STATS_SUB(fcache_free_capacity, u->size);
     }
     STATS_SUB(fcache_combined_capacity, u->size);
@@ -1290,7 +1300,10 @@ fcache_create_unit(dcontext_t *dcontext, fcache_t *cache, cache_pc pc, size_t si
                         "\tFound unit "PFX" of size %d (need %d) on dead list\n",
                         u->start_pc, u->size/1024, size/1024);
                     allunits->num_dead--;
+#ifdef NO
+//TODO SJF ASM
                     RSTATS_DEC(fcache_num_free);
+#endif
                     STATS_SUB(fcache_free_capacity, u->size);
 #ifdef WINDOWS_PC_SAMPLE
                     if (u->profile) {
@@ -1359,7 +1372,10 @@ fcache_create_unit(dcontext_t *dcontext, fcache_t *cache, cache_pc pc, size_t si
     DODEBUG({ u->pending_flush = false; });
     u->flushtime = 0;
 
+#ifdef NO
+// TODO SJF ASM
     RSTATS_ADD_PEAK(fcache_num_live, 1);
+#endif
     STATS_FCACHE_ADD(u->cache, capacity, u->size);
     STATS_FCACHE_MAX(u->cache, capacity_peak, capacity);
 
@@ -1920,7 +1936,10 @@ fcache_increase_size(dcontext_t *dcontext, fcache_t *cache, fcache_unit_t *unit,
                 else
                     prev_u->next_global = u->next_global;
                 allunits->num_dead--;
+#ifdef NO
+// TODO SJF ASM
                 RSTATS_DEC(fcache_num_free);
+#endif
                 STATS_SUB(fcache_free_capacity, u->size);
                 LOG(THREAD, LOG_CACHE, 1, "\tFound unit of size %d on dead list\n",
                     u->size/1024);

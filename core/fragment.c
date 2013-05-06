@@ -2447,7 +2447,10 @@ fragment_create(dcontext_t *dcontext, app_pc tag, int body_size,
     DOSTATS({ f->id = (int) next_id; });
     DO_GLOBAL_STATS({
         if (!TEST(FRAG_IS_TRACE, f->flags)) {
+#ifdef NO
+// TODO SJF ASM
             RSTATS_INC(num_bbs);
+#endif
             IF_X64(if (FRAG_IS_32(f->flags)) STATS_INC(num_32bit_bbs);)
         }
     });
@@ -6115,10 +6118,13 @@ flush_fragments_synchall_start(dcontext_t *ignored, app_pc base, size_t size,
     app_pc exec_start = NULL, exec_end = NULL;
     bool all_synched = true;
     int i;
-    const thread_synch_state_t desired_state =
+    const thread_synch_state_t desired_state = 
         THREAD_SYNCH_SUSPENDED_VALID_MCONTEXT_OR_NO_XFER;
     DEBUG_DECLARE(bool ok;)
+#ifdef NO
+// TODO SJF ASM
     KSTART(synchall_flush);
+#endif
     LOG(GLOBAL, LOG_FRAGMENT, 2, 
         "\nflush_fragments_synchall_start: thread %d suspending all threads\n",
         get_thread_id());

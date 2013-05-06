@@ -233,7 +233,11 @@ pcprofile_alarm(dcontext_t *dcontext, priv_mcontext_t *mcontext)
     pc_profile_entry_t *entry;
     fragment_t *fragment;
     fragment_t wrapper;
+#ifdef ARM
+    void *pc = (void *) mcontext->r15;
+#else
     void *pc = (void *) mcontext->pc;
+#endif
 
     entry = pcprofile_lookup(info, pc);
 

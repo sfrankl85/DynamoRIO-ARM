@@ -470,8 +470,13 @@ coarse_units_freeze_translate(thread_record_t *tr,
      * in fine-grained caches as an optimization.
      * If we did one unit at a time, could compare to just that unit.
      */
-    if (!res || !in_fcache((cache_pc)mc.pc) ||
-        get_fcache_coarse_info((cache_pc)mc.pc) != NULL) {
+    #ifdef ARM 
+      if (!res || !in_fcache((cache_pc)mc.r15) ||
+          get_fcache_coarse_info((cache_pc)mc.r15) != NULL) {
+    #else
+      if (!res || !in_fcache((cache_pc)mc.pc) ||
+          get_fcache_coarse_info((cache_pc)mc.pc) != NULL) {
+    #endif
         /* FIXME optimization: pass cxt for translation */
         translate_from_synchall_to_dispatch(tr, desired_state);
     } else {

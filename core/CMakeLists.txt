@@ -124,7 +124,7 @@ if (ARM)
     arm/proc.c
     arm/mangle.c
     arm/steal_reg.c
-    arm/x86_code.c
+    #arm/x86_code.c
     arm/disassemble.c
     ${arm_core_asm_src}
     arm/decode_fast.c
