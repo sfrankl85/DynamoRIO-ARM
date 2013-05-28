@@ -524,9 +524,15 @@ drwrap_get_mcontext_internal(drwrap_context_t *wrapcxt, dr_mcontext_flags_t flag
                 wrapcxt->mc->xflags = __readeflags();
 #else
                 ptr_uint_t val;
+  #ifdef ARM
+                __asm__ __volatile__("pushf"IF_X64_ELSE("q","l")"; pop"
+                                     IF_X64_ELSE("q","l")" %0" : "=m"(val));
+                wrapcxt->mc->cpsr = val;
+  #else
                 __asm__ __volatile__("pushf"IF_X64_ELSE("q","l")"; pop"
                                      IF_X64_ELSE("q","l")" %0" : "=m"(val));
                 wrapcxt->mc->xflags = val;
+  #endif
 #endif
                 ASSERT(!TEST(EFLAGS_DF, wrapcxt->mc->xflags), "DF not cleared");
             }
@@ -574,8 +580,20 @@ drwrap_arg_addr(drwrap_context_t *wrapcxt, int arg)
     /* ensure we have the info we need. note that we always have xsp. */
     drwrap_get_mcontext_internal(wrapcxt, DR_MC_INTEGER);
 # ifdef LINUX
+
+  #ifdef ARM
     switch (arg) {
-    case 0: return &wrapcxt->mc->rdi;
+    case 0: return &wrapcxt->mc->r7;
+    case 1: return &wrapcxt->mc->r6;
+    case 2: return &wrapcxt->mc->r2;
+    case 3: return &wrapcxt->mc->r1;
+    case 4: return &wrapcxt->mc->r8;
+    case 5: return &wrapcxt->mc->r9;
+    default: return (reg_t *)(wrapcxt->mc->xsp + (arg - 6 + 1/*retaddr*/)*sizeof(reg_t));
+    }
+  #else
+    switch (arg) {
+    case 0: return &wrapcxt->mc->ri;
     case 1: return &wrapcxt->mc->rsi;
     case 2: return &wrapcxt->mc->rdx;
     case 3: return &wrapcxt->mc->rcx;
@@ -583,6 +601,7 @@ drwrap_arg_addr(drwrap_context_t *wrapcxt, int arg)
     case 5: return &wrapcxt->mc->r9;
     default: return (reg_t *)(wrapcxt->mc->xsp + (arg - 6 + 1/*retaddr*/)*sizeof(reg_t));
     }
+  #endif
 # else
     switch (arg) {
     case 0: return &wrapcxt->mc->rcx;
@@ -649,7 +668,11 @@ drwrap_get_retval(void *wrapcxt_opaque)
         return NULL;
     /* ensure we have the info we need */
     drwrap_get_mcontext_internal(wrapcxt_opaque, DR_MC_INTEGER);
+#ifdef ARM
+    return (void *) wrapcxt->mc->r0;
+#else
     return (void *) wrapcxt->mc->xax;
+#endif
 }
 
 DR_EXPORT
@@ -661,7 +684,11 @@ drwrap_set_retval(void *wrapcxt_opaque, void *val)
         return false;
     /* ensure we have the info we need */
     drwrap_get_mcontext_internal(wrapcxt_opaque, DR_MC_INTEGER);
+#ifdef ARM
+    wrapcxt->mc->r0 = (reg_t) val;
+#else
     wrapcxt->mc->xax = (reg_t) val;
+#endif
     wrapcxt->mc_modified = true;
     return true;
 }
@@ -679,8 +706,13 @@ drwrap_skip_call(void *wrapcxt_opaque, void *retval, size_t stdcall_args_size)
     drwrap_get_mcontext_internal(wrapcxt_opaque, DR_MC_INTEGER|DR_MC_CONTROL);
     if (!drwrap_set_retval(wrapcxt_opaque, retval))
         return false;
+#ifdef ARM
+    wrapcxt->mc->r4 += stdcall_args_size + sizeof(void*)/*retaddr*/;
+    wrapcxt->mc->r14 = wrapcxt->retaddr;
+#else
     wrapcxt->mc->xsp += stdcall_args_size + sizeof(void*)/*retaddr*/;
     wrapcxt->mc->xip = wrapcxt->retaddr;
+#endif
     /* we can't redirect here b/c we need to release locks */
     pt->skip[pt->wrap_level] = true;
     return true;

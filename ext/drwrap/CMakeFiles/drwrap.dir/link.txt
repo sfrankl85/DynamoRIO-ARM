@@ -1,0 +1,4 @@
+/usr/bin/gcc  -fPIC      -std=gnu99 -fno-strict-aliasing -fno-stack-protector -O3 -g3 -Wall -Wwrite-strings -Wno-unused-but-set-variable    -DX86_32 -DLINUX -fno-stack-protector  -fPIC -shared -lgcc     -shared -Wl,-soname,libdrwrap.so -o ../lib32/release/libdrwrap.so CMakeFiles/drwrap.dir/drwrap.c.o CMakeFiles/drwrap.dir/drwrap_asm.asm.o ../../lib32/release/libdynamorio.so.4.0 ../lib32/release/libdrmgr.so ../lib32/release/libdrcontainers.a ../../lib32/release/libdynamorio.so.4.0 
+/usr/bin/objcopy --only-keep-debug ../lib32/release/libdrwrap.so ../lib32/release/libdrwrap.so.debug
+/usr/bin/objcopy --add-gnu-debuglink=../lib32/release/libdrwrap.so.debug ../lib32/release/libdrwrap.so
+/usr/bin/strip -g -x ../lib32/release/libdrwrap.so

@@ -1,0 +1,2 @@
+/usr/bin/ar cr ../lib32/release/libdrcontainers.a  CMakeFiles/drcontainers.dir/hashtable.c.o CMakeFiles/drcontainers.dir/drvector.c.o CMakeFiles/drcontainers.dir/drtable.c.o
+/usr/bin/ranlib ../lib32/release/libdrcontainers.a

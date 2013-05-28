@@ -1,0 +1,4 @@
+/usr/bin/gcc  -fPIC      -std=gnu99 -fno-strict-aliasing -fno-stack-protector -O3 -g3 -Wall -Wwrite-strings -Wno-unused-but-set-variable    -DX86_32 -DLINUX -fno-stack-protector  -fPIC -shared -lgcc     -shared -Wl,-soname,libdrmgr.so -o ../lib32/release/libdrmgr.so CMakeFiles/drmgr.dir/drmgr.c.o ../../lib32/release/libdynamorio.so.4.0 
+/usr/bin/objcopy --only-keep-debug ../lib32/release/libdrmgr.so ../lib32/release/libdrmgr.so.debug
+/usr/bin/objcopy --add-gnu-debuglink=../lib32/release/libdrmgr.so.debug ../lib32/release/libdrmgr.so
+/usr/bin/strip -g -x ../lib32/release/libdrmgr.so

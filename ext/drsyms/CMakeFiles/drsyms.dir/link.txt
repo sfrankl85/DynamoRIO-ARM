@@ -1,0 +1,4 @@
+/usr/bin/c++  -fPIC       -O3 -g3 -Wall -Wwrite-strings -Wno-unused-but-set-variable    -DX86_32 -DLINUX -fno-stack-protector  -fPIC -shared -lgcc     -shared -Wl,-soname,libdrsyms.so -o ../lib32/release/libdrsyms.so CMakeFiles/drsyms.dir/drsyms_linux.c.o CMakeFiles/drsyms.dir/drsyms_unix.c.o CMakeFiles/drsyms.dir/drsyms_elf.c.o CMakeFiles/drsyms.dir/drsyms_dwarf.c.o CMakeFiles/drsyms.dir/demangle.cc.o CMakeFiles/drsyms.dir/drsyms_common.c.o ../../lib32/release/libdynamorio.so.4.0 libelftc/lib32/libdwarf.a libelftc/lib32/libelftc.a libelftc/lib32/libelf.a ../lib32/release/libdrcontainers.a ../../lib32/release/libdynamorio.so.4.0 
+/usr/bin/objcopy --only-keep-debug ../lib32/release/libdrsyms.so ../lib32/release/libdrsyms.so.debug
+/usr/bin/objcopy --add-gnu-debuglink=../lib32/release/libdrsyms.so.debug ../lib32/release/libdrsyms.so
+/usr/bin/strip -g -x ../lib32/release/libdrsyms.so
