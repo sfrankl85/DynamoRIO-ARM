@@ -616,9 +616,10 @@ if (UNIX)
 
   # Check ARM specific flags
   if (ARM)
-    set(ASM_FLAGS "${ASM_FLAGS} --noexecstack -march=armv7-a -mcpu=cortex-a15")
-    set(BASE_CFLAGS "${BASE_CFLAGS}")
-    set(LD_FLAGS "${LD_FLAGS}")
+    set(ASM_FLAGS "${ASM_FLAGS} --noexecstack -marm -march=armv7-a -mcpu=cortex-a15")
+    set(BASE_CFLAGS "-marm ${BASE_CFLAGS}")
+    #set(LD_FLAGS "-elf32-littlearm" )
+    set(LD_FLAGS "" )
   else (ARM)
     set(ASM_FLAGS "-mmnemonic=intel -msyntax=intel -mnaked-reg --noexecstack")
           # now that the user must set non-default -mNN we don't nec. need these:
@@ -637,6 +638,7 @@ if (UNIX)
   # there's no cmake warning control so we hardcode it
   if(ARM)
     set(WARN "-Wall -Wwrite-strings")
+    set(DBG "-g3")
   else(ARM)
     #set(WARN "-Wall -Werror")
     #set(DBG "-g3")
@@ -1106,7 +1108,9 @@ option(BUILD_TOOLS "build tools" ON)
 if (WIN32)
   option(BUILD_DRGUI "build DRgui statistics viewer (requires MFC)" ON)
 endif (WIN32)
-option(BUILD_EXT "build Extension libraries" ON)
+
+# TODO SJF Turned off extensions
+option(BUILD_EXT "build Extension libraries" OFF)
 option(BUILD_DOCS "build documentation" ON)
 
 if (VMSAFE)
@@ -1119,7 +1123,7 @@ endif (VMSAFE)
 
 # should we disallow selecting samples when core is not built?
 # right now the samples build will just fail
-option(BUILD_SAMPLES "build client samples" ON)
+option(BUILD_SAMPLES "build client samples" OFF)
 if (NOT CLIENT_INTERFACE)
   set(BUILD_SAMPLES OFF)
   set(BUILD_EXT OFF)

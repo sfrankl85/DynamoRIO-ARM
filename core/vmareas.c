@@ -7459,9 +7459,15 @@ check_thread_vm_area(dcontext_t *dcontext, app_pc pc, app_pc tag, void **vmlist,
                         "application tried to execute from %s "PFX" is_allocated_mem=%d prot=0x%x\n",
                         is_in_dr ? "dr" : "unreadable", pc, is_allocated_mem, prot);
                     DOLOG(1, LOG_VMAREAS, {
+                    #ifdef ARM
+                        dump_callstack((app_pc)get_mcontext(dcontext)->r6,
+                                       (app_pc)get_mcontext(dcontext)->r5, 
+                                       THREAD, DUMP_NOT_XML);
+                    #else
                         dump_callstack((app_pc)get_mcontext(dcontext)->xsi,
                                        (app_pc)get_mcontext(dcontext)->xbp, 
                                        THREAD, DUMP_NOT_XML);
+                    #endif
                     });
                     
                     /* FIXME: what if the app masks it with an exception 

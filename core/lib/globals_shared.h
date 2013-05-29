@@ -576,7 +576,9 @@ typedef struct _instr_t instr_t;
 # define IF_ARM(x) x
 # define IF_ARM_ELSE(x, y) x
 # define IF_NOT_ARM(x)
-#else
+#endif
+
+#ifndef ARM
 # define IF_ARM(x)
 # define IF_ARM_ELSE(x, y) y
 # define IF_NOT_ARM(x) x

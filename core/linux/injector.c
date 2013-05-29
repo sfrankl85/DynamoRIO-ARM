@@ -774,6 +774,8 @@ static void
 gen_syscall(void *dc, instrlist_t *ilist, int sysnum, uint num_opnds,
             opnd_t *args)
 {
+#ifdef NO
+// TODO SJF SYSCALL INSTR
     uint i;
     ASSERT(num_opnds <= MAX_SYSCALL_ARGS);
     APP(ilist, INSTR_CREATE_mov
@@ -793,6 +795,7 @@ gen_syscall(void *dc, instrlist_t *ilist, int sysnum, uint num_opnds,
 # else
     APP(ilist, INSTR_CREATE_int(dc, OPND_CREATE_INT8((char)0x80)));
 # endif
+# endif //NO
 }
 
 
@@ -855,6 +858,8 @@ continue_until_break(process_id_t pid)
 static ptr_int_t
 injectee_run_get_retval(dr_inject_info_t *info, void *dc, instrlist_t *ilist)
 {
+#ifdef NO
+//TODO SJF INSTR
     #ifdef ARM
     struct user_regs regs;
     #else
@@ -931,6 +936,7 @@ injectee_run_get_retval(dr_inject_info_t *info, void *dc, instrlist_t *ilist)
         return r;
 
     return ret;
+#endif //NO
 }
 
 /* Call sys_open in the child. */

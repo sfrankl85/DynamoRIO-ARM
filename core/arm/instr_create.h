@@ -268,7 +268,64 @@
 #define INSTR_CREATE_vmxon(dc, s) \
   instr_create_0dst_1src((dc), OP_vmxon, (s))
 
-#ifdef NO
+/* 1 destination, 2 sources: 1 explicit, 1 implicit */
+/** @name 1 destination, 2 sources: 1 explicit, 1 implicit */
+/* @{ */ /* doxygen start group; w/ DISTRIBUTE_GROUP_DOC=YES, one comment suffices. */
+/**
+ * This INSTR_CREATE_xxx macro creates an instr_t with opcode OP_xxx and the given
+ * explicit operands, automatically supplying any implicit operands.
+ * \param dc The void * dcontext used to allocate memory for the instr_t.
+ * \param d The opnd_t explicit destination operand for the instruction.
+ * \param s The opnd_t explicit source operand for the instruction.
+ */
+#define INSTR_CREATE_add(dc, d, s) \
+  instr_create_1dst_2src((dc), OP_add, (d), (s), (d))
+#define INSTR_CREATE_or(dc, d, s) \
+  instr_create_1dst_2src((dc), OP_or,  (d), (s), (d))
+#define INSTR_CREATE_adc(dc, d, s) \
+  instr_create_1dst_2src((dc), OP_adc, (d), (s), (d))
+#define INSTR_CREATE_and(dc, d, s) \
+  instr_create_1dst_2src((dc), OP_and, (d), (s), (d))
+#define INSTR_CREATE_sub(dc, d, s) \
+  instr_create_1dst_2src((dc), OP_sub, (d), (s), (d))
+#define INSTR_CREATE_xor(dc, d, s) \
+  instr_create_1dst_2src((dc), OP_xor, (d), (s), (d))
+
+/* @} */ /* end doxygen group */
+/**
+ * This INSTR_CREATE_xxx macro creates an instr_t with opcode OP_xxx and the given
+ * explicit operands, automatically supplying any implicit operands.
+ * \param dc The void * dcontext used to allocate memory for the instr_t.
+ * \param d The opnd_t explicit destination operand for the instruction.
+ * \param s The opnd_t explicit source operand for the instruction, which can be
+ * created with OPND_CREATE_MEM_lea() to get the appropriate operand size.
+ */
+/* TODO SJF Just added the ones I need for now here */
+#define INSTR_CREATE_mov(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_mov, (d), (s))
+#define INSTR_CREATE_lsl(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_lsl, (d), (s))
+#define INSTR_CREATE_lsr(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_lsr, (d), (s))
+
+/* no destination, 2 explicit sources */
+/** @name No destination, 2 explicit sources */
+/* @{ */ /* doxygen start group; w/ DISTRIBUTE_GROUP_DOC=YES, one comment suffices. */
+/**
+ * This INSTR_CREATE_xxx macro creates an instr_t with opcode OP_xxx and
+ * the given explicit operands, automatically supplying any implicit operands.
+ * \param dc The void * dcontext used to allocate memory for the instr_t.
+ * \param s1 The opnd_t first source operand for the instruction.
+ * \param s2 The opnd_t second source operand for the instruction.
+ */
+#define INSTR_CREATE_cmp(dc, s1, s2) \
+  instr_create_0dst_2src((dc), OP_cmp, (s1), (s2))
+#define INSTR_CREATE_test(dc, s1, s2) \
+  instr_create_0dst_2src((dc), OP_test, (s1), (s2))
+#define INSTR_CREATE_ptest(dc, s1, s2) \
+  instr_create_0dst_2src((dc), OP_ptest, (s1), (s2))
+
+#ifdef NO //NO 1
 /* TODO SJF */
 /**
  * This INSTR_CREATE_xxx macro creates an instr_t with opcode OP_xxx and
@@ -356,6 +413,8 @@
 #define INSTR_CREATE_int(dc, i) \
   instr_create_0dst_1src((dc), OP_int, (i))
 
+#endif //NO 1
+
 
 #ifdef IA32_ON_IA64
 /* DR_API EXPORT BEGIN */
@@ -364,6 +423,8 @@
 #define INSTR_CREATE_jmpe_abs(dc, t) \
   instr_create_0dst_1src((dc), OP_jmpe_abs, (t))
 #endif
+
+#ifdef NO //NO 2
 
 /* floating-point */
 /**
@@ -416,27 +477,8 @@
   instr_create_0dst_1src((dc), OP_skinit, opnd_create_reg(DR_REG_EAX))
 /* @} */ /* end doxygen group */
 
-#endif
 
-/* no destination, 2 explicit sources */
-/** @name No destination, 2 explicit sources */
-/* @{ */ /* doxygen start group; w/ DISTRIBUTE_GROUP_DOC=YES, one comment suffices. */
-/**
- * This INSTR_CREATE_xxx macro creates an instr_t with opcode OP_xxx and
- * the given explicit operands, automatically supplying any implicit operands.
- * \param dc The void * dcontext used to allocate memory for the instr_t.
- * \param s1 The opnd_t first source operand for the instruction.
- * \param s2 The opnd_t second source operand for the instruction.
- */
-#define INSTR_CREATE_cmp(dc, s1, s2) \
-  instr_create_0dst_2src((dc), OP_cmp, (s1), (s2))
-#define INSTR_CREATE_test(dc, s1, s2) \
-  instr_create_0dst_2src((dc), OP_test, (s1), (s2))
-#define INSTR_CREATE_ptest(dc, s1, s2) \
-  instr_create_0dst_2src((dc), OP_ptest, (s1), (s2))
 
-#ifdef NO
-/*TODO SJF */
 /**
  * This INSTR_CREATE_xxx macro creates an instr_t with opcode OP_xxx and
  * the given explicit operands, automatically supplying any implicit operands.
@@ -758,28 +800,9 @@
 #define INSTR_CREATE_arpl(dc, d, s) \
   instr_create_1dst_1src((dc), OP_arpl, (d), (s))
 
-/* TODO SJF */
-#endif
-
-/**
- * This INSTR_CREATE_xxx macro creates an instr_t with opcode OP_xxx and the given
- * explicit operands, automatically supplying any implicit operands.
- * \param dc The void * dcontext used to allocate memory for the instr_t.
- * \param d The opnd_t explicit destination operand for the instruction.
- * \param s The opnd_t explicit source operand for the instruction, which can be
- * created with OPND_CREATE_MEM_lea() to get the appropriate operand size.
- */
-/* TODO SJF Just added the ones I need for now here */
-#define INSTR_CREATE_mov(dc, d, s) \
-  instr_create_1dst_1src((dc), OP_mov, (d), (s))
-#define INSTR_CREATE_lsl(dc, d, s) \
-  instr_create_1dst_1src((dc), OP_lsl, (d), (s))
-#define INSTR_CREATE_lsr(dc, d, s) \
-  instr_create_1dst_1src((dc), OP_lsr, (d), (s))
 
 /* @} */ /* end doxygen group */
 
-#ifdef NO
 /** @name In with no explicit sources */
 /* @{ */ /* doxygen start group; w/ DISTRIBUTE_GROUP_DOC=YES, one comment suffices. */
 /**
@@ -1355,34 +1378,9 @@
 #define INSTR_CREATE_vextractf128(dc, d, s1, s2) \
   instr_create_1dst_2src((dc), OP_vextractf128, (d), (s1), (s2))
 /* @} */ /* end doxygen group */
-#endif
 
-/* 1 destination, 2 sources: 1 explicit, 1 implicit */
-/** @name 1 destination, 2 sources: 1 explicit, 1 implicit */
-/* @{ */ /* doxygen start group; w/ DISTRIBUTE_GROUP_DOC=YES, one comment suffices. */
-/**
- * This INSTR_CREATE_xxx macro creates an instr_t with opcode OP_xxx and the given
- * explicit operands, automatically supplying any implicit operands.
- * \param dc The void * dcontext used to allocate memory for the instr_t.
- * \param d The opnd_t explicit destination operand for the instruction.
- * \param s The opnd_t explicit source operand for the instruction.
- */
-#define INSTR_CREATE_add(dc, d, s) \
-  instr_create_1dst_2src((dc), OP_add, (d), (s), (d))
-#define INSTR_CREATE_or(dc, d, s) \
-  instr_create_1dst_2src((dc), OP_or,  (d), (s), (d))
-#define INSTR_CREATE_adc(dc, d, s) \
-  instr_create_1dst_2src((dc), OP_adc, (d), (s), (d))
-#define INSTR_CREATE_and(dc, d, s) \
-  instr_create_1dst_2src((dc), OP_and, (d), (s), (d))
-#define INSTR_CREATE_sub(dc, d, s) \
-  instr_create_1dst_2src((dc), OP_sub, (d), (s), (d))
-#define INSTR_CREATE_xor(dc, d, s) \
-  instr_create_1dst_2src((dc), OP_xor, (d), (s), (d))
-/* @} */ /* end doxygen group */
 
-#ifdef NO
-/* TODO SJF */
+
 /** @name 1 destination, 1 explicit register-or-immediate source */
 /* @{ */ /* doxygen start group; w/ DISTRIBUTE_GROUP_DOC=YES, one comment suffices. */
 /**
@@ -1436,7 +1434,7 @@
 #define INSTR_CREATE_imul(dc, d, s) \
   instr_create_1dst_2src((dc), OP_imul, (d), (s), (d))
 
-#endif
+#endif //NO 2
 
 /** @name 1 implicit destination, 1 explicit source */
 /* @{ */ /* doxygen start group; w/ DISTRIBUTE_GROUP_DOC=YES, one comment suffices. */
@@ -1464,7 +1462,7 @@
 /* @} */ /* end doxygen group */
 
 
-#ifdef NO
+#ifdef NO //NO 5
 /* TODO SJF */
 /** @name 1 destination, 1 explicit source that is cl, an immediate, or a constant */
 /* @{ */ /* doxygen start group; w/ DISTRIBUTE_GROUP_DOC=YES, one comment suffices. */
@@ -2575,7 +2573,7 @@
  */
 #define INSTR_CREATE_popa(dc)   instr_create_popa((dc))
 
-#endif //NO
+#endif //NO 5
 
 /****************************************************************************/
 
@@ -2641,7 +2639,6 @@ INSTR_CREATE_nop2byte_reg(dcontext_t *dcontext, reg_id_t reg)
 /* lea's target is 32-bit but address register is 64: so we eliminate the
  * displacement and put in rex.w 
  */
-#ifdef NO
 static inline instr_t *
 INSTR_CREATE_nop3byte_reg(dcontext_t *dcontext, reg_id_t reg)
 {
@@ -2651,15 +2648,20 @@ INSTR_CREATE_nop3byte_reg(dcontext_t *dcontext, reg_id_t reg)
                               OPND_CREATE_MEM_lea(reg, DR_REG_NULL, 0, 0));
     } else {
 #endif
+#ifdef NO
+//TODO SJF INSTR
         return INSTR_CREATE_lea(dcontext, opnd_create_reg(reg),
                                 opnd_create_base_disp_ex(reg, DR_REG_NULL, 0, 0, OPSZ_lea,
                                                          true/*encode 0*/, false, false));
+#endif
 #ifdef X64
         /* see note above for whether to auto-shrink */
     }
 #endif
+  //TODO: DELETE THIS. INSERTED TO GET RID OF COMPILER WARNING 
+  instr_t *in;
+  return in;
 }
-#endif
 
 /* @} */ /* end doxygen group */
 #ifndef UNSUPPORTED_API
@@ -2692,8 +2694,8 @@ INSTR_CREATE_nop3byte_reg(dcontext_t *dcontext, reg_id_t reg)
 #endif
 #define INSTR_CREATE_RAW_nopNbyte(dc, n) instr_create_nbyte_nop(dc, n, true)
 #ifdef UNSUPPORTED_API
-/* DR_API EXPORT END */
 #endif
+/* DR_API EXPORT END */
 
 #endif /* _INSTR_CREATE_H_ */
 

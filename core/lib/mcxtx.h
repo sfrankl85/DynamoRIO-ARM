@@ -73,8 +73,10 @@
   reg_t r13;
   reg_t r14;
   reg_t r15;
+
+#endif
   
-#else
+#ifndef ARM
     union {
         reg_t xdi; /**< platform-independent name for full rdi/edi register */
         reg_t IF_X64_ELSE(rdi, edi); /**< platform-dependent name for rdi/edi register */
@@ -107,6 +109,8 @@
         reg_t xax; /**< platform-independent name for full rax/eax register */
         reg_t IF_X64_ELSE(rax, eax); /**< platform-dependent name for rax/eax register */
     }; /**< anonymous union of alternative names for rax/eax register */
+#endif
+
 #ifdef X64
     reg_t r8;  /**< r8 register. \note For 64-bit DR builds only. */
     reg_t r9;  /**< r9 register. \note For 64-bit DR builds only. */
@@ -118,12 +122,13 @@
     reg_t r15; /**< r15 register. \note For 64-bit DR builds only. */
 #endif
 
-#endif
 
 #ifdef ARM
     reg_t cpsr; /**< platform-independent name for full cpsr register */
     reg_t spsr; /**< platform-independent name for full cpsr register */
-#else
+#endif
+
+#ifndef ARM
     union {
         reg_t xflags; /**< platform-independent name for full rflags/eflags register */
         reg_t IF_X64_ELSE(rflags, eflags); /**< platform-dependent name for

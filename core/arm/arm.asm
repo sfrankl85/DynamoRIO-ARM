@@ -36,7 +36,7 @@
 /* Copyright (c) 2001 Hewlett-Packard Company */
 
 /*
- * x86.asm - x86 specific assembly and trampoline code
+ * arm.asm - arm specific assembly and trampoline code
  *
  * This file is used for both linux and windows.
  * We used to use the gnu assembler on both platforms, but
@@ -271,6 +271,9 @@ DECL_EXTERN(wow64_index)
 DECL_EXTERN(syscall_argsz)
 # endif
 #endif
+
+
+
         
 #if NO
 /*TODO SJF */
@@ -1070,6 +1073,8 @@ GLOBAL_LABEL(dynamorio_syscall_wow64_noedx:)
  * and syscall for 64-bit.
  * signature: dynamorio_syscall(sysnum, num_args, arg1, arg2, ...)
  */
+#ifdef NO
+SJF TODO
         DECLARE_FUNC(dynamorio_syscall)
 GLOBAL_LABEL(dynamorio_syscall:)
         /* x64 kernel doesn't clobber all the callee-saved registers */
@@ -1120,6 +1125,7 @@ syscall_0args:
         /* return val is in eax for us */
         mov	 r15, r14 
         END_FUNC(dynamorio_syscall)
+#endif
 
 /* FIXME: this function should be in #ifdef CLIENT_INTERFACE
  * However, the compiler complains about it in
@@ -2656,4 +2662,79 @@ dynamorio_earliest_init_repeatme:
 #endif /*NO*/
 #endif /*NO*/
 #endif /*NO*/
+
+/*SJF Fake syscall def*/
+DECLARE_FUNC(dynamorio_syscall)
+GLOBAL_LABEL(dynamorio_syscall:)
+
+        str      r3, [r13]
+        sub      r13, r13, #0x4
+        str      r6, [r13]
+        sub      r13, r13, #0x4
+        str      r7, [r13]
+        sub      r13, r13, #0x4
+        /* add 16 to skip the 4 pushes
+         * FIXME: rather than this dispatch, could have separate routines
+         * for each #args, or could just blindly read upward on the stack.
+         * for dispatch, if assume size of mov instr can do single ind jmp */
+        /*mov      r1, r1 Unnecessary now as r1 already contains arg numbers*/ /* num_args */
+        cmp      r1, #0
+        beq      syscall_0args
+        cmp      r1, #1
+        beq      syscall_1args
+        cmp      r1, #2
+        beq      syscall_2args
+        cmp      r1, #3
+        beq      syscall_3args
+        cmp      r1, #4
+        beq      syscall_4args
+        cmp      r1, #5
+        beq      syscall_5args
+        ldr      r5, [r13, #48] /* arg6 *//* TODO Fix the rest of these */
+syscall_5args:
+        mov      r7, r0 /* sysnum */
+        mov      r0, r2  /* arg1 */
+        mov      r1, r3  /* arg2 */
+        ldr      r2, [r13] /* arg3 */
+        ldr      r3, [r13, #4] /* arg4 */
+        ldr      r4, [r13, #8] /* arg5 */
+        b        do_syscall
+syscall_4args:
+        mov      r7, r0 /* sysnum */
+        mov      r0, r2  /* arg1 */
+        mov      r1, r3 /* arg2 */
+        ldr      r2, [r13] /* arg3 */
+        ldr      r3, [r13, #4] /* arg4 */
+        b        do_syscall
+syscall_3args:
+        mov      r7, r0 /* sysnum */
+        mov      r0, r2  /* arg1 */
+        mov      r1, r3 /* arg2 */
+        ldr      r2, [r13] /* arg3 */
+        b        do_syscall
+syscall_2args:
+        mov      r7, r0 /* sysnum */
+        mov      r0, r2  /* arg1 */
+        mov      r1, r3 /* arg2 */
+        b        do_syscall
+syscall_1args:
+        mov      r7, r0 /* sysnum */
+        mov      r0, r2  /* arg1 */
+        b        do_syscall
+syscall_0args:
+        mov      r7, r0 /* sysnum */
+        b        do_syscall
+do_syscall:
+        svc      #0x0 /* SJF Converted this to swi call */ 
+        ldr      r3, [r13]
+        add      r13, r13, #0x4
+        ldr      r6, [r13]
+        add      r13, r13, #0x4
+        ldr      r7, [r13]
+        add      r13, r13, #0x4
+        /* return val is in r14 for us */
+        mov      r15, r14
+
+END_FUNC(dynamorio_syscall)
+
 END_FILE

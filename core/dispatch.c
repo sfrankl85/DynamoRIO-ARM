@@ -1703,7 +1703,11 @@ handle_system_call(dcontext_t *dcontext)
          */
         execute_syscall = false;
         LOG(THREAD, LOG_SYSCALLS, 2, "skipping syscall %d on client request\n",
+#ifdef ARM
+            mc->r0);
+#else
             mc->xax);
+#endif
     }
 # ifdef WINDOWS
     /* re-set in case client changed the number */
@@ -2022,7 +2026,11 @@ void
 issue_last_system_call_from_app(dcontext_t *dcontext)
 {
     LOG(THREAD, LOG_SYSCALLS, 2, "issue_last_system_call_from_app("PIFX")\n",
+#ifdef ARM
+        get_mcontext(dcontext)->r0);
+#else
         get_mcontext(dcontext)->xax);
+#endif
 
     /* it's up to the caller to let go of the bb building lock if it was held
      * on this path, since not all paths to here hold it
@@ -2056,7 +2064,11 @@ transfer_to_dispatch(dcontext_t *dcontext, priv_mcontext_t *mc, bool full_DR_sta
 #endif
     LOG(THREAD, LOG_ASYNCH, 2,
         "transfer_to_dispatch: pc=0x%08x, xsp="PFX", initstack=%d\n",
+#ifdef ARM
+        dcontext->next_tag, mc->r13, using_initstack);
+#else
         dcontext->next_tag, mc->xsp, using_initstack);
+#endif
 
     /* next, want to switch to dstack, and if using initstack, free mutex.
      * finally, call dispatch(dcontext).

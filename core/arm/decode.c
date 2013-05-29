@@ -544,6 +544,7 @@ static byte *
 read_vex(byte *pc, decode_info_t *di, byte instr_byte,
          const instr_info_t **ret_info INOUT, bool *is_vex)
 {
+#ifdef NO //TODO SJF// vex_prefix_extensions no longer exists
     int idx;
     const instr_info_t *info;
     byte vex_last = 0, vex_pp;
@@ -634,6 +635,7 @@ read_vex(byte *pc, decode_info_t *di, byte instr_byte,
 
     di->vex_encoded = true;
     return pc;
+#endif //NO
 }
 
 /* Disassembles the instruction at pc into the data structures ret_info
@@ -649,6 +651,8 @@ read_instruction(byte *pc, byte *orig_pc,
                  const instr_info_t **ret_info, decode_info_t *di,
                  bool just_opcode _IF_DEBUG(bool report_invalid))
 {
+#ifdef NO
+//TODO SJF
     DEBUG_DECLARE(byte *post_suffix_pc = NULL;)
     byte instr_byte;
     const instr_info_t *info;
@@ -1021,6 +1025,7 @@ read_instruction(byte *pc, byte *orig_pc,
 
     /* return values */
     *ret_info = info;
+#endif //NO
     return pc;
 }
 
@@ -1304,6 +1309,8 @@ resolve_var_reg(decode_info_t *di/*IN: x86_mode, prefixes*/,
                 _IF_X64(bool default_64) _IF_X64(bool can_grow)
                 _IF_X64(bool extendable))
 {
+#ifdef NO
+//TODO SJF
 #ifdef X64
     if (extendable && X64_MODE(di) && di->prefixes != 0/*optimization*/) {
         /* Note that Intel's table 3-1 on +r possibilities is incorrect:
@@ -1339,6 +1346,7 @@ resolve_var_reg(decode_info_t *di/*IN: x86_mode, prefixes*/,
             if (can_shrink && TEST(PREFIX_DATA, di->prefixes))
                 return reg_32_to_16(reg32);
     }
+#endif //NO
     return reg32;
 }
 
@@ -1725,6 +1733,8 @@ check_is_variable_size(opnd_t op)
 static byte *
 decode_common(dcontext_t *dcontext, byte *pc, byte *orig_pc, instr_t *instr)
 {
+#ifdef NO
+//TODO SJF
     const instr_info_t *info;
     decode_info_t di;
     byte *next_pc;
@@ -1874,6 +1884,7 @@ decode_common(dcontext_t *dcontext, byte *pc, byte *orig_pc, instr_t *instr)
  decode_invalid:
     instr_set_operands_valid(instr, false);
     instr_set_opcode(instr, OP_INVALID);
+#endif //NO
     return NULL;
 }
 
@@ -1898,16 +1909,24 @@ get_next_instr_info(const instr_info_t * info)
 byte 
 decode_first_opcode_byte(int opcode)
 {
+#ifdef NO
+//TODO SJF
     const instr_info_t * info = op_instr[opcode];
     return (byte)((info->opcode & 0x00ff0000) >> 16);
+#endif //NO
+   return (byte) 0;
 }
 
 DR_API
 const char * 
 decode_opcode_name(int opcode)
 {
+#ifdef NO
+//TODO SJF
     const instr_info_t * info = op_instr[opcode];
     return info->name;
+#endif //NO
+   return (byte) 0;
 }
 
 #ifdef DECODE_UNIT_TEST

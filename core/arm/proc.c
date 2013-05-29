@@ -673,6 +673,8 @@ void
 dr_insert_save_fpstate(void *drcontext, instrlist_t *ilist, instr_t *where,
                        opnd_t buf)
 {
+#ifdef NO
+//TODO SJF INSTR
     dcontext_t *dcontext = (dcontext_t *) drcontext;
     if (proc_has_feature(FEATURE_FXSR)) {
         /* we want "fxsave, fnclex, finit" */
@@ -690,12 +692,15 @@ dr_insert_save_fpstate(void *drcontext, instrlist_t *ilist, instr_t *where,
         instrlist_meta_preinsert(ilist, where, INSTR_CREATE_fnsave(dcontext, buf));
         instrlist_meta_preinsert(ilist, where, INSTR_CREATE_fwait(dcontext));
     }
+#endif
 }
 
 void
 dr_insert_restore_fpstate(void *drcontext, instrlist_t *ilist, instr_t *where,
                           opnd_t buf)
 {
+#ifdef NO
+//TODO SJF
     dcontext_t *dcontext = (dcontext_t *) drcontext;
     if (proc_has_feature(FEATURE_FXSR)) {
         CLIENT_ASSERT(opnd_get_size(buf) == OPSZ_512,
@@ -707,4 +712,5 @@ dr_insert_restore_fpstate(void *drcontext, instrlist_t *ilist, instr_t *where,
             opnd_set_size(&buf, OPSZ_108);
         instrlist_meta_preinsert(ilist, where, INSTR_CREATE_frstor(dcontext, buf));
     }
+#endif
 }

@@ -329,8 +329,8 @@ extern const reg_id_t dr_reg_fixer[];
  * Last valid register enum value.  Note: DR_REG_INVALID is now smaller 
  * than this value.
  */
-#define DR_REG_LAST_VALID_ENUM DR_REG_YMM15
-#define DR_REG_LAST_ENUM   DR_REG_YMM15 /**< Last value of register enums */
+#define DR_REG_LAST_VALID_ENUM DR_REG_S31
+#define DR_REG_LAST_ENUM   DR_REG_S31 /**< Last value of register enums */
 /* DR_API EXPORT END */
 #define REG_START_SPILL   DR_REG_R7
 #define REG_STOP_SPILL    DR_REG_R14
@@ -388,6 +388,8 @@ extern const reg_id_t dr_reg_fixer[];
 # define REG_STOP_DWR        DR_REG_D31
 # define REG_START_SWR       DR_REG_S0
 # define REG_STOP_SWR        DR_REG_S31
+# define REG_LAST_ENUM       DR_REG_LAST_ENUM
+
 
 
 #endif /* DR_REG_ENUM_COMPATIBILITY */

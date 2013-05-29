@@ -36,7 +36,7 @@
 /* Copyright (c) 2000-2001 Hewlett-Packard Company */
 
 /*
- * arch.c - x86 architecture specific routines
+ * arch.c - arm architecture specific routines
  */
 
 #include "../globals.h"
@@ -569,7 +569,11 @@ arch_init()
 
     /* Ensure we have no unexpected padding inside structs that include
      * priv_mcontext_t (app_state_at_intercept_t and dcontext_t) */
+#ifdef ARM
+    ASSERT(offsetof(priv_mcontext_t, r15) + sizeof(byte*) + PRE_XMM_PADDING ==
+#else
     ASSERT(offsetof(priv_mcontext_t, pc) + sizeof(byte*) + PRE_XMM_PADDING ==
+#endif
            offsetof(priv_mcontext_t, ymm));
     ASSERT(offsetof(app_state_at_intercept_t, mc) ==
            offsetof(app_state_at_intercept_t, start_pc) + sizeof(void*));
@@ -1815,9 +1819,11 @@ get_branch_type_name(ibl_branch_type_t branch_type)
 ibl_branch_type_t
 get_ibl_branch_type(instr_t *instr)
 {
+#ifdef NO
     ASSERT(instr_is_mbr(instr) ||
            instr_get_opcode(instr) == OP_jmp_far ||
            instr_get_opcode(instr) == OP_call_far);
+#endif
 
     if (instr_is_return(instr))
         return IBL_RETURN;
@@ -2558,6 +2564,8 @@ instr_is_trace_cmp(dcontext_t *dcontext, instr_t *inst)
 static inline bool
 instr_is_seg_ref_load(dcontext_t *dcontext, instr_t *inst)
 {
+#ifdef NO
+//TODO SJF INSTR
     /* This won't fault but we don't want "unsupported mangle instr" message. */
     if (!instr_is_our_mangling(inst))
         return false;
@@ -2568,8 +2576,6 @@ instr_is_seg_ref_load(dcontext_t *dcontext, instr_t *inst)
                              os_tls_offset(os_get_app_seg_base_offset(SEG_GS))))
         return true;
     /* Look for the lea */
-#ifdef NO
-//TODO SJF INSTR
     if (instr_get_opcode(inst) == OP_lea) {
         opnd_t mem = instr_get_src(inst, 0);
         if (opnd_get_scale(mem) == 1 &&
@@ -3553,7 +3559,11 @@ recreate_app_pc(dcontext_t *tdcontext, cache_pc pc, fragment_t *f)
     }
     
     LOG(THREAD_GET, LOG_INTERP, 2,
+#ifdef ARM
+        "recreate_app_pc -- translation is "PFX"\n", mc.r15);
+#else
         "recreate_app_pc -- translation is "PFX"\n", mc.pc);
+#endif
     
 #if defined(CLIENT_INTERFACE) && defined(WINDOWS)
     if (swap_peb)
@@ -3909,6 +3919,8 @@ record_translation_info(dcontext_t *dcontext, fragment_t *f, instrlist_t *existi
 void
 stress_test_recreate_state(dcontext_t *dcontext, fragment_t *f, instrlist_t *ilist)
 {
+#ifdef NO
+//TODO SJF
     priv_mcontext_t mc;
     bool res;
     cache_pc cpc;
@@ -4002,6 +4014,7 @@ stress_test_recreate_state(dcontext_t *dcontext, fragment_t *f, instrlist_t *ili
     if (TEST(FRAG_IS_TRACE, f->flags)) {
         instrlist_clear_and_destroy(dcontext, ilist);
     }
+#endif //NO
 }
 #endif /* INTERNAL */
 
@@ -4151,8 +4164,11 @@ hook_vsyscall(dcontext_t *dcontext)
             num_nops++;
     } while (instr_is_nop(&instr));
     vsyscall_sysenter_return_pc = pc;
+#ifdef NO
+//TODO SJF. Replace this when dr_syscall call method has been determined
     ASSERT(instr_get_opcode(&instr) == OP_jmp_short ||
 	   instr_get_opcode(&instr) == OP_int /*ubuntu 11.10: i#647*/);
+#endif
 
     /* We fail if the pattern looks different */
 #define CHECK(x) do {                                 \

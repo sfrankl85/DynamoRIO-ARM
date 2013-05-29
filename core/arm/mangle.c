@@ -741,6 +741,8 @@ void
 insert_get_mcontext_base(dcontext_t *dcontext, instrlist_t *ilist, 
                          instr_t *where, reg_id_t reg)
 {
+#ifdef NO
+//TODO SJF
     PRE(ilist, where, instr_create_restore_from_tls
         (dcontext, reg, TLS_DCONTEXT_SLOT));
 
@@ -751,6 +753,7 @@ insert_get_mcontext_base(dcontext_t *dcontext, instrlist_t *ilist,
             (dcontext, opnd_create_reg(reg), 
              OPND_CREATE_MEMPTR(reg, offsetof(dcontext_t, upcontext))));
     }
+#endif
 }
 
 /* What prepare_for_clean_call() adds to xsp beyond sizeof(priv_mcontext_t) */
@@ -2191,6 +2194,8 @@ mangle_far_direct_helper(dcontext_t *dcontext, instrlist_t *ilist, instr_t *inst
     }
 #endif
 
+#ifdef NO
+//TODO SJF INSTR
     PRE(ilist, instr,
         SAVE_TO_DC_OR_TLS_OR_REG(dcontext, flags, REG_R1,
                                  MANGLE_XCX_SPILL_SLOT, R1_OFFSET, REG_R9));
@@ -2198,6 +2203,7 @@ mangle_far_direct_helper(dcontext_t *dcontext, instrlist_t *ilist, instr_t *inst
     PRE(ilist, instr,
         INSTR_CREATE_mov_imm(dcontext, opnd_create_reg(REG_R1),
                              OPND_CREATE_INT32((ptr_uint_t)pc)));
+#endif //NO
 }
 
 /***************************************************************************

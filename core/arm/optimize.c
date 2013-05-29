@@ -363,6 +363,8 @@ static bool
 generate_antialias_check(dcontext_t *dcontext, instrlist_t *pre_loop,
                          opnd_t op1, opnd_t op2)
 {
+#ifdef NO
+//TODO SJF
     /* basic idea: "lea op1 !overlap lea op2" */
     opnd_t lea1, lea2;
     if (opnd_same(op1, op2))
@@ -383,6 +385,7 @@ generate_antialias_check(dcontext_t *dcontext, instrlist_t *pre_loop,
     instrlist_append(pre_loop, INSTR_CREATE_cmp(dcontext,  opnd_create_reg(REG_EBX),
                                                 opnd_create_reg(REG_ECX)));
     return true;
+#endif //NO
 }
 
 #define MAX_INDUCTION_VARS 8
@@ -403,6 +406,8 @@ identify_for_loop(dcontext_t *dcontext, app_pc tag, instrlist_t *trace)
     int num_invariants = 0;
     instrlist_t pre_loop;
     instrlist_init(&pre_loop);
+#ifdef NO
+//TODO SJF
 
     /* FIXME: what about loops with cbr at top and ubr at bottom? */
 
@@ -810,6 +815,9 @@ now do not have a pre-loop and do unaligned simd
     if ((stats->logmask & LOG_OPTS) != 0)
         instrlist_disassemble(dcontext, tag, trace, THREAD);
 #endif
+
+
+#endif
 }
 
 /****************************************************************************/
@@ -823,6 +831,8 @@ now do not have a pre-loop and do unaligned simd
 static void
 unroll_loops(dcontext_t *dcontext, app_pc tag, instrlist_t *trace)
 {
+#ifdef NO
+//TODO SJF
     instr_t *inst, *temp;
     instr_t *branch, *decision, *cmp, *recovery_cmp, *final_jmp;
     int unroll_factor, cmp_vs, i;
@@ -1065,6 +1075,7 @@ unroll_loops(dcontext_t *dcontext, app_pc tag, instrlist_t *trace)
     if (stats->loglevel >= 3 && (stats->logmask & LOG_OPTS) != 0)
         instrlist_disassemble(dcontext, tag, trace, THREAD);
 #endif
+#endif//NO
 }
 
 #ifdef IA32_ON_IA64
@@ -1080,6 +1091,8 @@ static int test3;
 static void 
 test_i64(dcontext_t *dcontext, app_pc tag, instrlist_t *trace)
 {       
+#ifdef NO
+//TODO SJF
     uint * i64_code;
     uint * i64_code_start;
     int check = 0;
@@ -1206,6 +1219,7 @@ test_i64(dcontext_t *dcontext, app_pc tag, instrlist_t *trace)
         }
 #endif
     }
+#endif //NO
 }
 #endif
 
@@ -1496,9 +1510,11 @@ get_immutable_value(opnd_t address, prop_state_t *state, int size)
 static bool 
 opnd_is_stack_address(opnd_t address)
 {
+#ifdef NO //TODO SJF
     return (opnd_is_near_base_disp(address) && 
             (opnd_get_base(address) == REG_EBP) && 
             (opnd_get_index(address) == REG_NULL));
+#endif //NO
 }
 
 /* true if addresses (which must be a constant address) is an
@@ -1605,6 +1621,7 @@ propagate_address(opnd_t old, prop_state_t *state)
 static opnd_t 
 propagate_opnd(opnd_t old, prop_state_t *state, bool prefix_data)
 {
+#ifdef NO //TODO SJF
 
     reg_id_t reg;
     int immed, disp, i;
@@ -1715,6 +1732,7 @@ propagate_opnd(opnd_t old, prop_state_t *state, bool prefix_data)
         }
     }
     return old;
+#endif //NO
 }
 
 /* checks an eflags and eflags_valid to see if a particular flag flag is valid 
@@ -1753,6 +1771,7 @@ compare_flag_vals(uint flag1, uint flag2, bool same, uint eflags, uint eflags_va
 static bool 
 removable_jmp(instr_t *inst, uint eflags, uint eflags_valid)
 {
+#ifdef NO //TODO SJF
     int opcode = instr_get_opcode(inst);
     switch(opcode) {
     case OP_jno_short: case OP_jno:
@@ -1824,6 +1843,7 @@ removable_jmp(instr_t *inst, uint eflags, uint eflags_valid)
                     compare_flag_vals(EFLAGS_READ_SF, EFLAGS_READ_OF, true, eflags, eflags_valid));
         }
     }
+#endif //NO
     return false;
 }
 
@@ -1834,6 +1854,7 @@ removable_jmp(instr_t *inst, uint eflags, uint eflags_valid)
 static bool
 do_forward_check_eflags(instr_t *inst, uint eflags, uint eflags_valid, uint eflags_invalid, prop_state_t *state)
 {
+#ifdef NO //TODO SJF
 #ifdef DEBUG
     dcontext_t *dcontext = state->dcontext;
 #endif
@@ -1956,6 +1977,7 @@ do_forward_check_eflags(instr_t *inst, uint eflags, uint eflags_valid, uint efla
             return true;
     }
     LOG(THREAD, LOG_OPTS, 3, "forward eflags check failed(4)\n");
+#endif //NO
     return false;
 }
 
@@ -1979,6 +2001,7 @@ make_imm_store(prop_state_t *state, instr_t *inst, int value)
 static instr_t *
 make_to_imm_store(instr_t *inst, int value, prop_state_t *state)
 {
+#ifdef NO //TODO SJF
     instr_t *replacement;
     opnd_t dst = instr_get_dst(inst, 0);
     dcontext_t *dcontext = state->dcontext;
@@ -2012,6 +2035,7 @@ make_to_imm_store(instr_t *inst, int value, prop_state_t *state)
     }  
     replace_inst(dcontext, state->trace, inst, replacement);
     return replacement;
+#endif //NO
 }
 
 static instr_t *
@@ -2059,6 +2083,7 @@ calculate_zf_pf_sf(int immed)
 static instr_t *
 prop_simplify(instr_t *inst, prop_state_t *state)
 {
+#ifdef NO //TODO SJF
     instr_t *replacement;
     int opcode, num_src, num_dst, immed1, immed2, immed3=0, i;
     opnd_t temp_opnd;
@@ -2463,12 +2488,14 @@ prop_simplify(instr_t *inst, prop_state_t *state)
     // cpuid
 
     return inst;
+#endif //NO
 }
 
 /* initializes all the trace constant stuff and add */
 static void 
 get_trace_constant(prop_state_t *state)
 {
+#ifdef NO //TODO SJF
     /* can add all dynamo addresses here, they are never aliased so always */
     /* safe to optimize, but takes up space in our cache, with new jump code */
     /* probably only use exc so just put it in, and maby eax to since is fav */
@@ -2476,12 +2503,14 @@ get_trace_constant(prop_state_t *state)
     /* probably cleaner way of getting addresses but who cares for now */
     set_address_val(state, opnd_get_disp(opnd_create_dcontext_field(state->dcontext, XCX_OFFSET)), 0, PS_KEEP);
     set_address_val(state, opnd_get_disp(opnd_create_dcontext_field(state->dcontext, XAX_OFFSET)), 0, PS_KEEP);
+#endif //NO
 }
 
 /* updates the prop state as appropriate */
 static instr_t *
 update_prop_state(prop_state_t *state, instr_t *inst, bool intrace)
 {
+#ifdef NO //TODO SJF
     int opcode = instr_get_opcode(inst);
     int num_dst = instr_num_dsts(inst);
     bool is_zeroing = is_zeroing_instr(inst);
@@ -2623,6 +2652,7 @@ update_prop_state(prop_state_t *state, instr_t *inst, bool intrace)
         }
     }
     return inst;
+#endif //NO
 }
 
 typedef struct _two_entry_list_element_t {
@@ -2644,6 +2674,7 @@ typedef struct _start_list_element_t {
 instr_t *
 handle_stack(prop_state_t *state, instr_t *inst)
 {
+#ifdef NO //TODO SJF
     dcontext_t *dcontext = state->dcontext;
     int i;
     if (instr_get_opcode(inst) == OP_enter ||
@@ -2679,6 +2710,7 @@ handle_stack(prop_state_t *state, instr_t *inst)
         }
     }
     return inst;
+#endif //NO
 }  
 
 
@@ -2714,6 +2746,7 @@ handle_stack(prop_state_t *state, instr_t *inst)
 static void
 constant_propagation(dcontext_t *dcontext, app_pc tag, instrlist_t *trace)
 {
+#ifdef NO //TODO SJF
     prop_state_t state;
     int num_src, num_dst, i;
     opnd_t opnd, prop_opnd;
@@ -2841,6 +2874,7 @@ constant_propagation(dcontext_t *dcontext, app_pc tag, instrlist_t *trace)
     if (stats->loglevel >= 3 && (stats->logmask & LOG_OPTS) != 0)
         instrlist_disassemble(dcontext, tag, trace, THREAD);
 #endif
+#endif //NO
 }
 
 /***************************************************************************/
@@ -2979,6 +3013,7 @@ address_set_dead(dcontext_t *dcontext, int address, int *adds, byte *flags, bool
 static void
 add_init(dcontext_t *dcontext, int *addresses, byte *flags)
 {
+#ifdef NO //TODO SJF
     /* can add all dynamo addresses here, they are never aliased so always */
     /* safe to optimize, but takes up space in our cache, with new jump code */
     /* probably only use exc so just put it in, and maby eax to since is fav */
@@ -2986,6 +3021,7 @@ add_init(dcontext_t *dcontext, int *addresses, byte *flags)
     /* probably cleaner way of getting addresses but who cares for now */
     add_address(dcontext, opnd_get_disp(opnd_create_dcontext_field(dcontext, XCX_OFFSET)), ADD_KEEP, addresses, flags);
     add_address(dcontext, opnd_get_disp(opnd_create_dcontext_field(dcontext, XAX_OFFSET)), ADD_KEEP, addresses, flags);
+#endif //NO
 }
 
 #if 0 /* not used */
@@ -3043,6 +3079,7 @@ stack_address_set_dead(dcontext_t *dcontext, int address, int scope, int *adds, 
 void
 remove_dead_code(dcontext_t *dcontext, app_pc tag, instrlist_t *trace)
 {
+#ifdef NO //TODO SJF
     instr_t *inst, *prev_inst, *ecx_load;
     opnd_t dst, src;
     bool free[24];
@@ -3267,6 +3304,7 @@ remove_dead_code(dcontext_t *dcontext, app_pc tag, instrlist_t *trace)
     if (stats->loglevel >= 4 && (stats->logmask & LOG_OPTS) != 0)
         instrlist_disassemble(dcontext, tag, trace, THREAD);
 #endif
+#endif //NO
 }
 
 /***************************************************************************/
@@ -3284,6 +3322,7 @@ remove_dead_code(dcontext_t *dcontext, app_pc tag, instrlist_t *trace)
 static bool 
 is_stack_adjustment(instr_t *inst)
 {
+#ifdef NO //TODO SJF
     int opcode = instr_get_opcode(inst);
     return (
             ((opcode == OP_add || opcode == OP_sub) &&
@@ -3298,11 +3337,13 @@ is_stack_adjustment(instr_t *inst)
               (opnd_get_base(instr_get_src(inst, 0)) == REG_NULL &&
                opnd_get_index(instr_get_src(inst, 0)) == REG_ESP &&
                opnd_get_scale(instr_get_src(inst, 0)) == 1))));
+#endif //NO
 }
 
 static int 
 get_stack_adjustment(instr_t *inst)
 {
+#ifdef NO //TODO SJF
     int opcode = instr_get_opcode(inst);
     if (opcode == OP_add)
         return (int) opnd_get_immed_int(instr_get_src(inst, 0));
@@ -3312,11 +3353,13 @@ get_stack_adjustment(instr_t *inst)
         return opnd_get_disp(instr_get_src(inst, 0));
     else
         return -1;
+#endif //NO
 }
 
 static void 
 set_stack_adjustment(instr_t *inst, int adjust)
 {
+#ifdef NO //TODO SJF
     int opcode = instr_get_opcode(inst);
     opnd_t temp_opnd;
     if (opcode == OP_lea) {
@@ -3330,12 +3373,14 @@ set_stack_adjustment(instr_t *inst, int adjust)
     else
         temp_opnd = OPND_CREATE_INT8(adjust);
     instr_set_src(inst, 0, temp_opnd);
+#endif //NO
 }
         
 
 static void 
 stack_adjust_combiner(dcontext_t *dcontext, app_pc tag, instrlist_t *trace)
 {
+#ifdef NO //TODO SJF
     instr_t *inst, *next, *first_adjust, *last_adjust;
     int opcode, adj, max_off=0, cur_off=0, first_off=0;
 #ifdef DEBUG
@@ -3464,6 +3509,7 @@ stack_adjust_combiner(dcontext_t *dcontext, app_pc tag, instrlist_t *trace)
     if (stats->loglevel >= 3 && (stats->logmask & LOG_OPTS) != 0)
         instrlist_disassemble(dcontext, tag, trace, THREAD);
 #endif
+#endif //NO
 }
 
 
@@ -3496,6 +3542,7 @@ check_eflags_cr(instr_t *inst)
 static instr_t *
 remove_return_no_save_eflags(dcontext_t *dcontext, instrlist_t *trace, instr_t *inst)
 {
+#ifdef NO //TODO SJF
     instr_t *inst2;
     int to_pop = 4;
     opnd_t replacement;
@@ -3578,12 +3625,14 @@ remove_return_no_save_eflags(dcontext_t *dcontext, instrlist_t *trace, instr_t *
     loginst(dcontext, 3, inst2, "adjusting stack");
     instrlist_preinsert(trace, inst, inst2);
     return inst2;
+#endif //NO
 }
 
 /* removes the return code, pattern matches on our return macro */
 static instr_t *
 remove_return(dcontext_t *dcontext, instrlist_t *trace, instr_t *inst)
 {
+#ifdef NO //TODO SJF
     if (!INTERNAL_OPTION(unsafe_ignore_eflags_trace)) {
         instr_t *inst2;
         int to_pop = 4;
@@ -3695,6 +3744,7 @@ remove_return(dcontext_t *dcontext, instrlist_t *trace, instr_t *inst)
     }
     else
         return remove_return_no_save_eflags(dcontext, trace, inst);
+#endif //NO
 }
 
 /* for some reason can't get instr_same / opnd_same to work for the below so
@@ -3703,6 +3753,7 @@ remove_return(dcontext_t *dcontext, instrlist_t *trace, instr_t *inst)
 static bool 
 is_return(dcontext_t *dcontext, instr_t *inst)
 {
+#ifdef NO //TODO SJF
     instr_t *pop = instr_get_next(inst);
     if (!INTERNAL_OPTION(unsafe_ignore_eflags_trace)) {
         instr_t *lea, *jecxz;
@@ -3743,6 +3794,7 @@ is_return(dcontext_t *dcontext, instr_t *inst)
                 instr_get_opcode(cmp) == OP_cmp && 
                 instr_get_opcode(jne) == OP_jne);
     }
+#endif //NO
 }
 
 /* checks to see if the address pushed by the push instruction matches the
@@ -3750,6 +3802,7 @@ is_return(dcontext_t *dcontext, instr_t *inst)
 static bool 
 check_return(dcontext_t *dcontext, instr_t *inst, instr_t *push)
 {
+#ifdef NO //TODO SJF
     if (!INTERNAL_OPTION(unsafe_ignore_eflags_trace)) {
         instr_t *lea = instr_get_next(inst);
         opnd_t check;
@@ -3772,6 +3825,7 @@ check_return(dcontext_t *dcontext, instr_t *inst, instr_t *push)
                 opnd_get_immed_int(check) ==
                 opnd_get_immed_int(instr_get_src(push, 0)));
     }
+#endif //NO
 }
 
 
@@ -3782,6 +3836,7 @@ check_return(dcontext_t *dcontext, instr_t *inst, instr_t *push)
 static void 
 call_return_matching(dcontext_t *dcontext, app_pc tag, instrlist_t *trace)
 {
+#ifdef NO
     instr_t *a[CALL_RETURN_STACK_SIZE];
     instr_t *inst, *next_inst;
     int top, i, opcode;
@@ -3834,6 +3889,7 @@ call_return_matching(dcontext_t *dcontext, app_pc tag, instrlist_t *trace)
     if (stats->loglevel >= 3 && (stats->logmask & LOG_OPTS) != 0)
         instrlist_disassemble(dcontext, tag, trace, THREAD);
 #endif
+#endif //NO
 }
     
 /****************************************************************************/
@@ -3847,6 +3903,7 @@ call_return_matching(dcontext_t *dcontext, app_pc tag, instrlist_t *trace)
 static void
 peephole_optimize(dcontext_t *dcontext, app_pc tag, instrlist_t *trace)
 {
+#ifdef NO //TODO SJF
     bool p4 = (proc_get_family() == FAMILY_PENTIUM_4);
     instr_t *inst, *next_inst;
     int opcode;
@@ -3884,6 +3941,7 @@ peephole_optimize(dcontext_t *dcontext, app_pc tag, instrlist_t *trace)
             instr_destroy(dcontext, inst);
         }
     }
+#endif //NO
 }
 
 /* replaces inc with add 1, dec with sub 1 
@@ -3893,6 +3951,7 @@ peephole_optimize(dcontext_t *dcontext, app_pc tag, instrlist_t *trace)
 static bool
 replace_inc_with_add(dcontext_t *dcontext, instr_t *inst, instrlist_t *trace)
 {
+#ifdef NO
     instr_t *in;
     uint eflags;
     int opcode = instr_get_opcode(inst);
@@ -3974,6 +4033,7 @@ replace_inc_with_add(dcontext_t *dcontext, instr_t *inst, instrlist_t *trace)
     instr_set_prefixes(in, instr_get_prefixes(inst));
     replace_inst(dcontext, trace, inst, in);
     return true;
+#endif //NO
 }
 
 /****************************************************************************/
@@ -3982,6 +4042,7 @@ replace_inc_with_add(dcontext_t *dcontext, instr_t *inst, instrlist_t *trace)
 void
 remove_redundant_loads(dcontext_t *dcontext, app_pc tag, instrlist_t *trace)
 {
+#ifdef NO //TODO SJF
     instr_t *instr, *next_inst,*first_mem_access,*reg_write_checker;
     opnd_t mem_read,orig_reg_opnd ={0}; /* FIXME: check */
     reg_id_t orig_reg;
@@ -4229,11 +4290,13 @@ remove_redundant_loads(dcontext_t *dcontext, app_pc tag, instrlist_t *trace)
 
     }
     LOG(THREAD, LOG_OPTS, 3,"leaving remove_loads optimization\n");
+#endif //NO
 }
 
 static reg_id_t
 find_dead_register_across_instrs(instr_t *start,instr_t *end)
 {
+#ifdef NO //TODO SJF
     reg_id_t a;
     instr_t *instr = NULL;
 
@@ -4248,6 +4311,7 @@ find_dead_register_across_instrs(instr_t *start,instr_t *end)
             return a;
     }
     return REG_NULL;
+#endif //NO
 }
 
 #if 0 /* not used */
@@ -4304,6 +4368,7 @@ find_dead_register_across_instrs_H(instr_t *start,instr_t *end)
 static void
 prefetch_optimize_trace(dcontext_t *dcontext, app_pc tag, instrlist_t *trace)
 {
+#ifdef NO //TODO SJF
     instr_t *instr,*loopinstr,*tracewalker,*prefetchinstr;
     opnd_t src_mem_access;
     int distance;
@@ -4384,6 +4449,7 @@ prefetch_optimize_trace(dcontext_t *dcontext, app_pc tag, instrlist_t *trace)
         instr=instr_get_next(instr);
         
     }
+#endif //NO
 }
 
 /* Removed josh's attempt at using the SSE2 xmm registers to hold some local vars - 
@@ -4403,18 +4469,22 @@ prefetch_optimize_trace(dcontext_t *dcontext, app_pc tag, instrlist_t *trace)
 bool
 is_store_to_ecxoff(dcontext_t *dcontext, instr_t *inst)
 {
+#ifdef NO //TODO SJF
     int opcode = instr_get_opcode(inst);
     return ((opcode == OP_mov_imm || opcode == OP_mov_st) &&
             opnd_is_near_base_disp(instr_get_dst(inst, 0)) &&
             opnd_get_disp(instr_get_dst(inst, 0)) == opnd_get_disp(opnd_create_dcontext_field(dcontext, XCX_OFFSET)));
+#endif //NO
 }
 
 bool
 is_load_from_ecxoff(dcontext_t *dcontext, instr_t *inst)
 {
+#ifdef NO //TODO SJF
     return (instr_get_opcode(inst) == OP_mov_ld &&
             opnd_is_near_base_disp(instr_get_src(inst, 0)) &&
             opnd_get_disp(instr_get_src(inst, 0)) == opnd_get_disp(opnd_create_dcontext_field(dcontext, XCX_OFFSET)));
+#endif //NO
 }
 
 /* returns true if the opnd is a constant address 
@@ -4422,23 +4492,28 @@ is_load_from_ecxoff(dcontext_t *dcontext, instr_t *inst)
 bool
 opnd_is_constant_address(opnd_t address)
 {
+#ifdef NO //TODO SJF
     return (opnd_is_abs_addr(address) IF_X64(|| opnd_is_rel_addr(address)));
+#endif //NO
 }
 
 /* checks to see if the instr zeros a reg (and does nothing else) */
 static bool 
 is_zeroing_instr(instr_t *inst)
 {
+#ifdef NO //TODO SJF
     int opcode = instr_get_opcode(inst);
     if (((opcode == OP_xor) || (opcode == OP_pxor) || (opcode == OP_sub)) &&
         opnd_same(instr_get_src(inst,0), instr_get_src(inst,1)))
         return true;
     return false;
+#endif //NO
 }
 
 static bool 
 is_dead_register(reg_id_t reg,instr_t *where)
 {
+#ifdef NO //TODO SJF
     //something tells me its a bad call to mess with these...
     if (reg==REG_EBP||reg==REG_ESP)  
         return false;
@@ -4455,6 +4530,7 @@ is_dead_register(reg_id_t reg,instr_t *where)
         where=instr_get_next(where);
     }
     return false;
+#endif //NO
 }
 
 #if 0 /* not used */
@@ -4532,6 +4608,7 @@ instruction_affects_mem_access(instr_t *instr,opnd_t mem_access)
 static bool 
 safe_write(instr_t *mem_writer)
 {
+#ifdef NO //TODO SJF
     opnd_t mem_write=instr_get_dst(mem_writer,0);
 
     if (!opnd_is_base_disp(mem_write))
@@ -4544,6 +4621,7 @@ safe_write(instr_t *mem_writer)
         return false;
 
     return true;
+#endif //NO
 }
 
 opnd_t
@@ -4669,6 +4747,13 @@ is_nop(instr_t *inst)
     int opcode = instr_get_opcode(inst);
     if (opcode == OP_nop)
         return true;
+    // other cases
+    return false;
+
+#ifdef NO //TODO SJF
+    int opcode = instr_get_opcode(inst);
+    if (opcode == OP_nop)
+        return true;
     if ((opcode == OP_mov_ld || opcode == OP_mov_st || opcode == OP_xchg) && 
         opnd_same(instr_get_src(inst, 0), instr_get_dst(inst, 0))) 
         return true;
@@ -4682,6 +4767,7 @@ is_nop(instr_t *inst)
         return true;
     // other cases
     return false;
+#endif //NO
 }
 
 #endif /* INTERNAL around whole file */

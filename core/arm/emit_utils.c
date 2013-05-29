@@ -720,6 +720,8 @@ pad_for_exitstub_alignment(dcontext_t *dcontext, linkstub_t *l, fragment_t *f, b
 void
 remove_nops_from_ilist(dcontext_t *dcontext, instrlist_t *ilist _IF_DEBUG(bool recreating))
 {
+#ifdef NO
+//TODO SJF
     instr_t *inst, *next_inst;
 
     for (inst = instrlist_first(ilist); inst != NULL; inst = next_inst) {
@@ -738,6 +740,7 @@ remove_nops_from_ilist(dcontext_t *dcontext, instrlist_t *ilist _IF_DEBUG(bool r
             instr_destroy(dcontext, inst);
         }
     }
+#endif //NO
 }
 
 
@@ -750,6 +753,8 @@ remove_nops_from_ilist(dcontext_t *dcontext, instrlist_t *ilist _IF_DEBUG(bool r
 uint
 nop_pad_ilist(dcontext_t *dcontext, fragment_t *f, instrlist_t *ilist, bool emitting)
 {
+#ifdef NO
+//TODO SJF
     instr_t *inst;
     uint offset = 0;
     int first_patch_offset = -1;
@@ -852,6 +857,7 @@ nop_pad_ilist(dcontext_t *dcontext, fragment_t *f, instrlist_t *ilist, bool emit
     ASSERT_NOT_IMPLEMENTED(false);
 #endif
     return start_shift;
+#endif //NO
 }
 
 /* for the hashtable lookup inlined into exit stubs, the
@@ -865,6 +871,8 @@ static byte *
 insert_inlined_ibl(dcontext_t *dcontext, fragment_t *f, linkstub_t *l, byte *pc,
                    cache_pc unlinked_exit_target, uint flags)
 {
+#ifdef NO
+//TODO SJF
     ibl_code_t *ibl_code = 
         get_ibl_routine_code(dcontext, 
                              extract_branchtype(l->flags), f->flags);
@@ -913,6 +921,7 @@ insert_inlined_ibl(dcontext_t *dcontext, fragment_t *f, linkstub_t *l, byte *pc,
     }
 
     return start_pc + ibl_code->inline_stub_length;
+#endif //NO
 }
 
 static cache_pc
@@ -961,6 +970,8 @@ int
 insert_exit_stub_other_flags(dcontext_t *dcontext, fragment_t *f,
                              linkstub_t *l, cache_pc stub_pc, ushort l_flags)
 {
+#ifdef NO
+//TODO SJF
     byte *pc = (byte *)stub_pc;
     cache_pc exit_target;
     bool indirect = false;
@@ -1116,6 +1127,7 @@ insert_exit_stub_other_flags(dcontext_t *dcontext, fragment_t *f,
 
     IF_X64(ASSERT(CHECK_TRUNCATE_TYPE_int(pc - stub_pc)));
     return (int) (pc - stub_pc);
+#endif //NO
 }
 
 int
@@ -1128,6 +1140,8 @@ insert_exit_stub(dcontext_t *dcontext, fragment_t *f,
 static cache_pc
 exit_cti_disp_pc(cache_pc branch_pc)
 {
+#ifdef NO
+//TODO SJF
     cache_pc byte_ptr = branch_pc;
     byte opcode = *byte_ptr;
     uint length = 0;
@@ -1167,6 +1181,7 @@ exit_cti_disp_pc(cache_pc branch_pc)
         length += JMP_LONG_LENGTH;
     }
     return branch_pc + length - 4; /* disp is 4 even on x64 */
+#endif //NO
 }
 
 /* Patch the (direct) branch at branch_pc so it branches to target_pc 
@@ -1207,6 +1222,8 @@ static void
 optimize_linkcount_stub(dcontext_t *dcontext, fragment_t *f,
                         linkstub_t *l, fragment_t *targetf)
 {
+#ifdef NO
+//TODO SJF
     /* first-time link: try to remove eflags save/restore */
 # ifdef CUSTOM_EXIT_STUBS
     byte *stub_pc = (byte *) EXIT_FIXED_STUB_PC(dcontext, f, l);
@@ -1283,6 +1300,7 @@ optimize_linkcount_stub(dcontext_t *dcontext, fragment_t *f,
     /* jmp to target */
     pc = insert_relative_jump(pc, get_direct_exit_target(dcontext, f->flags),
                               NOT_HOT_PATCHABLE);
+#endif //NO
 }
 #endif /* PROFILE_LINKCOUNT */
 
@@ -1292,6 +1310,8 @@ optimize_linkcount_stub(dcontext_t *dcontext, fragment_t *f,
 uint
 patchable_exit_cti_align_offs(dcontext_t *dcontext, instr_t *inst, cache_pc pc)
 {
+#ifdef NO
+//TODO SJF
     /* all our exit cti's currently use 4 byte offsets */
     /* FIXME : would be better to use a instr_is_cti_long or some such
      * also should check for addr16 flag (we shouldn't have any prefixes) */
@@ -1301,6 +1321,7 @@ patchable_exit_cti_align_offs(dcontext_t *dcontext, instr_t *inst, cache_pc pc)
     IF_X64(ASSERT(CHECK_TRUNCATE_TYPE_uint
                   (ALIGN_SHIFT_SIZE(pc + instr_length(dcontext, inst) - CTI_PATCH_SIZE,
                                     CTI_PATCH_SIZE, PAD_JMPS_ALIGNMENT))));
+#endif //NO
     return (uint) ALIGN_SHIFT_SIZE(pc + instr_length(dcontext, inst) - CTI_PATCH_SIZE,
                                    CTI_PATCH_SIZE, PAD_JMPS_ALIGNMENT);
 }
@@ -1309,6 +1330,8 @@ patchable_exit_cti_align_offs(dcontext_t *dcontext, instr_t *inst, cache_pc pc)
 bool
 is_exit_cti_patchable(dcontext_t *dcontext, instr_t *inst, uint frag_flags)
 {
+#ifdef NO
+//TODO SJF
     app_pc target;
     if (TEST(FRAG_COARSE_GRAIN, frag_flags)) {
         /* Case 8647: coarse grain fragment bodies always link through stubs
@@ -1354,6 +1377,7 @@ is_exit_cti_patchable(dcontext_t *dcontext, instr_t *inst, uint frag_flags)
             return false;
         return true;
     }
+#endif //NO
 }
 
 /* returns true if exit cti no longer points at stub
@@ -3402,6 +3426,8 @@ emit_fcache_enter_common(dcontext_t *dcontext, generated_code_t *code, byte *pc,
                          bool absolute, bool shared)
 {
     int len;
+#ifdef NO
+//TODO SJF INSTR
     instrlist_t ilist;
     patch_list_t patch;
 #ifdef X64
@@ -3491,8 +3517,6 @@ emit_fcache_enter_common(dcontext_t *dcontext, generated_code_t *code, byte *pc,
     APP(&ilist, INSTR_CREATE_push(dcontext, opnd_create_reg(REG_R0)));
     /* restore eflags temporarily using dstack */
     APP(&ilist, INSTR_CREATE_RAW_popf(dcontext));
-#ifdef NO
-//TODO SJF INSTR
     if (preserve_xmm_caller_saved()) {
         /* PR 264138: we must preserve xmm0-5 if on a 64-bit kernel.
          * Rather than try and optimize we save/restore on every cxt
@@ -3520,7 +3544,6 @@ emit_fcache_enter_common(dcontext_t *dcontext, generated_code_t *code, byte *pc,
                                OPSZ_SAVED_XMM, XMM_OFFSET + i*XMM_SAVED_REG_SIZE)));
         }
     }
-#endif //NO
 #ifdef X64
     APP(&ilist, RESTORE_FROM_DC(dcontext, REG_R8, R8_OFFSET));
     APP(&ilist, RESTORE_FROM_DC(dcontext, REG_R9, R9_OFFSET));
@@ -3625,6 +3648,7 @@ emit_fcache_enter_common(dcontext_t *dcontext, generated_code_t *code, byte *pc,
     /* free the instrlist_t elements */
     instrlist_clear(dcontext, &ilist);
 
+#endif //NO
     return pc + len;
 }
 
@@ -3657,6 +3681,8 @@ emit_fcache_enter(dcontext_t *dcontext, generated_code_t *code, byte *pc)
 void
 append_shared_get_dcontext(dcontext_t *dcontext, instrlist_t *ilist, bool save_xdi)
 {
+#ifdef NO
+//TODO SJF
     /* needed to support grabbing the dcontext w/ shared cache */
     if (save_xdi) {
         APP(ilist, SAVE_TO_TLS(dcontext, REG_R7, DCONTEXT_BASE_SPILL_SLOT));
@@ -3679,6 +3705,7 @@ append_shared_get_dcontext(dcontext_t *dcontext, instrlist_t *ilist, bool save_x
         APP(ilist, SAVE_TO_DC(dcontext, REG_R7, R6_OFFSET));
         APP(ilist, RESTORE_FROM_TLS(dcontext, REG_R7, TLS_DCONTEXT_SLOT));
     }
+#endif //NO
 }
 
 
@@ -4178,6 +4205,8 @@ coarse_exit_prefix_size(coarse_info_t *info)
 byte *
 emit_coarse_exit_prefix(dcontext_t *dcontext, byte *pc, coarse_info_t *info)
 {
+#ifdef NO
+//TODO SJF INSTR
     byte *ibl;
     DEBUG_DECLARE(byte *start_pc = pc;)
     instrlist_t ilist;
@@ -4320,6 +4349,7 @@ emit_coarse_exit_prefix(dcontext_t *dcontext, byte *pc, coarse_info_t *info)
         LOG(GLOBAL, LOG_EMIT, 3, "\n");
     });
 
+#endif //NO
     return pc;
 }
 
@@ -4343,6 +4373,8 @@ void
 insert_save_eflags(dcontext_t *dcontext, instrlist_t *ilist, instr_t *where,
                    uint flags, bool tls, bool absolute _IF_X64(bool x86_to_x64))
 {
+#ifdef NO
+// TODO SJF
     /* no support for absolute addresses on x64: we always use tls/reg */
     IF_X64(ASSERT_NOT_IMPLEMENTED(!absolute));
 
@@ -4377,12 +4409,10 @@ insert_save_eflags(dcontext_t *dcontext, instrlist_t *ilist, instr_t *where,
     if (!TEST(FRAG_WRITES_EFLAGS_OF, flags)
         && !INTERNAL_OPTION(unsafe_ignore_overflow)) { /* OF needs saving */
         /* Move OF flags into the OF flag spill slot. */
-#ifdef NO
-// TODO SJF
         PRE(ilist, where,
             INSTR_CREATE_setcc(dcontext, OP_seto, opnd_create_reg(REG_AL)));
-#endif
     }
+#endif//NO
 }
 
 /* restores eflags from xax and the xax app value from the xax slot, either in
@@ -4394,6 +4424,8 @@ void
 insert_restore_eflags(dcontext_t *dcontext, instrlist_t *ilist, instr_t *where,
                       uint flags, bool tls, bool absolute _IF_X64(bool x86_to_x64))
 {
+#ifdef NO
+//TODO SJF INSTR
     /* no support for absolute addresses on x64: we always use tls/reg */
     IF_X64(ASSERT_NOT_IMPLEMENTED(!absolute));
 
@@ -4417,6 +4449,7 @@ insert_restore_eflags(dcontext_t *dcontext, instrlist_t *ilist, instr_t *where,
         /*>>>    RESTORE_FROM_UPCONTEXT xax_OFFSET,%xax                  */
         PRE(ilist, where, RESTORE_FROM_DC(dcontext, REG_R0, R0_OFFSET));
     }
+#endif //NO
 }
 
 #ifdef HASHTABLE_STATISTICS
@@ -4512,6 +4545,8 @@ static void
 append_empty_loop(dcontext_t *dcontext, instrlist_t *ilist, 
                   uint iterations, reg_id_t scratch_register)
 {
+#ifdef NO
+//TODO SJF
     instr_t *initloop;
     instr_t *loop;
     /*       mov     ebx, iterations */
@@ -4526,6 +4561,7 @@ append_empty_loop(dcontext_t *dcontext, instrlist_t *ilist,
     APP(ilist, initloop);
     APP(ilist, loop);
     APP(ilist, INSTR_CREATE_jcc(dcontext, OP_jnz_short, opnd_create_instr(loop)));
+#endif
 }
 #endif /* INTERNAL */
 
@@ -6397,6 +6433,8 @@ emit_return_lookup(dcontext_t *dcontext, byte *pc,
 static instr_t *
 create_int_syscall_instr(dcontext_t *dcontext)
 {
+#ifdef NO
+//TODO SJF
 #ifdef WINDOWS
     /* On windows should already be initialized by syscalls_init() */
     ASSERT(get_syscall_method() != SYSCALL_METHOD_UNINITIALIZED);
@@ -6413,11 +6451,14 @@ create_int_syscall_instr(dcontext_t *dcontext)
     /* int $0x80 */
     return INSTR_CREATE_int(dcontext, opnd_create_immed_int((char)0x80, OPSZ_1));
 #endif
+#endif //NO
 }
 
 instr_t *
 create_syscall_instr(dcontext_t *dcontext)
 {
+#ifdef NO
+// TODO SJF INSTR
     int method = get_syscall_method();
     if (method == SYSCALL_METHOD_INT || method == SYSCALL_METHOD_UNINITIALIZED) {
         return create_int_syscall_instr(dcontext);
@@ -6440,6 +6481,7 @@ create_syscall_instr(dcontext_t *dcontext)
         ASSERT_NOT_REACHED();
         return NULL;
     }
+#endif
 }
 
 #ifdef WINDOWS
@@ -7536,6 +7578,8 @@ emit_do_syscall_common(dcontext_t *dcontext, generated_code_t *code,
                        bool handle_clone, bool thread_shared, bool force_int,
                        instr_t *syscall_instr, uint *syscall_offs /*OUT*/)
 {
+#ifdef NO
+//TODO SJF INSTR
     instrlist_t ilist;
     instr_t *syscall;
 #ifdef LINUX
@@ -7624,6 +7668,7 @@ emit_do_syscall_common(dcontext_t *dcontext, generated_code_t *code,
     /* free the instrlist_t elements */
     instrlist_clear(dcontext, &ilist);
 
+#endif //NO
     return pc;
 }
 

@@ -6646,6 +6646,8 @@ void
 flush_fragments_unlink_shared(dcontext_t *dcontext, app_pc base, size_t size,
                               fragment_t *list _IF_DGCDIAG(app_pc written_pc))
 {
+    int res, tmp;
+
     /* we would assert that size > 0 || list != NULL but we have to pass
      * in 0 and NULL for unit flushing when no live fragments are in the unit
      */
@@ -7794,6 +7796,7 @@ fragment_coarse_htable_merge(dcontext_t *dcontext, coarse_info_t *dst,
     coarse_table_t *thht_dst, *thht1, *thht2;
     coarse_table_t *ht_dst, *ht1, *ht2;
     uint merged_entries = 0;
+    int                 res, tmp;
 
     ASSERT(SHARED_FRAGMENTS_ENABLED());
     ASSERT(info1 != NULL && info2 != NULL);

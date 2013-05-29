@@ -220,6 +220,25 @@ bool is_signal_restorer_code(byte *pc, size_t *len);
 #define CONTEXT_HEAP_SIZE_OPAQUE (CONTEXT_HEAP_SIZE(struct sigcontext))
 
 /* struct sigcontext field name changes */
+#ifdef ARM
+# define SC_R0 r0
+# define SC_R1 r1
+# define SC_R2 r2
+# define SC_R3 r3
+# define SC_R4 r4
+# define SC_R5 r5
+# define SC_R6 r6
+# define SC_R7 r7
+# define SC_R8 r8
+# define SC_R9 r9
+# define SC_R10 r10
+# define SC_R11 r11
+# define SC_R12 r12
+# define SC_R13 r13
+# define SC_R14 r14
+# define SC_R15 r15
+#endif
+
 #ifdef X64
 # define SC_XIP rip
 # define SC_XAX rax
@@ -231,7 +250,7 @@ bool is_signal_restorer_code(byte *pc, size_t *len);
 # define SC_XSI rsi
 # define SC_XDI rdi
 # define SC_XFLAGS eflags
-#else
+#elseif X86
 # define SC_XIP eip
 # define SC_XAX eax
 # define SC_XCX ecx

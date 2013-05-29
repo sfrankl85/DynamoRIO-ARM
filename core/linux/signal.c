@@ -2213,6 +2213,7 @@ handle_sigsuspend(dcontext_t *dcontext, kernel_sigset_t *set,
 static void
 dump_fpstate(dcontext_t *dcontext, struct _fpstate *fp)
 {
+#ifdef NO //TODO SJF
     int i,j;
 #ifdef X64
     LOG(THREAD, LOG_ASYNCH, 1, "\tcwd="PFX"\n", fp->cwd);
@@ -2292,11 +2293,13 @@ dump_fpstate(dcontext_t *dcontext, struct _fpstate *fp)
             }
         }
     }
+#endif //NO
 }
 
 static void
 dump_sigcontext(dcontext_t *dcontext, struct sigcontext *sc)
 {
+#ifdef NO //TODO SJF
     LOG(THREAD, LOG_ASYNCH, 1, "\tgs=0x%04x"IF_NOT_X64(", __gsh=0x%04x")"\n",
         sc->gs _IF_NOT_X64(sc->__gsh));
     LOG(THREAD, LOG_ASYNCH, 1, "\tfs=0x%04x"IF_NOT_X64(", __fsh=0x%04x")"\n",
@@ -2339,6 +2342,7 @@ dump_sigcontext(dcontext_t *dcontext, struct sigcontext *sc)
         dump_fpstate(dcontext, sc->fpstate);
     LOG(THREAD, LOG_ASYNCH, 1, "\toldmask="PFX"\n", sc->oldmask);
     LOG(THREAD, LOG_ASYNCH, 1, "\tcr2="PFX"\n", sc->cr2);
+#endif //NO
 }
 
 static void
@@ -4027,12 +4031,14 @@ master_signal_handler_C(byte *xsp)
 #endif
 {
 #ifdef NO
-//TODO SJF NON-ARM MASTER SIGNAL HANDLER 
+//TODO SJF Comment out all signal handling apart from new interrupt catcher to all dr jump
+
     sigframe_rt_t *frame = (sigframe_rt_t *) xsp;
 #ifndef X64
     /* Read the normal arguments from the frame. */
     int sig = frame->sig;
     siginfo_t *siginfo = frame->pinfo;
+
     kernel_ucontext_t *ucxt = frame->puc;
 #endif /* !X64 */
 #ifdef DEBUG
@@ -4178,7 +4184,11 @@ master_signal_handler_C(byte *xsp)
          * Thus we must use the third argument, which is a ucontext_t (see above)
          */
         struct sigcontext *sc = (struct sigcontext *) &(ucxt->uc_mcontext);
+#ifdef ARM
+        void *pc = (void *) sc->SC_R14;
+#else
         void *pc = (void *) sc->SC_XIP;
+#endif
         bool syscall_signal = false; /* signal came from syscall? */
         bool is_write = false;
         byte *target;
@@ -4410,6 +4420,7 @@ master_signal_handler_C(byte *xsp)
         break;
     }
     } /* end switch */
+
     
     LOG(THREAD, LOG_ASYNCH, level, "\tmaster_signal_handler %d returning now\n\n", sig);
 
@@ -4417,7 +4428,7 @@ master_signal_handler_C(byte *xsp)
     if (local)
         SELF_PROTECT_LOCAL(dcontext, READONLY);
     EXITING_DR();
-#endif
+#endif //NO
 }
 
 static void
@@ -5628,7 +5639,9 @@ handle_alarm(dcontext_t *dcontext, int sig, kernel_ucontext_t *ucxt)
         which = ITIMER_PROF;
     else
         ASSERT_NOT_REACHED();
+#ifdef NO //TODO SJF // Commented this out as sigcontext_t has not been changed yet
     LOG(THREAD, LOG_ASYNCH, 2, "received alarm %d @"PFX"\n", which, sc->SC_XIP);
+#endif
 
     /* This alarm could have interrupted an app thread making an itimer syscall */
     if (info->shared_itimer) {

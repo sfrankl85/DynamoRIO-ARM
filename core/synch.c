@@ -386,7 +386,11 @@ translate_mcontext(thread_record_t *trec, priv_mcontext_t *mcontext,
          */
         LOG(THREAD_GET, LOG_SYNCH, 1, 
             "translate context, thread %d unable to translate context at pc"
+#ifdef ARM
+            " = "PFX"\n", trec->id, mcontext->r15);
+#else
             " = "PFX"\n", trec->id, mcontext->pc);
+#endif
         SYSLOG_INTERNAL_WARNING_ONCE("failed to translate");
         return false;
     }
@@ -522,17 +526,21 @@ at_safe_spot(thread_record_t *trec, priv_mcontext_t *mc,
                is_thread_currently_native(trec));
         #ifdef ARM
           LOG(THREAD_GET, LOG_SYNCH, 2, 
-              "thread %d suspended at safe spot pc="PFX"\n", trec->id, mc->pc);
+              "thread %d suspended at safe spot pc="PFX"\n", trec->id, mc->r15);
         #else
           LOG(THREAD_GET, LOG_SYNCH, 2, 
-              "thread %d suspended at safe spot pc="PFX"\n", trec->id, mc->r15);
+              "thread %d suspended at safe spot pc="PFX"\n", trec->id, mc->pc);
         #endif
         
         return true;
     }
     LOG(THREAD_GET, LOG_SYNCH, 2, 
         "thread %d not at safe spot (pc="PFX") for %d\n", 
+#ifdef ARM
+        trec->id, mc->r15, desired_state);
+#else
         trec->id, mc->pc, desired_state);
+#endif
     return false;
 }
 
@@ -671,13 +679,11 @@ check_wait_at_safe_spot(dcontext_t *dcontext, thread_synch_permission_t cur_stat
 void
 adjust_wait_at_safe_spot(dcontext_t *dcontext, int amt)
 {
-    int res, tmp;
-
     thread_synch_data_t *tsd = (thread_synch_data_t *) dcontext->synch_field;
     ASSERT(tsd->pending_synch_count >= 0);
     spinmutex_lock(tsd->synch_lock);
     #ifdef ARM
-      ATOMIC_ADD(int, tsd->pending_synch_count, amt, res, tmp);
+      ATOMIC_ADD(int, tsd->pending_synch_count, amt);
     #else
       ATOMIC_ADD(int, tsd->pending_synch_count, amt);
     #endif
@@ -720,11 +726,18 @@ set_synched_thread_context(thread_record_t *trec,
             STATS_INC(wait_multiple_setcxt);
             synch_thread_free_setcontext(tsd);
         }
+#ifdef NO
+//TODO SJF
         LOG(THREAD_GET, LOG_SYNCH, 2, 
             "set_synched_thread_context %d to pc "PFX"\n", trec->id,
+  #ifdef ARM
+            (mc != NULL) ? mc->r15 : (app_pc)
+  #else
             (mc != NULL) ? mc->pc : (app_pc)
+  #endif
             IF_WINDOWS_ELSE(((CONTEXT*)cxt)->CXT_XIP,
                             ((struct sigcontext *)cxt)->SC_XIP));
+#endif
         if (mc != NULL)
             tsd->set_mcontext = mc;
         else {
@@ -1591,10 +1604,17 @@ translate_from_synchall_to_dispatch(thread_record_t *tr, thread_synch_state_t sy
             ASSERT_NOT_REACHED();
             goto translate_from_synchall_to_dispatch_exit;
         }
+#ifdef ARM
+        LOG(GLOBAL, LOG_CACHE, 2, 
+            "\ttranslation pc = "PFX"\n", mc->r14);
+        ASSERT(!is_dynamo_address((app_pc)mc->r14) &&
+               !in_fcache((app_pc)mc->r14));
+#else
         LOG(GLOBAL, LOG_CACHE, 2, 
             "\ttranslation pc = "PFX"\n", mc->xip);
         ASSERT(!is_dynamo_address((app_pc)mc->xip) &&
                !in_fcache((app_pc)mc->xip));
+#endif
         /* We send all threads, regardless of whether was in DR or not, to
          * re-interp from translated cxt, to avoid having to handle stale
          * local state problems if we simply resumed.
@@ -1678,7 +1698,11 @@ translate_from_synchall_to_dispatch(thread_record_t *tr, thread_synch_state_t sy
           mc->xip = (app_pc) get_reset_exit_stub(dcontext);
         #endif
         LOG(GLOBAL, LOG_CACHE, 2, 
+        #ifdef ARM
+            "\tsent to reset exit stub "PFX"\n", mc->r14);
+        #else
             "\tsent to reset exit stub "PFX"\n", mc->xip);
+        #endif
         /* make dispatch happy */
         dcontext->whereami = WHERE_FCACHE;
 #if defined(WINDOWS) && defined(CLIENT_INTERFACE)

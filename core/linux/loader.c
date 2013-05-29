@@ -544,6 +544,8 @@ static bool
 privload_search_rpath(privmod_t *mod, const char *name,
                       char *filename OUT /* buffer size is MAXIMUM_PATH */)
 {
+#ifdef NO
+//TODO SJF
     os_privmod_data_t *opd;
     ELF_DYNAMIC_ENTRY_TYPE *dyn;
     ASSERT(mod != NULL && "can't look for rpath without a dependent module");
@@ -598,6 +600,7 @@ privload_search_rpath(privmod_t *mod, const char *name,
         }
         ++dyn;
     }
+#endif //NO
     return false;
 }
 

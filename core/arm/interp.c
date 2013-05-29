@@ -5019,6 +5019,8 @@ int
 insert_increment_stat_counter(dcontext_t *dcontext, instrlist_t *trace, instr_t *next,                 
                               uint *counter_address)
 {
+#ifdef NO
+//TODO SJF
     int added_size = 0;
     /* incrementing a branch-type specific thread private counter */
     opnd_t private_branchtype_counter = 
@@ -5042,6 +5044,7 @@ insert_increment_stat_counter(dcontext_t *dcontext, instrlist_t *trace, instr_t 
                                                     private_branchtype_counter,
                                                     opnd_create_reg(REG_ECX)));
     return added_size;
+#endif //NO
 }
 #endif /* HASHTABLE_STATISTICS */
 
@@ -5937,10 +5940,12 @@ int
 append_ib_trace_last_ibl_exit_stat(dcontext_t *dcontext, instrlist_t *trace,
                                    app_pc speculate_next_tag)
 {
+    int added_size = 0;
+#ifdef NO
+//TODO SJF
     /* unlike fixup_last_cti() here we are about to go directly to the IBL routine */
     /* spill XCX in a scratch slot - note always using TLS */
     int tls_stat_scratch_slot = os_tls_offset(HTABLE_STATS_SPILL_SLOT);
-    int added_size = 0;
     ibl_type_t ibl_type;
 
     instr_t *inst = instrlist_last(trace); /* currently only relevant to last CTI */
@@ -6004,7 +6009,7 @@ append_ib_trace_last_ibl_exit_stat(dcontext_t *dcontext, instrlist_t *trace,
         added_size += tracelist_add(dcontext, trace, next, 
                                     INSTR_CREATE_jmp_short(dcontext, opnd_create_instr(where)));
     }
-
+#endif
     return added_size;
 }
 #endif /* HASHTABLE_STATISTICS */

@@ -1260,6 +1260,7 @@ print_all_ldt(void)
 
 #define LDT_ENTRIES_TO_CHECK 128
 
+#ifndef ARM
 /* returns -1 if all indices are in use */
 static int
 find_unused_ldt_index()
@@ -1338,6 +1339,8 @@ clear_ldt_entry(uint index)
     ret = modify_ldt_syscall(1, (void *)&array, sizeof(array));
     ASSERT(ret >= 0);
 }
+#endif //not ARM
+
 #endif /* HAVE_TLS */
 
 /* segment selector format:
@@ -1547,8 +1550,11 @@ static os_local_state_t *
 get_os_tls(void)
 {
     os_local_state_t *os_tls;
+#ifdef NO
+//TODO SJF
     ASSERT(is_segment_register_initialized());
     READ_TLS_SLOT_IMM(TLS_SELF_OFFSET, os_tls);
+#endif //NO
     return os_tls;
 }
 
@@ -1620,14 +1626,20 @@ void *
 get_tls(ushort tls_offs)
 {
     void *val;
+#ifdef NO
+//TODO SJF
     READ_TLS_SLOT(tls_offs, val);
+#endif
     return val;
 }
 
 void
 set_tls(ushort tls_offs, void *value)
 {
+#ifdef NO
+//TODO SJF
     WRITE_TLS_SLOT(tls_offs, value);
+#endif
 }
 
 
@@ -1741,6 +1753,7 @@ get_local_state()
 void
 os_handle_mov_seg(dcontext_t *dcontext, byte *pc)
 {
+#ifdef NO //TODO SJF
     instr_t instr;
     opnd_t opnd;
     reg_id_t seg;
@@ -1790,6 +1803,7 @@ os_handle_mov_seg(dcontext_t *dcontext, byte *pc)
     LOG(THREAD_GET, LOG_THREADS, 2,
         "thread %d segment change %s to selector 0x%x => app fs: "PFX", gs: "PFX"\n",
         get_thread_id(), reg_names[seg], sel, os_tls->app_fs_base, os_tls->app_gs_base);
+#endif //NO
 }
 
 /* Queries the set of available GDT slots, and initializes:
@@ -1968,6 +1982,8 @@ os_tls_app_seg_init(os_local_state_t *os_tls, void *segment)
 void
 os_tls_init(void)
 {
+#ifdef NO
+//TODO SJF
 #ifdef HAVE_TLS
     /* We create a 1-page segment with an LDT entry for each thread and load its
      * selector into fs/gs.
@@ -2169,6 +2185,7 @@ os_tls_init(void)
     /* store type in global var for convenience: should be same for all threads */
     tls_type = os_tls->tls_type;
     ASSERT(is_segment_register_initialized());
+#endif //NO
 }
 
 /* Frees local_state.  If the calling thread is exiting (i.e.,
@@ -2659,6 +2676,8 @@ get_thread_private_dcontext(void)
      * the current thread, they cannot both execute simultaneously for the
      * same tid, right?
      */
+#ifdef NO
+//TODO SJF
     thread_id_t tid = get_thread_id();
     int i;
     if (tls_table != NULL) {
@@ -2668,6 +2687,7 @@ get_thread_private_dcontext(void)
             }
         }
     }
+#endif //NO
     return NULL;
 #endif
 }
@@ -5381,8 +5401,13 @@ handle_exit(dcontext_t *dcontext)
     } else {
         LOG(THREAD, LOG_TOP|LOG_THREADS|LOG_SYSCALLS, 1,
             "SYS_exit%s(%d) in thread %d of %d => cleaning up %s\n",
+#ifdef ARM
+            (mc->r0 == SYS_exit_group) ? "_group" : "",
+            mc->r0, get_thread_id(), get_process_id(),
+#else
             (mc->xax == SYS_exit_group) ? "_group" : "",
             mc->xax, get_thread_id(), get_process_id(),
+#endif
             exit_process ? "process" : "thread");
     }
     KSTOP(num_exits_dir_syscall);
@@ -5612,11 +5637,21 @@ pre_system_call(dcontext_t *dcontext)
 #ifdef NO
     RSTATS_INC(pre_syscall);
 #endif //NO
+
+
+#ifdef ARM
+    DOSTATS({
+        if (ignorable_system_call(mc->r7)) //Syscall number is in r7
+            STATS_INC(pre_syscall_ignorable);
+    });
+    LOG(THREAD, LOG_SYSCALLS, 2, "system call %d\n", mc->r7);
+#else
     DOSTATS({
         if (ignorable_system_call(mc->xax))
             STATS_INC(pre_syscall_ignorable);
     });
     LOG(THREAD, LOG_SYSCALLS, 2, "system call %d\n", mc->xax);
+#endif
 
     /* PR 313715: If we fail to hook the vsyscall page (xref PR 212570, PR 288330)
      * we fall back on int, but we have to tweak syscall param #5 (ebp)
@@ -6192,7 +6227,11 @@ pre_system_call(dcontext_t *dcontext)
     case SYS_rt_sigqueueinfo: { /* 178 */
         /* FIXME: handle all of these syscalls! */
         LOG(THREAD, LOG_ASYNCH|LOG_SYSCALLS, 1,
+#ifdef ARM
+            "WARNING: unhandled signal system call %d\n", mc->r7);
+#else
             "WARNING: unhandled signal system call %d\n", mc->xax);
+#endif
         break;
     }
 
@@ -6812,7 +6851,7 @@ post_system_call(dcontext_t *dcontext)
      * case-by-case basis in the switch statement below.
      */
 #ifdef ARM
-    ptr_int_t result = (ptr_int_t) mc->r0; /* signed */
+    ptr_int_t result = (ptr_int_t) mc->r1; /* signed */// Result is in R1
 #else
     ptr_int_t result = (ptr_int_t) mc->xax; /* signed */
 #endif
@@ -6885,7 +6924,11 @@ post_system_call(dcontext_t *dcontext)
 
     LOG(THREAD, LOG_SYSCALLS, 2,
         "post syscall: sysnum="PFX", result="PFX" (%d)\n",
+#ifdef ARM
+        sysnum, mc->r7, (int)mc->r7);
+#else
         sysnum, mc->xax, (int)mc->xax);
+#endif
 
     switch (sysnum) {
 
@@ -7177,7 +7220,11 @@ post_system_call(dcontext_t *dcontext)
 
     case SYS_clone: {
         /* in /usr/src/linux/arch/i386/kernel/process.c */
+#ifdef ARM
+        LOG(THREAD, LOG_SYSCALLS, 2, "syscall: clone returned "PFX"\n", mc->r7);
+#else
         LOG(THREAD, LOG_SYSCALLS, 2, "syscall: clone returned "PFX"\n", mc->xax);
+#endif
         /* We switch the lib tls segment back to dr's segment.
          * Please refer to comment on os_switch_lib_tls.
          * It is only called in parent thread.

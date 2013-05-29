@@ -1154,12 +1154,12 @@ opnd_type_ok(decode_info_t *di/*prefixes field is IN/OUT; x86_mode is IN*/,
         } else {
             return false;
         }
-#endif
     case TYPE_H:
     case TYPE_L:
         return (opnd_is_reg(opnd) &&
                 reg_size_ok(di, opnd_get_reg(opnd), optype, opsize, false/*!addr*/) &&
                 reg_is_xmm(opnd_get_reg(opnd)));
+#endif
     default:
         CLIENT_ASSERT(false, "encode error: type ok: unknown operand type");
         return false;

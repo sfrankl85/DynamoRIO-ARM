@@ -4599,6 +4599,8 @@ DR_API void
 dr_save_reg(void *drcontext, instrlist_t *ilist, instr_t *where, reg_id_t reg,
             dr_spill_slot_t slot)
 {
+#ifdef NO
+//TODO SJF
     dcontext_t *dcontext = (dcontext_t *) drcontext;
     CLIENT_ASSERT(drcontext != NULL, "dr_save_reg: drcontext cannot be NULL");
     CLIENT_ASSERT(drcontext != GLOBAL_DCONTEXT,
@@ -4637,6 +4639,7 @@ dr_save_reg(void *drcontext, instrlist_t *ilist, instr_t *where, reg_id_t reg,
             MINSERT(ilist, where, instr_create_save_to_dcontext(dcontext, reg, offs));
         }
     }
+#endif
 }
 
 /* if want to save 8 or 16-bit reg, must pass in containing ptr-sized reg! */
@@ -6072,6 +6075,8 @@ bool
 dr_insert_get_seg_base(void *drcontext, instrlist_t *ilist, instr_t *instr,
                        reg_id_t seg, reg_id_t reg)
 {
+#ifdef NO
+//TODO SJF
     CLIENT_ASSERT(reg_is_pointer_sized(reg),
                   "dr_insert_get_seg_base: reg has wrong size\n");
     CLIENT_ASSERT(reg_is_segment(seg),
@@ -6120,6 +6125,7 @@ dr_insert_get_seg_base(void *drcontext, instrlist_t *ilist, instr_t *instr,
     } else
         return false;
 #endif /* LINUX */
+#endif //NO
     return true;
 }
 

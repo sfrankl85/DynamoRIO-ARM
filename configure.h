@@ -38,8 +38,8 @@
 #define _CONFIGURE_H_ 1
 
 /* exposed options */
-/* #undef INTERNAL */
-/* #undef DEBUG */
+#define INTERNAL
+#define DEBUG
 #define DRGUI_DEMO
 /* #undef STATIC_LIBRARY */
 

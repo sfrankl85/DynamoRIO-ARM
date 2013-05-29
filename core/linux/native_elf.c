@@ -139,6 +139,8 @@ find_dl_fixup(dcontext_t *dcontext, app_pc resolver)
 static void
 initialize_plt_stub_template(void)
 {
+#ifdef NO
+//TODO SJF INSTR
     dcontext_t *dc = GLOBAL_DCONTEXT;
     instrlist_t *ilist = instrlist_create(dc);
     app_pc code_end = plt_stub_template + BUFFER_SIZE_BYTES(plt_stub_template);
@@ -177,6 +179,7 @@ initialize_plt_stub_template(void)
         instrlist_disassemble(dc, NULL, ilist, THREAD_GET);
     });
     instrlist_clear_and_destroy(dc, ilist);
+#endif //NO
 }
 
 /* Replaces the resolver with our own or the app's original resolver.

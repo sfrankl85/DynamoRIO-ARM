@@ -1593,8 +1593,8 @@ void
 dump_mcontext_callstack(dcontext_t *dcontext)
 {
     LOG(THREAD, LOG_ALL, 1, "Call stack:\n");
-    internal_dump_callstack((app_pc)get_mcontext(dcontext)->pc,
-                            (app_pc)get_mcontext(dcontext)->xbp, THREAD,
+    internal_dump_callstack((app_pc)get_mcontext(dcontext)->r15,
+                            (app_pc)get_mcontext(dcontext)->r5, THREAD,
                             DUMP_NOT_XML, false/*!header*/);
 }
 #endif

@@ -58,6 +58,8 @@
  * not rely on being able to predict which instrs are invalid.
  */
 
+
+#ifdef NO
 /****************************************************************************
  * Operand pointers into tables
  * When there are multiple encodings of an opcode, this points to the first
@@ -1088,6 +1090,8 @@ const instr_info_t * const op_instr[] =
     /* OP_jmpe_abs  */   &second_byte[0xb8],
 #endif
 };
+
+#endif //NO
 
 
 /****************************************************************************
@@ -5139,4 +5143,4 @@ const instr_info_t extra_operands[] =
     {OP_CONTD,0x663a6018, "<vpcmpestri cont'd", xx, xx, eax, edx, xx, mrm|vex|reqp, fW6, END_LIST},
 };
 
-#endif
+#endif //NO

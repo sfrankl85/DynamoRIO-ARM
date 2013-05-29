@@ -777,6 +777,8 @@ spinmutex_lock(spin_mutex_t *spin_lock)
 void
 spinmutex_lock_no_yield(spin_mutex_t *spin_lock)
 {
+#ifdef NO
+//TODO SJF INSTR
     /* busy-wait until mutex is locked */
     while (!spinmutex_trylock(spin_lock)) {
 #ifdef DEADLOCK_AVOIDANCE
@@ -790,6 +792,7 @@ spinmutex_lock_no_yield(spin_mutex_t *spin_lock)
         SPINLOCK_PAUSE();
     }
     return;
+#endif //NO
 }
 
 void
