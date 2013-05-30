@@ -325,7 +325,6 @@
 #define INSTR_CREATE_ptest(dc, s1, s2) \
   instr_create_0dst_2src((dc), OP_ptest, (s1), (s2))
 
-#ifdef NO //NO 1
 /* TODO SJF */
 /**
  * This INSTR_CREATE_xxx macro creates an instr_t with opcode OP_xxx and
@@ -413,6 +412,7 @@
 #define INSTR_CREATE_int(dc, i) \
   instr_create_0dst_1src((dc), OP_int, (i))
 
+#ifdef NO //NO 1
 #endif //NO 1
 
 
@@ -424,7 +424,6 @@
   instr_create_0dst_1src((dc), OP_jmpe_abs, (t))
 #endif
 
-#ifdef NO //NO 2
 
 /* floating-point */
 /**
@@ -800,8 +799,375 @@
 #define INSTR_CREATE_arpl(dc, d, s) \
   instr_create_1dst_1src((dc), OP_arpl, (d), (s))
 
+/**
+ * This INSTR_CREATE_xxx macro creates an instr_t with opcode OP_xxx and the given
+ * explicit operands, automatically supplying any implicit operands.
+ * \param dc The void * dcontext used to allocate memory for the instr_t.
+ * \param d The opnd_t explicit destination operand for the instruction.
+ * \param s The opnd_t explicit source operand for the instruction, which can be
+ * created with OPND_CREATE_MEM_lea() to get the appropriate operand size.
+ */
+#define INSTR_CREATE_lea(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_lea, (d), (s))
+#define INSTR_CREATE_mov_ld(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_mov_ld, (d), (s))
+#define INSTR_CREATE_mov_st(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_mov_st, (d), (s))
+#define INSTR_CREATE_mov_imm(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_mov_imm, (d), (s))
+#define INSTR_CREATE_mov_seg(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_mov_seg, (d), (s))
+#define INSTR_CREATE_mov_priv(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_mov_priv, (d), (s))
+#define INSTR_CREATE_lar(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_lar, (d), (s))
+#define INSTR_CREATE_lsl(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_lsl, (d), (s))
+#define INSTR_CREATE_movntps(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_movntps, (d), (s))
+#define INSTR_CREATE_movntpd(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_movntpd, (d), (s))
+#define INSTR_CREATE_movd(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_movd, (d), (s))
+#define INSTR_CREATE_movq(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_movq, (d), (s))
+#define INSTR_CREATE_movdqu(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_movdqu, (d), (s))
+#define INSTR_CREATE_movdqa(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_movdqa, (d), (s))
+#define INSTR_CREATE_movzx(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_movzx, (d), (s))
+#define INSTR_CREATE_movsx(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_movsx, (d), (s))
+#define INSTR_CREATE_bsf(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_bsf, (d), (s))
+#define INSTR_CREATE_bsr(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_bsr, (d), (s))
+#define INSTR_CREATE_pmovmskb(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_pmovmskb, (d), (s))
+#define INSTR_CREATE_movups(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_movups, (d), (s))
+#define INSTR_CREATE_movss(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_movss, (d), (s))
+#define INSTR_CREATE_movupd(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_movupd, (d), (s))
+#define INSTR_CREATE_movsd(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_movsd, (d), (s))
+#define INSTR_CREATE_movlps(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_movlps, (d), (s))
+#define INSTR_CREATE_movlpd(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_movlpd, (d), (s))
+#define INSTR_CREATE_movhps(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_movhps, (d), (s))
+#define INSTR_CREATE_movhpd(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_movhpd, (d), (s))
+#define INSTR_CREATE_movaps(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_movaps, (d), (s))
+#define INSTR_CREATE_movapd(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_movapd, (d), (s))
+#define INSTR_CREATE_cvtpi2ps(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_cvtpi2ps, (d), (s))
+#define INSTR_CREATE_cvtsi2ss(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_cvtsi2ss, (d), (s))
+#define INSTR_CREATE_cvtpi2pd(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_cvtpi2pd, (d), (s))
+#define INSTR_CREATE_cvtsi2sd(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_cvtsi2sd, (d), (s))
+#define INSTR_CREATE_cvttps2pi(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_cvttps2pi, (d), (s))
+#define INSTR_CREATE_cvttss2si(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_cvttss2si, (d), (s))
+#define INSTR_CREATE_cvttpd2pi(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_cvttpd2pi, (d), (s))
+#define INSTR_CREATE_cvttsd2si(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_cvttsd2si, (d), (s))
+#define INSTR_CREATE_cvtps2pi(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_cvtps2pi, (d), (s))
+#define INSTR_CREATE_cvtss2si(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_cvtss2si, (d), (s))
+#define INSTR_CREATE_cvtpd2pi(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_cvtpd2pi, (d), (s))
+#define INSTR_CREATE_cvtsd2si(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_cvtsd2si, (d), (s))
+#define INSTR_CREATE_cvtps2pd(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_cvtps2pd, (d), (s))
+#define INSTR_CREATE_cvtss2sd(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_cvtss2sd, (d), (s))
+#define INSTR_CREATE_cvtpd2ps(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_cvtpd2ps, (d), (s))
+#define INSTR_CREATE_cvtsd2ss(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_cvtsd2ss, (d), (s))
+#define INSTR_CREATE_cvtdq2ps(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_cvtdq2ps, (d), (s))
+#define INSTR_CREATE_cvttps2dq(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_cvttps2dq, (d), (s))
+#define INSTR_CREATE_cvtps2dq(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_cvtps2dq, (d), (s))
+#define INSTR_CREATE_cvtdq2pd(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_cvtdq2pd, (d), (s))
+#define INSTR_CREATE_cvttpd2dq(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_cvttpd2dq, (d), (s))
+#define INSTR_CREATE_cvtpd2dq(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_cvtpd2dq, (d), (s))
+#define INSTR_CREATE_movmskps(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_movmskps, (d), (s))
+#define INSTR_CREATE_movmskpd(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_movmskpd, (d), (s))
+#define INSTR_CREATE_sqrtps(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_sqrtps, (d), (s))
+#define INSTR_CREATE_sqrtss(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_sqrtss, (d), (s))
+#define INSTR_CREATE_sqrtpd(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_sqrtpd, (d), (s))
+#define INSTR_CREATE_sqrtsd(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_sqrtsd, (d), (s))
+#define INSTR_CREATE_rsqrtps(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_rsqrtps, (d), (s))
+#define INSTR_CREATE_rsqrtss(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_rsqrtss, (d), (s))
+#define INSTR_CREATE_rcpps(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_rcpps, (d), (s))
+#define INSTR_CREATE_rcpss(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_rcpss, (d), (s))
+#define INSTR_CREATE_lddqu(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_lddqu, (d), (s))
+#define INSTR_CREATE_movsldup(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_movsldup, (d), (s))
+#define INSTR_CREATE_movshdup(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_movshdup, (d), (s))
+#define INSTR_CREATE_movddup(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_movddup, (d), (s))
+#define INSTR_CREATE_pshufb(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_pshufb, (d), (s))
+#define INSTR_CREATE_popcnt(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_popcnt, (d), (s))
+#define INSTR_CREATE_movntss(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_movntss, (d), (s))
+#define INSTR_CREATE_movntsd(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_movntsd, (d), (s))
+#define INSTR_CREATE_movntq(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_movntq, (d), (s))
+#define INSTR_CREATE_movntdq(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_movntdq, (d), (s))
+#define INSTR_CREATE_movnti(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_movnti, (d), (s))
+#define INSTR_CREATE_lzcnt(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_lzcnt, (d), (s))
+#define INSTR_CREATE_pmovsxbw(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_pmovsxbw, (d), (s))
+#define INSTR_CREATE_pmovsxbd(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_pmovsxbd, (d), (s))
+#define INSTR_CREATE_pmovsxbq(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_pmovsxbq, (d), (s))
+#define INSTR_CREATE_pmovsxdw(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_pmovsxdw, (d), (s))
+#define INSTR_CREATE_pmovsxwq(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_pmovsxwq, (d), (s))
+#define INSTR_CREATE_pmovsxdq(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_pmovsxdq, (d), (s))
+#define INSTR_CREATE_movntdqa(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_movntdqa, (d), (s))
+#define INSTR_CREATE_pmovzxbw(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_pmovzxbw, (d), (s))
+#define INSTR_CREATE_pmovzxbd(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_pmovzxbd, (d), (s))
+#define INSTR_CREATE_pmovzxbq(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_pmovzxbq, (d), (s))
+#define INSTR_CREATE_pmovzxdw(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_pmovzxdw, (d), (s))
+#define INSTR_CREATE_pmovzxwq(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_pmovzxwq, (d), (s))
+#define INSTR_CREATE_pmovzxdq(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_pmovzxdq, (d), (s))
+#define INSTR_CREATE_phminposuw(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_phminposuw, (d), (s))
+#define INSTR_CREATE_vmread(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_vmread, (d), (s))
+#define INSTR_CREATE_vmwrite(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_vmwrite, (d), (s))
+#define INSTR_CREATE_movsxd(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_movsxd, (d), (s))
+#define INSTR_CREATE_movbe(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_movbe, (d), (s))
+#define INSTR_CREATE_aesimc(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_aesimc, (d), (s))
+/* AVX */
+#define INSTR_CREATE_vmovups(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_vmovups, (d), (s))
+#define INSTR_CREATE_vmovupd(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_vmovupd, (d), (s))
+#define INSTR_CREATE_vmovsldup(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_vmovsldup, (d), (s))
+#define INSTR_CREATE_vmovddup(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_vmovddup, (d), (s))
+#define INSTR_CREATE_vmovlps(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_vmovlps, (d), (s))
+#define INSTR_CREATE_vmovlpd(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_vmovlpd, (d), (s))
+#define INSTR_CREATE_vmovshdup(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_vmovshdup, (d), (s))
+#define INSTR_CREATE_vmovhps(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_vmovhps, (d), (s))
+#define INSTR_CREATE_vmovhpd(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_vmovhpd, (d), (s))
+#define INSTR_CREATE_vmovaps(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_vmovaps, (d), (s))
+#define INSTR_CREATE_vmovapd(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_vmovapd, (d), (s))
+#define INSTR_CREATE_vmovntps(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_vmovntps, (d), (s))
+#define INSTR_CREATE_vmovntpd(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_vmovntpd, (d), (s))
+#define INSTR_CREATE_vcvttss2si(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_vcvttss2si, (d), (s))
+#define INSTR_CREATE_vcvttsd2si(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_vcvttsd2si, (d), (s))
+#define INSTR_CREATE_vcvtss2si(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_vcvtss2si, (d), (s))
+#define INSTR_CREATE_vcvtsd2si(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_vcvtsd2si, (d), (s))
+#define INSTR_CREATE_vmovmskps(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_vmovmskps, (d), (s))
+#define INSTR_CREATE_vmovmskpd(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_vmovmskpd, (d), (s))
+#define INSTR_CREATE_vsqrtps(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_vsqrtps, (d), (s))
+#define INSTR_CREATE_vsqrtpd(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_vsqrtpd, (d), (s))
+#define INSTR_CREATE_vrsqrtps(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_vrsqrtps, (d), (s))
+#define INSTR_CREATE_vrcpps(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_vrcpps, (d), (s))
+#define INSTR_CREATE_vcvtps2pd(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_vcvtps2pd, (d), (s))
+#define INSTR_CREATE_vcvtpd2ps(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_vcvtpd2ps, (d), (s))
+#define INSTR_CREATE_vcvttps2dq(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_vcvttps2dq, (d), (s))
+#define INSTR_CREATE_vcvtps2dq(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_vcvtps2dq, (d), (s))
+#define INSTR_CREATE_vmovd(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_vmovd, (d), (s))
+#define INSTR_CREATE_vmovq(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_vmovq, (d), (s))
+#define INSTR_CREATE_vpmovmskb(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_vpmovmskb, (d), (s))
+#define INSTR_CREATE_vcvtdq2pd(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_vcvtdq2pd, (d), (s))
+#define INSTR_CREATE_vcvttpd2dq(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_vcvttpd2dq, (d), (s))
+#define INSTR_CREATE_vcvtpd2dq(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_vcvtpd2dq, (d), (s))
+#define INSTR_CREATE_vmovntdq(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_vmovntdq, (d), (s))
+#define INSTR_CREATE_vmovdqu(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_vmovdqu, (d), (s))
+#define INSTR_CREATE_vmovdqa(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_vmovdqa, (d), (s))
+#define INSTR_CREATE_vlddqu(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_vlddqu, (d), (s))
+#define INSTR_CREATE_vpshufb(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_vpshufb, (d), (s))
+#define INSTR_CREATE_vpmovsxbw(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_vpmovsxbw, (d), (s))
+#define INSTR_CREATE_vpmovsxbd(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_vpmovsxbd, (d), (s))
+#define INSTR_CREATE_vpmovsxbq(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_vpmovsxbq, (d), (s))
+#define INSTR_CREATE_vpmovsxdw(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_vpmovsxdw, (d), (s))
+#define INSTR_CREATE_vpmovsxwq(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_vpmovsxwq, (d), (s))
+#define INSTR_CREATE_vpmovsxdq(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_vpmovsxdq, (d), (s))
+#define INSTR_CREATE_vmovntdqa(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_vmovntdqa, (d), (s))
+#define INSTR_CREATE_vpmovzxbw(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_vpmovzxbw, (d), (s))
+#define INSTR_CREATE_vpmovzxbd(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_vpmovzxbd, (d), (s))
+#define INSTR_CREATE_vpmovzxbq(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_vpmovzxbq, (d), (s))
+#define INSTR_CREATE_vpmovzxdw(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_vpmovzxdw, (d), (s))
+#define INSTR_CREATE_vpmovzxwq(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_vpmovzxwq, (d), (s))
+#define INSTR_CREATE_vpmovzxdq(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_vpmovzxdq, (d), (s))
+#define INSTR_CREATE_vphminposuw(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_vphminposuw, (d), (s))
+#define INSTR_CREATE_vaesimc(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_vaesimc, (d), (s))
+#define INSTR_CREATE_vmovss(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_vmovss, (d), (s))
+#define INSTR_CREATE_vmovsd(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_vmovsd, (d), (s))
+#define INSTR_CREATE_vcvtph2ps(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_vcvtph2ps, (d), (s))
+#define INSTR_CREATE_vbroadcastss(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_vbroadcastss, (d), (s))
+#define INSTR_CREATE_vbroadcastsd(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_vbroadcastsd, (d), (s))
+#define INSTR_CREATE_vbroadcastf128(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_vbroadcastf128, (d), (s))
+#define INSTR_CREATE_movq2dq(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_movq2dq, (d), (s))
+#define INSTR_CREATE_movdq2q(dc, d, s) \
+  instr_create_1dst_1src((dc), OP_movdq2q, (d), (s))
 
+/* 1 destination, 1 implicit source */
+/** @name 1 destination, 1 implicit source */
+/* @{ */ /* doxygen start group; w/ DISTRIBUTE_GROUP_DOC=YES, one comment suffices. */
+/**
+ * This INSTR_CREATE_xxx macro creates an instr_t with opcode OP_xxx and the given
+ * explicit operands, automatically supplying any implicit operands.
+ * \param dc The void * dcontext used to allocate memory for the instr_t.
+ * \param d The opnd_t explicit destination operand for the instruction.
+ */
+#define INSTR_CREATE_inc(dc, d) \
+  instr_create_1dst_1src((dc), OP_inc, (d), (d))
+#define INSTR_CREATE_dec(dc, d) \
+  instr_create_1dst_1src((dc), OP_dec, (d), (d))
+/* FIXME: check that d is a 32-bit reg? */
+#define INSTR_CREATE_bswap(dc, d) \
+  instr_create_1dst_1src((dc), OP_bswap, (d), (d))
+#define INSTR_CREATE_not(dc, d) \
+  instr_create_1dst_1src((dc), OP_not, (d), (d))
+#define INSTR_CREATE_neg(dc, d) \
+  instr_create_1dst_1src((dc), OP_neg, (d), (d))
 /* @} */ /* end doxygen group */
+
+/* 1 implicit destination, 1 implicit source */
+/** @name 1 implicit destination, 1 implicit source */
+/* @{ */ /* doxygen start group; w/ DISTRIBUTE_GROUP_DOC=YES, one comment suffices. */
+/**
+ * This INSTR_CREATE_xxx macro creates an instr_t with opcode OP_xxx, automatically
+ * supplying any implicit operands.
+ * \param dc The void * dcontext used to allocate memory for the instr_t.
+ */
+#define INSTR_CREATE_cdq(dc) \
+  instr_create_1dst_1src((dc), OP_cdq, opnd_create_reg(DR_REG_EDX), \
+    opnd_create_reg(DR_REG_EAX))
+#define INSTR_CREATE_daa(dc) \
+  instr_create_1dst_1src((dc), OP_daa, opnd_create_reg(DR_REG_AL), \
+    opnd_create_reg(DR_REG_AL))
+#define INSTR_CREATE_das(dc) \
+  instr_create_1dst_1src((dc), OP_das, opnd_create_reg(DR_REG_AL), \
+    opnd_create_reg(DR_REG_AL))
+#define INSTR_CREATE_aaa(dc) \
+  instr_create_1dst_1src((dc), OP_aaa, opnd_create_reg(DR_REG_AX), \
+    opnd_create_reg(DR_REG_AX))
+#define INSTR_CREATE_aas(dc) \
+  instr_create_1dst_1src((dc), OP_aas, opnd_create_reg(DR_REG_AX), \
+    opnd_create_reg(DR_REG_AX))
+#define INSTR_CREATE_cwde(dc) \
+  instr_create_1dst_1src((dc), OP_cwde, opnd_create_reg(DR_REG_EAX), \
+    opnd_create_reg(DR_REG_AX))
+#define INSTR_CREATE_xlat(dc) \
+  instr_create_1dst_1src((dc), OP_xlat, opnd_create_reg(DR_REG_AL), \
+    opnd_create_far_base_disp(DR_SEG_DS, DR_REG_XBX, DR_REG_AL, 1, 0, OPSZ_xlat))
+/* @} */ /* end doxygen group */
+
 
 /** @name In with no explicit sources */
 /* @{ */ /* doxygen start group; w/ DISTRIBUTE_GROUP_DOC=YES, one comment suffices. */
@@ -1434,8 +1800,6 @@
 #define INSTR_CREATE_imul(dc, d, s) \
   instr_create_1dst_2src((dc), OP_imul, (d), (s), (d))
 
-#endif //NO 2
-
 /** @name 1 implicit destination, 1 explicit source */
 /* @{ */ /* doxygen start group; w/ DISTRIBUTE_GROUP_DOC=YES, one comment suffices. */
 /**
@@ -1462,7 +1826,6 @@
 /* @} */ /* end doxygen group */
 
 
-#ifdef NO //NO 5
 /* TODO SJF */
 /** @name 1 destination, 1 explicit source that is cl, an immediate, or a constant */
 /* @{ */ /* doxygen start group; w/ DISTRIBUTE_GROUP_DOC=YES, one comment suffices. */
@@ -2573,7 +2936,6 @@
  */
 #define INSTR_CREATE_popa(dc)   instr_create_popa((dc))
 
-#endif //NO 5
 
 /****************************************************************************/
 

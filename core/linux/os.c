@@ -1355,6 +1355,11 @@ clear_ldt_entry(uint index)
 #define GDT_SELECTOR(idx) ((idx) << 3 | ((GDT_NOT_LDT) << 2) | (USER_PRIVILEGE))
 #define SELECTOR_INDEX(sel) ((sel) >> 3)
 
+
+// SJF TODO define these as nothing for the moment
+#define WRITE_DR_SEG(val)
+#define WRITE_LIB_SEG(val)
+
 #ifdef NO
 // TODO SJF ASM
 #define WRITE_DR_SEG(val) \

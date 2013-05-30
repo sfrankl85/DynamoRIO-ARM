@@ -4152,6 +4152,13 @@ enum {
 
     OP_ud2,
 
+    /* TODO SJF Added x86 opcodes in here to get 
+                project to compile. Remove from here and
+                from code when ready. */
+    OP_inc,
+    OP_mov_ld,
+    OP_mov_st, 
+
     OP_AFTER_LAST,
     OP_FIRST = OP_add,            /**< First real opcode. */
     OP_LAST  = OP_AFTER_LAST - 1, /**< Last real opcode. */

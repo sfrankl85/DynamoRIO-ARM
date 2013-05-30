@@ -1177,8 +1177,7 @@ const instr_info_t * const op_instr[] =
 #define fINT  (fRX|fWT|fWN|fWI|fWR)
 
 /* for constructing linked lists of table entries */
-#define NA 0
-#define END_LIST  0
+#ifdef NO  //TODO SJF Get rid of these 
 #define tfb (ptr_int_t)&first_byte
 #define tsb (ptr_int_t)&second_byte
 #define tex (ptr_int_t)&extensions
@@ -1195,6 +1194,10 @@ const instr_info_t * const op_instr[] =
 #define t64e (ptr_int_t)&x64_extensions
 #define trex (ptr_int_t)&rex_extensions
 #define tvex (ptr_int_t)&vex_extensions
+#endif
+
+#define NA 0
+#define END_LIST  0
 
 /* point at this when you need a canonical invalid instr 
  * type is OP_INVALID so can be copied to instr->opcode
@@ -1257,7 +1260,7 @@ const instr_info_t armv7a_instrs[] = {
 };
 
 const instr_info_t thumb_instrs[] = {
-    {OP_and,  0x000000, "add",  Ra, xx, Ra, Ra, xx, mrm, fW6, tex[1][0]},
+    {OP_and,  0x000000, "add",  Ra, xx, Ra, Ra, xx, mrm, fW6, END_LIST},
 };
 
 

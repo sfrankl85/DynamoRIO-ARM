@@ -450,7 +450,11 @@ if (UNIX)
   set(dynamorio_link_flags
     "-Xlinker -z -Xlinker now -Xlinker -Bsymbolic")
 
-  set(dynamorio_link_flags "${dynamorio_link_flags} -nostdlib")
+  if (ARM)
+    set(dynamorio_link_flags "${dynamorio_link_flags} -nostdlib")
+  else (ARM)
+    set(dynamorio_link_flags "${dynamorio_link_flags} -nostdlib")
+  endif (ARM)
 
   if (STATIC_LIBRARY)
     # We build static DR as PIC in case we're linked into a .so or a PIE.

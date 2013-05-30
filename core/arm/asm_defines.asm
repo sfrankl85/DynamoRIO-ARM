@@ -76,7 +76,8 @@
 # endif
 # define HEX(n) 0x##n
 # define SEGMEM(seg,mem) [seg:mem]
-# define DECL_EXTERN(symbol) /* nothing */
+#  define DECL_EXTERN(symbol) /* nothing */
+
 /* include newline so we can put multiple on one line */
 # define RAW(n) .byte HEX(n) @N@
 # define DECLARE_FUNC_SEH(symbol) DECLARE_FUNC(symbol)
@@ -143,10 +144,12 @@
 
 #  define STACK_PAD(tot, gt4) /* nothing */
 #  define STACK_UNPAD(tot, gt4) \
+/*
         mov    REG_R5, tot \
         mov    REG_R6, ARG_SZ \
-        mul    REG_R6, REG_R5, REG_R6 \
+        mul    REG_R6, REG_R5, REG_R6 /
         add    REG_R13, REG_R6 
+*/
 
 #  define STACK_PAD_LE4 /* nothing */
 #  define STACK_UNPAD_LE4(tot) STACK_UNPAD(tot, 0)
@@ -169,25 +172,25 @@
  */
 #define CALLC0(callee)     \
         STACK_PAD_LE4   @N@\
-        call     callee @N@\
+        bl     callee @N@\
         STACK_UNPAD_LE4(0)
 #define CALLC1(callee, p1)    \
         STACK_PAD_LE4      @N@\
         SETARGREG(ARG1, p1)   @N@\
-        call     callee    @N@\
+        bl     callee    @N@\
         STACK_UNPAD_LE4(0)
 #define CALLC2(callee, p1, p2)    \
         STACK_PAD_LE4          @N@\
         SETARGREG(ARG2, p2)       @N@\
         SETARGREG(ARG1, p1)       @N@\
-        call     callee        @N@\
+        bl     callee        @N@\
         STACK_UNPAD_LE4(0)
 #define CALLC3(callee, p1, p2, p3)    \
         STACK_PAD_LE4              @N@\
         SETARGREG(ARG3, p3)           @N@\
         SETARGREG(ARG2, p2)           @N@\
         SETARGREG(ARG1, p1)           @N@\
-        call     callee            @N@\
+        bl     callee            @N@\
         STACK_UNPAD_LE4(0)
 #define CALLC4(callee, p1, p2, p3, p4)    \
         STACK_PAD_LE4                  @N@\
@@ -195,7 +198,7 @@
         SETARGREG(ARG3, p3)               @N@\
         SETARGREG(ARG2, p2)               @N@\
         SETARGREG(ARG1, p1)               @N@\
-        call     callee                @N@\
+        bl     callee                @N@\
         STACK_UNPAD_LE4(0)
 #define CALLC5(callee, p1, p2, p3, p4, p5)    \
         STACK_PAD(5, 1)                    @N@\
@@ -204,7 +207,7 @@
         SETARGREG(ARG3, p3)                   @N@\
         SETARGREG(ARG2, p2)                   @N@\
         SETARGREG(ARG1, p1)                   @N@\
-        call     callee                    @N@\
+        bl     callee                    @N@\
         STACK_UNPAD_LE4(1)
 #define CALLC6(callee, p1, p2, p3, p4, p5, p6)\
         STACK_PAD(6, 2)                    @N@\
@@ -214,7 +217,7 @@
         SETARGREG(ARG3, p3)                   @N@\
         SETARGREG(ARG2, p2)                   @N@\
         SETARGREG(ARG1, p1)                   @N@\
-        call     callee                    @N@\
+        bl     callee                    @N@\
         STACK_UNPAD_LE4(2)
 
 /* For stdcall callees */

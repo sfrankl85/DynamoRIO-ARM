@@ -273,6 +273,10 @@ DECL_EXTERN(syscall_argsz)
 #endif
 
 
+/* TODO SJF Moved extern declaration or master signal handler out here */
+#if defined(LINUX)
+DECL_EXTERN(master_signal_handler_C)
+#endif
 
         
 #if NO
@@ -2666,17 +2670,9 @@ dynamorio_earliest_init_repeatme:
 /*SJF Fake syscall def*/
 DECLARE_FUNC(dynamorio_syscall)
 GLOBAL_LABEL(dynamorio_syscall:)
+        /* Backup regs */
+        /*stmib    r13!, {r0-r7}*/
 
-        str      r3, [r13]
-        sub      r13, r13, #0x4
-        str      r6, [r13]
-        sub      r13, r13, #0x4
-        str      r7, [r13]
-        sub      r13, r13, #0x4
-        /* add 16 to skip the 4 pushes
-         * FIXME: rather than this dispatch, could have separate routines
-         * for each #args, or could just blindly read upward on the stack.
-         * for dispatch, if assume size of mov instr can do single ind jmp */
         /*mov      r1, r1 Unnecessary now as r1 already contains arg numbers*/ /* num_args */
         cmp      r1, #0
         beq      syscall_0args
@@ -2690,27 +2686,36 @@ GLOBAL_LABEL(dynamorio_syscall:)
         beq      syscall_4args
         cmp      r1, #5
         beq      syscall_5args
-        ldr      r5, [r13, #48] /* arg6 *//* TODO Fix the rest of these */
+        /*ldr      r5, [r13, #48]*/ /* arg6 *//* TODO Fix the rest of these */
 syscall_5args:
         mov      r7, r0 /* sysnum */
         mov      r0, r2  /* arg1 */
         mov      r1, r3  /* arg2 */
+        sub      r13, r13, #44
         ldr      r2, [r13] /* arg3 */
-        ldr      r3, [r13, #4] /* arg4 */
-        ldr      r4, [r13, #8] /* arg5 */
+        add      r13, r13, #4
+        ldr      r3, [r13] /* arg4 */
+        add      r13, r13, #4
+        ldr      r4, [r13] /* arg5 */
+        add      r13, r13, #36   //Return to original position
         b        do_syscall
 syscall_4args:
         mov      r7, r0 /* sysnum */
         mov      r0, r2  /* arg1 */
         mov      r1, r3 /* arg2 */
+        sub      r13, r13, #40
         ldr      r2, [r13] /* arg3 */
-        ldr      r3, [r13, #4] /* arg4 */
+        add      r13, r13, #4
+        ldr      r3, [r13] /* arg4 */
+        add      r13, r13, #36   //Return to original position
         b        do_syscall
 syscall_3args:
         mov      r7, r0 /* sysnum */
         mov      r0, r2  /* arg1 */
         mov      r1, r3 /* arg2 */
+        /*sub      r13, r13, #36*/
         ldr      r2, [r13] /* arg3 */
+        /*add      r13, r13, #36  */
         b        do_syscall
 syscall_2args:
         mov      r7, r0 /* sysnum */
@@ -2726,15 +2731,349 @@ syscall_0args:
         b        do_syscall
 do_syscall:
         svc      #0x0 /* SJF Converted this to swi call */ 
-        ldr      r3, [r13]
-        add      r13, r13, #0x4
-        ldr      r6, [r13]
-        add      r13, r13, #0x4
-        ldr      r7, [r13]
-        add      r13, r13, #0x4
+
+        /* Restore the registers */
+        /*ldmda    r13!, {r0-r7}*/
+
         /* return val is in r14 for us */
         mov      r15, r14
 
 END_FUNC(dynamorio_syscall)
+
+DECLARE_FUNC(hashlookup_null_handler)
+GLOBAL_LABEL(hashlookup_null_handler:)
+        b      hashlookup_null_handler
+END_FUNC(hashlookup_null_handler)
+
+DECLARE_FUNC(back_from_native_retstubs)
+GLOBAL_LABEL(back_from_native_retstubs:)
+        mov      r7, #0
+        str      r7, [r13]!
+        b        back_from_native
+        mov      r7, #1
+        str      r7, [r13]!
+        b        back_from_native
+        mov      r7, #2
+        str      r7, [r13]!
+        b        back_from_native
+        mov      r7, #3
+        str      r7, [r13]!
+        b        back_from_native
+        mov      r7, #4
+        str      r7, [r13]!
+        b        back_from_native
+        mov      r7, #5
+        str      r7, [r13]!
+        b        back_from_native
+        mov      r7, #6
+        str      r7, [r13]!
+        b        back_from_native
+        mov      r7, #7
+        str      r7, [r13]!
+        b        back_from_native
+        mov      r7, #8
+        str      r7, [r13]!
+        b        back_from_native
+        mov      r7, #9
+        str      r7, [r13]!
+        b        back_from_native
+DECLARE_GLOBAL(back_from_native_retstubs_end)
+ADDRTAKEN_LABEL(back_from_native_retstubs_end:)
+END_FUNC(back_from_native_retstubs)
+
+/*
+ * back_from_native -- for taking control back after letting a module
+ * execute natively
+ * assumptions: app stack is valid
+ */
+DECLARE_FUNC(back_from_native)
+GLOBAL_LABEL(back_from_native:)
+        /* assume valid esp  
+         * FIXME: more robust if don't use app's esp -- should use initstack
+         */
+        /* grab exec state and pass as param in a priv_mcontext_t struct */
+        /*PUSH_PRIV_MCXT(0 *//* for priv_mcontext_t.pc *//*)*/
+        /*mov      REG_R0, [REG_R13]*/ /* stack grew down, so priv_mcontext_t at tos */
+
+        /* Call return_from_native passing the priv_mcontext_t.  It will obtain
+         * this thread's dcontext pointer and begin execution with the passed-in
+         * state.
+         */
+        /*CALLC1(return_from_native, REG_R0)*/
+        /* should not return */
+        b      unexpected_return
+END_FUNC(back_from_native)
+
+/* Pushes a priv_mcontext_t on the stack, with an r13 value equal to the
+ * r13 before the pushing.  Clobbers xax!
+ * Assumes that DR has been initialized (get_xmm_vals() checks proc feature bits).
+ * Caller should ensure 16-byte stack alignment prior to the push (PR 306421).
+ */
+/*
+#define PUSH_PRIV_MCXT(pc)                              \
+        mov      REG_R13, [REG_R13 + PUSH_PRIV_MCXT_PRE_PC_SHIFT]  @N@\
+        str      r15, [r13]!                                  @N@\
+        PUSHF                                          @N@\
+        PUSHGPR                                        @N@\
+        mov      REG_R0, REG_R13                    @N@\
+        CALLC1(get_xmm_vals, REG_XAX)                  @N@\
+        mov      REG_R0, PRIV_MCXT_SIZE + REG_R13 @N@\
+        mov      [PUSHGPR_XSP_OFFS + REG_XSP], REG_XAX
+*/
+
+/*
+ * For debugging: report an error if the function called by call_switch_stack()
+ * unexpectedly returns.
+ */
+DECLARE_FUNC(unexpected_return)
+GLOBAL_LABEL(unexpected_return:)
+        /* infinite loop is intentional: FIXME: do better in release build!
+         * FIXME - why not an int3? */
+        b        unexpected_return
+END_FUNC(unexpected_return)
+
+/* global_do_syscall_int
+ * Caller is responsible for all set up.  For linux this means putting
+ * the syscall num in r7, and the args in r0-r6 (in
+ * that order, as needed).  global_do_syscall is only used with system calls
+ * that we don't expect to return, so for debug builds we go into an infinite
+ * loop if syscall returns.
+ */
+DECLARE_FUNC(global_do_syscall_int)
+GLOBAL_LABEL(global_do_syscall_int:)
+        swi      #0x0 
+#ifdef DEBUG
+        b      debug_infinite_loop
+#endif
+#ifdef LINUX
+        /* we do come here for SYS_kill which can fail: try again via exit_group */
+        b      dynamorio_sys_exit_group
+#endif
+        END_FUNC(global_do_syscall_int)
+
+/* exit entire group without using any stack, in case something like
+ * SYS_kill via cleanup_and_terminate fails
+ */
+DECLARE_FUNC(dynamorio_sys_exit_group)
+GLOBAL_LABEL(dynamorio_sys_exit_group:)
+        mov      r7, #0 /* exit code: hardcoded */
+        mov      r0, #HEX(fc) /* SYS_exit_group */
+        swi      #0x0
+        /* should not return.  if we somehow do, infinite loop is intentional.
+         * FIXME: do better in release build! FIXME - why not an int3? */
+        b      unexpected_return
+        END_FUNC(dynamorio_sys_exit_group)
+
+#ifdef DEBUG
+/* Just an infinite CPU eating loop used to mark certain failures.
+ */
+DECLARE_FUNC(debug_infinite_loop)
+GLOBAL_LABEL(debug_infinite_loop:)
+        b      debug_infinite_loop
+END_FUNC(debug_infinite_loop)
+#endif
+
+/* Replacement for _dl_runtime_resolve() used for catching module transitions
+ * out of native modules.
+ */
+DECLARE_FUNC(_dynamorio_runtime_resolve)
+GLOBAL_LABEL(_dynamorio_runtime_resolve:)
+        add      REG_R13, REG_R13, #0x4
+        str      REG_R0, [REG_R13]
+        add      REG_R13, REG_R13, #0x4
+        str      REG_R1, [REG_R13]
+        /*mov      REG_R0, [REG_R13 + 2 * ARG_SZ]*/  /* link map */
+        /*mov      REG_R1, [REG_R13 + 3 * ARG_SZ]*/  /* .dynamic index */
+        /*CALLC2(dynamorio_dl_fixup, REG_XAX, REG_XCX)*/
+        /*mov      [REG_R13 + 2 * ARG_SZ], REG_R0 *//* overwrite arg1 */
+        ldr      REG_R0, [REG_R13]
+        sub      REG_R13, REG_R13, #0x4
+        ldr      REG_R1, [REG_R13]
+        sub      REG_R13, REG_R13, #0x4
+        b        4 /* ret to target, pop arg2 *//* SJF This clearly isnt going to work */
+END_FUNC(_dynamorio_runtime_resolve)
+
+DECLARE_FUNC(client_int_syscall)
+GLOBAL_LABEL(client_int_syscall:)
+        swi     #0x0 
+        mov     r15, r14 
+END_FUNC(client_int_syscall)
+
+
+/* Like back_from_native, except we're calling from a native module into a
+ * module that should execute from the code cache.  We transfer here from PLT
+ * stubs generated by create_plt_stub() in core/linux/native_elf.c.  See also
+ * initialize_plt_stub_template().  On entry, next_pc is on the stack for ia32
+ * and in %r11 for x64.  We use %r11 because it is scratch in the sysv amd64
+ * calling convention.
+ */
+DECLARE_FUNC(native_plt_call)
+GLOBAL_LABEL(native_plt_call:)
+#ifdef NO //TODO SJF
+        PUSH_PRIV_MCXT(0 /* pc */)
+        mov      REG_R0, REG_R13  /* lea priv_mcontext_t */
+# ifdef X64
+        mov      REG_R1, r11  /* next_pc in r11 */
+# else
+        mov      REG_R1, [REG_R13, PRIV_MCXT_SIZE]     /* next_pc on stack */
+        add      DWORD [REG_XAX + MCONTEXT_XSP_OFFS], ARG_SZ   /* adjust app xsp for arg */
+# endif
+        CALLC2(native_module_callout, REG_XAX, REG_XCX)
+
+        /* If we returned, continue to execute natively on the app stack. */
+        POP_PRIV_MCXT_GPRS()
+#endif
+        mov     r15, r11
+END_FUNC(native_plt_call)
+
+DECLARE_FUNC(master_signal_handler)
+GLOBAL_LABEL(master_signal_handler:)
+        /* We need to pass in xsp.  The easiest way is to create an
+         * intermediate frame.
+         */
+        mov      REG_R0, REG_R13
+        /*CALLC1(master_signal_handler_C, REG_R0)*/
+        mov      r15, r14
+END_FUNC(master_signal_handler)
+
+/* bool cpuid_supported(void)
+ * Checks for existence of the cpuid instr by attempting to modify bit 21 of eflags
+ */
+DECLARE_FUNC(cpuid_supported)
+GLOBAL_LABEL(cpuid_supported:)
+        mov      r0, #0        /* zero out top bytes */
+        mov      r15, r14 
+END_FUNC(cpuid_supported)
+
+DECLARE_FUNC(dr_setjmp)
+GLOBAL_LABEL(dr_setjmp:)
+#ifdef NO
+        /* PR 206278: for try/except we need to save the signal mask */
+        mov      REG_XDX, ARG1
+        push     REG_XDX /* preserve */
+        CALLC1(dr_setjmp_sigmask, REG_XDX)
+        pop      REG_XDX /* preserve */
+        mov      [       0 + REG_XDX], REG_XBX
+        mov      [  ARG_SZ + REG_XDX], REG_XCX
+        mov      [2*ARG_SZ + REG_XDX], REG_XDI
+        mov      [3*ARG_SZ + REG_XDX], REG_XSI
+        mov      [4*ARG_SZ + REG_XDX], REG_XBP
+        mov      [5*ARG_SZ + REG_XDX], REG_XSP
+        mov      REG_XAX, [REG_XSP]
+        mov      [6*ARG_SZ + REG_XDX], REG_XAX
+        xor      eax, eax
+        ret
+#endif
+END_FUNC(dr_setjmp)
+
+/* int cdecl dr_longjmp(dr_jmp_buf *buf, int retval);
+ */
+DECLARE_FUNC(dr_longjmp)
+GLOBAL_LABEL(dr_longjmp:)
+#ifdef NO
+        mov      REG_XDX, ARG1
+        mov      REG_XAX, ARG2
+
+        mov      REG_XBX, [       0 + REG_XDX]
+        mov      REG_XDI, [2*ARG_SZ + REG_XDX]
+        mov      REG_XSI, [3*ARG_SZ + REG_XDX]
+        mov      REG_XBP, [4*ARG_SZ + REG_XDX]
+        mov      REG_XSP, [5*ARG_SZ + REG_XDX] /* now we've switched to the old stack */
+        mov      REG_XCX, [6*ARG_SZ + REG_XDX]
+        mov      [REG_XSP], REG_XCX    /* restore the return address on to the stack */
+        mov      REG_XCX, [  ARG_SZ + REG_XDX]
+        ret
+#endif
+END_FUNC(dr_longjmp)
+
+/*
+ * Calls the specified function 'func' after switching to the stack 'stack'.  If we're
+ * currently on the initstack 'free_initstack' should be set so we release the
+ * initstack lock.  The supplied 'dcontext' will be passed as an argument to 'func'.
+ * If 'func' returns then 'return_on_return' is checked. If set we swap back stacks and
+ * return to the caller.  If not set then it's assumed that func wasn't supposed to
+ * return and we go to an error routine unexpected_return() below.
+ *
+ * void call_switch_stack(dcontext_t *dcontext,       // 1*ARG_SZ+XAX
+ *                        byte *stack,                // 2*ARG_SZ+XAX
+ *                        void (*func)(dcontext_t *), // 3*ARG_SZ+XAX
+ *                        bool free_initstack,        // 4*ARG_SZ+XAX
+ *                        bool return_on_return)      // 5*ARG_SZ+XAX
+ */
+        DECLARE_FUNC(call_switch_stack)
+GLOBAL_LABEL(call_switch_stack:)
+#ifdef NO
+        /* get all args with same offset(xax) regardless of plaform */
+        mov      REG_XAX, REG_XSP
+        /* we need a callee-saved reg across our call so save it onto stack */
+        push     REG_XBX
+        push     REG_XDI /* still 16-aligned */
+        mov      REG_XBX, REG_XAX
+        mov      REG_XDI, REG_XSP
+        /* set up for call */
+        mov      REG_XDX, [3*ARG_SZ + REG_XAX] /* func */
+        mov      REG_XCX, [1*ARG_SZ + REG_XAX] /* dcontext */
+        mov      REG_XSP, [2*ARG_SZ + REG_XAX] /* stack */
+        cmp      BYTE [4*ARG_SZ + REG_XAX], 0 /* free_initstack */
+        je       call_dispatch_alt_stack_no_free
+#if !defined(X64) && defined(LINUX)
+        /* PR 212290: avoid text relocations: get PIC base into xax
+         * Can't use CALLC0 since it inserts a nop: we need the exact retaddr.
+         */
+        call     get_pic_xax
+        lea      REG_XAX, [_GLOBAL_OFFSET_TABLE_ + REG_XAX]
+        lea      REG_XAX, VAR_VIA_GOT(REG_XAX, initstack_mutex)
+        mov      DWORD [REG_XAX], 0
+#else
+        mov      DWORD SYMREF(initstack_mutex), 0 /* rip-relative on x64 */
+#endif
+call_dispatch_alt_stack_no_free:
+        CALLC1(REG_XDX, REG_XCX)
+        mov      REG_XSP, REG_XDI
+        mov      REG_XAX, REG_XBX
+        cmp      BYTE [5*ARG_SZ + REG_XAX], 0 /* return_on_return */
+        je       unexpected_return
+        pop      REG_XDI
+        pop      REG_XBX
+        ret
+#endif
+END_FUNC(call_switch_stack)
+
+/*
+ * dr_app_take_over - For the client interface, we'll export 'dr_app_take_over'
+ * for consistency with the dr_ naming convention of all exported functions.  
+ * We'll keep 'dynamorio_app_take_over' for compatibility with the preinjector.
+ */
+DECLARE_EXPORTED_FUNC(dr_app_take_over)
+GLOBAL_LABEL(dr_app_take_over:  )
+        b      dynamorio_app_take_over
+END_FUNC(dr_app_take_over)
+
+/*
+ * dynamorio_app_take_over - Causes application to run under Dynamo
+ * control.  Dynamo never releases control.
+ */
+DECLARE_EXPORTED_FUNC(dynamorio_app_take_over)
+GLOBAL_LABEL(dynamorio_app_take_over:)
+#ifdef NO
+        sub     REG_XSP, FRAME_ALIGNMENT - ARG_SZ  /* Maintain alignment. */
+
+        /* grab exec state and pass as param in a priv_mcontext_t struct */
+        PUSH_PRIV_MCXT([FRAME_ALIGNMENT - ARG_SZ + REG_XSP -
+                        PUSH_PRIV_MCXT_PRE_PC_SHIFT]) /* return address as pc */
+
+        /* do the rest in C */
+        lea      REG_XAX, [REG_XSP] /* stack grew down, so priv_mcontext_t at tos */
+        CALLC1(dynamorio_app_take_over_helper, REG_XAX)
+
+        /* if we come back, then DR is not taking control so 
+         * clean up stack and return */
+        add      REG_XSP, PRIV_MCXT_SIZE + FRAME_ALIGNMENT - ARG_SZ
+        ret
+#endif
+END_FUNC(dynamorio_app_take_over)
+
+
+
 
 END_FILE

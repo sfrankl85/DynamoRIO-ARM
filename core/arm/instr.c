@@ -3801,48 +3801,64 @@ instr_is_branch(instr_t *instr)
 }
 
 
-#ifdef NO
 static bool
 opcode_is_call(int opc)
 {
+#ifdef NO
     return (opc == OP_call) 
+#endif //NO
+    return false;
 }
 
 bool 
 instr_is_call(instr_t *instr)
 {
+#ifdef NO
     int opc = instr_get_opcode(instr);
     return opcode_is_call(opc);
+#endif 
+    return false;
 }
 
 bool 
 instr_is_call_direct(instr_t *instr)
 {
+#ifdef NO
     int opc = instr_get_opcode(instr);
     return (opc == OP_call || opc == OP_call_far);
+#endif 
+    return false;
 }
 
 bool 
 instr_is_near_call_direct(instr_t *instr)
 {
+#ifdef NO
     int opc = instr_get_opcode(instr);
     return (opc == OP_call);
+#endif 
+    return false;
 }
 
 bool 
 instr_is_call_indirect(instr_t *instr)
 {
+#ifdef NO
     int opc = instr_get_opcode(instr);
     return (opc == OP_call_ind || opc == OP_call_far_ind);
+#endif 
+    return false;
 }
 
 bool
 instr_is_return(instr_t *instr)
 {
+#ifdef NO
     int opc = instr_get_opcode(instr);
-    return (opc == OP_ret || opc == OP_ret_far || opc == OP_iret);
+    return (opc == OP_b);
+#endif 
+    return false;
 }
-#endif
 
 /*** WARNING!  The following rely on ordering of opcodes! ***/
 
