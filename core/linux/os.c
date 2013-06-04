@@ -1260,11 +1260,11 @@ print_all_ldt(void)
 
 #define LDT_ENTRIES_TO_CHECK 128
 
-#ifndef ARM
 /* returns -1 if all indices are in use */
 static int
 find_unused_ldt_index()
 {
+#ifdef NO
     int i, bytes;
     /* N.B.: we don't have 64K of stack for the full LDT_ENTRIES
      * array, and I don't want to allocate a big array on the heap
@@ -1288,6 +1288,7 @@ find_unused_ldt_index()
         }
     }
     return -1;
+#endif
 }
 
 static void
@@ -1339,7 +1340,6 @@ clear_ldt_entry(uint index)
     ret = modify_ldt_syscall(1, (void *)&array, sizeof(array));
     ASSERT(ret >= 0);
 }
-#endif //not ARM
 
 #endif /* HAVE_TLS */
 
@@ -1460,8 +1460,32 @@ typedef struct _os_local_state_t {
  * precise constraint, then the compiler would be able to optimize better.  See
  * glibc comments on THREAD_SELF.
  */
-#ifdef NO
+# ifdef ARM 
 //TODO SJF ASM
+#define WRITE_TLS_SLOT_IMM(imm, var)                                  \
+    IF_NOT_HAVE_TLS(ASSERT_NOT_REACHED());                            \
+    ASSERT(sizeof(var) == sizeof(void*));                             \
+    asm volatile("nop");
+
+#define READ_TLS_SLOT_IMM(imm, var)                  \
+    IF_NOT_HAVE_TLS(ASSERT_NOT_REACHED());           \
+    ASSERT(sizeof(var) == sizeof(void*));            \
+    asm volatile("nop");
+
+/* FIXME: need dedicated-storage var for _TLS_SLOT macros, can't use expr */
+#define WRITE_TLS_SLOT(idx, var)                            \
+    IF_NOT_HAVE_TLS(ASSERT_NOT_REACHED());                  \
+    ASSERT(sizeof(var) == sizeof(void*));                   \
+    ASSERT(sizeof(idx) == 2);                               \
+    asm volatile("nop");
+
+#define READ_TLS_SLOT(idx, var)                                    \
+    ASSERT(sizeof(var) == sizeof(void*));                          \
+    ASSERT(sizeof(idx) == 2);                                      \
+    asm("mov %%"ASM_XAX", %"ASM_SEG":(%%"ASM_XDX")" : : : ASM_XAX, ASM_XDX);
+
+# else
+
 #define WRITE_TLS_SLOT_IMM(imm, var)                                  \
     IF_NOT_HAVE_TLS(ASSERT_NOT_REACHED());                            \
     ASSERT(sizeof(var) == sizeof(void*));                             \
@@ -1487,7 +1511,8 @@ typedef struct _os_local_state_t {
     asm("movzw"IF_X64_ELSE("q","l")" %0, %%"ASM_XAX : : "m"((idx)) : ASM_XAX); \
     asm("mov %"ASM_SEG":(%%"ASM_XAX"), %%"ASM_XAX : : : ASM_XAX);  \
     asm("mov %%"ASM_XAX", %0" : "=m"((var)) : : ASM_XAX);
-#endif
+
+# endif //ARM
 
 /* FIXME: assumes that fs/gs is not already in use by app */
 static bool
@@ -2634,7 +2659,7 @@ dcontext_t*
 get_thread_private_dcontext(void)
 {
 #ifdef HAVE_TLS
-    dcontext_t *dcontext;
+    dcontext_t *dcontext = NULL;
     /* We have to check this b/c this is called from __errno_location prior
      * to os_tls_init, as well as after os_tls_exit, and early in a new
      * thread's initialization (see comments below on that).
@@ -9632,6 +9657,7 @@ os_file_has_elf_so_header(const char *filename)
 static uint64
 uint64_divmod(uint64 dividend, uint64 divisor64, uint32 *remainder)
 {
+#ifdef NO
     /* Assumes little endian, which x86 is. */
     union {
         uint64 v64;
@@ -9668,12 +9694,11 @@ uint64_divmod(uint64 dividend, uint64 divisor64, uint32 *remainder)
      * The outputs precede the inputs in gcc inline asm syntax, and so to put
      * inputs in EAX and EDX we use "0" and "1".
      */
-#ifdef NO
 //TODO SJF ASM
     asm ("divl %2" : "=a" (res.lo), "=d" (*remainder) :
          "rm" (divisor), "0" (res.lo), "1" (upper));
-#endif
     return res.v64;
+#endif
 }
 
 /* Match libgcc's prototype. */
@@ -9702,6 +9727,7 @@ void
 test_uint64_divmod(void)
 {
 #ifndef X64
+#ifdef NO //TODO SJF
     uint64 quotient;
     uint32 remainder;
 
@@ -9735,6 +9761,7 @@ test_uint64_divmod(void)
     quotient = (45ULL << 32) + 13;
     remainder = quotient % 15;
     EXPECT(remainder == 13, true);
+#endif //NO
 #endif /* !X64 */
 }
 

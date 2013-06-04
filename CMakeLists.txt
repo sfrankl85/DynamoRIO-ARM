@@ -616,7 +616,7 @@ if (UNIX)
 
   # Check ARM specific flags
   if (ARM)
-    set(ASM_FLAGS "${ASM_FLAGS} --noexecstack -marm -march=armv7-a -mcpu=cortex-a15")
+    set(ASM_FLAGS "${ASM_FLAGS} --noexecstack -marm -march=armv7-a -mcpu=cortex-a15 -mnaked-reg --noexecstack")
     set(BASE_CFLAGS "-marm ${BASE_CFLAGS}")
     #set(LD_FLAGS "-elf32-littlearm" )
     set(LD_FLAGS "" )
@@ -758,15 +758,15 @@ if (UNIX)
   CHECK_C_COMPILER_FLAG("-fvisibility=internal" HAVE_FVISIBILITY_INTERNAL)
   CHECK_C_COMPILER_FLAG("-fvisibility=hidden" HAVE_FVISIBILITY_HIDDEN)
 
-  if (NOT ARM)
+  #if (NOT ARM)  DOnt know why I did this SJF
     if (HAVE_FVISIBILITY_INTERNAL)
       set(VISIBILITY "internal")
     elseif (HAVE_FVISIBILITY_HIDDEN)
       set(VISIBILITY "hidden")
-    else (HAVE_FVISIBILITY_INTERNAL)
+    else (HAVE_FVISIBILITY_INTERNAL)    #Force the linker script to be used for ARM
       message("${CMAKE_C_COMPILER} missing flag -fvisibility, using linker "
               "script instead")
-      set(VISIBILITY " ")
+      set(VISIBILITY "")
     endif (HAVE_FVISIBILITY_INTERNAL)
 
     if (VISIBILITY)
@@ -774,7 +774,7 @@ if (UNIX)
       set(BASE_CXXFLAGS "${BASE_CXXFLAGS} -fvisibility=${VISIBILITY}")
       set(HAVE_FVISIBILITY ON)
     endif (VISIBILITY)
-  endif (NOT ARM)
+  #endif (NOT ARM)
 
   if (NOT LINKER_IS_GNU_GOLD)
     # Better to use -dT when passing linker options through gcc, but ld

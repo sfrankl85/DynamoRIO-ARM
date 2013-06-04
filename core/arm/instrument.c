@@ -1123,7 +1123,7 @@ instrument_client_thread_init(dcontext_t *dcontext, bool client_thread)
 
 #ifdef CLIENT_SIDELINE
     if (client_thread) {
-        ATOMIC_INC(int, num_client_sideline_threads);
+        atomic_inc( num_client_sideline_threads);
         /* We don't call dynamo_thread_not_under_dynamo() b/c we want itimers. */
         dcontext->thread_record->under_dynamo_control = false;
         dcontext->client_data->is_client_thread = true;
@@ -1193,7 +1193,7 @@ instrument_thread_exit_event(dcontext_t *dcontext)
          * thread: rule it out here so we properly clean it up
          */
         IF_WINDOWS(&& dcontext->nudge_target == NULL)) {
-        ATOMIC_DEC(int, num_client_sideline_threads);
+        atomic_dec( num_client_sideline_threads);
         /* no exit event */
         return;
     }
@@ -2035,7 +2035,7 @@ instrument_nudge(dcontext_t *dcontext, client_id_t id, uint64 arg)
     }
 
     /* atomic to avoid locking around the dec */
-    ATOMIC_INC(int, num_client_nudge_threads);
+    atomic_inc( num_client_nudge_threads);
     mutex_unlock(&client_thread_count_lock);
 
     /* We need to mark this as a client controlled thread for synch_with_all_threads
@@ -2069,7 +2069,7 @@ instrument_nudge(dcontext_t *dcontext, client_id_t id, uint64 arg)
     dcontext->thread_record->under_dynamo_control = true;
     dcontext->client_data->is_client_thread = false;
 
-    ATOMIC_DEC(int, num_client_nudge_threads);
+    atomic_dec( num_client_nudge_threads);
 #endif
 }
 
@@ -2269,7 +2269,7 @@ DR_API const char *
 dr_get_application_name(void)
 {
 #ifdef LINUX
-    return get_application_short_name();
+    /*return get_application_short_name(); TODO SJF*/
 #else
     return get_application_short_unqualified_name();
 #endif

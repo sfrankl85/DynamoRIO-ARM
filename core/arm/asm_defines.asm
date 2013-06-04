@@ -142,17 +142,42 @@
 # define IF_X64_ELSE(x, y) y
 # define IF_NOT_X64(x) x
 
-#  define STACK_PAD(tot, gt4) /* nothing */
-#  define STACK_UNPAD(tot, gt4) \
+/* Clobbers r0, Make sure to call PUSHGPR FIRST not after like before */
+#  define PUSHF \
+          mrs   r0, CPSR           /* Get the CPSR */            @N@\
+          push  r0
+
+#  define POPF   \
+          pop   r0                                                     @N@\
+          msr   CPSR, r0           /* Put the CPSR */                 
+
+/* SETARG usage is order-dependent on 32-bit.  we could avoid that
+ * by having STACK_PAD allocate the stack space and do a mov here.
+ */
+#  define SETARG(argreg, p) \
+        push     p
+
+/* Wipes REG R8 */
+#    define STACK_PAD(tot, gt4) \
+        mul      REG_R8, gt4, ARG_SZ            @N@\
+        sub      REG_R13, REG_R13, REG_R8       
+        /*lea      REG_XSP, [-ARG_SZ*gt4 + REG_XSP]*/
+#    define STACK_UNPAD(tot, gt4) \
+        mul      REG_R8, gt4, ARG_SZ            @N@\
+        add      REG_R13, REG_R13, REG_R8       
+        /*lea      REG_XSP, [ARG_SZ*gt4 + REG_XSP]*/
+#    define STACK_PAD_LE4 /* nothing */
+#    define STACK_UNPAD_LE4(tot) /* nothing */
+
+
 /*
+#  define STACK_UNPAD(tot, gt4) \
         mov    REG_R5, tot \
         mov    REG_R6, ARG_SZ \
         mul    REG_R6, REG_R5, REG_R6 /
         add    REG_R13, REG_R6 
 */
 
-#  define STACK_PAD_LE4 /* nothing */
-#  define STACK_UNPAD_LE4(tot) STACK_UNPAD(tot, 0)
 /* ARM defines a different calling convention from x86. 
    Args 1-4 are stored in regsiters 0-3 and then evrything else is pushed onto the stack.
  */

@@ -124,7 +124,7 @@ if (ARM)
     arm/proc.c
     arm/mangle.c
     arm/steal_reg.c
-    #arm/x86_code.c
+    arm/arm_code.c
     arm/disassemble.c
     ${arm_core_asm_src}
     arm/decode_fast.c
@@ -220,6 +220,7 @@ if (UNIX)
       )
     set(INJECTOR_SRCS
       linux/injector.c
+      #dynamo.c # for dr_app_start_helper SJF
       config.c    # to read config
       linux/os.c  # for file_t interface
       linux/module.c
@@ -445,13 +446,14 @@ if (UNIX)
   # FIXME case 69/1891: -z initfirst = initialize first at runtime (before libc)
   set_target_properties(${PRELOAD_NAME} PROPERTIES
     LINK_FLAGS "-nostartfiles")
+    #LINK_FLAGS "-nostartfiles -lgcc")
 
   # -z now = do non-lazy runtime binding
   set(dynamorio_link_flags
     "-Xlinker -z -Xlinker now -Xlinker -Bsymbolic")
 
   if (ARM)
-    set(dynamorio_link_flags "${dynamorio_link_flags} -nostdlib")
+    set(dynamorio_link_flags "${dynamorio_link_flags} -nostartfiles")
   else (ARM)
     set(dynamorio_link_flags "${dynamorio_link_flags} -nostdlib")
   endif (ARM)

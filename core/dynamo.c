@@ -358,6 +358,7 @@ get_dr_stats(void)
 DYNAMORIO_EXPORT int
 dynamorio_app_init(void)
 {
+/* NOTE SJF Heavily altering this function to get ft_1 working */
     int size;
 
     if (!dynamo_initialized /* we do enter if nullcalls is on */) {
@@ -403,13 +404,18 @@ dynamorio_app_init(void)
 #endif
 
         config_init();
+
+/* TODO SJF Crashing when attempting to get mutex locks 
         options_init();
+*/
 #ifdef WINDOWS
         syscalls_init_options_read(); /* must be called after options_init
                                        * but before init_syscall_trampolines */
 #endif
+/* TODO SJF HEAVY EDIT
         utils_init();
         data_section_init();
+*/
 
 #ifdef DEBUG
         /* decision: nullcalls WILL create a dynamorio.log file and
@@ -469,19 +475,22 @@ dynamorio_app_init(void)
 #endif
 
         /* initialize components (CAUTION: order is important here) */
-        vmm_heap_init(); /* must be called even if not using vmm heap */
-        heap_init();
+/* TODO SJF HEAVY EDIT
+        vmm_heap_init();*/ /* must be called even if not using vmm heap */
+        /*heap_init();*/
         dynamo_heap_initialized = true;
 
         /* The process start event should be done after os_init() but before
          * process_control_int() because the former initializes event logging
          * and the latter can kill the process if a violation occurs.
          */
+/* TODO SJF HEAVY EDIT
         SYSLOG(SYSLOG_INFORMATION,
                IF_CLIENT_INTERFACE_ELSE(INFO_PROCESS_START_CLIENT, INFO_PROCESS_START),
                IF_CLIENT_INTERFACE_ELSE(3, 2),
                get_application_name(), get_application_pid()
                _IF_NOT_CLIENT_INTERFACE(get_application_md5()));
+*/
 
 #ifdef PROCESS_CONTROL
         if (IS_PROCESS_CONTROL_ON())    /* Case 8594. */
@@ -496,17 +505,20 @@ dynamorio_app_init(void)
             earliest_inject_cleanup(dr_earliest_inject_args);
 #endif
 
+/* TODO SJF HEAVY EDIT
         dynamo_vm_areas_init();
         proc_init();
-        modules_init(); /* before vm_areas_init() */
-        os_init();
-        config_heap_init(); /* after heap_init */
+        modules_init(); *//* before vm_areas_init() */
+/*        os_init();
+        config_heap_init();*/ /* after heap_init */
 
         /* Setup for handling faults in loader_init() */
         /* initial stack so we don't have to use app's 
          * N.B.: we never de-allocate initstack (see comments in app_exit)
          */
+/*
         initstack = (byte *) stack_alloc(DYNAMORIO_STACK_SIZE);
+*/
 
 #if defined(WINDOWS) && defined(STACK_GUARD_PAGE)
         /* PR203701: separate stack for error reporting when the
@@ -530,10 +542,13 @@ dynamorio_app_init(void)
          * FIXME i#338: this must be before arch_init() for Windows, but Linux
          * wants it later.
          */
+/* TODO SJF HEAVY EDIT
         loader_init();
         arch_init();
         synch_init();
+*/
 
+/* TODO SJF HEAVY EDIT
 #ifdef KSTATS
         kstat_init();
 #endif
@@ -541,9 +556,9 @@ dynamorio_app_init(void)
         fcache_init();
         link_init();
         fragment_init();
-        moduledb_init(); /* before vm_areas_init, after heap_init */
-        perscache_init(); /* before vm_areas_init */
-        native_exec_init(); /* before vm_areas_init */
+        moduledb_init();*/ /* before vm_areas_init, after heap_init */
+/*        perscache_init();*/ /* before vm_areas_init */
+/*        native_exec_init();*/ /* before vm_areas_init */
 
         if (!DYNAMO_OPTION(thin_client)) {
 #ifdef HOT_PATCHING_INTERFACE
@@ -558,6 +573,7 @@ dynamorio_app_init(void)
             char initial_options[MAX_OPTIONS_STRING];
             get_dynamo_options_string(&dynamo_options, 
                                       initial_options, sizeof(initial_options), true);
+/* TODO SJF HEAVY EDIT
             SYSLOG_INTERNAL_INFO("Initial options = %s", initial_options);
             DOLOG(1, LOG_TOP, {
                 get_pcache_dynamo_options_string(&dynamo_options, initial_options,
@@ -566,6 +582,7 @@ dynamorio_app_init(void)
                 LOG(GLOBAL, LOG_TOP, 1, "Initial pcache-affecting options = %s\n",
                     initial_options);
             });
+*/
         }
 #endif /* INTERNAL */
 
@@ -578,17 +595,20 @@ dynamorio_app_init(void)
          * For now, leave it in there unless thin_client footprint becomes an 
          * issue.
          */
+/* TODO SJF HEAVY EDIT 
         size = HASHTABLE_SIZE(ALL_THREADS_HASH_BITS) * sizeof(thread_record_t*);
         all_threads = (thread_record_t**) global_heap_alloc(size HEAPACCT(ACCT_THREAD_MGT));
         memset(all_threads, 0, size);
         if (!INTERNAL_OPTION(nop_initial_bblock)
-            IF_WINDOWS(|| !check_sole_thread())) /* some other thread is already here! */
-            bb_lock_start = true;
+            IF_WINDOWS(|| !check_sole_thread())) *//* some other thread is already here! */
+            /*bb_lock_start = true;*/
 
 #ifdef SIDELINE
         /* initialize sideline thread after thread table is set up */
+/* TODO SJF HEAVY EDIT
         if (dynamo_options.sideline)
             sideline_init();
+*/
 #endif
 
         /* thread-specific initialization for the first thread we inject in
@@ -597,10 +617,14 @@ dynamorio_app_init(void)
         /* i#117/PR 395156: it'd be nice to have mc here but would
          * require changing start/stop API
          */
+/* TODO SJF HEAVY EDIT
         dynamo_thread_init(NULL, NULL _IF_CLIENT_INTERFACE(false));
+*/
 #ifdef LINUX
         /* i#27: we need to special-case the 1st thread */
+/* TODO SJF HEAVY EDIT
         signal_thread_inherit(get_thread_private_dcontext(), NULL);
+*/
 #endif
 
         /* We move vm_areas_init() below dynamo_thread_init() so we can have
@@ -608,6 +632,8 @@ dynamorio_app_init(void)
          * inside vm_areas_init() for PR 361594's probes and for safe_read().
          * This means vm_areas_thread_init() runs before vm_areas_init().
          */
+
+#ifdef NO //TODO SJF HEAVY EDIT
         if (!DYNAMO_OPTION(thin_client)) {
             vm_areas_init();
 #ifdef RCT_IND_BRANCH
@@ -677,10 +703,12 @@ dynamorio_app_init(void)
             early_inject_init();
         }
 #endif
+#endif //NO
     }
 
     dynamo_initialized = true;
 
+#ifdef NO //TODO SJF HEAVY EDIT
     /* Protect .data, assuming all vars there have been initialized. */
     SELF_PROTECT_DATASEC(DATASEC_RARELY_PROT);
 
@@ -695,6 +723,7 @@ dynamorio_app_init(void)
         wait_for_event(never_signaled);
         destroy_event(never_signaled);
     }
+#endif
 
     return SUCCESS;
 }
@@ -2658,6 +2687,7 @@ dynamorio_take_over_threads(dcontext_t *dcontext)
 void
 dynamorio_app_take_over_helper(priv_mcontext_t *mc)
 {
+#ifdef NO //TODO SJF HEAVY EDIT
     static bool have_taken_over = false; /* ASSUMPTION: not an actual write */
     SELF_UNPROTECT_DATASEC(DATASEC_RARELY_PROT);
     APP_EXPORT_ASSERT(dynamo_initialized, PRODUCT_NAME" not initialized");
@@ -2703,6 +2733,9 @@ dynamorio_app_take_over_helper(priv_mcontext_t *mc)
         /* the interpreter takes over from here */
     } else
         SELF_PROTECT_DATASEC(DATASEC_RARELY_PROT);
+#endif //NO
+
+  dynamo_start(mc);
 }
 
 #ifdef WINDOWS

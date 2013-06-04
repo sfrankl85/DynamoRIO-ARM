@@ -1438,9 +1438,9 @@ enum {LONGJMP_EXCEPTION = 1};
 # define XSTATS_ATOMIC_MAX(max, cur) ATOMIC_MAX(int64, max, cur)
 # define XSTATS_ATOMIC_ADD_EXCHANGE(var, val) atomic_add_exchange_int64(var, val)
 #else
-# define XSTATS_ATOMIC_INC(var) ATOMIC_INC(int, var)
-# define XSTATS_ATOMIC_DEC(var) ATOMIC_DEC(int, var)
-# define XSTATS_ATOMIC_ADD(var, val) ATOMIC_ADD(int, var, val)
+# define XSTATS_ATOMIC_INC(var) atomic_inc( var )
+# define XSTATS_ATOMIC_DEC(var) atomic_dec( var ) 
+# define XSTATS_ATOMIC_ADD(var, val) atomic_add(var, val)
 # define XSTATS_ATOMIC_MAX(max, cur) ATOMIC_MAX(int, max, cur)
 # define XSTATS_ATOMIC_ADD_EXCHANGE(var, val) atomic_add_exchange_int(var, val)
 #endif

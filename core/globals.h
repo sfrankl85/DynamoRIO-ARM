@@ -1028,6 +1028,15 @@ utf16_to_utf8_size(const wchar_t *src, size_t max_chars, size_t *written/*unicod
 /* string.c */
 int tolower(int c);
 
+
+/* TODO SJF Added defs here */
+DYNAMORIO_EXPORT void
+dr_app_start_helper(priv_mcontext_t *mc);
+
+DYNAMORIO_EXPORT void
+dynamorio_app_take_over_helper(priv_mcontext_t *mc);
+
+
 /* Code cleanliness rules */
 #ifdef WINDOWS
 #  define strcasecmp _stricmp

@@ -38,7 +38,7 @@
  */
 
 //#include "tools.h"
-//#include <stdio.h>
+#include <stdio.h>
 
 int fib(int n) 
 {
@@ -65,7 +65,11 @@ main(int argc, char** argv)
 //    INIT();
 //    USE_USER32();
 
-  fib(5); fib(15); fib(25);
+  printf( "%d\n" , fib(5));
+
+  printf( "%d\n" , fib(15));
+
+  printf( "%d\n" , fib(25));
 
 // Do not print the values as want to avoid using shared libraries or syscalls.
 //    printf("fib(%d)=%d\n", 5, fib(5));

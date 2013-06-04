@@ -91,7 +91,8 @@
 /* #undef CUSTOM_PRODUCT_NAME */
 
 /* features */
-/* #undef HAVE_FVISIBILITY */
+#define HAVE_FVISIBILITY
+-DHAVE_FVISIBILITY
 
 /* typedef conflicts */
 /* #undef DR_DO_NOT_DEFINE_bool */

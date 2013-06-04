@@ -321,6 +321,9 @@ if ($header) {
         # by the linux injector
         print OUT "dynamorio_app_init;\n";
         print OUT "dynamorio_app_take_over;\n";
+        # SJF Added dr_start_app_helper here instead of putting into dr_app.h
+        print OUT "dr_app_start_helper;\n";
+        print OUT "dynamorio_app_take_over_helper;\n";
         # add in our_std*, which are hard to match w/ DR_API and I'm in a hurry
         # (should switch to visibility attributes now that we upgraded gcc)
         print OUT "our_stdout;\n";

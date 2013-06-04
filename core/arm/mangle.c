@@ -4240,12 +4240,11 @@ mangle(dcontext_t *dcontext, instrlist_t *ilist, uint flags,
 #endif
 
 
-#ifdef NO
-//TODO SJF Comment all of this out
 static void
 sandbox_rep_instr(dcontext_t *dcontext, instrlist_t *ilist, instr_t *instr, instr_t *next,
                   app_pc start_pc, app_pc end_pc /* end is open */)
 {
+#ifdef NO
     /* put checks before instr, set some reg as a flag, act on it
      * after instr (even if overwrite self will execute rep to completion)
      * want to read DF to find direction (0=inc xsi/xdi, 1=dec),
@@ -4414,12 +4413,14 @@ sandbox_rep_instr(dcontext_t *dcontext, instrlist_t *ilist, instr_t *instr, inst
     /* an exit cti, not a meta instr */
     instrlist_preinsert(ilist, next, jmp);
     PRE(ilist, next, ok2);
+#endif //NO
 }
 
 static void
 sandbox_write(dcontext_t *dcontext, instrlist_t *ilist, instr_t *instr, instr_t *next,
               opnd_t op, app_pc start_pc, app_pc end_pc /* end is open */)
 {
+#ifdef NO
     /* can only test for equality w/o modifying flags, so save them 
      * if (addr < end_pc && addr+opndsize > start_pc) => self-write
      *   <write memory>
@@ -4585,6 +4586,7 @@ sandbox_write(dcontext_t *dcontext, instrlist_t *ilist, instr_t *instr, instr_t 
             RESTORE_FROM_DC_OR_TLS(dcontext, REG_R1, TLS_XCX_SLOT, R1_OFFSET));
     }
 #endif
+#endif //NO
 }
 
 static bool
@@ -4876,7 +4878,7 @@ sandbox_top_of_bb(dcontext_t *dcontext, instrlist_t *ilist,
                           _IF_X64(X64_CACHE_MODE_DC(dcontext) &&
                                   !X64_MODE_DC(dcontext)));
     /* fall-through to bb start */
-#endif
+#endif //NO
 }
 
 /* returns false if failed to add sandboxing b/c of a problematic ilist --
@@ -4995,7 +4997,7 @@ insert_selfmod_sandbox(dcontext_t *dcontext, instrlist_t *ilist, uint flags,
         instrlist_set_translation_target(ilist, NULL);
     instrlist_set_our_mangling(ilist, false); /* PR 267260 */
     return true;
-#endif
+#endif //NO
 }
 
 /* Offsets within selfmod sandbox top-of-bb code that we patch once
@@ -5101,8 +5103,6 @@ finalize_selfmod_sandbox(dcontext_t *dcontext, fragment_t *f)
         *((cache_pc*)pc) = (copy_pc + FRAGMENT_SELFMOD_COPY_SIZE(f) - sizeof(uint));
     } /* else, no 2nd patch point */
 }
-
-#endif //NO
 
 /****************************************************************************/
 /* clean call optimization code */

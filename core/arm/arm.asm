@@ -93,19 +93,9 @@ START_FILE
 /* We should give asm_defines.asm all unique names and then include globals.h
  * and avoid all this duplication!
  */
-#ifdef X64
-# ifdef WINDOWS
-#  define NUM_XMM_SLOTS 6 /* xmm0-5 */
-# else
-#  define NUM_XMM_SLOTS 16 /* xmm0-15 */
-# endif
-# define PRE_XMM_PADDING 16
-#else
-# define NUM_XMM_SLOTS 8 /* xmm0-7 */
-# define PRE_XMM_PADDING 24
-#endif
+#define NUM_XMM_SLOTS 13 /* r0-12 */
+#define PRE_XMM_PADDING 32 /* ??? For EFLAGS/CPSR maybe. */
 #define XMM_SAVED_REG_SIZE 32 /* for ymm */
-/* xmm0-5/7/15 for PR 264138/i#139/PR 302107 */
 #define XMM_SAVED_SIZE ((NUM_XMM_SLOTS)*(XMM_SAVED_REG_SIZE)) 
 
 /* Should we generate all of our asm code instead of having it static?
@@ -113,98 +103,25 @@ START_FILE
  * but it's not that much code here in these macros, and this is simpler
  * than emit_utils.c-style code.
  */
-#ifdef X64
-/* push GPR registers in priv_mcontext_t order.  does NOT make xsp have a
- * pre-push value as no callers need that (they all use PUSH_PRIV_MCXT).
- * Leaves space for, but does NOT fill in, the xmm0-5 slots (PR 264138),
- * since it's hard to dynamically figure out during bootstrapping whether
- * movdqu or movups are legal instructions.  The caller is expected
- * to fill in the xmm values prior to any calls that may clobber them.
- */
-# define PUSHGPR \
-        push     r15 @N@\
-        push     r14 @N@\
-        push     r13 @N@\
-        push     r12 @N@\
-        push     r11 @N@\
-        push     r10 @N@\
-        push     r9  @N@\
-        push     r8  @N@\
-        push     rax @N@\
-        push     rcx @N@\
-        push     rdx @N@\
-        push     rbx @N@\
-        /* not the pusha pre-push rsp value but see above */ @N@\
-        push     rsp @N@\
-        push     rbp @N@\
-        push     rsi @N@\
-        push     rdi
-# define POPGPR        \
-        pop      rdi @N@\
-        pop      rsi @N@\
-        pop      rbp @N@\
-        pop      rbx /* rsp into dead rbx */ @N@\
-        pop      rbx @N@\
-        pop      rdx @N@\
-        pop      rcx @N@\
-        pop      rax @N@\
-        pop      r8  @N@\
-        pop      r9  @N@\
-        pop      r10 @N@\
-        pop      r11 @N@\
-        pop      r12 @N@\
-        pop      r13 @N@\
-        pop      r14 @N@\
-        pop      r15 @N@
-# define PRIV_MCXT_SIZE (18*ARG_SZ + PRE_XMM_PADDING + XMM_SAVED_SIZE)
-# define dstack_OFFSET     (PRIV_MCXT_SIZE+UPCXT_EXTRA+3*ARG_SZ)
-# define MCONTEXT_PC_OFFS  (17*ARG_SZ)
-#else
+
 /* SJF Changed */
-#ifdef ARM 
-# define PUSHGPR \
+#define PUSHGPR \
         stmda   r13!, {r0-r12} 
-# define POPGPR  \
+#define POPGPR  \
         ldmib   r13!, {r0-r12} 
-#else
-# define PUSHGPR \
-        pusha
-# define POPGPR  \
-        popa
-#endif
+
 # define PRIV_MCXT_SIZE (10*ARG_SZ + PRE_XMM_PADDING + XMM_SAVED_SIZE)
 # define dstack_OFFSET     (PRIV_MCXT_SIZE+UPCXT_EXTRA+3*ARG_SZ)
 # define MCONTEXT_PC_OFFS  (9*ARG_SZ)
-#endif
+
 /* offsetof(dcontext_t, is_exiting) */
 #define is_exiting_OFFSET (dstack_OFFSET+1*ARG_SZ)
 #define PUSHGPR_XSP_OFFS  (3*ARG_SZ)
 #define MCONTEXT_XSP_OFFS (PUSHGPR_XSP_OFFS)
+
+/* SJF BEGIN These defines should be the correct value or have been altered */ 
 #define PUSH_PRIV_MCXT_PRE_PC_SHIFT (- XMM_SAVED_SIZE - PRE_XMM_PADDING)
-
-/* Pushes a priv_mcontext_t on the stack, with an xsp value equal to the
- * xsp before the pushing.  Clobbers xax!
- * Does fill in xmm0-5, if necessary, for PR 264138.
- * Assumes that DR has been initialized (get_xmm_vals() checks proc feature bits).
- * Caller should ensure 16-byte stack alignment prior to the push (PR 306421).
- */
-#define PUSH_PRIV_MCXT(pc)                              \
-        lea      REG_XSP, [REG_XSP + PUSH_PRIV_MCXT_PRE_PC_SHIFT]  @N@\
-        push     pc                                    @N@\
-        PUSHF                                          @N@\
-        PUSHGPR                                        @N@\
-        lea      REG_XAX, [REG_XSP]                    @N@\
-        CALLC1(get_xmm_vals, REG_XAX)                  @N@\
-        lea      REG_XAX, [PRIV_MCXT_SIZE + REG_XSP] @N@\
-        mov      [PUSHGPR_XSP_OFFS + REG_XSP], REG_XAX
-
-/* Pops the GPRs and flags from a priv_mcontext off the stack.  Does not
- * restore xmm/ymm regs.
- */
-#define POP_PRIV_MCXT_GPRS() \
-        POPGPR                                          @N@\
-        POPF                                            @N@\
-        lea      REG_XSP, [REG_XSP - PUSH_PRIV_MCXT_PRE_PC_SHIFT + ARG_SZ/*pc*/]
+/* SJF END*/
 
 /* This is really the alignment needed by x64 code.  For now, when we bother to
  * align the stack pointer, we just go for 16 byte alignment.  We do *not*
@@ -1258,7 +1175,7 @@ GLOBAL_LABEL(master_signal_handler:)
          */
         mov      REG_R0, REG_R13
         CALLC1(master_signal_handler_C, REG_R0)
-        mov 	 r15, r14 
+        mov 	 REG_R15, REG_R14 
         END_FUNC(master_signal_handler)
 
 #else /* !HAVE_SIGALTSTACK */
@@ -2667,7 +2584,9 @@ dynamorio_earliest_init_repeatme:
 #endif /*NO*/
 #endif /*NO*/
 
-/*SJF Fake syscall def*/
+/* Start of ARM specific routines */
+/* Remove the ones above as I go */
+
 DECLARE_FUNC(dynamorio_syscall)
 GLOBAL_LABEL(dynamorio_syscall:)
         /* Backup regs */
@@ -2812,14 +2731,38 @@ END_FUNC(back_from_native)
 /*
 #define PUSH_PRIV_MCXT(pc)                              \
         mov      REG_R13, [REG_R13 + PUSH_PRIV_MCXT_PRE_PC_SHIFT]  @N@\
-        str      r15, [r13]!                                  @N@\
-        PUSHF                                          @N@\
+        str      REG_R15, [REG_R13]!                                  @N@\
         PUSHGPR                                        @N@\
+        PUSHF                                          @N@\
         mov      REG_R0, REG_R13                    @N@\
         CALLC1(get_xmm_vals, REG_XAX)                  @N@\
         mov      REG_R0, PRIV_MCXT_SIZE + REG_R13 @N@\
         mov      [PUSHGPR_XSP_OFFS + REG_XSP], REG_XAX
 */
+
+/* Pushes a priv_mcontext_t on the stack, with an xsp value equal to the
+ * xsp before the pushing.  Clobbers xax!
+ * Does fill in xmm0-5, if necessary, for PR 264138.
+ * Assumes that DR has been initialized (get_xmm_vals() checks proc feature bits).
+ * Caller should ensure 16-byte stack alignment prior to the push (PR 306421).
+ */
+#define PUSH_PRIV_MCXT(pc)                              \
+        add      REG_R13, REG_R13, PUSH_PRIV_MCXT_PRE_PC_SHIFT  @N@\
+        push     pc                                    @N@\
+        PUSHGPR                                        @N@\
+        PUSHF                                          @N@\
+        mov      REG_R0, REG_R13                    @N@\
+        CALLC1(get_xmm_vals, REG_R0)                  @N@\
+        add      REG_R0, REG_R13, PRIV_MCXT_SIZE @N@\
+        str      REG_R0, [REG_R13, PUSHGPR_R13_OFFS]
+
+/* Pops the GPRs and flags from a priv_mcontext off the stack.  Does not
+ * restore xmm/ymm regs.
+ */
+#define POP_PRIV_MCXT_GPRS() \
+        POPF                                            @N@\
+        POPGPR                                          @N@\
+        sub      REG_R13, REG_R13, PUSH_PRIV_MCXT_PRE_PC_SHIFT + ARG_SZ/*pc*/
 
 /*
  * For debugging: report an error if the function called by call_switch_stack()
@@ -3039,15 +2982,9 @@ call_dispatch_alt_stack_no_free:
 #endif
 END_FUNC(call_switch_stack)
 
-/*
- * dr_app_take_over - For the client interface, we'll export 'dr_app_take_over'
- * for consistency with the dr_ naming convention of all exported functions.  
- * We'll keep 'dynamorio_app_take_over' for compatibility with the preinjector.
- */
-DECLARE_EXPORTED_FUNC(dr_app_take_over)
-GLOBAL_LABEL(dr_app_take_over:  )
-        b      dynamorio_app_take_over
-END_FUNC(dr_app_take_over)
+#ifdef DR_APP_EXPORTS
+DECL_EXTERN(dr_app_start_helper)
+#endif
 
 /*
  * dynamorio_app_take_over - Causes application to run under Dynamo
@@ -3056,7 +2993,7 @@ END_FUNC(dr_app_take_over)
 DECLARE_EXPORTED_FUNC(dynamorio_app_take_over)
 GLOBAL_LABEL(dynamorio_app_take_over:)
 #ifdef NO
-        sub     REG_XSP, FRAME_ALIGNMENT - ARG_SZ  /* Maintain alignment. */
+        sub     REG_R13, #FRAME_ALIGNMENT - ARG_SZ  /* Maintain alignment. */
 
         /* grab exec state and pass as param in a priv_mcontext_t struct */
         PUSH_PRIV_MCXT([FRAME_ALIGNMENT - ARG_SZ + REG_XSP -
@@ -3064,7 +3001,9 @@ GLOBAL_LABEL(dynamorio_app_take_over:)
 
         /* do the rest in C */
         lea      REG_XAX, [REG_XSP] /* stack grew down, so priv_mcontext_t at tos */
-        CALLC1(dynamorio_app_take_over_helper, REG_XAX)
+#endif
+        CALLC1(dynamorio_app_take_over_helper, REG_R0)
+#ifdef NO
 
         /* if we come back, then DR is not taking control so 
          * clean up stack and return */
@@ -3073,6 +3012,325 @@ GLOBAL_LABEL(dynamorio_app_take_over:)
 #endif
 END_FUNC(dynamorio_app_take_over)
 
+/* uint atomic_swap(uint *addr, uint value)
+ * return current contents of addr and replace contents with value.
+ * on win32 could use InterlockedExchange intrinsic instead.
+ */
+DECLARE_FUNC(atomic_swap)
+GLOBAL_LABEL(atomic_swap:)
+END_FUNC(atomic_swap)
+
+/* Repeats string_op for XDX bytes using aligned pointer-sized operations when
+ * possible.  Assumes that string_op works by counting down until XCX reaches
+ * zero.  The pointer-sized string ops are aligned based on ptr_to_align.
+ * For string ops that have both a src and dst, aligning based on src is
+ * preferred, subject to micro-architectural differences.
+ *
+ * XXX: glibc memcpy uses SSE instructions to copy, which is 10% faster on x64
+ * and ~2x faster for 20kb copies on plain x86.  Using SSE is quite complicated,
+ * because it means doing cpuid checks and loop unrolling.  Many of our string
+ * operations are short anyway.  For safe_read, it also increases the number of
+ * potentially faulting PCs.
+ */
+#define REP_STRING_OP(funcname, ptr_to_align, string_op) \
+ADDRTAKEN_LABEL(funcname##_pre:)                                @N@\
+funcname##_aligned:                                             @N@\
+ADDRTAKEN_LABEL(funcname##_mid:)                                @N@\
+ADDRTAKEN_LABEL(funcname##_post:)                               @N@\
+        mov r15, r14
+
+
+/* Declare these labels global so we can take their addresses in C.  pre, mid,
+ * and post are defined by REP_STRING_OP().
+ */
+DECLARE_GLOBAL(safe_read_asm_pre)
+DECLARE_GLOBAL(safe_read_asm_mid)
+DECLARE_GLOBAL(safe_read_asm_post)
+DECLARE_GLOBAL(safe_read_asm_recover)
+
+/* i#350: We implement safe_read in assembly and save the PCs that can fault.
+ * If these PCs fault, we return from the signal handler to the epilog, which
+ * can recover.  We return the source pointer from XSI, and the caller uses this
+ * to determine how many bytes were copied and whether it matches size.
+ *
+ * XXX: Do we care about differentiating whether the read or write faulted?
+ * Currently this is just "safe_memcpy", and we recover regardless of whether
+ * the read or write faulted.
+ *
+ * void *
+ * safe_read_asm(void *dst, const void *src, size_t n);
+ */
+
+DECLARE_FUNC(safe_read_asm)
+GLOBAL_LABEL(safe_read_asm:)
+        REP_STRING_OP(safe_read_asm, REG_XSI, movs)
+ADDRTAKEN_LABEL(safe_read_asm_recover:)
+        mov r15, r14 
+END_FUNC(safe_read_asm)
+
+/*
+ * dr_app_start - Causes application to run under Dynamo control
+ */
+#ifdef DR_APP_EXPORTS
+        DECLARE_EXPORTED_FUNC(dr_app_start)
+GLOBAL_LABEL(dr_app_start:)
+        sub     REG_R13, REG_R13, #FRAME_ALIGNMENT /* Maintain alignment. */
+        sub     REG_R13, REG_R13, #ARG_SZ
+
+        /* grab exec state and pass as param in a priv_mcontext_t struct */
+        PUSH_PRIV_MCXT([FRAME_ALIGNMENT - ARG_SZ + REG_R13 -
+                        PUSH_PRIV_MCXT_PRE_PC_SHIFT]) /* return address as pc */
+
+        /* do the rest in C */
+        mov     REG_R0, REG_R13 /* stack grew down, so priv_mcontext_t at tos */
+        CALLC1(dr_app_start_helper, REG_R0)
+
+        /* if we come back, then DR is not taking control so
+         * clean up stack and return */
+        add      REG_R13, REG_R13, #PRIV_MCXT_SIZE 
+        add      REG_R13, REG_R13, #FRAME_ALIGNMENT 
+        sub      REG_R13, REG_R13, #ARG_SZ
+        mov      r15, r14 
+        END_FUNC(dr_app_start)
+
+/*
+ * dr_app_take_over - For the client interface, we'll export 'dr_app_take_over'
+ * for consistency with the dr_ naming convention of all exported functions.
+ * We'll keep 'dynamorio_app_take_over' for compatibility with the preinjector.
+ */
+        DECLARE_EXPORTED_FUNC(dr_app_take_over)
+GLOBAL_LABEL(dr_app_take_over:  )
+        b      dynamorio_app_take_over
+        END_FUNC(dr_app_take_over)
+#endif
+
+/*
+ * cleanup_and_terminate(dcontext_t *dcontext,     // 1*ARG_SZ+XBP
+ *                       int sysnum,               // 2*ARG_SZ+XBP = syscall #
+ *                       int sys_arg1/param_base,  // 3*ARG_SZ+XBP = arg1 for syscall
+ *                       int sys_arg2,             // 4*ARG_SZ+XBP = arg2 for syscall
+ *                       bool exitproc)            // 5*ARG_SZ+XBP
+ *
+ * Calls dynamo_exit_process if exitproc is true, else calls dynamo_exit_thread.
+ * Uses the current dstack, but instructs the cleanup routines not to
+ * de-allocate it, does a custom de-allocate after swapping to initstack (don't
+ * want to use initstack the whole time, that's too long to hold the mutex).
+ * Then calls system call sysnum with parameter base param_base, which is presumed
+ * to be either NtTerminateThread or NtTerminateProcess or exit.
+ * For x64 Windows, args are in ecx and edx (terminate syscalls have only 2 args).
+ * For x64 Linux, 1st 2 args are in rdi and rsi.
+ *
+ * Note that the caller is responsible for placing the actual syscall arguments
+ * at the correct offset from edx (or ebx).  See SYSCALL_PARAM_OFFSET in
+ * win32 os.c for more info.
+ *
+ * Note that this routine does not return and thus clobbers callee-saved regs.
+ */
+        DECLARE_FUNC(cleanup_and_terminate)
+GLOBAL_LABEL(cleanup_and_terminate:)
+#ifdef NO //TODO SJF
+        /* get all args with same offset(xbp) regardless of plaform, to save
+         * across our calls.
+         */
+        mov      REG_XBP, REG_XSP
+        /* increment exiting_thread_count so that we don't get killed after 
+         * thread_exit removes us from the all_threads list */
+        /* PR 212290: avoid text relocations: get PIC base into callee-saved xdi.
+         * Can't use CALLC0 since it inserts a nop: we need the exact retaddr.
+         */
+        call     get_pic_xdi
+	lea      REG_XDI, [_GLOBAL_OFFSET_TABLE_ + REG_XDI]
+	lea      REG_XAX, VAR_VIA_GOT(REG_XDI, exiting_thread_count)
+        lock inc DWORD [REG_XAX]
+
+        /* save dcontext->dstack for freeing later and set dcontext->is_exiting */
+        mov      REG_XBX, ARG1 /* xbx is callee-saved and not an x64 param */
+        SAVE_TO_DCONTEXT_VIA_REG(REG_XBX,is_exiting_OFFSET,1)
+        CALLC1(is_currently_on_dstack, REG_XBX) /* xbx is callee-saved */
+        cmp      REG_XAX, 0
+        jnz      cat_save_dstack
+        mov      REG_XBX, 0 /* save 0 for dstack to avoid double-free */
+        jmp      cat_done_saving_dstack
+cat_save_dstack:
+        RESTORE_FROM_DCONTEXT_VIA_REG(REG_XBX,dstack_OFFSET,REG_XBX)
+cat_done_saving_dstack:
+        /* PR 306421: xbx is callee-saved for all platforms, so don't push yet,
+         * to maintain 16-byte stack alignment
+         */
+        /* avoid sygate sysenter version as our stack may be static const at 
+         * that point, caller will take care of sygate hack */
+        CALLC0(get_cleanup_and_terminate_global_do_syscall_entry)
+        push     REG_XBX /* 16-byte aligned again */
+        push     REG_XAX
+        /* upper bytes are 0xab so only look at lower bytes */
+        movzx    esi, BYTE [5*ARG_SZ + REG_XBP] /* exitproc */
+        cmp      esi, 0
+        jz       cat_thread_only
+        CALLC0(dynamo_process_exit)
+        jmp      cat_no_thread
+cat_thread_only:
+        CALLC0(dynamo_thread_exit)
+cat_no_thread:
+        /* now switch to initstack for cleanup of dstack 
+         * could use initstack for whole thing but that's too long 
+         * of a time to hold global initstack_mutex */
+        mov      ecx, 1
+#if !defined(X64) && defined(LINUX)
+        /* PIC base is still in xdi */
+	lea      REG_XAX, VAR_VIA_GOT(REG_XDI, initstack_mutex)
+#endif
+cat_spin:       
+#if !defined(X64) && defined(LINUX)
+        xchg     DWORD [REG_XAX], ecx
+#else
+        xchg     DWORD SYMREF(initstack_mutex), ecx /* rip-relative on x64 */
+#endif
+        jecxz    cat_have_lock
+        /* try again -- too few free regs to call sleep() */
+        pause    /* good thing gas now knows about pause */
+        jmp      cat_spin
+cat_have_lock:
+        /* need to grab everything off dstack first */
+#ifdef WINDOWS
+        /* PR 601533: the wow64 syscall writes to the stack b/c it
+         * makes a call, so we have a race that can lead to a hang or
+         * worse.  we do not expect the syscall to return, so we can
+         * use a global single-entry stack (the wow64 layer swaps to a
+         * different stack: presumably for alignment and other reasons).
+         */
+        CALLC1(os_terminate_wow64_stack, -1/*INVALID_HANDLE_VALUE*/)
+        mov      REG_XDI, REG_XAX    /* esp to use */
+#endif
+        mov      REG_XSI, [2*ARG_SZ + REG_XBP]  /* sysnum */
+        pop      REG_XAX             /* syscall */
+        pop      REG_XCX             /* dstack */
+        mov      REG_XBX, [3*ARG_SZ + REG_XBP] /* sys_arg1 */
+        mov      REG_XDX, [4*ARG_SZ + REG_XBP] /* sys_arg2 */
+        /* swap stacks */
+#if !defined(X64) && defined(LINUX)
+        /* PIC base is still in xdi */
+	lea      REG_XBP, VAR_VIA_GOT(REG_XDI, initstack)
+        mov      REG_XSP, PTRSZ [REG_XBP]
+#else
+        mov      REG_XSP, PTRSZ SYMREF(initstack) /* rip-relative on x64 */
+#endif
+        /* now save registers */
+#ifdef WINDOWS
+        push     REG_XDI   /* esp to use */
+#endif
+        push     REG_XDX   /* sys_arg2 */
+        push     REG_XBX   /* sys_arg1 */
+        push     REG_XAX   /* syscall */
+        push     REG_XSI   /* sysnum => xsp 16-byte aligned */
+        /* free dstack and call the EXIT_DR_HOOK */
+        CALLC1(dynamo_thread_stack_free_and_exit, REG_XCX) /* pass dstack */
+        /* finally, execute the termination syscall */
+        pop      REG_XAX   /* sysnum */
+#ifdef X64
+        /* We assume we're doing "syscall" on Windows & Linux, where r10 is dead */
+        pop      r10       /* syscall, in reg dead at syscall */
+# ifdef LINUX
+        pop      REG_XDI   /* sys_arg1 */
+        pop      REG_XSI   /* sys_arg2 */
+# else
+        pop      REG_XCX   /* sys_arg1 */
+        pop      REG_XDX   /* sys_arg2 */
+# endif
+#else
+        pop      REG_XSI   /* syscall */
+# ifdef LINUX
+        pop      REG_XBX   /* sys_arg1 */
+        pop      REG_XCX   /* sys_arg2 */
+# else
+        pop      REG_XDX   /* sys_arg1 == param_base */
+        pop      REG_XCX   /* sys_arg2 (unused) */
+# endif
+#endif
+#ifdef WINDOWS
+        pop      REG_XSP    /* get the stack pointer we pushed earlier */
+#endif
+        /* give up initstack mutex -- potential problem here with a thread getting 
+         *   an asynch event that then uses initstack, but syscall should only care 
+         *   about ebx and edx */
+#if !defined(X64) && defined(LINUX)
+        /* PIC base is still in xdi */
+	lea      REG_XBP, VAR_VIA_GOT(REG_XDI, initstack_mutex)
+        mov      DWORD [REG_XBP], 0
+#else
+        mov      DWORD SYMREF(initstack_mutex), 0 /* rip-relative on x64 */
+#endif
+        /* we are finished with all shared resources, decrement the  
+         * exiting_thread_count (allows another thread to kill us) */
+#if !defined(X64) && defined(LINUX)
+        /* PIC base is still in xdi */
+	lea      REG_XBP, VAR_VIA_GOT(REG_XDI, exiting_thread_count)
+        lock dec DWORD [REG_XBP]
+#else
+        lock dec DWORD SYMREF(exiting_thread_count) /* rip-rel on x64 */
+#endif
+#ifdef X64
+        jmp      r10      /* go do the syscall! */
+#else
+        jmp      REG_XSI  /* go do the syscall! */
+#endif
+#endif //NO
+        END_FUNC(cleanup_and_terminate)
+
+/* void get_ymm_caller_saved(byte *ymm_caller_saved_buf)
+ *   stores the values of ymm0 through ymm5 consecutively into ymm_caller_saved_buf.
+ *   ymm_caller_saved_buf need not be 32-byte aligned.
+ *   for linux, also saves ymm6-15 (PR 302107).
+ *   caller must ensure that the underlying processor supports SSE!
+ */
+        DECLARE_FUNC(get_ymm_caller_saved)
+GLOBAL_LABEL(get_ymm_caller_saved:)
+        END_FUNC(get_ymm_caller_saved)
+
+/* void get_xmm_caller_saved(byte *xmm_caller_saved_buf)
+ *   stores the values of xmm0 through xmm5 consecutively into xmm_caller_saved_buf.
+ *   xmm_caller_saved_buf need not be 16-byte aligned.
+ *   for linux, also saves xmm6-15 (PR 302107).
+ *   caller must ensure that the underlying processor supports SSE!
+ * FIXME PR 266305: AMD optimization guide says to use movlps+movhps for unaligned
+ * stores, instead of movups (movups is best for loads): but for
+ * simplicity I'm sticking with movups (assumed not perf-critical here).
+ */
+        DECLARE_FUNC(get_xmm_caller_saved)
+GLOBAL_LABEL(get_xmm_caller_saved:)
+        END_FUNC(get_xmm_caller_saved)
+
+/* SYS_clone swaps the stack so we need asm support to call it.
+ * signature:
+ *   thread_id_t dynamorio_clone(uint flags, byte *newsp, void *ptid, void *tls,
+ *                               void *ctid, void (*func)(void))
+ */
+        DECLARE_FUNC(dynamorio_clone)
+GLOBAL_LABEL(dynamorio_clone:)
+        END_FUNC(dynamorio_clone)
+
+/* void our_cpuid(int res[4], int eax)
+ * Executes cpuid instr, which is hard for x64 inline asm b/c clobbers rbx and can't
+ * push in middle of func.
+ */
+        DECLARE_FUNC(our_cpuid)
+GLOBAL_LABEL(our_cpuid:)
+#ifdef NO
+        mov      REG_XDX, ARG1
+        mov      REG_XAX, ARG2
+        push     REG_XBX /* callee-saved */
+        push     REG_XDI /* callee-saved */
+        /* not making a call so don't bother w/ 16-byte stack alignment */
+        mov      REG_XDI, REG_XDX
+        cpuid
+        mov      [ 0 + REG_XDI], eax
+        mov      [ 4 + REG_XDI], ebx
+        mov      [ 8 + REG_XDI], ecx
+        mov      [12 + REG_XDI], edx
+        pop      REG_XDI /* callee-saved */
+        pop      REG_XBX /* callee-saved */
+        ret
+#endif //NO
+        END_FUNC(our_cpuid)
 
 
 

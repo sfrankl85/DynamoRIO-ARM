@@ -1105,18 +1105,18 @@ void read_lock(read_write_lock_t *rw)
                     /* we would share the code below but we do not want
                      * the deadlock avoidance to consider this an acquire
                      */
-                    ATOMIC_INC(int, rw->num_readers);
+                    atomic_inc(rw->num_readers);
                     return;
                 }
                 DEADLOCK_AVOIDANCE_LOCK(&rw->lock, false, LOCK_NOT_OWNABLE);
                 /* FIXME: last places where we yield instead of wait */
                 thread_yield();
             }
-            ATOMIC_INC(int, rw->num_readers);
+            atomic_inc(rw->num_readers);
             if (!mutex_testlock(&rw->lock))
                 break;
             /* else, race with writer, must try again */
-            ATOMIC_DEC(int, rw->num_readers);
+            atomic_dec( rw->num_readers);
         } while (true);
         DEADLOCK_AVOIDANCE_LOCK(&rw->lock, true, LOCK_NOT_OWNABLE);
         return;
@@ -1141,12 +1141,12 @@ void read_lock(read_write_lock_t *rw)
                  * the deadlock avoidance to consider this an acquire
                  */
                 /* we also have to do this check on the read_unlock path  */
-                ATOMIC_INC(int, rw->num_readers);
+                atomic_inc(rw->num_readers);
                 return;
             }
             DEADLOCK_AVOIDANCE_LOCK(&rw->lock, false, LOCK_NOT_OWNABLE);
 
-            ATOMIC_INC(int, rw->num_pending_readers);
+            atomic_inc(rw->num_pending_readers);
             /* if we get interrupted before we have incremented this counter? 
                Then no signal will be send our way, so we shouldn't be waiting then
             */
@@ -1172,7 +1172,7 @@ void read_lock(read_write_lock_t *rw)
             }
         }
         /* fast path */
-        ATOMIC_INC(int, rw->num_readers);
+        atomic_inc( rw->num_readers);
         if (!mutex_testlock(&rw->lock))
             break;
         /* else, race with writer, must try again */
@@ -1180,7 +1180,7 @@ void read_lock(read_write_lock_t *rw)
            or otherwise add a mutex grabbed by readers for the above
            test.
         */
-        ATOMIC_DEC(int, rw->num_readers);
+        atomic_dec( rw->num_readers);
         /* What if a writer thought that this reader has
          already taken turn - and will then wait thinking this guy has
          grabbed the read lock first?  For now we'll have to wake up
@@ -1251,7 +1251,7 @@ bool write_trylock(read_write_lock_t *rw)
 void read_unlock(read_write_lock_t *rw)
 {
     if (INTERNAL_OPTION(spin_yield_rwlock)) {
-        ATOMIC_DEC(int, rw->num_readers);
+        atomic_dec( rw->num_readers);
         DEADLOCK_AVOIDANCE_UNLOCK(&rw->lock, LOCK_NOT_OWNABLE);
         return;
     }
@@ -1367,12 +1367,12 @@ signal_broadcast_event(broadcast_event_t *be)
 void 
 intend_wait_broadcast_event_helper(broadcast_event_t *be) 
 {
-    ATOMIC_INC(int, be->num_waiting);
+    atomic_inc( be->num_waiting);
 }
 void 
 unintend_wait_broadcast_event_helper(broadcast_event_t *be)
 {
-    ATOMIC_DEC(int, be->num_waiting);
+    atomic_inc( be->num_waiting);
 }
 void 
 wait_broadcast_event_helper(broadcast_event_t *be)
