@@ -405,17 +405,13 @@ dynamorio_app_init(void)
 
         config_init();
 
-/* TODO SJF Crashing when attempting to get mutex locks 
         options_init();
-*/
 #ifdef WINDOWS
         syscalls_init_options_read(); /* must be called after options_init
                                        * but before init_syscall_trampolines */
 #endif
-/* TODO SJF HEAVY EDIT
         utils_init();
         data_section_init();
-*/
 
 #ifdef DEBUG
         /* decision: nullcalls WILL create a dynamorio.log file and

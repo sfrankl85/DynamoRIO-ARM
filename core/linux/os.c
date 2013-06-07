@@ -2632,10 +2632,14 @@ get_thread_id(void)
     /* i#228/PR 494330: making a syscall here is a perf bottleneck since we call
      * this routine in read and recursive locks so use the TLS value instead
      */
+
+/* SJF Not implemented any threaded code yet so accept performace overheads 
+       for now and use system pid instead. 
     thread_id_t id = get_tls_thread_id();
     if (id != INVALID_THREAD_ID)
         return id;
     else
+*/
         return get_sys_thread_id();
 }
 

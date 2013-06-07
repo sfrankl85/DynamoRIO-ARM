@@ -1450,7 +1450,7 @@ enum {LONGJMP_EXCEPTION = 1};
  */
 #define XSTATS_INC_DC(dcontext, stat) do {                              \
         DO_THREAD_STATS(dcontext, THREAD_STAT(dcontext, stat) += 1);    \
-        DO_GLOBAL_STATS(XSTATS_ATOMIC_INC(GLOBAL_STAT(stat)));          \
+        DO_GLOBAL_STATS(XSTATS_ATOMIC_INC(GLOBAL_STAT_ADDR(stat)));          \
     } while (0)
 #define XSTATS_INC(stat)                                                 \
         XSTATS_WITH_DC(stats_inc__dcontext,                              \

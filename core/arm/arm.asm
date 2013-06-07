@@ -989,64 +989,6 @@ GLOBAL_LABEL(dynamorio_syscall_wow64_noedx:)
 #endif /* !NOT_DYNAMORIO_CORE_PROPER */
 /* we share dynamorio_syscall w/ preload */
 #ifdef LINUX
-/* to avoid libc wrappers we roll our own syscall here
- * hardcoded to use int 0x80 for 32-bit -- FIXME: use something like do_syscall
- * and syscall for 64-bit.
- * signature: dynamorio_syscall(sysnum, num_args, arg1, arg2, ...)
- */
-#ifdef NO
-SJF TODO
-        DECLARE_FUNC(dynamorio_syscall)
-GLOBAL_LABEL(dynamorio_syscall:)
-        /* x64 kernel doesn't clobber all the callee-saved registers */
-        str      REG_R3, [r13]
-        sub	 r13, r13, #0x4
-        str      REG_R6, [r13]
-        sub	 r13, r13, #0x4
-        str      REG_R7, [r13]
-        sub	 r13, r13, #0x4
-        /* add 16 to skip the 4 pushes 
-         * FIXME: rather than this dispatch, could have separate routines 
-         * for each #args, or could just blindly read upward on the stack. 
-         * for dispatch, if assume size of mov instr can do single ind jmp */
-        ldr      r1, [r13, #24] /* num_args */
-        cmp      r1, #0
-        beq      syscall_0args
-        cmp      r1, #1
-        beq      syscall_1args
-        cmp      r1, #2
-        beq      syscall_2args
-        cmp      r1, #3
-        beq      syscall_3args
-        cmp      r1, #4
-        beq      syscall_4args
-        cmp      r1, #5
-        beq      syscall_5args
-        ldr      r3, [r13, #48] /* arg6 */
-syscall_5args:
-        ldr      r7, [r13, #44] /* arg5 */
-syscall_4args:
-        ldr      r6, [r13, #40] /* arg4 */
-syscall_3args:
-        ldr      r2, [r13, #36] /* arg3 */
-syscall_2args:
-        ldr      r1, [r13, #32] /* arg2 */
-syscall_1args:
-        ldr      r3, [r13, #28] /* arg1 */
-syscall_0args:
-        ldr      r0, [r13, #20] /* sysnum */
-        /* PR 254280: we assume int$80 is ok even for LOL64 */
-        /*int      HEX(80) TODO SJF What is this? No interrupt for ARM*/
-        ldr      REG_R3, [r13]
-        add	 r13, r13, #0x4
-        ldr      REG_R6, [r13]
-        add	 r13, r13, #0x4
-        ldr      REG_R7, [r13]
-        add	 r13, r13, #0x4
-        /* return val is in eax for us */
-        mov	 r15, r14 
-        END_FUNC(dynamorio_syscall)
-#endif
 
 /* FIXME: this function should be in #ifdef CLIENT_INTERFACE
  * However, the compiler complains about it in
@@ -1562,60 +1504,6 @@ GLOBAL_LABEL(dr_longjmp:)
  * in VC8.
  */
 
-/* uint atomic_swap(uint *addr, uint value)
- * return current contents of addr and replace contents with value.
- * on win32 could use InterlockedExchange intrinsic instead.
- */
-        DECLARE_FUNC(atomic_swap)
-GLOBAL_LABEL(atomic_swap:)
-        mov      REG_XAX, ARG2
-        mov      REG_XCX, ARG1 /* nop on win64 (ditto for linux64 if used rdi) */
-        xchg     [REG_XCX], eax
-        ret
-        END_FUNC(atomic_swap)
-
-/* bool cpuid_supported(void)
- * Checks for existence of the cpuid instr by attempting to modify bit 21 of eflags
- */
-        DECLARE_FUNC(cpuid_supported)
-GLOBAL_LABEL(cpuid_supported:)
-        PUSHF
-        pop      REG_XAX
-        mov      ecx, eax      /* original eflags in ecx */
-        xor      eax, HEX(200000) /* try to modify bit 21 of eflags */
-        push     REG_XAX
-        POPF
-        PUSHF
-        pop      REG_XAX
-        cmp      ecx, eax
-        mov      eax, 0        /* zero out top bytes */
-        setne    al
-        push     REG_XCX         /* now restore original eflags */
-        POPF
-        ret
-        END_FUNC(cpuid_supported)
-
-/* void our_cpuid(int res[4], int eax)
- * Executes cpuid instr, which is hard for x64 inline asm b/c clobbers rbx and can't
- * push in middle of func.
- */
-        DECLARE_FUNC(our_cpuid)
-GLOBAL_LABEL(our_cpuid:)
-        mov      REG_XDX, ARG1
-        mov      REG_XAX, ARG2
-        push     REG_XBX /* callee-saved */
-        push     REG_XDI /* callee-saved */
-        /* not making a call so don't bother w/ 16-byte stack alignment */
-        mov      REG_XDI, REG_XDX
-        cpuid
-        mov      [ 0 + REG_XDI], eax
-        mov      [ 4 + REG_XDI], ebx
-        mov      [ 8 + REG_XDI], ecx
-        mov      [12 + REG_XDI], edx
-        pop      REG_XDI /* callee-saved */
-        pop      REG_XBX /* callee-saved */
-        ret
-        END_FUNC(our_cpuid)
 
 #ifdef WINDOWS /* on linux we use inline asm versions */
 
@@ -2746,15 +2634,16 @@ END_FUNC(back_from_native)
  * Assumes that DR has been initialized (get_xmm_vals() checks proc feature bits).
  * Caller should ensure 16-byte stack alignment prior to the push (PR 306421).
  */
+/* TODO SJF Fix This */
 #define PUSH_PRIV_MCXT(pc)                              \
-        add      REG_R13, REG_R13, PUSH_PRIV_MCXT_PRE_PC_SHIFT  @N@\
+        /*add      REG_R13, REG_R13, PUSH_PRIV_MCXT_PRE_PC_SHIFT  @N@\
         push     pc                                    @N@\
         PUSHGPR                                        @N@\
         PUSHF                                          @N@\
         mov      REG_R0, REG_R13                    @N@\
         CALLC1(get_xmm_vals, REG_R0)                  @N@\
         add      REG_R0, REG_R13, PRIV_MCXT_SIZE @N@\
-        str      REG_R0, [REG_R13, PUSHGPR_R13_OFFS]
+        str      REG_R0, [REG_R13, PUSHGPR_R13_OFFS]*/
 
 /* Pops the GPRs and flags from a priv_mcontext off the stack.  Does not
  * restore xmm/ymm regs.
@@ -3018,6 +2907,15 @@ END_FUNC(dynamorio_app_take_over)
  */
 DECLARE_FUNC(atomic_swap)
 GLOBAL_LABEL(atomic_swap:)
+      a1: 
+        mov      REG_R0, ARG2
+        mov      REG_R1, ARG1 
+        ldrex    REG_R3, [REG_R1]
+        strex    REG_R2, REG_R0, [REG_R1]
+        cmp      REG_R2, #0x0
+        bne      a1 
+        mov      pc, lr  /* ret */ 
+
 END_FUNC(atomic_swap)
 
 /* Repeats string_op for XDX bytes using aligned pointer-sized operations when

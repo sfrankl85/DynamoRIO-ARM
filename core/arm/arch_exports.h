@@ -433,9 +433,10 @@ static inline int64 atomic_add_exchange_int64(volatile int64 *var, int64 value) 
    __asm__ __volatile__( "l3:    ldrex" suffix " %1, %3\n"      \
                          "       teq     %1, %2\n"              \
                          "       strexeq %1, %0, %3\n"          \
-                         "       movne   %1, #0\n"              \
+                         "       bne     l5\n"              \
                          "       cmp     %1, #0\n"              \
                          "       bne     l3\n"                  \
+                         "l5:\n"                                \
                          "       mov     %0, %1\n"              \
                         : "=&r" (exchange), "=&r" (tmp)              \
                         : "r" (compare), "m" (var)         \
