@@ -72,8 +72,6 @@
   reg_t r12;
   reg_t r13;
   reg_t r14;
-  reg_t r15;
-
 #endif
   
 #ifndef ARM
@@ -126,9 +124,11 @@
 #ifdef ARM
     reg_t cpsr; /**< platform-independent name for full cpsr register */
     reg_t spsr; /**< platform-independent name for full cpsr register */
-#endif
 
-#ifndef ARM
+    reg_t r15;  /* Put the pc after all the other general regs info */
+
+#else
+
     union {
         reg_t xflags; /**< platform-independent name for full rflags/eflags register */
         reg_t IF_X64_ELSE(rflags, eflags); /**< platform-dependent name for
@@ -147,7 +147,12 @@
     };
 #endif
 
+
+#ifdef ARM
+    byte padding[PRE_QR_PADDING]; /**< padding to get ymm field 32-byte aligned */
+#else
     byte padding[PRE_XMM_PADDING]; /**< padding to get ymm field 32-byte aligned */
+#endif
     /**
      * The SSE registers xmm0-xmm5 (-xmm15 on Linux) are volatile
      * (caller-saved) for 64-bit and WOW64, and are actually zeroed out on
@@ -174,4 +179,9 @@
      * PR 306394: we preserve xmm0-7 for 32-bit linux too.
      */
 #endif
+
+#ifdef ARM
+    dr_qr_t qr[NUM_QR_SLOTS];
+#else
     dr_ymm_t ymm[NUM_XMM_SLOTS];
+#endif

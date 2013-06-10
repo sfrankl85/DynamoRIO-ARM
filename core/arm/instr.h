@@ -164,10 +164,16 @@ enum {
     DR_REG_S24,         DR_REG_S25,     DR_REG_S26,     DR_REG_S27,
     DR_REG_S28,         DR_REG_S29,     DR_REG_S30,     DR_REG_S31,
 
+    DR_REG_INVALID, /**< Sentinel value indicating an invalid register. */
+
     /* segments (order from "Sreg" description in Intel manual) */
     DR_SEG_ES,   DR_SEG_CS,   DR_SEG_SS,   DR_SEG_DS,   DR_SEG_FS,   DR_SEG_GS,
 
+    /*  SJF TODO Fake debug and control regs */
+    DR_REG_DEBUG1,  DR_REG_DEBUG2, 
+    DR_REG_CONTROL1,  DR_REG_CONTROL2, 
 
+#ifdef NO // TODO SJF Remove the debug regs for now.
     /* Coprocessor registers from the ARM tech manual ??? Is this right. All for CP15 */
     /* TODO Maybe rearrange these to group by function instead of location */
     /* c0 registers */
@@ -267,13 +273,8 @@ enum {
     DR_REG_DBGCID0,     DR_REG_DBGCID1, DR_REG_DBGCID2, DR_REG_DBGCID3,
     DR_REG_DBGDSCRI,    DR_REG_DBGDTRRXI,DR_REG_DBGDTRTXI,DR_REG_DBGDRAR, 
     DR_REG_DBGOSDLR,    DR_REG_DBGDSAR,
+#endif //NO
 
-
-    /* TODO Do I need special Thumb registers here or can I use 
-            the ARM ones. Technically they are the same */
-    DR_SEG_XX,  
-
-    DR_REG_INVALID, /**< Sentinel value indicating an invalid register. */
 
 #ifdef AVOID_API_EXPORT
     /* Below here overlaps with OPSZ_ enum but all cases where the two
@@ -284,12 +285,14 @@ enum {
 };
 
 /* we avoid typedef-ing the enum, as its storage size is compiler-specific */
+/* TODO SJF Changed back to byte again as increase of instr_t struct was causing issues.
+            I dont think I need all the debug regs anyway so a byte should be good enough */
 /* TODO SJF Changed byte to int as num of regs is now > 255 */
-typedef int reg_id_t; /* contains a DR_REG_ enum value */
+typedef byte reg_id_t; /* contains a DR_REG_ enum value */
 /* Changed this to an int as a byte is too small to store all the new registers.
    TODO This may need changing back depending on whether my values in DR_REG_XXX 
         are correct or not */
-typedef int  opnd_size_t; /* contains a DR_REG_ or OPSZ_ enum value */
+typedef byte  opnd_size_t; /* contains a DR_REG_ or OPSZ_ enum value */
 
 /* DR_API EXPORT END */
 /* indexed by enum */
@@ -310,12 +313,12 @@ extern const reg_id_t dr_reg_fixer[];
 #define DR_REG_STOP_16     DR_REG_R15 /**< End of 16-bit general register enum values */  
 #define DR_REG_START_FLOAT DR_REG_Q0  /**< Start of floating-point-register enum values */
 #define DR_REG_STOP_FLOAT  DR_REG_S31  /**< End of floating-point-register enum values */  
-#define DR_REG_START_SEGMENT DR_SEG_XX /**< Start of segment register enum values */
-#define DR_REG_STOP_SEGMENT  DR_SEG_XX /**< End of segment register enum values */  
-#define DR_REG_START_DR    DR_REG_MIDR  /**< Start of debug register enum values */
-#define DR_REG_STOP_DR     DR_REG_DBGDSAR /**< End of debug register enum values */  
-#define DR_REG_START_CR    DR_REG_MIDR  /**< Start of control register enum values */
-#define DR_REG_STOP_CR     DR_REG_CBAR /**< End of control register enum values */  
+#define DR_REG_START_SEGMENT DR_SEG_ES /**< Start of segment register enum values */
+#define DR_REG_STOP_SEGMENT  DR_SEG_GS /**< End of segment register enum values */  
+#define DR_REG_START_DR    DR_REG_DEBUG1  /**< Start of debug register enum values */
+#define DR_REG_STOP_DR     DR_REG_DEBUG2 /**< End of debug register enum values */  
+#define DR_REG_START_CR    DR_REG_CONTROL1  /**< Start of control register enum values */
+#define DR_REG_STOP_CR     DR_REG_CONTROL2 /**< End of control register enum values */  
 /* VFPv3/NEON registers */
 #define DR_REG_START_QWR   DR_REG_Q0	/* Start of quad word registers */
 #define DR_REG_END_QWR     DR_REG_Q15  /* End of quad word registers */
@@ -329,8 +332,8 @@ extern const reg_id_t dr_reg_fixer[];
  * Last valid register enum value.  Note: DR_REG_INVALID is now smaller 
  * than this value.
  */
-#define DR_REG_LAST_VALID_ENUM DR_REG_S31
-#define DR_REG_LAST_ENUM   DR_REG_S31 /**< Last value of register enums */
+#define DR_REG_LAST_VALID_ENUM  DR_REG_CONTROL2 
+#define DR_REG_LAST_ENUM        DR_REG_CONTROL2 /**< Last value of register enums */
 /* DR_API EXPORT END */
 #define REG_START_SPILL   DR_REG_R7
 #define REG_STOP_SPILL    DR_REG_R14
@@ -361,6 +364,94 @@ extern const reg_id_t dr_reg_fixer[];
 # define REG_RR13             DR_REG_R13
 # define REG_RR14             DR_REG_R14
 # define REG_RR15             DR_REG_R15
+# define REG_Q0               DR_REG_Q0
+# define REG_Q1               DR_REG_Q1
+# define REG_Q2               DR_REG_Q2
+# define REG_Q3               DR_REG_Q3
+# define REG_Q4               DR_REG_Q4
+# define REG_Q5               DR_REG_Q5
+# define REG_Q6               DR_REG_Q6
+# define REG_Q7               DR_REG_Q7
+# define REG_Q8               DR_REG_Q8
+# define REG_Q9               DR_REG_Q9
+# define REG_Q10              DR_REG_Q10
+# define REG_Q11              DR_REG_Q11
+# define REG_Q12              DR_REG_Q12
+# define REG_Q13              DR_REG_Q13
+# define REG_Q14              DR_REG_Q14
+# define REG_Q15              DR_REG_Q15
+# define REG_D0               DR_REG_D0
+# define REG_D1               DR_REG_D1
+# define REG_D2               DR_REG_D2
+# define REG_D3               DR_REG_D3
+# define REG_D4               DR_REG_D4
+# define REG_D5               DR_REG_D5
+# define REG_D6               DR_REG_D6
+# define REG_D7               DR_REG_D7
+# define REG_D8               DR_REG_D8
+# define REG_D9               DR_REG_D9
+# define REG_D10              DR_REG_D10
+# define REG_D11              DR_REG_D11
+# define REG_D12              DR_REG_D12
+# define REG_D13              DR_REG_D13
+# define REG_D14              DR_REG_D14
+# define REG_D15              DR_REG_D15
+# define REG_D16              DR_REG_D16
+# define REG_D17              DR_REG_D17
+# define REG_D18              DR_REG_D18
+# define REG_D19              DR_REG_D19
+# define REG_D20              DR_REG_D20
+# define REG_D21              DR_REG_D21
+# define REG_D22              DR_REG_D22
+# define REG_D23              DR_REG_D23
+# define REG_D24              DR_REG_D24
+# define REG_D25              DR_REG_D25
+# define REG_D26              DR_REG_D26
+# define REG_D27              DR_REG_D27
+# define REG_D28              DR_REG_D28
+# define REG_D29              DR_REG_D29
+# define REG_D30              DR_REG_D30
+# define REG_D31              DR_REG_D31
+# define REG_D32              DR_REG_D32
+# define REG_S0               DR_REG_S0
+# define REG_S1               DR_REG_S1
+# define REG_S2               DR_REG_S2
+# define REG_S3               DR_REG_S3
+# define REG_S4               DR_REG_S4
+# define REG_S5               DR_REG_S5
+# define REG_S6               DR_REG_S6
+# define REG_S7               DR_REG_S7
+# define REG_S8               DR_REG_S8
+# define REG_S9               DR_REG_S9
+# define REG_S10              DR_REG_S10
+# define REG_S11              DR_REG_S11
+# define REG_S12              DR_REG_S12
+# define REG_S13              DR_REG_S13
+# define REG_S14              DR_REG_S14
+# define REG_S15              DR_REG_S15
+# define REG_S16              DR_REG_S16
+# define REG_S17              DR_REG_S17
+# define REG_S18              DR_REG_S18
+# define REG_S19              DR_REG_S19
+# define REG_S20              DR_REG_S20
+# define REG_S21              DR_REG_S21
+# define REG_S22              DR_REG_S22
+# define REG_S23              DR_REG_S23
+# define REG_S24              DR_REG_S24
+# define REG_S25              DR_REG_S25
+# define REG_S26              DR_REG_S26
+# define REG_S27              DR_REG_S27
+# define REG_S28              DR_REG_S28
+# define REG_S29              DR_REG_S29
+# define REG_S30              DR_REG_S30
+# define REG_S31              DR_REG_S31
+# define REG_S32              DR_REG_S32
+# define REG_DEBUG1           DR_REG_DEBUG1
+# define REG_DEBUG2           DR_REG_DEBUG2
+# define REG_CONTROL1         DR_REG_CONTROL1 
+# define REG_CONTROL2         DR_REG_CONTROL2
+
+
 # define REG_INVALID         DR_REG_INVALID
 # define REG_START_FLOAT     DR_REG_START_FLOAT
 # define REG_STOP_FLOAT      DR_REG_STOP_FLOAT

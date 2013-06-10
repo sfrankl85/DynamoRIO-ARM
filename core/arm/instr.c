@@ -748,18 +748,35 @@ const reg_id_t regparms[] = {
 };
 
 /* Maps sub-registers to their containing register. */
-/* TODO SJF Fix this?? That does it do??? */
 const reg_id_t dr_reg_fixer[]={
     REG_NULL,
-    REG_R0,   REG_R1,   REG_R2,   REG_R3,   REG_R4,   REG_R5,   REG_R6,   REG_R7,
-    REG_R8,   REG_R9,   REG_R10,  REG_R11,  REG_R12,  REG_R13,  REG_R14,  REG_R15,
-    REG_R0,   REG_R1,   REG_R2,   REG_R3,   REG_R4,   REG_R5,   REG_R6,   REG_R7,
-    REG_R8,   REG_R9,   REG_R10,  REG_R11,  REG_R12,  REG_R13,  REG_R14,  REG_R15,
-    REG_R0,   REG_R1,   REG_R2,   REG_R3,   REG_R4,   REG_R5,   REG_R6,   REG_R7,
-    REG_R8,   REG_R9,   REG_R10,  REG_R11,  REG_R12,  REG_R13,  REG_R14,  REG_R15,
-    REG_R0,   REG_R1,   REG_R2,   REG_R3,   REG_R4,   REG_R5,   REG_R6,   REG_R7,
-    REG_R8,   REG_R9,   REG_R10,  REG_R11,  REG_R12,  REG_R13,  REG_R14,  REG_R15,
-    REG_R12,  REG_R13,  REG_R14,  REG_R15,  /* i#201 */
+    REG_RR0,         REG_RR1,     REG_RR2,     REG_RR3,
+    REG_RR4,         REG_RR5,     REG_RR6,     REG_RR7,
+    REG_RR8,         REG_RR9,     REG_RR10,    REG_RR11,
+    REG_RR12,        REG_RR13,    REG_RR14,    REG_RR15,
+    REG_Q0,          REG_Q1,      REG_Q2,      REG_Q3,
+    REG_Q4,          REG_Q5,      REG_Q6,      REG_Q7,
+    REG_Q8,          REG_Q9,      REG_Q10,     REG_Q11,
+    REG_Q12,         REG_Q13,     REG_Q14,     REG_Q15,
+    REG_D0,          REG_D1,      REG_D2,      REG_D3,
+    REG_D4,          REG_D5,      REG_D6,      REG_D7,
+    REG_D8,          REG_D9,      REG_D10,     REG_D11,
+    REG_D12,         REG_D13,     REG_D14,     REG_D15,
+    REG_D16,         REG_D17,     REG_D18,     REG_D19,
+    REG_D20,         REG_D21,     REG_D22,     REG_D23,
+    REG_D24,         REG_D25,     REG_D26,     REG_D27,
+    REG_D28,         REG_D29,     REG_D30,     REG_D31,
+    REG_S0,          REG_S1,      REG_S2,      REG_S3,
+    REG_S4,          REG_S5,      REG_S6,      REG_S7,
+    REG_S8,          REG_S9,      REG_S10,     REG_S11,
+    REG_S12,         REG_S13,     REG_S14,     REG_S15,
+    REG_S16,         REG_S17,     REG_S18,     REG_S19,
+    REG_S20,         REG_S21,     REG_S22,     REG_S23,
+    REG_S24,         REG_S25,     REG_S26,     REG_S27,
+    REG_S28,         REG_S29,     REG_S30,     REG_S31,
+    SEG_ES,   SEG_CS,   SEG_SS,   SEG_DS,   SEG_FS,   SEG_GS,
+    REG_DEBUG1,  REG_DEBUG2,
+    REG_CONTROL1,  REG_CONTROL2,
     REG_INVALID,
 };
 

@@ -204,6 +204,7 @@ resolve_variable_size(decode_info_t *di/*IN: x86_mode, prefixes*/,
     case OPSZ_4x8_short2:
         return (TEST(PREFIX_DATA, di->prefixes) ? OPSZ_2 :
                 (X64_MODE(di) ? OPSZ_8 : OPSZ_4));
+/* TODO SJF Comment out all INTEL/AMD stuff 
     case OPSZ_4x8_short2xi8:
         return (X64_MODE(di) ? (proc_get_vendor() == VENDOR_INTEL ? OPSZ_8 :
                               (TEST(PREFIX_DATA, di->prefixes) ? OPSZ_2 : OPSZ_8)) :
@@ -211,6 +212,7 @@ resolve_variable_size(decode_info_t *di/*IN: x86_mode, prefixes*/,
     case OPSZ_4_short2xi4:
         return ((X64_MODE(di) && proc_get_vendor() == VENDOR_INTEL) ? OPSZ_4 :
                 (TEST(PREFIX_DATA, di->prefixes) ? OPSZ_2 : OPSZ_4));
+*/
     case OPSZ_4_rex8_short2: /* rex.w trumps data prefix */
         return (TEST(PREFIX_REX_W, di->prefixes) ? OPSZ_8 :
                 (TEST(PREFIX_DATA, di->prefixes) ? OPSZ_2 : OPSZ_4));
@@ -221,8 +223,10 @@ resolve_variable_size(decode_info_t *di/*IN: x86_mode, prefixes*/,
             if (TEST(PREFIX_REX_W, di->prefixes))
                 SYSLOG_INTERNAL_INFO_ONCE("curiosity: rex.w on OPSZ_6_irex10_short4!");
         });
+/* TODO SJF Comment out all AMD/INTEL stuff 
         return ((TEST(PREFIX_REX_W, di->prefixes) && proc_get_vendor() != VENDOR_AMD) ?
                 OPSZ_10 : (TEST(PREFIX_DATA, di->prefixes) ? OPSZ_4 : OPSZ_6));
+*/
     case OPSZ_6x10: return (X64_MODE(di) ? OPSZ_10 : OPSZ_6);
     case OPSZ_8_short2: return (TEST(PREFIX_DATA, di->prefixes) ? OPSZ_2 : OPSZ_8);
     case OPSZ_8_short4: return (TEST(PREFIX_DATA, di->prefixes) ? OPSZ_4 : OPSZ_8);
@@ -418,11 +422,12 @@ read_operand(byte *pc, decode_info_t *di, byte optype, opnd_size_t opsize)
                 end_pc = pc;
             /* convert from relative offset to absolute target pc */
             val = ((ptr_int_t)end_pc) + val;
+/* TODO SJF Comment all AMD/INTEL Stuff 
             if ((!X64_MODE(di) || proc_get_vendor() != VENDOR_INTEL) &&
                 TEST(PREFIX_DATA, di->prefixes)) {
-                /* need to clear upper 16 bits */
                 val &= (ptr_int_t) 0x0000ffff;
-            } /* for x64 Intel, always 64-bit addr ("f64" in Intel table) */
+            }
+*/
             break;
         }
     case TYPE_L:

@@ -975,11 +975,11 @@ synch_with_thread(thread_id_t id, bool block, bool hold_initexit_lock,
              * may end up being killed there */
             if (dcontext->is_exiting) {
                 ASSERT(exiting_thread_count >= 1);
-                atomic_dec( exiting_thread_count);
+                atomic_dec( &exiting_thread_count);
             }
             check_wait_at_safe_spot(dcontext, caller_state);
             if (dcontext->is_exiting) {
-                atomic_inc( exiting_thread_count);
+                atomic_inc( &exiting_thread_count);
             }
             mutex_lock(&thread_initexit_lock);
             trec = thread_lookup(id);
@@ -1181,11 +1181,11 @@ synch_with_all_threads(thread_synch_state_t desired_synch_state,
              * may end up being killed there */
             if (dcontext->is_exiting) {
                 ASSERT(exiting_thread_count >= 1);
-                atomic_dec( exiting_thread_count);
+                atomic_dec( &exiting_thread_count);
             }
             check_wait_at_safe_spot(dcontext, cur_state);
             if (dcontext->is_exiting) {
-                atomic_inc( exiting_thread_count);
+                atomic_inc( &exiting_thread_count);
             }
         }
         LOG(THREAD, LOG_SYNCH, 2, "Yielding on all threads synch lock\n");

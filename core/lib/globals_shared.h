@@ -1577,7 +1577,23 @@ typedef union _dr_xmm_t {
     reg_t  reg[IF_X64_ELSE(2,4)]; /**< Representation as 2 or 4 registers. */
 } dr_xmm_t;
 
-/** 256-bit YMM register. */
+
+/** 128-bit Q0-Q15 register. */
+typedef union _dr_qr_t {
+    uint   u32[4]; /**< Representation as 8 32-bit integers. */
+    byte   u8[16]; /**< Representation as 32 8-bit integers. */
+    reg_t  reg[4]; /**< Representation as 4 or 8 registers. */
+} dr_qr_t;
+
+
+/** 64-bit D0-D15 register. */
+typedef union _dr_dr_t {
+    uint   u32[2]; /**< Representation as 8 32-bit integers. */
+    byte   u8[8]; /**< Representation as 32 8-bit integers. */
+    reg_t  reg[2]; /**< Representation as 4 or 8 registers. */
+} dr_dr_t;
+
+#ifdef NO
 typedef union _dr_ymm_t {
 #ifdef AVOID_API_EXPORT
     /* We avoid having 8-byte-aligned fields here for 32-bit: they cause
@@ -1601,6 +1617,8 @@ typedef union _dr_ymm_t {
     byte   u8[32]; /**< Representation as 32 8-bit integers. */
     reg_t  reg[IF_X64_ELSE(4,8)]; /**< Representation as 4 or 8 registers. */
 } dr_ymm_t;
+#endif
+
 
 #ifdef AVOID_API_EXPORT
 /* If this is increased, you'll probably need to increase the size of
@@ -1611,17 +1629,22 @@ typedef union _dr_ymm_t {
  * and thus some *XMM* macros also apply to *YMM*.
  */
 #endif
-#ifdef X64
-# ifdef WINDOWS
-#  define NUM_XMM_SLOTS 6 /**< Number of [xy]mm reg slots in dr_mcontext_t */ /*xmm0-5*/
+#ifdef ARM
+# define NUM_QR_SLOTS    16 /**< Number of quad word reg slots in dr_mcontext_t */ /*qr0-15*/
+# define PRE_QR_PADDING  24 /**< Bytes of padding before xmm/ymm dr_mcontext_t slots */
+#else 
+# ifdef X64
+#  ifdef WINDOWS
+#   define NUM_XMM_SLOTS 6 /**< Number of [xy]mm reg slots in dr_mcontext_t */ /*xmm0-5*/
+#  else
+#   define NUM_XMM_SLOTS 16 /**< Number of [xy]mm reg slots in dr_mcontext_t */ /*xmm0-15*/
+#  endif
+#  define PRE_XMM_PADDING 16 /**< Bytes of padding before xmm/ymm dr_mcontext_t slots */
 # else
-#  define NUM_XMM_SLOTS 16 /**< Number of [xy]mm reg slots in dr_mcontext_t */ /*xmm0-15*/
+#  define NUM_XMM_SLOTS 8 /**< Number of [xy]mm reg slots in dr_mcontext_t */ /*xmm0-7*/
+#  define PRE_XMM_PADDING 24 /**< Bytes of padding before xmm/ymm dr_mcontext_t slots */
 # endif
-# define PRE_XMM_PADDING 16 /**< Bytes of padding before xmm/ymm dr_mcontext_t slots */
-#else
-# define NUM_XMM_SLOTS 8 /**< Number of [xy]mm reg slots in dr_mcontext_t */ /*xmm0-7*/
-# define PRE_XMM_PADDING 24 /**< Bytes of padding before xmm/ymm dr_mcontext_t slots */
-#endif
+#endif //ARM
 
 /** Values for the flags field of dr_mcontext_t */
 typedef enum {
@@ -1697,5 +1720,9 @@ typedef struct _priv_mcontext_t {
  * CLIENT_INTERFACE we could control our own libs enough to avoid some saves.
  */
 #define NUM_XMM_SAVED NUM_XMM_SLOTS
+
+#ifdef ARM
+# define NUM_QR_SAVED NUM_QR_SLOTS
+#endif
 
 #endif /* ifndef _GLOBALS_SHARED_H_ */

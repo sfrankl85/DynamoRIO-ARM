@@ -1085,7 +1085,7 @@ bool bitmap_check_consistency(bitmap_t b, uint bitmap_size, uint expect_free);
 # define MAX_LOG_LENGTH_MINUS_ONE IF_CLIENT_INTERFACE_ELSE(2047,1383)
 #endif
 
-#if defined(DEBUG) && !defined(STANDALONE_DECODER)
+#if defined(DEBUG) && !defined(STANDALONE_DECODER) 
 # define LOG(file, mask, level, ...) do {        \
   if (stats != NULL &&                           \
       stats->loglevel >= (level) &&              \
@@ -1438,11 +1438,11 @@ enum {LONGJMP_EXCEPTION = 1};
 # define XSTATS_ATOMIC_MAX(max, cur) ATOMIC_MAX(int64, max, cur)
 # define XSTATS_ATOMIC_ADD_EXCHANGE(var, val) atomic_add_exchange_int64(var, val)
 #else
-# define XSTATS_ATOMIC_INC(var) atomic_inc( var )
-# define XSTATS_ATOMIC_DEC(var) atomic_dec( var ) 
-# define XSTATS_ATOMIC_ADD(var, val) atomic_add(var, val)
+# define XSTATS_ATOMIC_INC(var) stats_atomic_inc(var)
+# define XSTATS_ATOMIC_DEC(var) stats_atomic_dec(var) 
+# define XSTATS_ATOMIC_ADD(var, val) stats_atomic_add(var, val)
 # define XSTATS_ATOMIC_MAX(max, cur) ATOMIC_MAX(int, max, cur)
-# define XSTATS_ATOMIC_ADD_EXCHANGE(var, val) atomic_add_exchange_int(var, val)
+# define XSTATS_ATOMIC_ADD_EXCHANGE(var, val) stats_atomic_add_exchange_int(var, val)
 #endif
 
 /* XSTAT_* macros are pointed at by either STATS_* or RSTATS_*

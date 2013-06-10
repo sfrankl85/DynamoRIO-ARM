@@ -153,7 +153,12 @@ is_elf_so_header_common(app_pc base, size_t size, bool memory)
         if (INTERNAL_OPTION(private_loader) &&
             ((elf_header.e_version != 1) || 
              (memory && elf_header.e_ehsize != sizeof(ELF_HEADER_TYPE)) ||
+/* SJF Add ARM specific */
+#ifdef ARM
+             (memory && elf_header.e_machine != EM_ARM)))
+#else
              (memory && elf_header.e_machine != IF_X64_ELSE(EM_X86_64, EM_386))))
+#endif
             return false;
 #endif
         /* FIXME - should we add any of these to the check? For real 
@@ -162,7 +167,9 @@ is_elf_so_header_common(app_pc base, size_t size, bool memory)
         ASSERT_CURIOSITY(!memory || elf_header.e_ehsize == sizeof(ELF_HEADER_TYPE));
         ASSERT_CURIOSITY(elf_header.e_ident[EI_OSABI] == ELFOSABI_SYSV ||
                          elf_header.e_ident[EI_OSABI] == ELFOSABI_LINUX);
-#ifdef X64
+#ifdef ARM 
+        ASSERT_CURIOSITY(!memory || elf_header.e_machine == EM_ARM);
+#elif X64
         ASSERT_CURIOSITY(!memory || elf_header.e_machine == EM_X86_64);
 #else
         ASSERT_CURIOSITY(!memory || elf_header.e_machine == EM_386);
@@ -331,6 +338,9 @@ module_fill_os_data(ELF_PROGRAM_HEADER_TYPE *prog_hdr, /* PT_DYNAMIC entry */
     ASSERT(prog_hdr->p_type == PT_DYNAMIC);
     dcontext_t *dcontext = get_thread_private_dcontext();
 
+#ifdef NO               
+/* SJF TODO This was causing a crash.  Maybe stack corruption due to 
+            what it does or maybe due to incorrect syscall function */
     TRY_EXCEPT_ALLOW_NO_DCONTEXT(dcontext, {
         int soname_index = -1;
         char *dynstr = NULL;
@@ -406,6 +416,7 @@ module_fill_os_data(ELF_PROGRAM_HEADER_TYPE *prog_hdr, /* PT_DYNAMIC entry */
         ASSERT_CURIOSITY(false && "crashed while walking dynamic header");
         *soname = NULL;
     });
+#endif
 }
 
 /* Returned addresses out_base and out_end are relative to the actual

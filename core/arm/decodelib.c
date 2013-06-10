@@ -74,7 +74,7 @@ dr_get_stdin_file(void)
 }
 #endif
 
-static uint vendor = VENDOR_INTEL; /* default */
+static uint vendor = VENDOR_ARM; /* default */
 
 uint
 proc_get_vendor(void)
@@ -86,8 +86,7 @@ DR_API
 int
 proc_set_vendor(uint new_vendor)
 {
-    if (new_vendor == VENDOR_INTEL ||
-        new_vendor == VENDOR_AMD) {
+    if (new_vendor == VENDOR_ARM ) {
         uint old_vendor = vendor;
         vendor = new_vendor;
         return old_vendor;

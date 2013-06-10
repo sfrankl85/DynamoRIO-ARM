@@ -141,7 +141,7 @@ get_cache_sizes_amd(uint max_ext_val)
 }
 
 static void
-get_cache_sizes_intel(uint max_val)
+get_cache_sizes_arm(uint max_val)
 {
     /* declare as uint so compiler won't complain when we write GP regs to the array */
     uint cache_codes[4];
@@ -150,64 +150,15 @@ get_cache_sizes_intel(uint max_val)
     if (max_val < 2)
         return;
 
-#ifdef LINUX
-    our_cpuid((int*)cache_codes, 2);
-#else
-    __cpuid(cache_codes, 2);
-#endif
-    /* The lower 8 bits of eax specify the number of times cpuid
-     * must be executed to obtain a complete picture of the cache
-     * characteristics.
-     */
-    CLIENT_ASSERT((cache_codes[0] & 0xff) == 1, "cpuid error");
-    cache_codes[0] &= ~0xff;
-    
-    /* Cache codes are stored in consecutive bytes in the 
-     * GP registers.  For each register, a 1 in bit 31 
-     * indicates that the codes should be ignored... zero
-     * all four bytes when that happens
-     */
-    for (i=0; i<4; i++) {
-        if (cache_codes[i] & 0x80000000)
-            cache_codes[i] = 0;
-    }
-    
-    /* Table 3-17, pg 3-171 of IA-32 instruction set reference lists
-     * all codes.  Omitting L3 cache characteristics for now...
-     */
-    for (i=0; i<16; i++) {
-        switch (((uchar*)cache_codes)[i]) {
-            case 0x06: L1_icache_size = CACHE_SIZE_8_KB; break;
-            case 0x08: L1_icache_size = CACHE_SIZE_16_KB; break;
-            case 0x0a: L1_dcache_size = CACHE_SIZE_8_KB; break;
-            case 0x0c: L1_dcache_size = CACHE_SIZE_16_KB; break;
-            case 0x2c: L1_dcache_size = CACHE_SIZE_32_KB; break;
-            case 0x30: L1_icache_size = CACHE_SIZE_32_KB; break;
-            case 0x41: L2_cache_size = CACHE_SIZE_128_KB; break;
-            case 0x42: L2_cache_size = CACHE_SIZE_256_KB; break;
-            case 0x43: L2_cache_size = CACHE_SIZE_512_KB; break;
-            case 0x44: L2_cache_size = CACHE_SIZE_1_MB; break;
-            case 0x45: L2_cache_size = CACHE_SIZE_2_MB; break;
-            case 0x60: L1_dcache_size = CACHE_SIZE_16_KB; break;
-            case 0x66: L1_dcache_size = CACHE_SIZE_8_KB; break;
-            case 0x67: L1_dcache_size = CACHE_SIZE_16_KB; break;
-            case 0x68: L1_dcache_size = CACHE_SIZE_32_KB; break;
-            case 0x78: L2_cache_size = CACHE_SIZE_1_MB; break;
-            case 0x79: L2_cache_size = CACHE_SIZE_128_KB; break;
-            case 0x7a: L2_cache_size = CACHE_SIZE_256_KB; break;
-            case 0x7b: L2_cache_size = CACHE_SIZE_512_KB; break;
-            case 0x7c: L2_cache_size = CACHE_SIZE_1_MB; break;
-            case 0x7d: L2_cache_size = CACHE_SIZE_2_MB; break;
-            case 0x7f: L2_cache_size = CACHE_SIZE_512_KB; break;
-            case 0x82: L2_cache_size = CACHE_SIZE_256_KB; break;
-            case 0x83: L2_cache_size = CACHE_SIZE_512_KB; break;
-            case 0x84: L2_cache_size = CACHE_SIZE_1_MB; break;
-            case 0x85: L2_cache_size = CACHE_SIZE_2_MB; break;
-            case 0x86: L2_cache_size = CACHE_SIZE_512_KB; break;
-            case 0x87: L2_cache_size = CACHE_SIZE_1_MB; break;
-            default: break;
-        }
-    }
+    /* SJF TODO Hard code in ARM cache sizes for now. 
+                May be possible to get cache sizes from
+                coprocessor regs. For now just hard code 
+                for A15/A9 */
+    /* SJF TODO Using A9 for now so hcode to 32 KB/1MB.
+                Should be the same for A15 */
+    L1_dcache_size = CACHE_SIZE_32_KB; 
+    L1_icache_size = CACHE_SIZE_32_KB;
+    L2_cache_size  = CACHE_SIZE_1_MB;
 }
 
 /*
@@ -217,158 +168,41 @@ get_cache_sizes_intel(uint max_val)
 static void
 get_processor_specific_info(void)
 {
-    /* use cpuid instruction to get processor info.  For details, see
-     * http://download.intel.com/design/Xeon/applnots/24161830.pdf
-     * "AP-485: Intel Processor Identification and the CPUID
-     * instruction", 96 pages, January 2006
-     */
+    /* SJF TODO Can use the coprocessor regs to obtain cpu info
+                Going to hard code certain values in and might 
+                try to get reg values if necessary. */
     uint res_eax, res_ebx = 0, res_ecx = 0, res_edx = 0;
     uint max_val, max_ext_val;
     int cpuid_res_local[4]; /* eax, ebx, ecx, and edx registers (in that order) */
 
-    /* First check for existence of the cpuid instruction
-     * by attempting to modify bit 21 of eflags
-     */
-    /* FIXME: Perhaps we should abort when the cpuid instruction
-     * doesn't exist since the cache_line_size may be incorrect.
-     * (see case 463 for discussion)
-    */
+/*
     if (!cpuid_supported()) {
         ASSERT_CURIOSITY(false && "cpuid instruction unsupported");
         SYSLOG_INTERNAL_WARNING("cpuid instruction unsupported -- cache_line_size "
                                 "may be incorrect");
         return;
     }
+*/
 
-    /* first verify on Intel processor */
-#ifdef LINUX
-    our_cpuid(cpuid_res_local, 0);
-#else
-    __cpuid(cpuid_res_local, 0);
-#endif
-    res_eax = cpuid_res_local[0];
-    res_ebx = cpuid_res_local[1];
-    res_ecx = cpuid_res_local[2];
-    res_edx = cpuid_res_local[3];
-    max_val = res_eax;
+    /* Hard code in ARM */
+    vendor = VENDOR_ARM;
 
-    if (res_ebx == INTEL_EBX) {
-        vendor = VENDOR_INTEL;
-        CLIENT_ASSERT(res_edx == INTEL_EDX && res_ecx == INTEL_ECX,
-                      "unknown Intel processor type");
-    } else if (res_ebx == AMD_EBX) {
-        vendor = VENDOR_AMD;
-        CLIENT_ASSERT(res_edx == AMD_EDX && res_ecx == AMD_ECX,
-                      "unknown AMD processor type");
-    } else {
-        vendor = VENDOR_UNKNOWN;
-        SYSLOG_INTERNAL_ERROR("Running on unknown processor type");
-        LOG(GLOBAL, LOG_TOP, 1, "cpuid returned "PFX" "PFX" "PFX" "PFX"\n",
-            res_eax, res_ebx, res_ecx, res_edx);
-    }
+    /* Hard code ARM cache line size */
+    cache_line_size = 32;
 
-    /* Try to get extended cpuid information */
-#ifdef LINUX
-    our_cpuid(cpuid_res_local, 0x80000000);
-#else
-    __cpuid(cpuid_res_local, 0x80000000);
-#endif
-    max_ext_val = cpuid_res_local[0]/*eax*/;
-
-    /* Extended feature flags */
-    if (max_ext_val >= 0x80000001) {
-#ifdef LINUX
-        our_cpuid(cpuid_res_local, 0x80000001);
-#else
-        __cpuid(cpuid_res_local, 0x80000001);
-#endif
-        res_ecx = cpuid_res_local[2];
-        res_edx = cpuid_res_local[3];
-        features.ext_flags_edx = res_edx;
-        features.ext_flags_ecx = res_ecx;
-    }
-
-    /* now get processor info */
-#ifdef LINUX
-    our_cpuid(cpuid_res_local, 1);
-#else
-    __cpuid(cpuid_res_local, 1);
-#endif
-    res_eax = cpuid_res_local[0];
-    res_ebx = cpuid_res_local[1];
-    res_ecx = cpuid_res_local[2];
-    res_edx = cpuid_res_local[3];
-    /* eax contains basic info:
-     *   extended family, extended model, type, family, model, stepping id
-     *   20:27,           16:19,          12:13, 8:11,  4:7,   0:3
-     */
-    type   = (res_eax >> 12) & 0x3;
-    family = (res_eax >>  8) & 0xf;
-    model  = (res_eax >>  4) & 0xf;
-    stepping = res_eax & 0xf;
-
-    /* Pages 3-164 and 3-165 of the IA-32 instruction set 
-     * reference instruct us to adjust the family and model
-     * numbers as follows.
-     */
-    if (family == 0x6 || family == 0xf) {
-        uint ext_model = (res_eax >> 16) & 0xf;
-        model += (ext_model << 4);
-
-        if (family == 0xf) {
-            uint ext_family = (res_eax >> 20) & 0xff;
-            family += ext_family;
-        }
-    }
-
-    features.flags_edx = res_edx;
-    features.flags_ecx = res_ecx;
-
-    /* Now features.* are complete and we can query */
-    if (proc_has_feature(FEATURE_CLFSH)) {
-        /* The new manuals imply ebx always holds the
-         * cache line size for clflush, not just on P4
-         */
-        cache_line_size = (res_ebx & 0x0000ff00) >> 5; /* (x >> 8) * 8 == x >> 5 */
-    } else if (vendor == VENDOR_INTEL &&
-               (family == FAMILY_PENTIUM_3 || family == FAMILY_PENTIUM_2)) {
-        /* Pentium III, Pentium II */
-        cache_line_size = 32;
-    } else if (vendor == VENDOR_AMD && family == FAMILY_ATHLON) {
-        /* Athlon */
-        cache_line_size = 64;
-#ifdef IA32_ON_IA64
-    } else if (vendor == VENDOR_INTEL && family == FAMILY_IA64) {
-        /* Itanium */
-        cache_line_size = 32;
-#endif
-    } else {
-        LOG(GLOBAL, LOG_TOP, 1, "Warning: running on unsupported processor family %d\n",
-            family);
-        cache_line_size = 32;
-    }
     /* people who use this in ALIGN* macros are assuming it's a power of 2 */
     CLIENT_ASSERT((cache_line_size & (cache_line_size - 1)) == 0,
                   "invalid cache line size");
 
-    /* get L1 and L2 cache sizes */
-    if (vendor == VENDOR_AMD)
-        get_cache_sizes_amd(max_ext_val);
-    else
-        get_cache_sizes_intel(max_val);
+    /* Get ARM Cache sizes. Hard coded for now */
+    max_val = 3;
+    get_cache_sizes_arm(max_val);
 
-    /* Processor brand string */
-    if (max_ext_val >= 0x80000004) {
-#ifdef LINUX
-        our_cpuid((int*)&brand_string[0], 0x80000002);
-        our_cpuid((int*)&brand_string[4], 0x80000003);
-        our_cpuid((int*)&brand_string[8], 0x80000004);
-#else
-        __cpuid(&brand_string[0], 0x80000002);
-        __cpuid(&brand_string[4], 0x80000003);
-        __cpuid(&brand_string[8], 0x80000004);
-#endif
-    }
+    /* Nothing useful here for now */
+    brand_string[0] = 0x41;
+    brand_string[1] = 0x52;
+    brand_string[2] = 0x4D;
+    brand_string[3] = 0x0;
 }
 
 void
@@ -435,8 +269,7 @@ DR_API
 int
 proc_set_vendor(uint new_vendor)
 {
-    if (new_vendor == VENDOR_INTEL ||
-        new_vendor == VENDOR_AMD) {
+    if (new_vendor == VENDOR_ARM) {
         uint old_vendor = vendor;
         SELF_UNPROTECT_DATASEC(DATASEC_RARELY_PROT);
         vendor = new_vendor;

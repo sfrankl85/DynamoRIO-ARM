@@ -60,8 +60,7 @@
 
 /** Constants returned by proc_get_vendor(). */
 enum {
-    VENDOR_INTEL,   /**< proc_get_vendor() processor identification: Intel */
-    VENDOR_AMD,     /**< proc_get_vendor() processor identification: AMD */
+    VENDOR_ARM,     /**< proc_get_vendor() processor identification: ARM */
     VENDOR_UNKNOWN, /**< proc_get_vendor() processor identification: unknown */
 };
 

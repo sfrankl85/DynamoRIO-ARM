@@ -348,22 +348,26 @@ size_ok_varsz(decode_info_t *di/*prefixes field is IN/OUT; x86_mode is IN*/,
             di->prefixes |= prefix_data_addr;
             return true;
         }
+/* TODO SJF Comment out all Intel/AMD stuff 
         if (size_template == OPSZ_6_irex10_short4 &&
             (proc_get_vendor() == VENDOR_AMD || !TEST(PREFIX_REX_W, di->prefixes))) {
             di->prefixes |= prefix_data_addr;
             return true;
         }
+*/
         return false;
     case OPSZ_4_rex8_short2:
         if (size_template == OPSZ_4_short2 || size_template == OPSZ_4_rex8 ||
             size_template == OPSZ_8_short2 || size_template == OPSZ_8_short4 ||
             size_template == OPSZ_2 || size_template == OPSZ_4 || size_template == OPSZ_8)
             return true; /* will take prefix or no prefix */
+/* TODO SJF Comment out all Intel/AMD stuff 
         if (size_template == OPSZ_6_irex10_short4 &&
             (proc_get_vendor() == VENDOR_AMD || !TEST(PREFIX_REX_W, di->prefixes))) {
             di->prefixes |= prefix_data_addr;
             return true;
         }
+*/
         return false;
     case OPSZ_4_rex8:
         if (size_template == OPSZ_8_short4 || size_template == OPSZ_4 ||
@@ -372,16 +376,20 @@ size_ok_varsz(decode_info_t *di/*prefixes field is IN/OUT; x86_mode is IN*/,
         if (size_template == OPSZ_4_short2 || size_template == OPSZ_4_rex8_short2 ||
             size_template == OPSZ_8_short2)
             return !TEST(prefix_data_addr, di->prefixes);
+/* TODO SJF Comment out all Intel/AMD stuff 
         if (size_template == OPSZ_6_irex10_short4 &&
             (proc_get_vendor() == VENDOR_AMD || !TEST(PREFIX_REX_W, di->prefixes))) {
             di->prefixes |= prefix_data_addr;
             return true;
         }
+*/
         return false;
     case OPSZ_6_irex10_short4:
+/* TODO SJF Comment out all Intel/AMD stuff 
         if (size_template == OPSZ_6 || size_template == OPSZ_4 ||
             (size_template == OPSZ_10 && proc_get_vendor() != VENDOR_AMD))
-            return true; /* will take prefix or no prefix */
+            return true;
+*/
         if (size_template == OPSZ_4_short2)
             return !TEST(prefix_data_addr, di->prefixes);
         if (size_template == OPSZ_4_rex8_short2)
@@ -427,11 +435,13 @@ size_ok_varsz(decode_info_t *di/*prefixes field is IN/OUT; x86_mode is IN*/,
         if (size_template == OPSZ_4_short2 || size_template == OPSZ_4_rex8_short2 ||
             size_template == OPSZ_8_short2)
             return !TEST(prefix_data_addr, di->prefixes);
+/* TODO SJF Comment out all Intel/AMD stuff 
         if (size_template == OPSZ_6_irex10_short4 &&
             (proc_get_vendor() == VENDOR_AMD || !TEST(PREFIX_REX_W, di->prefixes))) {
             di->prefixes |= prefix_data_addr;
             return true;
         }
+*/
         return false;
     case OPSZ_8_of_16_vex32:
         if (size_template == OPSZ_8 || size_template == OPSZ_32)
@@ -468,14 +478,18 @@ resolve_var_x64_size(decode_info_t *di/*x86_mode is IN*/,
      * size_ok routines more complicated.  */
     switch (sz) {
     case OPSZ_4x8: return (X64_MODE(di) ? OPSZ_8 : OPSZ_4);
+/* TODO SJF Comment out all Intel/AMD stuff 
     case OPSZ_4_short2xi4: return (X64_MODE(di) && proc_get_vendor() == VENDOR_INTEL ?
                                   OPSZ_4 : OPSZ_4_short2);
+*/
     case OPSZ_4x8_short2: return (X64_MODE(di) ? 
                                   (addr_short4 ? OPSZ_8_short4 : OPSZ_8_short2) :
                                   OPSZ_4_short2);
+/* TODO SJF Comment out all Intel/AMD stuff 
     case OPSZ_4x8_short2xi8: return (X64_MODE(di) ? (proc_get_vendor() == VENDOR_INTEL ?
                                                   OPSZ_8 : OPSZ_8_short2) :
                                     OPSZ_4_short2);
+*/
     case OPSZ_6x10: return (X64_MODE(di) ? OPSZ_10 : OPSZ_6);
     }
     return sz;
@@ -571,8 +585,9 @@ size_ok(decode_info_t *di/*prefixes field is IN/OUT; x86_mode is IN*/,
             if (size_template == OPSZ_4_rex8)
                 return !TEST(PREFIX_REX_W, di->prefixes);
             if (size_template == OPSZ_6_irex10_short4) {
+/* TODO SJF Comment out all Intel/AMD stuff 
                 if (TEST(PREFIX_REX_W, di->prefixes) && proc_get_vendor() != VENDOR_AMD)
-                    return false; /* rex.w trumps data prefix */
+                    return false; *//* rex.w trumps data prefix */
                 di->prefixes |= prefix_data_addr;
                 return true;
             }
@@ -582,9 +597,11 @@ size_ok(decode_info_t *di/*prefixes field is IN/OUT; x86_mode is IN*/,
             }
             return false;
         case OPSZ_6:
+/* TODO SJF Comment out all Intel/AMD stuff 
             if (size_template == OPSZ_6_irex10_short4)
                 return !TEST(prefix_data_addr, di->prefixes) &&
                     (!TEST(PREFIX_REX_W, di->prefixes) || proc_get_vendor() == VENDOR_AMD);
+*/
             if (size_template == OPSZ_12_rex40_short6) {
                 di->prefixes |= prefix_data_addr;
                 return true;
@@ -605,11 +622,13 @@ size_ok(decode_info_t *di/*prefixes field is IN/OUT; x86_mode is IN*/,
                 return !TEST(PREFIX_VEX_L, di->prefixes);
             return false;
         case OPSZ_10:
+/* TODO SJF Comment out all Intel/AMD stuff 
             if (X64_MODE(di) && size_template == OPSZ_6_irex10_short4 &&
                 proc_get_vendor() != VENDOR_AMD) {
-                di->prefixes |= PREFIX_REX_W; /* rex.w trumps data prefix */
+                di->prefixes |= PREFIX_REX_W; 
                 return true;
             }
+*/
             return false;
         case OPSZ_12:
             if (size_template == OPSZ_12_rex40_short6)
@@ -1943,10 +1962,12 @@ encode_operand(decode_info_t *di, int optype, opnd_size_t opsize, opnd_t opnd)
 #endif
             
             CLIENT_ASSERT(!X64_MODE(di), "x64 has no type A instructions");
+/* TODO SJF Comment out all Intel/AMD stuff 
             CLIENT_ASSERT(opsize == OPSZ_6_irex10_short4 || opsize == OPSZ_6 ||
                           opsize == OPSZ_4 ||
                           (opsize == OPSZ_10 && proc_get_vendor() != VENDOR_AMD),
                           "encode error: A operand size mismatch");
+*/
             CLIENT_ASSERT(di->size_immed == OPSZ_NA &&
                           di->size_immed2 == OPSZ_NA,
                           "encode error: A operand size mismatch");
@@ -1982,8 +2003,10 @@ encode_operand(decode_info_t *di, int optype, opnd_size_t opsize, opnd_t opnd)
                 di->prefixes |= PREFIX_DATA;
                 set_immed(di, val, OPSZ_4);
             } else if (target > UINT_MAX) {
+/* TODO SJF comment out intel/amd 
                 CLIENT_ASSERT(proc_get_vendor() == VENDOR_INTEL,
                               "cannot use 8-byte far pc on AMD processor");
+*/
                 di->prefixes |= PREFIX_REX_W;
                 set_immed(di, opnd_get_segment_selector(opnd), OPSZ_10);
                 set_immed(di, target, OPSZ_10);

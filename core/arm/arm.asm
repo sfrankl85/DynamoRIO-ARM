@@ -93,10 +93,16 @@ START_FILE
 /* We should give asm_defines.asm all unique names and then include globals.h
  * and avoid all this duplication!
  */
-#define NUM_XMM_SLOTS 13 /* r0-12 */
-#define PRE_XMM_PADDING 32 /* ??? For EFLAGS/CPSR maybe. */
-#define XMM_SAVED_REG_SIZE 32 /* for ymm */
-#define XMM_SAVED_SIZE ((NUM_XMM_SLOTS)*(XMM_SAVED_REG_SIZE)) 
+#define NUM_QR_SLOTS 16 
+#define PRE_QR_PADDING 32 /* ??? For EFLAGS/CPSR maybe. */
+#define QR_SAVED_REG_SIZE 128 /* for ymm */
+#define QR_SAVED_SIZE ((NUM_QR_SLOTS)*(QR_SAVED_REG_SIZE)) 
+
+#define NUM_DR_SLOTS 32 
+#define PRE_DR_PADDING 32 /* ??? For EFLAGS/CPSR maybe. */
+#define DR_SAVED_REG_SIZE 64 /* for ymm */
+#define DR_SAVED_SIZE ((NUM_DR_SLOTS)*(DR_SAVED_REG_SIZE)) 
+
 
 /* Should we generate all of our asm code instead of having it static?
  * As it is we're duplicating insert_push_all_registers(), dr_insert_call(), etc.,
@@ -110,7 +116,7 @@ START_FILE
 #define POPGPR  \
         ldmib   r13!, {r0-r12} 
 
-# define PRIV_MCXT_SIZE (10*ARG_SZ + PRE_XMM_PADDING + XMM_SAVED_SIZE)
+# define PRIV_MCXT_SIZE (10*ARG_SZ + PRE_QR_PADDING + QR_SAVED_SIZE)
 # define dstack_OFFSET     (PRIV_MCXT_SIZE+UPCXT_EXTRA+3*ARG_SZ)
 # define MCONTEXT_PC_OFFS  (9*ARG_SZ)
 
@@ -120,7 +126,7 @@ START_FILE
 #define MCONTEXT_XSP_OFFS (PUSHGPR_XSP_OFFS)
 
 /* SJF BEGIN These defines should be the correct value or have been altered */ 
-#define PUSH_PRIV_MCXT_PRE_PC_SHIFT (- XMM_SAVED_SIZE - PRE_XMM_PADDING)
+#define PUSH_PRIV_MCXT_PRE_PC_SHIFT (- QR_SAVED_SIZE - PRE_QR_PADDING)
 /* SJF END*/
 
 /* This is really the alignment needed by x64 code.  For now, when we bother to
@@ -1725,97 +1731,6 @@ GLOBAL_LABEL(get_own_context_helper:)
 
 #endif /* WINDOWS */
 
-/* void get_xmm_caller_saved(byte *xmm_caller_saved_buf)
- *   stores the values of xmm0 through xmm5 consecutively into xmm_caller_saved_buf.
- *   xmm_caller_saved_buf need not be 16-byte aligned.
- *   for linux, also saves xmm6-15 (PR 302107).
- *   caller must ensure that the underlying processor supports SSE!
- * FIXME PR 266305: AMD optimization guide says to use movlps+movhps for unaligned
- * stores, instead of movups (movups is best for loads): but for
- * simplicity I'm sticking with movups (assumed not perf-critical here).
- */
-        DECLARE_FUNC(get_xmm_caller_saved)
-GLOBAL_LABEL(get_xmm_caller_saved:)
-        mov      REG_XAX, ARG1
-        movups   [REG_XAX + 0*XMM_SAVED_REG_SIZE], xmm0
-        movups   [REG_XAX + 1*XMM_SAVED_REG_SIZE], xmm1
-        movups   [REG_XAX + 2*XMM_SAVED_REG_SIZE], xmm2
-        movups   [REG_XAX + 3*XMM_SAVED_REG_SIZE], xmm3
-        movups   [REG_XAX + 4*XMM_SAVED_REG_SIZE], xmm4
-        movups   [REG_XAX + 5*XMM_SAVED_REG_SIZE], xmm5
-#ifdef LINUX
-        movups   [REG_XAX + 6*XMM_SAVED_REG_SIZE], xmm6
-        movups   [REG_XAX + 7*XMM_SAVED_REG_SIZE], xmm7
-#endif
-#if defined(LINUX) && defined(X64)
-        movups   [REG_XAX + 8*XMM_SAVED_REG_SIZE], xmm8
-        movups   [REG_XAX + 9*XMM_SAVED_REG_SIZE], xmm9
-        movups   [REG_XAX + 10*XMM_SAVED_REG_SIZE], xmm10
-        movups   [REG_XAX + 11*XMM_SAVED_REG_SIZE], xmm11
-        movups   [REG_XAX + 12*XMM_SAVED_REG_SIZE], xmm12
-        movups   [REG_XAX + 13*XMM_SAVED_REG_SIZE], xmm13
-        movups   [REG_XAX + 14*XMM_SAVED_REG_SIZE], xmm14
-        movups   [REG_XAX + 15*XMM_SAVED_REG_SIZE], xmm15
-#endif
-        ret
-        END_FUNC(get_xmm_caller_saved)
-
-/* void get_ymm_caller_saved(byte *ymm_caller_saved_buf)
- *   stores the values of ymm0 through ymm5 consecutively into ymm_caller_saved_buf.
- *   ymm_caller_saved_buf need not be 32-byte aligned.
- *   for linux, also saves ymm6-15 (PR 302107).
- *   caller must ensure that the underlying processor supports SSE!
- */
-        DECLARE_FUNC(get_ymm_caller_saved)
-GLOBAL_LABEL(get_ymm_caller_saved:)
-        mov      REG_XAX, ARG1
-       /* i#441: some compilers like gcc 4.3 and VS2005 do not know "vmovdqu".
-        * We just put in the raw bytes for these instrs:
-        * Note the 64/32 bit have the same encoding for either rax or eax.
-        * c5 fe 7f 00               vmovdqu %ymm0,0x00(%xax)
-        * c5 fe 7f 48 20            vmovdqu %ymm1,0x20(%xax)
-        * c5 fe 7f 50 40            vmovdqu %ymm2,0x40(%xax)
-        * c5 fe 7f 58 60            vmovdqu %ymm3,0x60(%xax)
-        * c5 fe 7f a0 80 00 00 00   vmovdqu %ymm4,0x80(%xax)
-        * c5 fe 7f a8 a0 00 00 00   vmovdqu %ymm5,0xa0(%xax)
-        */
-        RAW(c5) RAW(fe) RAW(7f) RAW(00)
-        RAW(c5) RAW(fe) RAW(7f) RAW(48) RAW(20)
-        RAW(c5) RAW(fe) RAW(7f) RAW(50) RAW(40)
-        RAW(c5) RAW(fe) RAW(7f) RAW(58) RAW(60)
-        RAW(c5) RAW(fe) RAW(7f) RAW(a0) RAW(80) RAW(00) RAW(00) RAW(00)
-        RAW(c5) RAW(fe) RAW(7f) RAW(a8) RAW(a0) RAW(00) RAW(00) RAW(00)
-#ifdef LINUX
-       /*
-        * c5 fe 7f b0 c0 00 00 00   vmovdqu %ymm6,0xc0(%xax)
-        * c5 fe 7f b8 e0 00 00 00   vmovdqu %ymm7,0xe0(%xax)
-        */
-        RAW(c5) RAW(fe) RAW(7f) RAW(b0) RAW(c0) RAW(00) RAW(00) RAW(00)
-        RAW(c5) RAW(fe) RAW(7f) RAW(b8) RAW(e0) RAW(00) RAW(00) RAW(00)
-# ifdef X64
-       /*
-        * c5 7e 7f 80 00 01 00 00   vmovdqu %ymm8, 0x100(%xax)
-        * c5 7e 7f 88 20 01 00 00   vmovdqu %ymm9, 0x120(%xax)
-        * c5 7e 7f 90 40 01 00 00   vmovdqu %ymm10,0x140(%xax)
-        * c5 7e 7f 98 60 01 00 00   vmovdqu %ymm11,0x160(%xax)
-        * c5 7e 7f a0 80 01 00 00   vmovdqu %ymm12,0x180(%xax)
-        * c5 7e 7f a8 a0 01 00 00   vmovdqu %ymm13,0x1a0(%xax)
-        * c5 7e 7f b0 c0 01 00 00   vmovdqu %ymm14,0x1c0(%xax)
-        * c5 7e 7f b8 e0 01 00 00   vmovdqu %ymm15,0x1e0(%xax)
-        */
-        RAW(c5) RAW(7e) RAW(7f) RAW(80) RAW(00) RAW(01) RAW(00) RAW(00)
-        RAW(c5) RAW(7e) RAW(7f) RAW(88) RAW(20) RAW(01) RAW(00) RAW(00)
-        RAW(c5) RAW(7e) RAW(7f) RAW(90) RAW(40) RAW(01) RAW(00) RAW(00)
-        RAW(c5) RAW(7e) RAW(7f) RAW(98) RAW(60) RAW(01) RAW(00) RAW(00)
-        RAW(c5) RAW(7e) RAW(7f) RAW(a0) RAW(80) RAW(01) RAW(00) RAW(00)
-        RAW(c5) RAW(7e) RAW(7f) RAW(a8) RAW(a0) RAW(01) RAW(00) RAW(00)
-        RAW(c5) RAW(7e) RAW(7f) RAW(b0) RAW(c0) RAW(01) RAW(00) RAW(00)
-        RAW(c5) RAW(7e) RAW(7f) RAW(b8) RAW(e0) RAW(01) RAW(00) RAW(00)
-# endif
-#endif
-        ret
-        END_FUNC(get_ymm_caller_saved)
-
 /* void hashlookup_null_handler(void)
  * PR 305731: if the app targets NULL, it ends up here, which indirects
  * through hashlookup_null_target to end up in an ibl miss routine.
@@ -2478,7 +2393,7 @@ dynamorio_earliest_init_repeatme:
 DECLARE_FUNC(dynamorio_syscall)
 GLOBAL_LABEL(dynamorio_syscall:)
         /* Backup regs */
-        /*stmib    r13!, {r0-r7}*/
+        stmdb    r13!, {r4-r10}
 
         /*mov      r1, r1 Unnecessary now as r1 already contains arg numbers*/ /* num_args */
         cmp      r1, #0
@@ -2493,36 +2408,51 @@ GLOBAL_LABEL(dynamorio_syscall:)
         beq      syscall_4args
         cmp      r1, #5
         beq      syscall_5args
-        /*ldr      r5, [r13, #48]*/ /* arg6 *//* TODO Fix the rest of these */
-syscall_5args:
+        cmp      r1, #6
+        beq      syscall_6args
+syscall_6args:
         mov      r7, r0 /* sysnum */
         mov      r0, r2  /* arg1 */
         mov      r1, r3  /* arg2 */
-        sub      r13, r13, #44
+        add      r13, r13, #28  /* Pass the stored regs */
         ldr      r2, [r13] /* arg3 */
         add      r13, r13, #4
         ldr      r3, [r13] /* arg4 */
         add      r13, r13, #4
         ldr      r4, [r13] /* arg5 */
-        add      r13, r13, #36   //Return to original position
+        add      r13, r13, #4
+        ldr      r4, [r13] /* arg6 */
+        sub      r13, r13, #40
+        b        do_syscall
+syscall_5args:
+        mov      r7, r0 /* sysnum */
+        mov      r0, r2  /* arg1 */
+        mov      r1, r3  /* arg2 */
+        add      r13, r13, #28  /* Pass the stored regs */
+        ldr      r2, [r13] /* arg3 */
+        add      r13, r13, #4
+        ldr      r3, [r13] /* arg4 */
+        add      r13, r13, #4
+        ldr      r4, [r13] /* arg5 */
+        sub      r13, r13, #36
         b        do_syscall
 syscall_4args:
         mov      r7, r0 /* sysnum */
         mov      r0, r2  /* arg1 */
         mov      r1, r3 /* arg2 */
-        sub      r13, r13, #40
+        add      r13, r13, #28  /* Pass the stored regs */
         ldr      r2, [r13] /* arg3 */
         add      r13, r13, #4
         ldr      r3, [r13] /* arg4 */
-        add      r13, r13, #36   //Return to original position
+        sub      r13, r13, #32
         b        do_syscall
 syscall_3args:
         mov      r7, r0 /* sysnum */
         mov      r0, r2  /* arg1 */
         mov      r1, r3 /* arg2 */
-        /*sub      r13, r13, #36*/
+        add      r13, r13, #28  /* Pass the stored regs */
         ldr      r2, [r13] /* arg3 */
-        /*add      r13, r13, #36  */
+        sub      r13, r13, #28  
         b        do_syscall
 syscall_2args:
         mov      r7, r0 /* sysnum */
@@ -2540,7 +2470,7 @@ do_syscall:
         svc      #0x0 /* SJF Converted this to swi call */ 
 
         /* Restore the registers */
-        /*ldmda    r13!, {r0-r7}*/
+        ldmia    r13!, {r4-r10}
 
         /* return val is in r14 for us */
         mov      r15, r14
@@ -2997,7 +2927,7 @@ GLOBAL_LABEL(dr_app_start:)
  * We'll keep 'dynamorio_app_take_over' for compatibility with the preinjector.
  */
         DECLARE_EXPORTED_FUNC(dr_app_take_over)
-GLOBAL_LABEL(dr_app_take_over:  )
+GLOBAL_LABEL(dr_app_take_over:)
         b      dynamorio_app_take_over
         END_FUNC(dr_app_take_over)
 #endif

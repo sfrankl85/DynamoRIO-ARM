@@ -570,11 +570,12 @@ arch_init()
     /* Ensure we have no unexpected padding inside structs that include
      * priv_mcontext_t (app_state_at_intercept_t and dcontext_t) */
 #ifdef ARM
-    ASSERT(offsetof(priv_mcontext_t, r15) + sizeof(byte*) + PRE_XMM_PADDING ==
+    ASSERT(offsetof(priv_mcontext_t, r15) + sizeof(byte*) + PRE_QR_PADDING ==
+           offsetof(priv_mcontext_t, qr));
 #else
     ASSERT(offsetof(priv_mcontext_t, pc) + sizeof(byte*) + PRE_XMM_PADDING ==
-#endif
            offsetof(priv_mcontext_t, ymm));
+#endif
     ASSERT(offsetof(app_state_at_intercept_t, mc) ==
            offsetof(app_state_at_intercept_t, start_pc) + sizeof(void*));
     /* Try to catch errors in x86.asm offsets for dcontext_t */

@@ -3379,6 +3379,8 @@ common_heap_alloc(thread_units_t *tu, size_t size HEAPACCT(which_heap_t which))
 
         ACCOUNT_FOR_ALLOC(alloc_new, tu, which, alloc_size, aligned_size);
     }
+#ifdef NO
+//TODO SJF Comment this crap out 
     DOSTATS({
         /* do this before done_allocating: want to ignore special-unit allocs */
         atomic_add( block_count[bucket], 1);
@@ -3414,6 +3416,7 @@ common_heap_alloc(thread_units_t *tu, size_t size HEAPACCT(which_heap_t which))
             }
         }
     });
+#endif
  done_allocating:
 #ifdef DEBUG_MEMORY
     if (bucket == BLOCK_TYPES-1 && check_alloc_size <= MAXROOM) {
@@ -3605,11 +3608,13 @@ common_heap_free(thread_units_t *tu, void *p_void, size_t size HEAPACCT(which_he
         STATS_SUB(heap_bucket_pad, (alloc_size - aligned_size));
     }
     STATS_SUB(heap_align, (aligned_size - size));
+#ifdef NO
     DOSTATS({
         atomic_add( block_count[bucket], -1);
         atomic_add( block_wasted[bucket], -(int)(alloc_size - aligned_size));
         atomic_add( block_align_pad[bucket], -(int)(aligned_size - size));
     });
+#endif
 # ifdef HEAP_ACCOUNTING
     LOG(THREAD, LOG_HEAP, 6, "\t%s\n", whichheap_name[which]);
     ACCOUNT_FOR_FREE(tu, which, alloc_size);

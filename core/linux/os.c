@@ -3030,7 +3030,9 @@ os_heap_reserve(void *preferred, size_t size, heap_error_code_t *error_code,
     } else {
         *error_code = HEAP_ERROR_SUCCESS;
     }
+/*   SJF Undetermined Crash SEGFAULT
     LOG(GLOBAL, LOG_HEAP, 2, "os_heap_reserve: %d bytes @ "PFX"\n", size, p);
+*/
 #ifdef VMX86_SERVER
     /* PR 365331: ensure our memory is all in the mmap_text region */
     ASSERT(!os_in_vmkernel_userworld() || !executable ||

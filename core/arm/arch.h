@@ -300,7 +300,7 @@ typedef enum {
 # define SHARED_GENCODE_MATCH_THREAD(dc) get_shared_gencode(dc)
 #endif
 
-#define NUM_XMM_REGS  NUM_XMM_SAVED
+#define NUM_QR_REGS  NUM_QR_SAVED
 
 /* TODO Does arm have 14 or 15 gp registers. r15 can be read/used but I dont 
         think it is considered gp */
@@ -320,8 +320,8 @@ typedef struct _clean_call_info_t {
     bool save_all_regs;
     bool skip_save_aflags;
     bool skip_clear_eflags;
-    uint num_xmms_skip;
-    bool xmm_skip[NUM_XMM_REGS];
+    uint num_qr_skip;
+    bool qr_skip[NUM_QR_REGS];
     uint num_regs_skip;
     bool reg_skip[NUM_GP_REGS];
     bool preserve_mcontext; /* even if skip reg save, preserve mcontext shape */
@@ -993,8 +993,6 @@ void global_do_syscall_wow64_index0(void);
 #ifdef X64
 void global_do_syscall_syscall(void);
 #endif
-void get_xmm_caller_saved(dr_ymm_t *xmm_caller_saved_buf);
-void get_ymm_caller_saved(dr_ymm_t *ymm_caller_saved_buf);
 
 /* in encode.c */
 byte *instr_encode_ignore_reachability(dcontext_t *dcontext_t, instr_t *instr, byte *pc);
