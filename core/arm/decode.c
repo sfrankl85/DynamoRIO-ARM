@@ -1048,10 +1048,10 @@ reg8_alternative(decode_info_t *di, reg_id_t reg, uint prefixes)
 
 /* which register within modrm we're decoding */
 typedef enum {
-    DECODE_REG_REG,
+    DECODE_REG_RREG,
     DECODE_REG_BASE,
     DECODE_REG_INDEX,
-    DECODE_REG_RM,
+    DECODE_REG_RRM,
 } decode_reg_t;
 
 /* Pass in the raw opsize, NOT a size passed through resolve_variable_size(),
@@ -1063,13 +1063,13 @@ decode_reg(decode_reg_t which_reg, decode_info_t *di, byte optype, opnd_size_t o
     bool extend = false;
     byte reg = 0;
     switch (which_reg) {
-    case DECODE_REG_REG:
+    case DECODE_REG_RREG:
         reg = di->reg;   extend = X64_MODE(di) && TEST(PREFIX_REX_R, di->prefixes); break;
     case DECODE_REG_BASE:
         reg = di->base;  extend = X64_MODE(di) && TEST(PREFIX_REX_B, di->prefixes); break;
     case DECODE_REG_INDEX:
         reg = di->index; extend = X64_MODE(di) && TEST(PREFIX_REX_X, di->prefixes); break;
-    case DECODE_REG_RM:
+    case DECODE_REG_RRM:
         reg = di->rm;    extend = X64_MODE(di) && TEST(PREFIX_REX_B, di->prefixes); break;
     default:
         CLIENT_ASSERT(false, "internal unknown reg error");
@@ -1135,7 +1135,7 @@ decode_modrm(decode_info_t *di, byte optype, opnd_size_t opsize,
     bool addr16 = !X64_MODE(di) && TEST(PREFIX_ADDR, di->prefixes);
 
     if (reg_opnd != NULL) {
-        reg_id_t reg = decode_reg(DECODE_REG_REG, di, optype, opsize);
+        reg_id_t reg = decode_reg(DECODE_REG_RREG, di, optype, opsize);
         if (reg == REG_NULL)
             return false;
         *reg_opnd = opnd_create_reg(reg);
@@ -1219,7 +1219,7 @@ decode_modrm(decode_info_t *di, byte optype, opnd_size_t opsize,
                 index_reg = REG_NULL;
             } else if (di->mod == 3) {
                 /* register */
-                reg_id_t rm_reg = decode_reg(DECODE_REG_RM, di, optype, opsize);
+                reg_id_t rm_reg = decode_reg(DECODE_REG_RRM, di, optype, opsize);
                 if (rm_reg == REG_NULL) /* no assert since happens, e.g., ff d9 */
                     return false;
                 else {
@@ -1247,7 +1247,7 @@ decode_modrm(decode_info_t *di, byte optype, opnd_size_t opsize,
                     }
                 } else {
                     /* single base reg */
-                    base_reg = decode_reg(DECODE_REG_RM, di, memtype, memsize);
+                    base_reg = decode_reg(DECODE_REG_RRM, di, memtype, memsize);
                     if (base_reg == REG_NULL) {
                         CLIENT_ASSERT(false,
                                       "decode error: !base: internal modrm decode error");
@@ -1518,7 +1518,7 @@ decode_operand(decode_info_t *di, byte optype, opnd_size_t opsize, opnd_t *opnd)
         else if (!X64_MODE(di) || TEST(PREFIX_ADDR, di->prefixes))
             *opnd = opnd_create_far_base_disp(ds_seg(di), REG_ESI, REG_NULL,0,0,ressize);
         else
-            *opnd = opnd_create_far_base_disp(ds_seg(di), REG_RSI, REG_NULL,0,0,ressize);
+            *opnd = opnd_create_far_base_disp(ds_seg(di), REG_RRSI, REG_NULL,0,0,ressize);
         return true;
     case TYPE_Y:
         /* this means the memory address ES:(E)DI */
@@ -1527,7 +1527,7 @@ decode_operand(decode_info_t *di, byte optype, opnd_size_t opsize, opnd_t *opnd)
         else if (!X64_MODE(di) || TEST(PREFIX_ADDR, di->prefixes))
             *opnd = opnd_create_far_base_disp(SEG_ES, REG_EDI, REG_NULL, 0, 0, ressize);
         else
-            *opnd = opnd_create_far_base_disp(SEG_ES, REG_RDI, REG_NULL, 0, 0, ressize);
+            *opnd = opnd_create_far_base_disp(SEG_ES, REG_RRDI, REG_NULL, 0, 0, ressize);
         return true;
     case TYPE_XLAT:
         /* this means the memory address DS:(E)BX+AL */
@@ -1536,7 +1536,7 @@ decode_operand(decode_info_t *di, byte optype, opnd_size_t opsize, opnd_t *opnd)
         else if (!X64_MODE(di) || TEST(PREFIX_ADDR, di->prefixes))
             *opnd = opnd_create_far_base_disp(ds_seg(di), REG_EBX, REG_AL,1,0,ressize);
         else
-            *opnd = opnd_create_far_base_disp(ds_seg(di), REG_RBX, REG_AL,1,0,ressize);
+            *opnd = opnd_create_far_base_disp(ds_seg(di), REG_RRBX, REG_AL,1,0,ressize);
         return true;
     case TYPE_MASKMOVQ:
         /* this means the memory address DS:(E)DI */
@@ -1545,7 +1545,7 @@ decode_operand(decode_info_t *di, byte optype, opnd_size_t opsize, opnd_t *opnd)
         else if (!X64_MODE(di) || TEST(PREFIX_ADDR, di->prefixes))
             *opnd = opnd_create_far_base_disp(ds_seg(di), REG_EDI, REG_NULL,0,0,ressize);
         else
-            *opnd = opnd_create_far_base_disp(ds_seg(di), REG_RDI, REG_NULL,0,0,ressize);
+            *opnd = opnd_create_far_base_disp(ds_seg(di), REG_RRDI, REG_NULL,0,0,ressize);
         return true;
 #endif
     case TYPE_INDIR_REG:

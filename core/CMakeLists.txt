@@ -445,7 +445,7 @@ add_gen_events_deps(drdecode)
 if (UNIX)
   # FIXME case 69/1891: -z initfirst = initialize first at runtime (before libc)
   set_target_properties(${PRELOAD_NAME} PROPERTIES
-    LINK_FLAGS "-nostartfiles")
+    LINK_FLAGS "-nostartfiles -lgcc")
     #LINK_FLAGS "-nostartfiles -lgcc")
 
   # -z now = do non-lazy runtime binding
@@ -453,7 +453,7 @@ if (UNIX)
     "-Xlinker -z -Xlinker now -Xlinker -Bsymbolic")
 
   if (ARM)
-    set(dynamorio_link_flags "${dynamorio_link_flags} -nostartfiles")
+    set(dynamorio_link_flags "${dynamorio_link_flags} -nostartfiles -lgcc")
   else (ARM)
     set(dynamorio_link_flags "${dynamorio_link_flags} -nostdlib")
   endif (ARM)

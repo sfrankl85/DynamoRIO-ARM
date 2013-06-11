@@ -4308,7 +4308,7 @@ cleanup_after_call_ex(dcontext_t *dcontext, clean_call_info_t *cci,
                       "cleanup_after_call_ex: sizeof_param_area must be <= 127");
         /* mark it meta down below */
         instrlist_preinsert(ilist, where,
-            INSTR_CREATE_add(dcontext, opnd_create_reg(REG_R13),
+            INSTR_CREATE_add(dcontext, opnd_create_reg(REG_RR13),
                              OPND_CREATE_INT8(sizeof_param_area)));
     }
     cleanup_after_clean_call(dcontext, cci, ilist, where);
@@ -4387,37 +4387,6 @@ dr_insert_clean_call_ex_varg(void *drcontext, instrlist_t *ilist, instr_t *where
         uint i;
         /* even if we remove xmm saves we want to keep mcontext shape */
         cci.preserve_mcontext = true;
-        /* start w/ all */
-#if defined(X64) && defined(WINDOWS)
-        cci.num_xmms_skip = 6;
-#else
-        /* all 8 (or 16) are scratch */
-        cci.num_xmms_skip = NUM_XMM_REGS;
-#endif
-        for (i=0; i<cci.num_xmms_skip; i++)
-            cci.xmm_skip[i] = true;
-        /* now remove those used for param/retval */
-#ifdef X64
-        if (TEST(DR_CLEANCALL_NOSAVE_XMM_NONPARAM, save_flags)) {
-            /* xmm0-3 (-7 for linux) are used for params */
-# ifdef LINUX
-            for (i=0; i<7; i++)
-# else
-            for (i=0; i<3; i++)
-# endif
-                cci.xmm_skip[i] = false;
-            cci.num_xmms_skip -= i;
-        }
-        if (TEST(DR_CLEANCALL_NOSAVE_XMM_NONRET, save_flags)) {
-            /* xmm0 (and xmm1 for linux) are used for retvals */
-            cci.xmm_skip[0] = false;
-            cci.num_xmms_skip--;
-# ifdef LINUX
-            cci.xmm_skip[1] = false;
-            cci.num_xmms_skip--;
-# endif
-        }
-#endif         
     }
     dstack_offs = prepare_for_call_ex(dcontext, &cci, ilist, where);
 #ifdef X64
@@ -4435,10 +4404,10 @@ dr_insert_clean_call_ex_varg(void *drcontext, instrlist_t *ilist, instr_t *where
         pad = ALIGN_FORWARD_UINT(dstack_offs, 16) - dstack_offs;
         IF_X64(CLIENT_ASSERT(CHECK_TRUNCATE_TYPE_int(buf_sz + pad),
                              "dr_insert_clean_call: internal truncation error"));
-        MINSERT(ilist, where, INSTR_CREATE_sub(dcontext, opnd_create_reg(REG_R13),
+        MINSERT(ilist, where, INSTR_CREATE_sub(dcontext, opnd_create_reg(REG_RR13),
                                                OPND_CREATE_INT32((int)(buf_sz + pad))));
         dr_insert_save_fpstate(drcontext, ilist, where,
-                               opnd_create_base_disp(REG_R13, REG_NULL, 0, 0,
+                               opnd_create_base_disp(REG_RR13, REG_NULL, 0, 0,
                                                      OPSZ_512));
     }
 
@@ -4464,9 +4433,9 @@ dr_insert_clean_call_ex_varg(void *drcontext, instrlist_t *ilist, instr_t *where
 
     if (save_fpstate) {
         dr_insert_restore_fpstate(drcontext, ilist, where,
-                                  opnd_create_base_disp(REG_R13, REG_NULL, 0, 0,
+                                  opnd_create_base_disp(REG_RR13, REG_NULL, 0, 0,
                                                         OPSZ_512));
-        MINSERT(ilist, where, INSTR_CREATE_add(dcontext, opnd_create_reg(REG_R13),
+        MINSERT(ilist, where, INSTR_CREATE_add(dcontext, opnd_create_reg(REG_RR13),
                                                OPND_CREATE_INT32(buf_sz + pad)));
     }
     cleanup_after_call_ex(dcontext, &cci, ilist, where, 0);
@@ -4538,23 +4507,23 @@ dr_swap_to_clean_stack(void *drcontext, instrlist_t *ilist, instr_t *where)
      */
     if (SCRATCH_ALWAYS_TLS()) {
         MINSERT(ilist, where, instr_create_save_to_tls
-                (dcontext, REG_R0, TLS_R0_SLOT));
-        insert_get_mcontext_base(dcontext, ilist, where, REG_R0);
+                (dcontext, REG_RR0, TLS_R0_SLOT));
+        insert_get_mcontext_base(dcontext, ilist, where, REG_RR0);
         /* save app xsp, and then bring in dstack to xsp */
         MINSERT(ilist, where, instr_create_save_to_dc_via_reg
-                (dcontext, REG_R0, REG_R13, R13_OFFSET));
+                (dcontext, REG_RR0, REG_RR13, R13_OFFSET));
         /* DSTACK_OFFSET isn't within the upcontext so if it's separate this won't
          * work right.  FIXME - the dcontext accessing routines are a mess of shared
          * vs. no shared support, separate context vs. no separate context support etc. */
         ASSERT_NOT_IMPLEMENTED(!TEST(SELFPROT_DCONTEXT, dynamo_options.protect_mask));
         MINSERT(ilist, where, instr_create_restore_from_dc_via_reg
-                (dcontext, REG_R0, REG_R13, DSTACK_OFFSET));
+                (dcontext, REG_RR0, REG_RR13, DSTACK_OFFSET));
         MINSERT(ilist, where, instr_create_restore_from_tls
-                (dcontext, REG_R0, TLS_R0_SLOT));
+                (dcontext, REG_RR0, TLS_R0_SLOT));
     }
     else {
         MINSERT(ilist, where, instr_create_save_to_dcontext
-                (dcontext, REG_R13, R13_OFFSET));
+                (dcontext, REG_RR13, R13_OFFSET));
         MINSERT(ilist, where, instr_create_restore_dynamo_stack(dcontext));
     }
 }
@@ -4569,12 +4538,12 @@ dr_restore_app_stack(void *drcontext, instrlist_t *ilist, instr_t *where)
     /* restore stack */
     if (SCRATCH_ALWAYS_TLS()) {
         /* use the register we're about to clobber as scratch space */        
-        insert_get_mcontext_base(dcontext, ilist, where, REG_R13);
+        insert_get_mcontext_base(dcontext, ilist, where, REG_RR13);
         MINSERT(ilist, where, instr_create_restore_from_dc_via_reg
-                (dcontext, REG_R13, REG_R13, R13_OFFSET));
+                (dcontext, REG_RR13, REG_RR13, R13_OFFSET));
     } else {
         MINSERT(ilist, where, instr_create_restore_from_dcontext
-                (dcontext, REG_R13, R13_OFFSET));
+                (dcontext, REG_RR13, R13_OFFSET));
     }
 }
 
@@ -4591,9 +4560,9 @@ static const ushort SPILL_SLOT_TLS_OFFS[NUM_TLS_SPILL_SLOTS] =
  * our own use in dr convenience routines. */
 static const reg_id_t SPILL_SLOT_MC_REG[NUM_SPILL_SLOTS - NUM_TLS_SPILL_SLOTS] = { 
 #ifdef X64
-    REG_R15, REG_R14, REG_R13, REG_R12, REG_R11, REG_R10, REG_R9, REG_R8,
+    REG_RR15, REG_RR14, REG_RR13, REG_RR12, REG_RR11, REG_RR10, REG_RR9, REG_RR8,
 #endif
-    REG_R7, REG_R6, REG_R5, REG_R2, REG_R1, REG_R3 };
+    REG_RR7, REG_RR6, REG_RR5, REG_RR2, REG_RR1, REG_RR3 };
 
 DR_API void 
 dr_save_reg(void *drcontext, instrlist_t *ilist, instr_t *where, reg_id_t reg,
@@ -4623,7 +4592,7 @@ dr_save_reg(void *drcontext, instrlist_t *ilist, instr_t *where, reg_id_t reg,
             /* PR 219620: For thread-shared, we need to get the dcontext
              * dynamically rather than use the constant passed in here.
              */
-            reg_id_t tmp = (reg == REG_R0) ? REG_R3 : REG_R0;
+            reg_id_t tmp = (reg == REG_RR0) ? REG_RR3 : REG_RR0;
             
             MINSERT(ilist, where, instr_create_save_to_tls
                     (dcontext, tmp, TLS_R0_SLOT));
@@ -4825,9 +4794,9 @@ dr_insert_write_tls_field(void *drcontext, instrlist_t *ilist, instr_t *where,
     CLIENT_ASSERT(reg_is_pointer_sized(reg),
                   "must use a pointer-sized general-purpose register");
     if (SCRATCH_ALWAYS_TLS()) {
-        reg_id_t spill = REG_R0;
+        reg_id_t spill = REG_RR0;
         if (reg == spill) /* don't need sub-reg test b/c we know it's pointer-sized */
-            spill = REG_R7;
+            spill = REG_RR7;
         MINSERT(ilist, where, instr_create_save_to_tls(dcontext, spill, TLS_R0_SLOT));
         MINSERT(ilist, where, instr_create_restore_from_tls
                 (dcontext, spill, TLS_DCONTEXT_SLOT));
@@ -4858,7 +4827,7 @@ dr_save_arith_flags(void *drcontext, instrlist_t *ilist, instr_t *where,
     CLIENT_ASSERT(slot <= SPILL_SLOT_MAX,
                   "dr_save_arith_flags: invalid spill slot selection");
 
-    dr_save_reg(drcontext, ilist, where, REG_R0, slot);
+    dr_save_reg(drcontext, ilist, where, REG_RR0, slot);
     dr_save_arith_flags_to_xax(drcontext, ilist, where);
 }
 
@@ -4874,7 +4843,7 @@ dr_restore_arith_flags(void *drcontext, instrlist_t *ilist, instr_t *where,
                   "dr_restore_arith_flags: invalid spill slot selection");
 
     dr_restore_arith_flags_from_xax(drcontext, ilist, where);
-    dr_restore_reg(drcontext, ilist, where, REG_R0, slot);
+    dr_restore_reg(drcontext, ilist, where, REG_RR0, slot);
 }
 
 DR_API void 
@@ -5015,7 +4984,7 @@ dr_insert_mbr_instrumentation(void *drcontext, instrlist_t *ilist, instr_t *inst
     /* Note that since we're using a client exposed slot we know it will be
      * preserved across the clean call. */
     tls_opnd = dr_reg_spill_slot_opnd(drcontext, scratch_slot);
-    newinst = INSTR_CREATE_mov_st(dcontext, tls_opnd, opnd_create_reg(REG_R1));
+    newinst = INSTR_CREATE_mov_st(dcontext, tls_opnd, opnd_create_reg(REG_RR1));
 
     /* PR 214962: ensure we'll properly translate the de-ref of app
      * memory by marking the spill and de-ref as INSTR_OUR_MANGLING.
@@ -5029,25 +4998,25 @@ dr_insert_mbr_instrumentation(void *drcontext, instrlist_t *ilist, instr_t *inst
         opnd_size_t sz = opnd_get_size(retaddr);
         /* even for far ret and iret, retaddr is at TOS */
         newinst = instr_create_1dst_1src(dcontext, sz == OPSZ_2 ? OP_movzx : OP_mov_ld,
-                                         opnd_create_reg(REG_R1), retaddr);
+                                         opnd_create_reg(REG_RR1), retaddr);
     } else {
         /* call* or jmp* */
         opnd_t src = instr_get_src(instr, 0);
         opnd_size_t sz = opnd_get_size(src);
-        reg_id_t reg_target = REG_R1;
+        reg_id_t reg_target = REG_RR1;
         /* if a far cti, we can't fit it into a register: asserted above.
          * in release build we'll get just the address here.
          */
         if (instr_is_far_cti(instr)) {
             if (sz == OPSZ_10) {
                 sz = OPSZ_8;
-                reg_target = REG_RCX;
+                reg_target = REG_RRCX;
             } else if (sz == OPSZ_6) {
                 sz = OPSZ_4;
                 reg_target = REG_ECX;
             } else /* target has OPSZ_4 */ {
                 sz = OPSZ_2;
-                reg_target = REG_R1; /* we use movzx below */
+                reg_target = REG_RR1; /* we use movzx below */
             }
             opnd_set_size(&src, sz);
         }
@@ -5062,7 +5031,7 @@ dr_insert_mbr_instrumentation(void *drcontext, instrlist_t *ilist, instr_t *inst
      * instr_is_reg_spill_or_restore().
      */
     MINSERT(ilist, instr,
-            INSTR_CREATE_xchg(dcontext, tls_opnd, opnd_create_reg(REG_R1)));
+            INSTR_CREATE_xchg(dcontext, tls_opnd, opnd_create_reg(REG_RR1)));
 
     dr_insert_clean_call(drcontext, ilist, instr, callee, false/*no fpstate*/, 2,
                          /* address of mbr is 1st param */
@@ -5113,7 +5082,7 @@ dr_insert_cbr_instrumentation(void *drcontext, instrlist_t *ilist, instr_t *inst
                          /* target is 2nd parameter */
                          OPND_CREATE_INTPTR(target),
                          /* branch direction (put in ebx below) is 3rd parameter */
-                         opnd_create_reg(REG_R3));
+                         opnd_create_reg(REG_RR3));
 
     /* calculate whether branch taken or not
      * since the clean call mechanism clobbers eflags, we
@@ -5152,7 +5121,7 @@ dr_insert_cbr_instrumentation(void *drcontext, instrlist_t *ilist, instr_t *inst
     /* move a few instrs back till right before push xbx or mov rbx => r3 */
     if (instr_get_opcode(app_flags_ok) == OP_call) {
         while (app_flags_ok != NULL) {
-            if (instr_reg_in_src(app_flags_ok, DR_REG_R3))
+            if (instr_reg_in_src(app_flags_ok, DR_REG_RR3))
                 break;
             app_flags_ok = instr_get_prev(app_flags_ok);
         }

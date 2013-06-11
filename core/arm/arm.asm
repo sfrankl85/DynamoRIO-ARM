@@ -2831,6 +2831,16 @@ GLOBAL_LABEL(dynamorio_app_take_over:)
 #endif
 END_FUNC(dynamorio_app_take_over)
 
+/*
+ * dr_app_take_over - For the client interface, we'll export 'dr_app_take_over'
+ * for consistency with the dr_ naming convention of all exported functions.
+ * We'll keep 'dynamorio_app_take_over' for compatibility with the preinjector.
+ */
+        DECLARE_EXPORTED_FUNC(dr_app_take_over)
+GLOBAL_LABEL(dr_app_take_over:)
+        b      dynamorio_app_take_over
+        END_FUNC(dr_app_take_over)
+
 /* uint atomic_swap(uint *addr, uint value)
  * return current contents of addr and replace contents with value.
  * on win32 could use InterlockedExchange intrinsic instead.
@@ -2915,21 +2925,14 @@ GLOBAL_LABEL(dr_app_start:)
 
         /* if we come back, then DR is not taking control so
          * clean up stack and return */
+/* TODO SJF Causing "Error: invalid constant (848) after fixup" error 
         add      REG_R13, REG_R13, #PRIV_MCXT_SIZE 
         add      REG_R13, REG_R13, #FRAME_ALIGNMENT 
         sub      REG_R13, REG_R13, #ARG_SZ
+*/
         mov      r15, r14 
         END_FUNC(dr_app_start)
 
-/*
- * dr_app_take_over - For the client interface, we'll export 'dr_app_take_over'
- * for consistency with the dr_ naming convention of all exported functions.
- * We'll keep 'dynamorio_app_take_over' for compatibility with the preinjector.
- */
-        DECLARE_EXPORTED_FUNC(dr_app_take_over)
-GLOBAL_LABEL(dr_app_take_over:)
-        b      dynamorio_app_take_over
-        END_FUNC(dr_app_take_over)
 #endif
 
 /*

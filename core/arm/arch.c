@@ -108,10 +108,10 @@ int
 reg_spill_tls_offs(reg_id_t reg)
 {
     switch (reg) {
-    case REG_R0: return TLS_R0_SLOT;
-    case REG_R3: return TLS_R3_SLOT;
-    case REG_R1: return TLS_R1_SLOT;
-    case REG_R2: return TLS_R2_SLOT;
+    case REG_RR0: return TLS_R0_SLOT;
+    case REG_RR3: return TLS_R3_SLOT;
+    case REG_RR1: return TLS_R1_SLOT;
+    case REG_RR2: return TLS_R2_SLOT;
     }
     /* don't assert if another reg passed: used on random regs looking for spills */
     return -1;
@@ -569,13 +569,8 @@ arch_init()
 
     /* Ensure we have no unexpected padding inside structs that include
      * priv_mcontext_t (app_state_at_intercept_t and dcontext_t) */
-#ifdef ARM
     ASSERT(offsetof(priv_mcontext_t, r15) + sizeof(byte*) + PRE_QR_PADDING ==
            offsetof(priv_mcontext_t, qr));
-#else
-    ASSERT(offsetof(priv_mcontext_t, pc) + sizeof(byte*) + PRE_XMM_PADDING ==
-           offsetof(priv_mcontext_t, ymm));
-#endif
     ASSERT(offsetof(app_state_at_intercept_t, mc) ==
            offsetof(app_state_at_intercept_t, start_pc) + sizeof(void*));
     /* Try to catch errors in x86.asm offsets for dcontext_t */
@@ -4553,9 +4548,6 @@ dr_mcontext_to_priv_mcontext(priv_mcontext_t *dst, dr_mcontext_t *src)
             //dst->xflags = src->xflags;
             dst->cpsr = src->cpsr;
         }
-        if (TEST(DR_MC_MULTIMEDIA, src->flags)) {
-            memcpy(&dst->ymm, &src->ymm, sizeof(dst->ymm));
-        }
     }
     return true;
 }
@@ -4584,9 +4576,6 @@ priv_mcontext_to_dr_mcontext(dr_mcontext_t *dst, priv_mcontext_t *src)
             dst->r13 = src->r13;
             //dst->xflags = src->xflags;
             dst->cpsr = src->cpsr;
-        }
-        if (TEST(DR_MC_MULTIMEDIA, dst->flags)) {
-            memcpy(&dst->ymm, &src->ymm, sizeof(dst->ymm));
         }
     }
     return true;
@@ -4639,25 +4628,6 @@ dump_mcontext(priv_mcontext_t *context, file_t f, bool dump_xml)
                context->r12, context->r13, context->r14,  context->r15
 #endif
                );
-    if (preserve_xmm_caller_saved()) {
-        int i, j;
-        for (i=0; i<NUM_XMM_SAVED; i++) {
-            if (YMM_ENABLED()) {
-                print_file(f, dump_xml ? "\t\tymm%d= \"0x" : "\tymm%d= 0x", i);
-                for (j = 0; j < 8; j++) {
-                    print_file(f, "%08x", context->ymm[i].u32[j]);
-                }
-            } else {
-                print_file(f, dump_xml ? "\t\txmm%d= \"0x" : "\txmm%d= 0x", i);
-                /* This would be simpler if we had uint64 fields in dr_xmm_t but
-                 * that complicates our struct layouts */
-                for (j = 0; j < 4; j++) {
-                    print_file(f, "%08x", context->ymm[i].u32[j]);
-                }
-            }
-            print_file(f, dump_xml ? "\"\n" : "\n");
-        }
-    }
     print_file(f, dump_xml ? 
                "\n\t\tcpsr=\""PFX"\"\n\t\tpc=\""PFX"\" />\n"
                :

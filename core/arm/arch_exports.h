@@ -54,11 +54,10 @@
  * adding new ones, so code operating on XMM often also operates on YMM,
  * and thus some *XMM* macros also apply to *YMM*.
  */
-#define XMM_REG_SIZE  16
-#define YMM_REG_SIZE  32
-#define XMM_SAVED_REG_SIZE  YMM_REG_SIZE /* space in priv_mcontext_t for xmm/ymm */
-#define XMM_SLOTS_SIZE  (NUM_XMM_SLOTS*XMM_SAVED_REG_SIZE)
-#define XMM_SAVED_SIZE  (NUM_XMM_SAVED*XMM_SAVED_REG_SIZE)
+#define QR_REG_SIZE 128
+#define QR_SAVED_REG_SIZE  QR_REG_SIZE /* space in priv_mcontext_t for xmm/ymm */
+#define QR_SLOTS_SIZE  (NUM_QR_SLOTS*QR_SAVED_REG_SIZE)
+#define QR_SAVED_SIZE  (NUM_QR_SAVED*QR_SAVED_REG_SIZE)
 /* OS has to enable AVX (=> OSXSAVE): else AVX instrs will raise #UD (i#1030) */
 #define YMM_ENABLED() (proc_has_feature(FEATURE_AVX) && proc_has_feature(FEATURE_OSXSAVE))
 #define YMMH_REG_SIZE (YMM_REG_SIZE/2) /* upper half */

@@ -1093,9 +1093,9 @@ bb_verify_sysenter_pattern(dcontext_t *dcontext, build_bb_t *bb)
     if (!(instr != NULL && instr_get_opcode(instr) == OP_mov_ld &&
           instr_num_srcs(instr) == 1 && instr_num_dsts(instr) == 1 &&
           opnd_is_reg(instr_get_dst(instr, 0)) &&
-          opnd_get_reg(instr_get_dst(instr, 0)) == REG_R2 &&
+          opnd_get_reg(instr_get_dst(instr, 0)) == REG_RR2 &&
           opnd_is_reg(instr_get_src(instr, 0)) &&
-          opnd_get_reg(instr_get_src(instr, 0)) == REG_R13)) {
+          opnd_get_reg(instr_get_src(instr, 0)) == REG_RR13)) {
         BBPRINT(bb, 3, "bb_verify_sysenter_pattern -- mov didn't match\n");
         return NULL;
     }
@@ -1107,14 +1107,14 @@ bb_verify_sysenter_pattern(dcontext_t *dcontext, build_bb_t *bb)
           instr_is_call_indirect(instr) &&
           /* The 2nd src operand should always be %xsp. */
           opnd_is_reg(instr_get_src(instr, 1)) &&
-          opnd_get_reg(instr_get_src(instr, 1)) == REG_R13 &&
+          opnd_get_reg(instr_get_src(instr, 1)) == REG_RR13 &&
           /* Match 'call (%xdx)' for post-SP2. */
           ((opnd_is_near_base_disp(instr_get_src(instr, 0)) &&
-            opnd_get_base(instr_get_src(instr, 0)) == REG_R2 &&
+            opnd_get_base(instr_get_src(instr, 0)) == REG_RR2 &&
             opnd_get_disp(instr_get_src(instr, 0)) == 0) ||
            /* Match 'call %xdx' for pre-SP2. */
            (opnd_is_reg(instr_get_src(instr, 0)) &&
-            opnd_get_reg(instr_get_src(instr, 0)) == REG_R2)))) {
+            opnd_get_reg(instr_get_src(instr, 0)) == REG_RR2)))) {
         BBPRINT(bb, 3, "bb_verify_sysenter_pattern -- call didn't match\n");
         return NULL;
     }
@@ -1885,7 +1885,7 @@ bb_process_convertible_indcall(dcontext_t *dcontext, build_bb_t *bb)
 #ifdef WINDOWS
           /* Match 'call (%xdx)' for a post-SP2 indirect call to sysenter. */
           (opnd_is_near_base_disp(instr_get_src(instr, 0)) &&
-           opnd_get_base(instr_get_src(instr, 0)) == REG_R2 &&
+           opnd_get_base(instr_get_src(instr, 0)) == REG_RR2 &&
            opnd_get_disp(instr_get_src(instr, 0)) == 0) ||
 #endif
           /* Match 'call %reg'. */
@@ -1951,7 +1951,7 @@ bb_process_convertible_indcall(dcontext_t *dcontext, build_bb_t *bb)
      * context in an SP2 os. It's a hold-over from pre-SP2.
      */
     else if (get_syscall_method() == SYSCALL_METHOD_SYSENTER
-             && call_src_reg == REG_R2
+             && call_src_reg == REG_RR2
              && opnd_get_immed_int(instr_get_src(instr, 0)) == 
              (ptr_int_t)VSYSCALL_BOOTSTRAP_ADDR) {
         /* Extract the target address. We expect that the memory read using the
@@ -4123,7 +4123,7 @@ build_native_exec_bb(dcontext_t *dcontext, build_bb_t *bb)
 
     append_shared_get_dcontext(dcontext, bb->ilist, true/*save xdi*/);
     instrlist_append(bb->ilist, instr_create_save_to_dc_via_reg
-                     (dcontext, REG_NULL/*default*/, REG_R0, R0_OFFSET));
+                     (dcontext, REG_NULL/*default*/, REG_RR0, R0_OFFSET));
 
     /* need some cleanup prior to native: turn off asynch, clobber trace, etc.
      * Now that we have a stack of native retaddrs, we save the app retaddr in C
@@ -4132,7 +4132,7 @@ build_native_exec_bb(dcontext_t *dcontext, build_bb_t *bb)
     if (bb->native_call) {
         dr_insert_clean_call(dcontext, bb->ilist, NULL,
                              (void *)call_to_native, false/*!fp*/, 1,
-                             opnd_create_reg(REG_R13));
+                             opnd_create_reg(REG_RR13));
     } else {
         dr_insert_clean_call(dcontext, bb->ilist, NULL,
                              (void *) return_to_native, false/*!fp*/, 0);
@@ -4141,7 +4141,7 @@ build_native_exec_bb(dcontext_t *dcontext, build_bb_t *bb)
     jmp_tgt = opnd_create_pc(bb->start_pc);
 
     instrlist_append(bb->ilist, instr_create_restore_from_dc_via_reg
-                     (dcontext, REG_NULL/*default*/, REG_R0, R0_OFFSET));
+                     (dcontext, REG_NULL/*default*/, REG_RR0, R0_OFFSET));
     append_shared_restore_dcontext_reg(dcontext, bb->ilist);
 
     /* this is the jump to native code */
@@ -5060,12 +5060,12 @@ insert_restore_spilled_xcx(dcontext_t *dcontext, instrlist_t *trace, instr_t *ne
     if (DYNAMO_OPTION(private_ib_in_tls)) {
         if (X64_CACHE_MODE_DC(dcontext) && !X64_MODE_DC(dcontext)) {
             added_size += tracelist_add(dcontext, trace, next,
-                INSTR_CREATE_mov_ld(dcontext, opnd_create_reg(REG_R1),
-                                    opnd_create_reg(REG_R9)));
+                INSTR_CREATE_mov_ld(dcontext, opnd_create_reg(REG_RR1),
+                                    opnd_create_reg(REG_RR9)));
         } else {
             added_size += tracelist_add(dcontext, trace, next,
                 INSTR_CREATE_mov_ld(dcontext,
-                                    opnd_create_reg(REG_R1),
+                                    opnd_create_reg(REG_RR1),
                                     opnd_create_tls_slot
                                     (os_tls_offset(MANGLE_XCX_SPILL_SLOT))));
         }
@@ -5075,7 +5075,7 @@ insert_restore_spilled_xcx(dcontext_t *dcontext, instrlist_t *trace, instr_t *ne
          */
         added_size += tracelist_add(dcontext, trace, next,
                                     instr_create_restore_from_dcontext
-                                    (dcontext, REG_R1, R1_OFFSET));
+                                    (dcontext, REG_RR1, R1_OFFSET));
     }
 
     return added_size;
@@ -5112,8 +5112,8 @@ insert_transparent_comparison(dcontext_t *dcontext, instrlist_t *trace,
     added_size += tracelist_add
         (dcontext, trace, targeter,
          INSTR_CREATE_lea
-         (dcontext, opnd_create_reg(REG_R1),
-          opnd_create_base_disp(REG_R1, REG_NULL, 0,
+         (dcontext, opnd_create_reg(REG_RR1),
+          opnd_create_base_disp(REG_RR1, REG_NULL, 0,
                                 -((int)(ptr_int_t)speculative_tag), OPSZ_lea)));
     jecxz = INSTR_CREATE_jecxz(dcontext, opnd_create_instr(continue_label));
     /* do not treat jecxz as exit cti! */
@@ -5144,19 +5144,19 @@ mangle_x64_ib_in_trace(dcontext_t *dcontext, instrlist_t *trace,
         added_size += tracelist_add
             (dcontext, trace, targeter, INSTR_CREATE_mov_st
              (dcontext, opnd_create_tls_slot(os_tls_offset(PREFIX_XAX_SPILL_SLOT)),
-              opnd_create_reg(REG_R0)));
+              opnd_create_reg(REG_RR0)));
         added_size += tracelist_add
             (dcontext, trace, targeter, INSTR_CREATE_mov_imm
-             (dcontext, opnd_create_reg(REG_R0),
+             (dcontext, opnd_create_reg(REG_RR0),
               OPND_CREATE_INTPTR((ptr_int_t)next_tag)));
     } else {
         ASSERT(X64_CACHE_MODE_DC(dcontext));
         added_size += tracelist_add
             (dcontext, trace, targeter, INSTR_CREATE_mov_ld
-             (dcontext, opnd_create_reg(REG_R8), opnd_create_reg(REG_R0)));
+             (dcontext, opnd_create_reg(REG_RR8), opnd_create_reg(REG_RR0)));
         added_size += tracelist_add
             (dcontext, trace, targeter, INSTR_CREATE_mov_imm
-             (dcontext, opnd_create_reg(REG_R10),
+             (dcontext, opnd_create_reg(REG_RR10),
               OPND_CREATE_INTPTR((ptr_int_t)next_tag)));
     }
     /* saving in the trace and restoring in ibl means that
@@ -5168,7 +5168,7 @@ mangle_x64_ib_in_trace(dcontext_t *dcontext, instrlist_t *trace,
                 (dcontext, trace, targeter, INSTR_CREATE_mov_st
                  (dcontext, opnd_create_tls_slot
                   (os_tls_offset(INDIRECT_STUB_SPILL_SLOT)),
-                  opnd_create_reg(REG_R0)));
+                  opnd_create_reg(REG_RR0)));
         }
         /* FIXME: share w/ insert_save_eflags() */
         added_size += tracelist_add
@@ -5182,21 +5182,21 @@ mangle_x64_ib_in_trace(dcontext_t *dcontext, instrlist_t *trace,
         if (X64_MODE_DC(dcontext)) {
             added_size += tracelist_add
                 (dcontext, trace, targeter,
-                 INSTR_CREATE_cmp(dcontext, opnd_create_reg(REG_R1),
+                 INSTR_CREATE_cmp(dcontext, opnd_create_reg(REG_RR1),
                                   opnd_create_tls_slot(os_tls_offset
                                                        (INDIRECT_STUB_SPILL_SLOT))));
         } else {
             added_size += tracelist_add
                 (dcontext, trace, targeter,
-                 INSTR_CREATE_cmp(dcontext, opnd_create_reg(REG_R1),
-                                  opnd_create_reg(REG_R10)));
+                 INSTR_CREATE_cmp(dcontext, opnd_create_reg(REG_RR1),
+                                  opnd_create_reg(REG_RR10)));
         }
     } else {
         added_size += tracelist_add
             (dcontext, trace, targeter,
-             INSTR_CREATE_cmp(dcontext, opnd_create_reg(REG_R1),
-                              X64_MODE_DC(dcontext) ? opnd_create_reg(REG_R0)
-                                                    : opnd_create_reg(REG_R10)));
+             INSTR_CREATE_cmp(dcontext, opnd_create_reg(REG_RR1),
+                              X64_MODE_DC(dcontext) ? opnd_create_reg(REG_RR0)
+                                                    : opnd_create_reg(REG_RR10)));
     }
     /* change jmp into jne to trace cmp entry of ibl routine (special entry
      * that is after the eflags save) */
@@ -5319,8 +5319,8 @@ mangle_indirect_branch_in_trace(dcontext_t *dcontext, instrlist_t *trace,
             removed_ret = true;
             added_size += tracelist_add
                 (dcontext, trace, targeter,
-                 INSTR_CREATE_lea(dcontext, opnd_create_reg(REG_R13),
-                                  opnd_create_base_disp(REG_R13, REG_NULL, 0,
+                 INSTR_CREATE_lea(dcontext, opnd_create_reg(REG_RR13),
+                                  opnd_create_base_disp(REG_RR13, REG_NULL, 0,
                                                         esp_add, OPSZ_lea)));
         }
     }
@@ -5386,8 +5386,8 @@ mangle_indirect_branch_in_trace(dcontext_t *dcontext, instrlist_t *trace,
             instr_destroy(dcontext, ret);
             added_size += tracelist_add
                 (dcontext, trace, targeter,
-                 INSTR_CREATE_lea(dcontext, opnd_create_reg(REG_R13),
-                                  opnd_create_base_disp(REG_R13, REG_NULL, 0,
+                 INSTR_CREATE_lea(dcontext, opnd_create_reg(REG_RR13),
+                                  opnd_create_base_disp(REG_RR13, REG_NULL, 0,
                                                         (int)4, OPSZ_lea)));
             instrlist_remove(trace, targeter);
             instr_destroy(dcontext, targeter);
@@ -5505,12 +5505,12 @@ mangle_indirect_branch_in_trace(dcontext_t *dcontext, instrlist_t *trace,
         if (X64_MODE_DC(dcontext)) {
             added_size += tracelist_add
                 (dcontext, trace, next, INSTR_CREATE_mov_ld
-                 (dcontext, opnd_create_reg(REG_R0),
+                 (dcontext, opnd_create_reg(REG_RR0),
                   opnd_create_tls_slot(os_tls_offset(PREFIX_XAX_SPILL_SLOT))));
         } else {
             added_size += tracelist_add
                 (dcontext, trace, next, INSTR_CREATE_mov_ld
-                 (dcontext, opnd_create_reg(REG_R0), opnd_create_reg(REG_R8)));
+                 (dcontext, opnd_create_reg(REG_RR0), opnd_create_reg(REG_RR8)));
         }
     }
 #endif
@@ -5820,7 +5820,7 @@ append_trace_speculate_last_ibl(dcontext_t *dcontext, instrlist_t *trace,
                 tracelist_add(dcontext, trace, where, 
                               INSTR_CREATE_mov_st(dcontext,
                                                   opnd_create_tls_slot(tls_stat_scratch_slot),
-                                                  opnd_create_reg(REG_R1)));
+                                                  opnd_create_reg(REG_RR1)));
             added_size += 
                 insert_increment_stat_counter(dcontext, trace, where, 
                                               &get_ibl_per_type_statistics(dcontext, 
@@ -5829,7 +5829,7 @@ append_trace_speculate_last_ibl(dcontext_t *dcontext, instrlist_t *trace,
             added_size += 
                 tracelist_add(dcontext, trace, where, 
                               INSTR_CREATE_mov_ld(dcontext,
-                                                  opnd_create_reg(REG_R1),
+                                                  opnd_create_reg(REG_RR1),
                                                   opnd_create_tls_slot(tls_stat_scratch_slot)));
         }
     });
@@ -5873,7 +5873,7 @@ append_trace_speculate_last_ibl(dcontext_t *dcontext, instrlist_t *trace,
             added_size += 
                 tracelist_add(dcontext, trace, next, 
                               INSTR_CREATE_mov_ld(dcontext,
-                                                  opnd_create_reg(REG_R1),
+                                                  opnd_create_reg(REG_RR1),
                                                   opnd_create_tls_slot(tls_stat_scratch_slot)));
         }
     });        
@@ -5966,14 +5966,14 @@ append_ib_trace_last_ibl_exit_stat(dcontext_t *dcontext, instrlist_t *trace,
     added_size += tracelist_add(dcontext, trace, where, 
                                 INSTR_CREATE_mov_st(dcontext,
                                                     opnd_create_tls_slot(tls_stat_scratch_slot),
-                                                    opnd_create_reg(REG_R1)));
+                                                    opnd_create_reg(REG_RR1)));
     added_size += 
         insert_increment_stat_counter(dcontext, trace, where, 
                                       &get_ibl_per_type_statistics(dcontext, ibl_type.branch_type)
                                       ->ib_trace_last_ibl_exit);
     added_size += tracelist_add(dcontext, trace, where, 
                                 INSTR_CREATE_mov_ld(dcontext,
-                                                    opnd_create_reg(REG_R1),
+                                                    opnd_create_reg(REG_RR1),
                                                     opnd_create_tls_slot(tls_stat_scratch_slot)));
 
     if (speculate_next_tag != NULL) {
@@ -6913,7 +6913,7 @@ decode_fragment(dcontext_t *dcontext, fragment_t *f, byte *buf, /*IN/OUT*/uint *
                     /* now append our new xcx save */
                     instrlist_append(ilist,
                                      instr_create_save_to_dcontext
-                                     (dcontext, REG_R1, R1_OFFSET));
+                                     (dcontext, REG_RR1, R1_OFFSET));
                     /* make sure skip current instr */
                     cur_buf += (int)(pc - prev_pc);
                     raw_start_pc = pc;

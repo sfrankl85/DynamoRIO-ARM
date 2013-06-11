@@ -1280,9 +1280,6 @@ encoding_possible(decode_info_t *di, instr_t *in, const instr_info_t * ii)
         return false;
     LOG(THREAD, LOG_EMIT, ENC_LEVEL, "\nencoding_possible on "PFX"\n", ii->opcode);
 
-    if (TEST(X64_MODE(di) ? X64_INVALID : X86_INVALID, ii->flags))
-        return false;
-
     /* For size prefixes we use the di prefix field since that's what
      * the decode.c routines use; we transfer to the instr's prefix field
      * when done.  The first
@@ -1633,7 +1630,7 @@ encode_base_disp(decode_info_t * di, opnd_t opnd)
         if (disp == 0 &&
             /* must use 8-bit disp for 0x0(%ebp) or 0x0(%r13) */
             ((!addr16 && base != REG_EBP /* x64 w/ addr prefix => ebp */
-              IF_X64(&& base != REG_RBP && base != REG_R13 && base != REG_R13D)) ||
+              IF_X64(&& base != REG_RRBP && base != REG_RR13 && base != REG_RR13D)) ||
              /* must use 8-bit disp for 0x0(%bp) */
              (addr16 && (base != REG_BP || index != REG_NULL))) &&
             !opnd_is_disp_encode_zero(opnd)) {
@@ -1678,7 +1675,7 @@ encode_base_disp(decode_info_t * di, opnd_t opnd)
                 di->rm = 0;
             }
         } else if (index == REG_NULL && base != REG_ESP /* x64 w/ addr prefix => esp */
-                   IF_X64(&& base != REG_RSP && base != REG_R12 && base != REG_R12D)) {
+                   IF_X64(&& base != REG_RRSP && base != REG_RR12 && base != REG_RR12D)) {
             /* don't need SIB byte */
             di->has_sib = false;
             encode_reg_ext_prefixes(di, base, PREFIX_REX_B);
@@ -1692,7 +1689,7 @@ encode_base_disp(decode_info_t * di, opnd_t opnd)
                 di->scale = 0; /* does it matter?!? */
             } else {
                 /* note that r13 can be an index register */
-                CLIENT_ASSERT(index != REG_ESP IF_X64(&& index != REG_RSP),
+                CLIENT_ASSERT(index != REG_ESP IF_X64(&& index != REG_RRSP),
                               "encode error: xsp cannot be an index register");
                 CLIENT_ASSERT(reg_is_32bit(index) || (X64_MODE(di) && reg_is_64bit(index)),
                               "encode error: index must be general-purpose register");
@@ -1717,8 +1714,8 @@ encode_base_disp(decode_info_t * di, opnd_t opnd)
                 /* can't do nodisp(ebp) or nodisp(r13) */
                 CLIENT_ASSERT(di->mod != 0 ||
                               (base != REG_EBP
-                               IF_X64(&& base != REG_RBP &&
-                                      base != REG_R13 && base != REG_R13D)),
+                               IF_X64(&& base != REG_RRBP &&
+                                      base != REG_RR13 && base != REG_RR13D)),
                               "encode error: xbp/r13 base must have disp");
                 encode_reg_ext_prefixes(di, base, PREFIX_REX_B);
                 if (X64_MODE(di) && reg_is_32bit(base)) {
@@ -2380,6 +2377,7 @@ instr_encode_common(dcontext_t *dcontext, instr_t *instr, byte *copy_pc, byte *f
     opc = instr_get_opcode(instr);
 #ifdef NO
 /* TODO SJF Eh? */
+/* Indirect branches */
     if ((instr_is_cbr(instr) &&
          (!instr_is_cti_loop(instr) ||
           /* no addr16 */

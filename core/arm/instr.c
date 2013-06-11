@@ -1604,7 +1604,7 @@ reg_get_bits(reg_id_t reg)
     if (reg >= REG_START_32 && reg <= REG_STOP_32)
         return (byte) ((reg - REG_START_32) % 8);
 /* TODO SJF
-    if (reg >= REG_START_8 && reg <= REG_R15L)
+    if (reg >= REG_START_8 && reg <= REG_RRR15L)
         return (byte) ((reg - REG_START_8) % 8);
 */
 #ifdef X64
@@ -2059,17 +2059,13 @@ instr_opcode_valid(instr_t *instr)
 const instr_info_t * 
 instr_get_instr_info(instr_t *instr)
 {
-#ifdef NO
     return op_instr[instr_get_opcode(instr)];
-#endif //NO
 }
 
 const instr_info_t * 
 get_instr_info(int opcode)
 {
-#ifdef NO
     return op_instr[opcode];
-#endif //NO
 }
 
 #undef instr_get_src
@@ -2749,7 +2745,7 @@ instr_length(dcontext_t *dcontext, instr_t *instr)
     case OP_loop:
     case OP_loope:
     case OP_loopne: 
-        if (opnd_get_reg(instr_get_src(instr, 1)) != REG_R1
+        if (opnd_get_reg(instr_get_src(instr, 1)) != REG_RR1
             IF_X64(&& !instr_get_x86_mode(instr)))
             return 3; /* need addr prefix */
         else
@@ -4547,7 +4543,7 @@ instr_is_mov_imm_to_tos(instr_t *instr)
         (opnd_is_immed(instr_get_src(instr, 0)) ||
          opnd_is_near_instr(instr_get_src(instr, 0))) &&
         opnd_is_near_base_disp(instr_get_dst(instr, 0)) &&
-        opnd_get_base(instr_get_dst(instr, 0)) == REG_R13 &&
+        opnd_get_base(instr_get_dst(instr, 0)) == REG_RR13 &&
         opnd_get_index(instr_get_dst(instr, 0)) == REG_NULL &&
         opnd_get_disp(instr_get_dst(instr, 0)) == 0;
 }
@@ -5120,7 +5116,7 @@ instr_t *
 instr_create_popa(dcontext_t *dcontext)
 {
     instr_t *in = instr_build(dcontext, OP_popa, 8, 2);
-    instr_set_dst(in, 0, opnd_create_reg(REG_R13));
+    instr_set_dst(in, 0, opnd_create_reg(REG_RRR13));
     instr_set_dst(in, 1, opnd_create_reg(REG_EAX));
     instr_set_dst(in, 2, opnd_create_reg(REG_EBX));
     instr_set_dst(in, 3, opnd_create_reg(REG_ECX));
@@ -5128,8 +5124,8 @@ instr_create_popa(dcontext_t *dcontext)
     instr_set_dst(in, 5, opnd_create_reg(REG_EBP));
     instr_set_dst(in, 6, opnd_create_reg(REG_ESI));
     instr_set_dst(in, 7, opnd_create_reg(REG_EDI));
-    instr_set_src(in, 0, opnd_create_reg(REG_R13));
-    instr_set_src(in, 1, opnd_create_base_disp(REG_R13, REG_NULL, 0, 0, OPSZ_32_short16));
+    instr_set_src(in, 0, opnd_create_reg(REG_RRR13));
+    instr_set_src(in, 1, opnd_create_base_disp(REG_RRR13, REG_NULL, 0, 0, OPSZ_32_short16));
     return in;
 }
 
@@ -5137,10 +5133,10 @@ instr_t *
 instr_create_pusha(dcontext_t *dcontext)
 {
     instr_t *in = instr_build(dcontext, OP_pusha, 2, 8);
-    instr_set_dst(in, 0, opnd_create_reg(REG_R13));
-    instr_set_dst(in, 1, opnd_create_base_disp(REG_R13, REG_NULL, 0, -32,
+    instr_set_dst(in, 0, opnd_create_reg(REG_RRR13));
+    instr_set_dst(in, 1, opnd_create_base_disp(REG_RRR13, REG_NULL, 0, -32,
                                                OPSZ_32_short16));
-    instr_set_src(in, 0, opnd_create_reg(REG_R13));
+    instr_set_src(in, 0, opnd_create_reg(REG_RRR13));
     instr_set_src(in, 1, opnd_create_reg(REG_EAX));
     instr_set_src(in, 2, opnd_create_reg(REG_EBX));
     instr_set_src(in, 3, opnd_create_reg(REG_ECX));
@@ -5349,7 +5345,7 @@ dcontext_opnd_common(dcontext_t *dcontext, bool absolute, reg_id_t basereg,
     if (TEST(SELFPROT_DCONTEXT, dynamo_options.protect_mask) &&
         offs < sizeof(unprotected_context_t)) {
         return opnd_create_base_disp(absolute ? REG_NULL :
-                                     ((basereg == REG_NULL) ? REG_R6 : basereg),
+                                     ((basereg == REG_NULL) ? REG_RR6 : basereg),
                                      REG_NULL, 0,
                                      ((int)(ptr_int_t)(absolute ?
                                             dcontext->upcontext.separate_upcontext : 0))
@@ -5358,7 +5354,7 @@ dcontext_opnd_common(dcontext_t *dcontext, bool absolute, reg_id_t basereg,
         if (offs >= sizeof(unprotected_context_t))
             offs -= sizeof(unprotected_context_t);
         return opnd_create_base_disp(absolute ? REG_NULL :
-                                     ((basereg == REG_NULL) ? REG_R7 : basereg),
+                                     ((basereg == REG_NULL) ? REG_RR7 : basereg),
                                      REG_NULL, 0,
                                      ((int)(ptr_int_t)
                                       (absolute ? dcontext : 0)) + offs, size);
@@ -5402,14 +5398,8 @@ instr_t *
 instr_create_restore_from_dcontext(dcontext_t *dcontext, reg_id_t reg, int offs)
 {
     opnd_t memopnd = opnd_create_dcontext_field(dcontext, offs);
-    /* use movd for xmm/mmx */
-#ifdef NO
-//TODO SJF
-    if (reg_is_xmm(reg) || reg_is_mmx(reg))
-        return INSTR_CREATE_movd(dcontext, opnd_create_reg(reg), memopnd);
-    else
-        return INSTR_CREATE_mov_ld(dcontext, opnd_create_reg(reg), memopnd);
-#endif
+
+    return INSTR_CREATE_mov_ld(dcontext, opnd_create_reg(reg), memopnd);
 }
 
 instr_t *
@@ -5435,17 +5425,10 @@ instr_t *
 instr_create_restore_from_dc_via_reg(dcontext_t *dcontext, reg_id_t basereg,
                                      reg_id_t reg, int offs)
 {
-#ifdef NO
     /* use movd for xmm/mmx, and OPSZ_PTR */
-    if (reg_is_xmm(reg) || reg_is_mmx(reg)) {
-        opnd_t memopnd = opnd_create_dcontext_field_via_reg(dcontext, basereg, offs);
-        return INSTR_CREATE_movd(dcontext, opnd_create_reg(reg), memopnd);
-    } else {
-        opnd_t memopnd = opnd_create_dcontext_field_via_reg_sz
-            (dcontext, basereg, offs, reg_get_size(reg));
-        return INSTR_CREATE_mov_ld(dcontext, opnd_create_reg(reg), memopnd);
-    }
-#endif //NO
+    opnd_t memopnd = opnd_create_dcontext_field_via_reg_sz
+        (dcontext, basereg, offs, reg_get_size(reg));
+    return INSTR_CREATE_mov_ld(dcontext, opnd_create_reg(reg), memopnd);
 }
 
 /* Use basereg==REG_NULL to get default (xdi, or xsi for upcontext) 
@@ -5480,6 +5463,14 @@ instr_create_save_immed_to_dcontext(dcontext_t *dcontext, int immed, int offs)
 }
 
 instr_t *
+instr_create_branch_via_dcontext(dcontext_t *dcontext, int offs)
+{
+    opnd_t memopnd = opnd_create_dcontext_field(dcontext, offs);
+    return INSTR_CREATE_branch(dcontext, memopnd);
+}
+
+
+instr_t *
 instr_create_jump_via_dcontext(dcontext_t *dcontext, int offs)
 {
 #ifdef NO
@@ -5496,7 +5487,7 @@ instr_t *
 instr_create_restore_dynamo_stack(dcontext_t *dcontext)
 {
 #ifdef NO
-    return instr_create_restore_from_dcontext(dcontext, REG_R13, DSTACK_OFFSET);
+    return instr_create_restore_from_dcontext(dcontext, REG_RR13, DSTACK_OFFSET);
 #endif //NO
 }
 
@@ -5505,7 +5496,7 @@ instr_t *
 instr_create_restore_dynamo_return_stack(dcontext_t *dcontext)
 {
 #ifdef NO
-    return instr_create_restore_from_dcontext(dcontext, REG_R13,
+    return instr_create_restore_from_dcontext(dcontext, REG_RR13,
                                               TOP_OF_RSTACK_OFFSET);
 #endif //NO
 }
@@ -5514,7 +5505,7 @@ instr_t *
 instr_create_save_dynamo_return_stack(dcontext_t *dcontext)
 {
 #ifdef NO
-    return instr_create_save_to_dcontext(dcontext, REG_R13,
+    return instr_create_save_to_dcontext(dcontext, REG_RR13,
                                          TOP_OF_RSTACK_OFFSET);
 #endif //NO
 }
@@ -5571,7 +5562,7 @@ opnd_create_sized_tls_slot(int offs, opnd_size_t size)
 bool
 instr_raw_is_tls_spill(byte *pc, reg_id_t reg, ushort offs)
 {
-    ASSERT_NOT_IMPLEMENTED(reg != REG_R0);
+    ASSERT_NOT_IMPLEMENTED(reg != REG_RR0);
 #ifdef X64
     /* match insert_jmp_to_ibl */
     if     (*pc == TLS_SEG_OPCODE && 
@@ -5679,9 +5670,9 @@ instr_is_tls_xcx_spill(instr_t *instr)
     if (instr_raw_bits_valid(instr)) {
         /* avoid upgrading instr */
         return instr_raw_is_tls_spill(instr_get_raw_bits(instr),
-                                      REG_R1, MANGLE_XCX_SPILL_SLOT);
+                                      REG_RR1, MANGLE_XCX_SPILL_SLOT);
     } else
-        return instr_is_tls_spill(instr, REG_R1, MANGLE_XCX_SPILL_SLOT);
+        return instr_is_tls_spill(instr, REG_RR1, MANGLE_XCX_SPILL_SLOT);
 }
 
 /* this routine may upgrade a level 1 instr */
