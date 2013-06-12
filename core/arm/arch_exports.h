@@ -490,12 +490,11 @@ static inline int64 atomic_add_exchange_int64(volatile int64 *var, int64 value) 
 /* SJF New stats atomic defs here to deal with the stats shit */
 /* SJF F*ck this just comment it out. Getting  -- `ldrex r3,[fp,#-16]'
        errors when trying to do it correctly. */
-static inline void stats_atomic_inc( int *var )
+static inline void stats_atomic_inc( int var )
 {
     int t = 0, tmp = 0;
-/*
-    ATOMIC_INC(int, *var, t, tmp);
-*/
+
+    ATOMIC_INC(int, var, t, tmp);
 }
 
 static inline void stats_atomic_dec( int *var )

@@ -886,7 +886,8 @@ opnd_type_ok(decode_info_t *di/*prefixes field is IN/OUT; x86_mode is IN*/,
     case TYPE_NONE: 
         return opnd_is_null(opnd);
     case TYPE_REG:
-        return (opnd_is_reg(opnd) && opnd_get_reg(opnd) == opsize);
+        /* SJF Changed opnd_get_reg to opnd_get_size. Looks like a mistake to me */
+        return (opnd_is_reg(opnd) && opnd_get_size(opnd) == opsize);
     case TYPE_VAR_REG:
         /* for TYPE_*REG*, opsize is really reg_id_t */
         return (opnd_is_reg(opnd) &&

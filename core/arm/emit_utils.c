@@ -3301,15 +3301,7 @@ preinsert_swap_peb(dcontext_t *dcontext, instrlist_t *ilist, instr_t *next,
      opnd_create_dcontext_field_via_reg_sz((dcontext), REG_NULL, (offs), (sz)))
 
 /* Export this in instr.h if it becomes useful elsewhere */
-#ifdef X64
-# ifdef WINDOWS
-#  define OPND_ARG1  opnd_create_reg(REG_RRCX)
-# else
-#  define OPND_ARG1  opnd_create_reg(REG_RR7)
-# endif
-#else
-# define OPND_ARG1   OPND_CREATE_MEM32(REG_RR13, 4)
-#endif
+#define OPND_ARG1  opnd_create_reg(REG_RR7)
 
 /* Our context switch to and from the fragment cache are arranged such
  * that there is no persistent state kept on the dstack, allowing us to
@@ -3425,7 +3417,13 @@ static byte *
 emit_fcache_enter_common(dcontext_t *dcontext, generated_code_t *code, byte *pc,
                          bool absolute, bool shared)
 {
-    int len;
+    int len = 0;
+/* Comment out all these instructions for now. 
+   Every one needs the relevant structs in instr.h
+   and decode_table.c updating correctly.
+   I dont even have a suitable structure to store 
+   ARM instructions in yet! SJF TODO */
+#ifdef NO
     instrlist_t ilist;
     patch_list_t patch;
     instr_t *post_hook = INSTR_CREATE_label(dcontext);
@@ -3434,7 +3432,7 @@ emit_fcache_enter_common(dcontext_t *dcontext, generated_code_t *code, byte *pc,
     instrlist_init(&ilist);
 
     if (!absolute) {
-        /* grab gen routine's parameter dcontext and put it into edi */
+        /* grab gen routine's parameter dcontext and put it into R7 */
         APP(&ilist, INSTR_CREATE_mov_ld(dcontext, opnd_create_reg(REG_RR7), OPND_ARG1));
         if (TEST(SELFPROT_DCONTEXT, dynamo_options.protect_mask))
             APP(&ilist, RESTORE_FROM_DC(dcontext, REG_RR6, PROT_OFFS));
@@ -3554,6 +3552,7 @@ emit_fcache_enter_common(dcontext_t *dcontext, generated_code_t *code, byte *pc,
 
     /* free the instrlist_t elements */
     instrlist_clear(dcontext, &ilist);
+#endif
 
     return pc + len;
 }
