@@ -352,31 +352,16 @@ enum {
     /* operand types */
     TYPE_NONE,
     TYPE_A, /* immediate that is absolute address */
-    TYPE_E, /* modrm selects reg or mem addr */
-    /* I don't use type F, I have eflags info in separate field */
-    TYPE_G, /* reg of modrm selects register */
-    TYPE_H, /* vex.vvvv field selects xmm/ymm register */
     TYPE_I, /* immediate */
-    TYPE_J, /* immediate that is relative offset of EIP */
-    TYPE_L, /* top 4 bits of 8-bit immed select xmm/ymm register */
-    TYPE_M, /* modrm select mem addr */
+    TYPE_J, /* immediate that is relative offset of R13 */
+    TYPE_M,
     TYPE_O, /* immediate that is memory offset */
-    TYPE_P, /* reg of modrm selects MMX */
-    TYPE_Q, /* modrm selects MMX or mem addr */
-    TYPE_R, /* modrm selects register */
-    TYPE_S, /* reg of modrm selects segment register */
-    TYPE_V, /* reg of modrm selects XMM */
-    TYPE_W, /* modrm selects XMM or mem addr */
-    TYPE_X, /* DS:(RE)(E)SI */
-    TYPE_Y, /* ES:(RE)(E)SDI */
     TYPE_1,
     TYPE_FLOATCONST,
     TYPE_FLOATMEM,
     /* TODO Do I need separate values here for the thumb regs. */
     TYPE_REG,     /* hardcoded register */
-    TYPE_VAR_REG, /* hardcoded register, default 32 bits, but can be
-                   * 16 w/ data prefix or 64 w/ rex.w: equivalent of Intel 'v'
-                   * == like OPSZ_4_rex8_short2 */
+    TYPE_CO_REG,     /* hardcoded coprocessor register */
     TYPE_INDIR_E,
     TYPE_INDIR_REG,
     /* when adding new types, update type_names[] in encode.c */
@@ -420,87 +405,27 @@ enum {
      */
     OPSZ_NA = DR_REG_INVALID+1, /**< Sentinel value: not a valid size. */ /* = 140 */
     OPSZ_FIRST = OPSZ_NA,
-    OPSZ_0,  /**< Intel 'm': "sizeless": used for both start addresses
-              * (lea, invlpg) and implicit constants (rol, fldl2e, etc.) */
+    OPSZ_0,  /* "sizeless" */
     OPSZ_1, 
     OPSZ_2,
+    OPSZ_3,
     OPSZ_4,
     OPSZ_5,
     OPSZ_6,
     OPSZ_8,
     OPSZ_10,
+    OPSZ_12,
            
     OPSZ_16,
     OPSZ_14, 
     OPSZ_24, 
     OPSZ_28, 
+    OPSZ_32, 
+    OPSZ_40, 
     OPSZ_94, 
     OPSZ_108, 
     OPSZ_512, 
-    /**
-     * The following sizes (OPSZ_*_short*) vary according to the cs segment and the
-     * operand size prefix.  This IR assumes that the cs segment is set to the
-     * default operand size.  The operand size prefix then functions to shrink the
-     * size.  The IR does not explicitly mark the prefix; rather, a shortened size is
-     * requested in the operands themselves, with the IR adding the prefix at encode
-     * time.  Normally the fixed sizes above should be used rather than these
-     * variable sizes, which are used internally by the IR and should only be
-     * externally specified when building an operand in order to be flexible and
-     * allow other operands to decide the size for the instruction (the prefix
-     * applies to the entire instruction).
-     */
-    OPSZ_2_short1, /**< Intel 'c': 2/1 bytes ("2/1" means 2 bytes normally, but if
-                    * another operand requests a short size then this size can
-                    * accommodate by shifting to its short size, which is 1 byte). */
-    OPSZ_4_short2, /**< Intel 'z': 4/2 bytes */
-    OPSZ_4_rex8_short2, /**< Intel 'v': 8/4/2 bytes */
-    OPSZ_4_rex8,   /**< Intel 'd/q' (like 'v' but never 2 bytes). */
-    OPSZ_6_irex10_short4, /**< Intel 'p': On Intel processors this is 10/6/4 bytes for
-                           * segment selector + address.  On AMD processors this is
-                           * 6/4 bytes for segment selector + address (rex is ignored). */
-    OPSZ_8_short2, /**< partially resolved 4x8_short2 */
-    OPSZ_8_short4, /**< Intel 'a': pair of 4_short2 (bound) */
-    OPSZ_28_short14, /**< FPU operating env variable data size (fldenv, fnstenv) */
-    OPSZ_108_short94, /**< FPU state with variable data size (fnsave, frstor) */
-    /** Varies by 32-bit versus 64-bit processor mode. */
-    OPSZ_4x8,  /**< Full register size with no variation by prefix.
-                *   Used for control and debug register moves. */
-    OPSZ_6x10, /**< Intel 's': 6-byte (10-byte for 64-bit mode) table base + limit */
-    /** 
-     * Stack operands not only vary by operand size specifications but also
-     * by 32-bit versus 64-bit processor mode.
-     */
-    OPSZ_4x8_short2, /**< Intel 'v'/'d64' for stack operations.
-                      * Also 64-bit address-size specified operands, which are
-                      * short4 rather than short2 in 64-bit mode (but short2 in
-                      * 32-bit mode).
-                      * Note that this IR does not distinguish extra stack
-                      * operations performed by OP_enter w/ non-zero immed.
-                      */
-    OPSZ_4x8_short2xi8, /**< Intel 'f64': 4_short2 for 32-bit, 8_short2 for 64-bit AMD,
-                         *   always 8 for 64-bit Intel */
-    OPSZ_4_short2xi4,   /**< Intel 'f64': 4_short2 for 32-bit or 64-bit AMD,
-                         *   always 4 for 64-bit Intel */
-    /**
-     * The following 3 sizes differ based on whether the modrm chooses a
-     * register or memory.
-     */
-    OPSZ_1_reg4,  /**< Intel Rd/Mb: zero-extends if reg; used by pextrb */
-    OPSZ_2_reg4,  /**< Intel Rd/Mw: zero-extends if reg; used by pextrw */
-    OPSZ_4_reg16, /**< Intel Udq/Md: sub-xmm but we consider that whole xmm;
-                   *   used by insertps. */
-    /* Sizes used by new instructions */
-    OPSZ_xsave, /**< Size is > 512 bytes: use cpuid to determine.
-                 * Used for FPU, MMX, XMM, etc. state by xsave and xrstor. */
-    OPSZ_12,    /**< 12 bytes: 32-bit iret */
-    OPSZ_32,    /**< 32 bytes: pusha/popa
-                 * Also Intel 'qq','pd','ps','x': 32 bytes (256 bits) */
-    OPSZ_40,    /**< 40 bytes: 64-bit iret */
-    OPSZ_32_short16,      /**< unresolved pusha/popa */
-    OPSZ_8_rex16,         /**< cmpxcgh8b/cmpxchg16b */
-    OPSZ_8_rex16_short4,  /**< Intel 'v' * 2 (far call/ret) */
-    OPSZ_12_rex40_short6, /**< unresolved iret */
-    OPSZ_16_vex32,        /**< 16 or 32 bytes depending on VEX.L */
+
     /* Add new size here.  Also update size_names[] in encode.c. */
     OPSZ_LAST,
 };

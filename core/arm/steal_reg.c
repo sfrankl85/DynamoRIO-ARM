@@ -179,16 +179,16 @@ expand_popa(dcontext_t *dcontext, instr_t *instr, instrlist_t *ilist)
          movl  -20(%esp), %edi  # restore context ptr
     */
     instrlist_preinsert(ilist, instr,
-                        INSTR_CREATE_mov_ld(dcontext, opnd_create_reg(REG_EBX),
+                        INSTR_CREATE_mov_imm(dcontext, opnd_create_reg(REG_EBX),
                                             OPND_CREATE_MEM32(REG_ESP, 0)));
     instrlist_preinsert(ilist, instr,
                         instr_create_save_to_dcontext(dcontext, REG_EBX, XDI_OFFSET));
     instrlist_preinsert(ilist, instr,
-                        INSTR_CREATE_mov_st(dcontext,
+                        INSTR_CREATE_mov_reg(dcontext,
                                             OPND_CREATE_MEM32(REG_ESP, 12),
                                             opnd_create_reg(REG_EDI)));
     instrlist_postinsert(ilist, instr,
-                        INSTR_CREATE_mov_ld(dcontext, opnd_create_reg(REG_EDI),
+                        INSTR_CREATE_mov_imm(dcontext, opnd_create_reg(REG_EDI),
                                             OPND_CREATE_MEM32(REG_ESP, -20)));
     ilist->flags = EDI_VAL_IN_MEM;
 }

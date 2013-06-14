@@ -94,8 +94,8 @@ START_FILE
  * and avoid all this duplication!
  */
 #define NUM_QR_SLOTS 16 
-#define PRE_QR_PADDING 32 /* ??? For EFLAGS/CPSR maybe. */
-#define QR_SAVED_REG_SIZE 128 /* for ymm */
+#define PRE_QR_PADDING 16 /* ??? For EFLAGS/CPSR maybe. */
+#define QR_SAVED_REG_SIZE 16 /* for qr. SJF Why is it 16??? Surely 4 ints is 4*32??? */
 #define QR_SAVED_SIZE ((NUM_QR_SLOTS)*(QR_SAVED_REG_SIZE)) 
 
 #define NUM_DR_SLOTS 32 

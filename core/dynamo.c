@@ -1439,7 +1439,7 @@ create_new_dynamo_context(bool initial, byte *dstack_in)
     /* 264138: ensure xmm/ymm slots are aligned so we can use vmovdqa */
     ASSERT(ALIGNED(get_mcontext(dcontext)->qr, QR_REG_SIZE));
     /* also ensure we don't have extra padding beyond x86.asm defines */
-    ASSERT(sizeof(priv_mcontext_t) == 10*sizeof(reg_t) +
+    ASSERT(sizeof(priv_mcontext_t) == 18*sizeof(reg_t) +
            PRE_QR_PADDING + QR_SLOTS_SIZE);
 
 #else

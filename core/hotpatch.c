@@ -3652,7 +3652,7 @@ hotp_inject_gateway_call(dcontext_t *dcontext, instrlist_t *ilist,
     GET_FROM_DC_OFFS_TO_REG(DSTACK_OFFSET, REG_XAX, false /* !have_dc */, REG_XBX);
 
     /* app reg ptr is put in eax */
-    MINSERT(ilist, where, INSTR_CREATE_sub
+    MINSERT(ilist, where, INSTR_CREATE_sub_imm
             (dcontext, opnd_create_reg(REG_XAX),
              OPND_CREATE_INT8(HOTP_CONTEXT_OFFSET_ON_DSTACK)));
 

@@ -3029,7 +3029,8 @@ build_profile_call_buffer()
 
     /* pop arguments: addl $0xc, %esp */
     APP(&ilist,
-        INSTR_CREATE_add(dcontext, opnd_create_reg(REG_ESP), OPND_CREATE_INT8(0xc)));
+        INSTR_CREATE_add_imm(dcontext, opnd_create_reg(REG_ESP), 
+                             opnd_create_reg(REG_ESP), OPND_CREATE_INT8(0xc)));
 
     /* restore eflags */
     APP(&ilist, INSTR_CREATE_RAW_popf(dcontext));
@@ -3148,7 +3149,7 @@ preinsert_swap_peb(dcontext_t *dcontext, instrlist_t *ilist, instr_t *next,
      */
     PRE(ilist, next, INSTR_CREATE_mov_imm
         (dcontext, opnd_create_reg(reg_scratch), OPND_CREATE_INTPTR((ptr_int_t)tgt_peb)));
-    PRE(ilist, next, INSTR_CREATE_mov_st
+    PRE(ilist, next, INSTR_CREATE_mov_reg
         (dcontext, opnd_create_far_base_disp
          (SEG_TLS, REG_NULL, REG_NULL, 0, PEB_TIB_OFFSET, OPSZ_PTR),
          opnd_create_reg(reg_scratch)));
@@ -3160,7 +3161,7 @@ preinsert_swap_peb(dcontext_t *dcontext, instrlist_t *ilist, instr_t *next,
      */
     if (to_priv) {
         /* yes errno is 32 bits even on x64 */
-        PRE(ilist, next, INSTR_CREATE_mov_ld
+        PRE(ilist, next, INSTR_CREATE_mov_reg
             (dcontext, opnd_create_reg(scratch32), opnd_create_far_base_disp
              (SEG_TLS, REG_NULL, REG_NULL, 0, ERRNO_TIB_OFFSET, OPSZ_4)));
         PRE(ilist, next, SAVE_TO_DC_VIA_REG
@@ -3168,7 +3169,7 @@ preinsert_swap_peb(dcontext_t *dcontext, instrlist_t *ilist, instr_t *next,
     } else {
         PRE(ilist, next, RESTORE_FROM_DC_VIA_REG
             (absolute, dcontext, reg_dr, scratch32, APP_ERRNO_OFFSET));
-        PRE(ilist, next, INSTR_CREATE_mov_st
+        PRE(ilist, next, INSTR_CREATE_mov_reg
             (dcontext, opnd_create_far_base_disp
              (SEG_TLS, REG_NULL, REG_NULL, 0, ERRNO_TIB_OFFSET, OPSZ_4),
              opnd_create_reg(scratch32)));
@@ -3180,7 +3181,7 @@ preinsert_swap_peb(dcontext_t *dcontext, instrlist_t *ilist, instr_t *next,
      * We have never seen that.
      */
     if (to_priv) {
-        PRE(ilist, next, INSTR_CREATE_mov_ld
+        PRE(ilist, next, INSTR_CREATE_mov_reg
             (dcontext, opnd_create_reg(reg_scratch), opnd_create_far_base_disp
              (SEG_TLS, REG_NULL, REG_NULL, 0, BASE_STACK_TIB_OFFSET, OPSZ_PTR)));
         PRE(ilist, next, SAVE_TO_DC_VIA_REG
@@ -3191,14 +3192,14 @@ preinsert_swap_peb(dcontext_t *dcontext, instrlist_t *ilist, instr_t *next,
             (dcontext, opnd_create_reg(reg_scratch),
              opnd_create_base_disp(reg_scratch, REG_NULL, 0,
                                    -(int)DYNAMORIO_STACK_SIZE, OPSZ_lea)));
-        PRE(ilist, next, INSTR_CREATE_mov_st
+        PRE(ilist, next, INSTR_CREATE_mov_reg
             (dcontext, opnd_create_far_base_disp
              (SEG_TLS, REG_NULL, REG_NULL, 0, BASE_STACK_TIB_OFFSET, OPSZ_PTR),
              opnd_create_reg(reg_scratch)));
     } else {
         PRE(ilist, next, RESTORE_FROM_DC_VIA_REG
             (absolute, dcontext, reg_dr, reg_scratch, APP_STACK_LIMIT_OFFSET));
-        PRE(ilist, next, INSTR_CREATE_mov_st
+        PRE(ilist, next, INSTR_CREATE_mov_reg
             (dcontext, opnd_create_far_base_disp
              (SEG_TLS, REG_NULL, REG_NULL, 0, BASE_STACK_TIB_OFFSET, OPSZ_PTR),
              opnd_create_reg(reg_scratch)));
@@ -3209,7 +3210,7 @@ preinsert_swap_peb(dcontext_t *dcontext, instrlist_t *ilist, instr_t *next,
      * constant, and TEB->LastErrorCode, which is not peristent, we have to maintain
      * both values and swap between them which is expensive.
      */
-    PRE(ilist, next, INSTR_CREATE_mov_ld
+    PRE(ilist, next, INSTR_CREATE_mov_reg
         (dcontext, opnd_create_reg(reg_scratch), opnd_create_far_base_disp
          (SEG_TLS, REG_NULL, REG_NULL, 0, NLS_CACHE_TIB_OFFSET, OPSZ_PTR)));
     PRE(ilist, next, SAVE_TO_DC_VIA_REG
@@ -3218,7 +3219,7 @@ preinsert_swap_peb(dcontext_t *dcontext, instrlist_t *ilist, instr_t *next,
     PRE(ilist, next, RESTORE_FROM_DC_VIA_REG
         (absolute, dcontext, reg_dr, reg_scratch,
          to_priv ? PRIV_NLS_CACHE_OFFSET : APP_NLS_CACHE_OFFSET));
-    PRE(ilist, next, INSTR_CREATE_mov_st
+    PRE(ilist, next, INSTR_CREATE_mov_reg
         (dcontext, opnd_create_far_base_disp
          (SEG_TLS, REG_NULL, REG_NULL, 0, NLS_CACHE_TIB_OFFSET, OPSZ_PTR),
          opnd_create_reg(reg_scratch)));
@@ -3226,7 +3227,7 @@ preinsert_swap_peb(dcontext_t *dcontext, instrlist_t *ilist, instr_t *next,
      * constant, and TEB->LastErrorCode, which is not peristent, we have to maintain
      * both values and swap between them which is expensive.
      */
-    PRE(ilist, next, INSTR_CREATE_mov_ld
+    PRE(ilist, next, INSTR_CREATE_mov_reg
         (dcontext, opnd_create_reg(reg_scratch), opnd_create_far_base_disp
          (SEG_TLS, REG_NULL, REG_NULL, 0, FLS_DATA_TIB_OFFSET, OPSZ_PTR)));
     PRE(ilist, next, SAVE_TO_DC_VIA_REG
@@ -3235,14 +3236,14 @@ preinsert_swap_peb(dcontext_t *dcontext, instrlist_t *ilist, instr_t *next,
     PRE(ilist, next, RESTORE_FROM_DC_VIA_REG
         (absolute, dcontext, reg_dr, reg_scratch,
          to_priv ? PRIV_FLS_OFFSET : APP_FLS_OFFSET));
-    PRE(ilist, next, INSTR_CREATE_mov_st
+    PRE(ilist, next, INSTR_CREATE_mov_reg
         (dcontext, opnd_create_far_base_disp
          (SEG_TLS, REG_NULL, REG_NULL, 0, FLS_DATA_TIB_OFFSET, OPSZ_PTR),
          opnd_create_reg(reg_scratch)));
     /* We swap TEB->ReservedForNtRpc as well.  Hopefully there won't be many
      * more we'll have to swap.
      */
-    PRE(ilist, next, INSTR_CREATE_mov_ld
+    PRE(ilist, next, INSTR_CREATE_mov_reg
         (dcontext, opnd_create_reg(reg_scratch), opnd_create_far_base_disp
          (SEG_TLS, REG_NULL, REG_NULL, 0, NT_RPC_TIB_OFFSET, OPSZ_PTR)));
     PRE(ilist, next, SAVE_TO_DC_VIA_REG
@@ -3251,7 +3252,7 @@ preinsert_swap_peb(dcontext_t *dcontext, instrlist_t *ilist, instr_t *next,
     PRE(ilist, next, RESTORE_FROM_DC_VIA_REG
         (absolute, dcontext, reg_dr, reg_scratch,
          to_priv ? PRIV_RPC_OFFSET : APP_RPC_OFFSET));
-    PRE(ilist, next, INSTR_CREATE_mov_st
+    PRE(ilist, next, INSTR_CREATE_mov_reg
         (dcontext, opnd_create_far_base_disp
          (SEG_TLS, REG_NULL, REG_NULL, 0, NT_RPC_TIB_OFFSET, OPSZ_PTR),
          opnd_create_reg(reg_scratch)));
@@ -3433,7 +3434,7 @@ emit_fcache_enter_common(dcontext_t *dcontext, generated_code_t *code, byte *pc,
 
     if (!absolute) {
         /* grab gen routine's parameter dcontext and put it into R7 */
-        APP(&ilist, INSTR_CREATE_mov_ld(dcontext, opnd_create_reg(REG_RR7), OPND_ARG1));
+        APP(&ilist, INSTR_CREATE_mov_reg(dcontext, opnd_create_reg(REG_RR7), OPND_ARG1));
         if (TEST(SELFPROT_DCONTEXT, dynamo_options.protect_mask))
             APP(&ilist, RESTORE_FROM_DC(dcontext, REG_RR6, PROT_OFFS));
     }
@@ -3537,7 +3538,7 @@ emit_fcache_enter_common(dcontext_t *dcontext, generated_code_t *code, byte *pc,
     } else {
         if (shared) {
             /* next_tag placed into tls slot earlier in this routine */
-            APP(&ilist, INSTR_CREATE_jmp_ind(dcontext, 
+            APP(&ilist, INSTR_CREATE_branch_ind(dcontext, 
                                              OPND_TLS_FIELD(FCACHE_ENTER_TARGET_SLOT)));
 
         } else {
@@ -3778,7 +3779,7 @@ append_fcache_return_common(dcontext_t *dcontext, generated_code_t *code,
 #ifdef X64
     if (GENCODE_IS_X86(code->gencode_mode)) {
         instr_t *label = INSTR_CREATE_label(dcontext);
-        instr_t *ljmp = INSTR_CREATE_jmp_far
+        instr_t *ljmp = INSTR_CREATE_branch_far
             (dcontext, opnd_create_far_instr(CS64_SELECTOR, label));
         instr_set_x86_mode(ljmp, true/*x86*/);
         APP(ilist, ljmp);
@@ -3975,7 +3976,7 @@ append_fcache_return_common(dcontext_t *dcontext, generated_code_t *code,
         /* PR 248210: unsupported feature on x64 */
         IF_X64(ASSERT_NOT_IMPLEMENTED(false)); /* PR 244737: fix abs address */
         APP(ilist,
-            INSTR_CREATE_mov_st(dcontext,
+            INSTR_CREATE_mov_reg(dcontext,
                                 OPND_CREATE_MEM32(REG_NULL, (int)&sideline_trace),
                                 OPND_CREATE_INT32(0)));
     }
@@ -4181,7 +4182,7 @@ emit_coarse_exit_prefix(dcontext_t *dcontext, byte *pc, coarse_info_t *info)
 #ifdef X64
     }
 #endif
-    APP(&ilist, INSTR_CREATE_jmp(dcontext,
+    APP(&ilist, INSTR_CREATE_branch(dcontext,
         opnd_create_pc(get_direct_exit_target(dcontext,
                                               FRAG_SHARED | FRAG_COARSE_GRAIN |
                                               COARSE_32_FLAG(info)))));
@@ -4198,9 +4199,9 @@ emit_coarse_exit_prefix(dcontext_t *dcontext, byte *pc, coarse_info_t *info)
          */
         (info->frozen && info->mod_shift != 0)) {
         /* trace_t heads need to store the info ptr for lazy linking */
-        APP(&ilist, INSTR_CREATE_jmp(dcontext, opnd_create_instr(fcache_ret_prefix)));
+        APP(&ilist, INSTR_CREATE_branch(dcontext, opnd_create_instr(fcache_ret_prefix)));
     } else {
-        APP(&ilist, INSTR_CREATE_jmp
+        APP(&ilist, INSTR_CREATE_branch
             (dcontext, opnd_create_pc(trace_head_return_coarse_routine(IF_X64(mode)))));
     }
 
@@ -4209,7 +4210,7 @@ emit_coarse_exit_prefix(dcontext_t *dcontext, byte *pc, coarse_info_t *info)
                              get_source_fragment_type(dcontext,
                                                       FRAG_SHARED | FRAG_COARSE_GRAIN),
                              IBL_RETURN _IF_X64(mode));
-    APP(&ilist, INSTR_CREATE_jmp(dcontext, opnd_create_pc(ibl)));
+    APP(&ilist, INSTR_CREATE_branch(dcontext, opnd_create_pc(ibl)));
     add_patch_marker(&patch, instrlist_last(&ilist), PATCH_ASSEMBLE_ABSOLUTE,
                      0 /* start of instr */, (ptr_uint_t*)&info->ibl_ret_prefix);
 
@@ -4217,7 +4218,7 @@ emit_coarse_exit_prefix(dcontext_t *dcontext, byte *pc, coarse_info_t *info)
                              get_source_fragment_type(dcontext,
                                                       FRAG_SHARED | FRAG_COARSE_GRAIN),
                              IBL_INDCALL _IF_X64(mode));
-    APP(&ilist, INSTR_CREATE_jmp(dcontext, opnd_create_pc(ibl)));
+    APP(&ilist, INSTR_CREATE_branch(dcontext, opnd_create_pc(ibl)));
     add_patch_marker(&patch, instrlist_last(&ilist), PATCH_ASSEMBLE_ABSOLUTE,
                      0 /* start of instr */, (ptr_uint_t*)&info->ibl_call_prefix);
 
@@ -4225,7 +4226,7 @@ emit_coarse_exit_prefix(dcontext_t *dcontext, byte *pc, coarse_info_t *info)
                              get_source_fragment_type(dcontext,
                                                       FRAG_SHARED | FRAG_COARSE_GRAIN),
                              IBL_INDJMP _IF_X64(mode));
-    APP(&ilist, INSTR_CREATE_jmp(dcontext, opnd_create_pc(ibl)));
+    APP(&ilist, INSTR_CREATE_branch(dcontext, opnd_create_pc(ibl)));
     add_patch_marker(&patch, instrlist_last(&ilist), PATCH_ASSEMBLE_ABSOLUTE,
                      0 /* start of instr */, (ptr_uint_t*)&info->ibl_jmp_prefix);
 
@@ -4340,7 +4341,8 @@ insert_restore_eflags(dcontext_t *dcontext, instrlist_t *ilist, instr_t *where,
         !INTERNAL_OPTION(unsafe_ignore_overflow)) { 
         /* restore OF using add that overflows and sets OF if OF was on when we did seto */
         PRE(ilist, where,
-            INSTR_CREATE_add(dcontext, opnd_create_reg(REG_RR0), OPND_CREATE_INT8(0x7f)));
+            INSTR_CREATE_add_imm(dcontext, opnd_create_reg(REG_RR0), 
+                                 opnd_create_reg(REG_RR0), OPND_CREATE_INT8(0x7f)));
     }
     /* restore other 5 flags (still in xax at this point) */
     /*>>>    sahf                                                    */
@@ -4392,7 +4394,7 @@ append_increment_counter(dcontext_t *dcontext, instrlist_t *ilist,
         /* get dcontext in register (xdi) */
         append_shared_get_dcontext(dcontext, ilist, false /* dead register */);
         /* XDI now has dcontext */
-        APP(ilist, INSTR_CREATE_mov_ld(dcontext, opnd_create_reg(REG_RR7),
+        APP(ilist, INSTR_CREATE_mov_reg(dcontext, opnd_create_reg(REG_RR7),
                                        OPND_DC_FIELD(absolute, dcontext, OPSZ_PTR, 
                                                      FRAGMENT_FIELD_OFFSET)));
 
@@ -4402,7 +4404,7 @@ append_increment_counter(dcontext_t *dcontext, instrlist_t *ilist,
          * in the per_thread_t struct -- see fragment.h, not worth it
          */
         if (entry_register != REG_NULL) {
-            APP(ilist, INSTR_CREATE_mov_ld
+            APP(ilist, INSTR_CREATE_mov_reg
                 (dcontext, opnd_create_reg(REG_RR7),
                  OPND_CREATE_MEMPTR(REG_RR7,
                                     ibl_code->entry_stats_to_lookup_table_offset)));
@@ -4412,20 +4414,20 @@ append_increment_counter(dcontext_t *dcontext, instrlist_t *ilist,
             counter_opnd = opnd_create_base_disp(REG_RR7, entry_register, 1,
                                                  counter_offset, OPSZ_4);
         } else {
-            APP(ilist, INSTR_CREATE_mov_ld
+            APP(ilist, INSTR_CREATE_mov_reg
                 (dcontext, opnd_create_reg(REG_RR7),
                  OPND_CREATE_MEMPTR(REG_RR7, ibl_code->unprot_stats_offset)));
             /* XDI now has unprot_stats structure */
             counter_opnd = OPND_CREATE_MEM32(REG_RR7, counter_offset);
         }
 
-        counter = INSTR_CREATE_inc(dcontext, counter_opnd);
+        counter = INSTR_CREATE_add_imm(dcontext, counter_opnd, counter_opnd, OPND_CREATE_INT8(1));
         APP(ilist, counter);
     } else {
         /* TAKE_ADDRESS will in fact add the necessary base to the statistics structure, 
            hence no explicit indirection needed here */
         opnd_t counter_opnd = OPND_CREATE_MEMPTR(entry_register, counter_offset);
-        counter = INSTR_CREATE_inc(dcontext, counter_opnd);
+        counter = INSTR_CREATE_add_imm(dcontext, counter_opnd, counter_opnd, OPND_CREATE_INT8(1));
         /* hack to get both this table's unprot offset and the specific stat's offs */
         ASSERT(counter_offset < USHRT_MAX);
         if (entry_register != REG_NULL) {
@@ -4595,7 +4597,7 @@ append_ibl_found(dcontext_t *dcontext, instrlist_t *ilist,
         /* FIXME: do we want this?  seems to be a problem, I'm disabling:
          * ASSERT(!collision || start_pc_offset == FRAGMENT_START_PC_OFFS);  // c \imply FRAGMENT
          */
-        APP(ilist, INSTR_CREATE_jmp_ind(dcontext,
+        APP(ilist, INSTR_CREATE_branch_ind(dcontext,
                                         OPND_CREATE_MEMPTR(REG_RR1, start_pc_offset)));
     } else {
         /* There is no prefix so we must restore all and jmp through memory:
@@ -4604,7 +4606,7 @@ append_ibl_found(dcontext_t *dcontext, instrlist_t *ilist,
          *     <restore %xcx from xcx slot>
          *     jmp*     <xbx slot>
          */
-        APP(ilist, INSTR_CREATE_mov_ld(dcontext, opnd_create_reg(REG_RR1),
+        APP(ilist, INSTR_CREATE_mov_reg(dcontext, opnd_create_reg(REG_RR1),
                                        OPND_CREATE_MEMPTR(REG_RR1, start_pc_offset)));
         if (absolute) {
             APP(ilist, SAVE_TO_DC(dcontext, REG_RR1, R3_OFFSET));
@@ -4614,7 +4616,7 @@ append_ibl_found(dcontext_t *dcontext, instrlist_t *ilist,
                 APP(ilist, RESTORE_FROM_TLS(dcontext, REG_RR1, MANGLE_XCX_SPILL_SLOT));
             else
                 APP(ilist, RESTORE_FROM_DC(dcontext, REG_RR1, R1_OFFSET));
-            APP(ilist, INSTR_CREATE_jmp_ind(dcontext,
+            APP(ilist, INSTR_CREATE_branch_ind(dcontext,
                                             OPND_DC_FIELD(absolute, dcontext, OPSZ_PTR,
                                                           R3_OFFSET)));
         } else {
@@ -4625,7 +4627,7 @@ append_ibl_found(dcontext_t *dcontext, instrlist_t *ilist,
             else
 #endif
                 APP(ilist, RESTORE_FROM_TLS(dcontext, REG_RR1, MANGLE_XCX_SPILL_SLOT));
-            APP(ilist, INSTR_CREATE_jmp_ind(dcontext,
+            APP(ilist, INSTR_CREATE_branch_ind(dcontext,
                                             OPND_TLS_FIELD(INDIRECT_STUB_SPILL_SLOT)));
         }
     }
@@ -4658,16 +4660,19 @@ append_linkcount_incr(dcontext_t *dcontext, instrlist_t *ilist, bool clobber_efl
 # ifdef LINKCOUNT_64_BITS
         /*>>>    addl    $1,count_offs(ebx == &linkstub)                 */
         /*>>>    adcl    $0,count_offs+4(ebx == &linkstub)               */
-        APP(ilist, INSTR_CREATE_add(dcontext,
+        APP(ilist, INSTR_CREATE_add_imm(dcontext,
+                                    OPND_CREATE_MEM32(REG_EBX, LINKSTUB_COUNT_OFFS),
                                     OPND_CREATE_MEM32(REG_EBX, LINKSTUB_COUNT_OFFS),
                                     OPND_CREATE_INT8(1)));
-        APP(ilist, INSTR_CREATE_adc(dcontext,
+        APP(ilist, INSTR_CREATE_adc_imm(dcontext,
+                                    OPND_CREATE_MEM32(REG_EBX, LINKSTUB_COUNT_OFFS+4),
                                     OPND_CREATE_MEM32(REG_EBX, LINKSTUB_COUNT_OFFS+4),
                                     OPND_CREATE_INT8(0)));
 # else
         /*>>>    incl    count_offs(ebx == &linkstub)                    */
-        APP(ilist, INSTR_CREATE_inc(dcontext,
-                                    OPND_CREATE_MEM32(REG_EBX, LINKSTUB_COUNT_OFFS)));
+        APP(ilist, INSTR_CREATE_add_imm(dcontext,
+                                    OPND_CREATE_MEM32(REG_EBX, LINKSTUB_COUNT_OFFS),
+                                    OPND_CREATE_MEM32(REG_EBX, LINKSTUB_COUNT_OFFS), OPND_CREATE_INT8(1)));
 # endif
     } else {
 # ifdef LINKCOUNT_64_BITS
@@ -4675,17 +4680,17 @@ append_linkcount_incr(dcontext_t *dcontext, instrlist_t *ilist, bool clobber_efl
 # endif
         /*>>>    movl    %ebx, %ecx */
         /*>>>    jecxz   next:      */
-        APP(ilist, INSTR_CREATE_mov_ld(dcontext, opnd_create_reg(REG_ECX),
+        APP(ilist, INSTR_CREATE_mov_reg(dcontext, opnd_create_reg(REG_ECX),
                                        opnd_create_reg(REG_EBX)));
         APP(ilist, INSTR_CREATE_jecxz(dcontext, opnd_create_instr(next)));
         /*>>>    movl    count_offs(%ebx == &linkstub), %ecx              */
         /*>>>    lea     1(%ecx), %ecx                                    */
         /*>>>    movl    %ecx, count_offs(%ebx == &linkstub), %ecx        */
-        APP(ilist, INSTR_CREATE_mov_ld(dcontext, opnd_create_reg(REG_ECX),
+        APP(ilist, INSTR_CREATE_mov_reg(dcontext, opnd_create_reg(REG_ECX),
                                OPND_CREATE_MEM32(REG_EBX, LINKSTUB_COUNT_OFFS)));
         APP(ilist, INSTR_CREATE_lea(dcontext, opnd_create_reg(REG_ECX),
                             opnd_create_base_disp(REG_ECX, REG_NULL, 0, 1, OPSZ_lea)));
-        APP(ilist, INSTR_CREATE_mov_st(dcontext, 
+        APP(ilist, INSTR_CREATE_mov_reg(dcontext, 
                                OPND_CREATE_MEM32(REG_EBX, LINKSTUB_COUNT_OFFS),
                                opnd_create_reg(REG_ECX)));
 # ifdef LINKCOUNT_64_BITS
@@ -4696,14 +4701,14 @@ append_linkcount_incr(dcontext_t *dcontext, instrlist_t *ilist, bool clobber_efl
         /*>>>    lea     1(%ecx), %ecx                                    */
         /*>>>    movl    %ecx, count_offs+4(%ebx == &linkstub), %ecx      */
         /*>>>  nocarry:                                                   */
-        carry = INSTR_CREATE_mov_ld(dcontext, opnd_create_reg(REG_ECX),
+        carry = INSTR_CREATE_mov_reg(dcontext, opnd_create_reg(REG_ECX),
                                     OPND_CREATE_MEM32(REG_EBX, LINKSTUB_COUNT_OFFS));
         APP(ilist, INSTR_CREATE_jecxz(dcontext, opnd_create_instr(carry)));
-        APP(ilist, INSTR_CREATE_jmp(dcontext, opnd_create_instr(next)));
+        APP(ilist, INSTR_CREATE_branch(dcontext, opnd_create_instr(next)));
         APP(ilist, carry);
         APP(ilist, INSTR_CREATE_lea(dcontext, opnd_create_reg(REG_ECX),
                             opnd_create_base_disp(REG_ECX, REG_NULL, 0, 1, OPSZ_lea)));
-        APP(ilist, INSTR_CREATE_mov_st(dcontext, 
+        APP(ilist, INSTR_CREATE_mov_reg(dcontext, 
                                OPND_CREATE_MEM32(REG_EBX, LINKSTUB_COUNT_OFFS),
                                opnd_create_reg(REG_ECX)));
 # endif
@@ -4826,7 +4831,7 @@ append_ibl_head(dcontext_t *dcontext, instrlist_t *ilist,
     /* make a copy of the tag for hashing
      * keep original in xbx, hash will be in xcx
      *>>>    mov     %xcx,%xbx                                       */
-    APP(ilist, INSTR_CREATE_mov_ld(dcontext, opnd_create_reg(REG_RR3),
+    APP(ilist, INSTR_CREATE_mov_reg(dcontext, opnd_create_reg(REG_RR3),
                                    opnd_create_reg(REG_RR1)));
 
     if (only_spill_state_in_tls) {
@@ -4835,7 +4840,7 @@ append_ibl_head(dcontext_t *dcontext, instrlist_t *ilist,
         /*   TODO:  make this an 8bit offset, currently it is a 32bit one
              8b bf 94 00 00 00    mov    0x94(%xdi) -> %xdi 
         */
-        APP(ilist, INSTR_CREATE_mov_ld(dcontext, opnd_create_reg(REG_RR7),
+        APP(ilist, INSTR_CREATE_mov_reg(dcontext, opnd_create_reg(REG_RR7),
                                        OPND_DC_FIELD(absolute, dcontext, OPSZ_PTR, 
                                                      FRAGMENT_FIELD_OFFSET)));
         /* TODO: should have a flag that SAVE_TO_DC can ASSERT(valid_DC_in_reg) */
@@ -4892,7 +4897,7 @@ append_ibl_head(dcontext_t *dcontext, instrlist_t *ilist,
         IF_X64(ASSERT(CHECK_TRUNCATE_TYPE_int
                       (GET_IB_FTABLE(ibl_code, target_trace_table, table))));
         table_in_xdi =
-            INSTR_CREATE_mov_ld(dcontext, opnd_create_reg(REG_RR7),
+            INSTR_CREATE_mov_reg(dcontext, opnd_create_reg(REG_RR7),
                                 opnd_create_base_disp(REG_RR7, REG_NULL, 0,
                                                       (int)
                                                       GET_IB_FTABLE(ibl_code,
@@ -4949,7 +4954,7 @@ append_ibl_head(dcontext_t *dcontext, instrlist_t *ilist,
         /* are 4 adds faster than 1 lea, for x64? */
         for (i = IBL_HASH_FUNC_OFFSET_MAX;
              i > HASHTABLE_IBL_OFFSET(ibl_code->branch_type); i--) {
-            APP(ilist, INSTR_CREATE_add(dcontext, opnd_create_reg(REG_RR1),
+            APP(ilist, INSTR_CREATE_add_reg(dcontext, opnd_create_reg(REG_RR1),
                                         opnd_create_reg(REG_RR1)));
         }
         /* we separately add the lookuptable base since we'd need an extra register
@@ -4962,7 +4967,7 @@ append_ibl_head(dcontext_t *dcontext, instrlist_t *ilist,
             OPND_TLS_FIELD(TLS_TABLE_SLOT(ibl_code->branch_type)) /* addr in TLS */:
             opnd_create_reg(REG_RR7) /* addr in %xdi */;
         APP(ilist,
-            INSTR_CREATE_add(dcontext, opnd_create_reg(REG_RR1), table_opnd));
+            INSTR_CREATE_add_reg(dcontext, opnd_create_reg(REG_RR1), table_opnd));
     }
 
     /* compare tags, empty slot is not 0, instead is a constant frag w/ tag 0 
@@ -5095,11 +5100,11 @@ miss:
 //TODO SJF
     if (DYNAMO_OPTION(indirect_stubs)) {
         if (absolute) {
-            miss = INSTR_CREATE_mov_st(dcontext,
+            miss = INSTR_CREATE_mov_reg(dcontext,
                                        opnd_create_dcontext_field(dcontext, R7_OFFSET),
                                        OPND_CREATE_INT32(0));
         } else {
-            miss = INSTR_CREATE_mov_st(dcontext,
+            miss = INSTR_CREATE_mov_reg(dcontext,
                                        OPND_TLS_FIELD(TLS_XDX_SLOT),
                                        OPND_CREATE_INT32(0));
         }
@@ -5114,19 +5119,19 @@ miss:
             if (absolute) {
                 unlink = SAVE_TO_DC(dcontext, REG_EBX, R3_OFFSET);
                 after_unlink =
-                    INSTR_CREATE_mov_st(dcontext,
+                    INSTR_CREATE_mov_reg(dcontext,
                                         opnd_create_dcontext_field(dcontext, 
                                                                    R7_OFFSET),
                                         OPND_CREATE_INT32(0));
             } else {
                 unlink = SAVE_TO_TLS(dcontext, REG_EBX, TLS_XBX_SLOT);
-                after_unlink = INSTR_CREATE_mov_st(dcontext,
+                after_unlink = INSTR_CREATE_mov_reg(dcontext,
                                                    OPND_TLS_FIELD(TLS_XDX_SLOT),
                                                    OPND_CREATE_INT32(0));
             }
             APP(&ilist, unlink);
             APP(&ilist, after_unlink);
-            APP(&ilist, INSTR_CREATE_jmp(dcontext, 
+            APP(&ilist, INSTR_CREATE_branch(dcontext, 
                                          opnd_create_pc(unlinked_ibl_pc)));
         } else {
             if (absolute)
@@ -5139,7 +5144,7 @@ miss:
         }
         APP(&ilist, miss);
         APP(&ilist,
-            INSTR_CREATE_jmp(dcontext, 
+            INSTR_CREATE_branch(dcontext, 
                              opnd_create_pc(DYNAMO_OPTION(atomic_inlined_linking) ? 
                                             linked_ibl_pc : unlinked_ibl_pc)));
     
@@ -5174,7 +5179,7 @@ miss:
          * routines (they all assume they can find the unlinked from the current
          * target in a certain manner).
          */
-        unlink = INSTR_CREATE_jmp(dcontext, opnd_create_pc(unlinked_ibl_pc));
+        unlink = INSTR_CREATE_branch(dcontext, opnd_create_pc(unlinked_ibl_pc));
         APP(&ilist, unlink);
         /* FIXME: w/ private traces and htable stats we have a patch entry
          * inserted inside app_ibl_head (in append_ibl_found) at a later instr
@@ -5214,9 +5219,9 @@ miss:
  * ASSERTs to help you.
  */
 #ifdef HASHTABLE_STATISTICS
-#  define INSTR_CREATE_jmp_smart INSTR_CREATE_jmp
+#  define INSTR_CREATE_branch_smart INSTR_CREATE_branch
 #else
-#  define INSTR_CREATE_jmp_smart INSTR_CREATE_jmp_short
+#  define INSTR_CREATE_branch_smart INSTR_CREATE_branch_short
 #endif
 
 /*
@@ -5305,7 +5310,7 @@ emit_indirect_branch_lookup(dcontext_t *dcontext, generated_code_t *code, byte *
     }
 #endif
     
-    fragment_not_found = INSTR_CREATE_mov_ld(dcontext, opnd_create_reg(REG_RR1),
+    fragment_not_found = INSTR_CREATE_mov_reg(dcontext, opnd_create_reg(REG_RR1),
                                              opnd_create_reg(REG_RR3));
 
     /* initialize the ilist */
@@ -5429,8 +5434,8 @@ emit_indirect_branch_lookup(dcontext_t *dcontext, generated_code_t *code, byte *
                          DYNAMO_OPTION(bb_single_restore_prefix),
                          NULL);
     } else {
-        /* case 5232: use INSTR_CREATE_jmp_smart, since release builds can use a short jump */
-        APP(&ilist, INSTR_CREATE_jmp_smart(dcontext, opnd_create_instr(compare_tag)));
+        /* case 5232: use INSTR_CREATE_branch_smart, since release builds can use a short jump */
+        APP(&ilist, INSTR_CREATE_branch_smart(dcontext, opnd_create_instr(compare_tag)));
     }
 
     if (INTERNAL_OPTION(ibl_sentinel_check)) {
@@ -5483,7 +5488,7 @@ emit_indirect_branch_lookup(dcontext_t *dcontext, generated_code_t *code, byte *
                  * it and then reload per_thread_t* and then the table*. */
                 append_shared_get_dcontext(dcontext, &ilist, false);
                 APP(&ilist,
-                    INSTR_CREATE_mov_ld(dcontext, opnd_create_reg(REG_RR7),
+                    INSTR_CREATE_mov_reg(dcontext, opnd_create_reg(REG_RR7),
                                         OPND_DC_FIELD(absolute, dcontext, OPSZ_PTR, 
                                                       FRAGMENT_FIELD_OFFSET)));
                 /* We could load directly into XCX but since hash stats are on,
@@ -5494,7 +5499,7 @@ emit_indirect_branch_lookup(dcontext_t *dcontext, generated_code_t *code, byte *
                 IF_X64(ASSERT(CHECK_TRUNCATE_TYPE_int
                               (GET_IB_FTABLE(ibl_code, target_trace_table, table))));
                 APP(&ilist,
-                    INSTR_CREATE_mov_ld(dcontext, opnd_create_reg(REG_RR7),
+                    INSTR_CREATE_mov_reg(dcontext, opnd_create_reg(REG_RR7),
                                         opnd_create_base_disp
                                         (REG_RR7, REG_NULL, 0,
                                          (int) GET_IB_FTABLE(ibl_code,
@@ -5503,14 +5508,14 @@ emit_indirect_branch_lookup(dcontext_t *dcontext, generated_code_t *code, byte *
             }
 # endif
             /* XDI should still point to lookuptable[0] */
-            APP(&ilist, INSTR_CREATE_mov_ld(dcontext, opnd_create_reg(REG_RR1),
+            APP(&ilist, INSTR_CREATE_mov_reg(dcontext, opnd_create_reg(REG_RR1),
                                             opnd_create_reg(REG_RR7)));
         }
 
         /*>>>    jmp    compare_tag                                 */
         /* FIXME: should fit in a jmp_short for release builds */
-        /* case 5232: use INSTR_CREATE_jmp_smart here */
-        APP(&ilist, INSTR_CREATE_jmp(dcontext, opnd_create_instr(compare_tag)));
+        /* case 5232: use INSTR_CREATE_branch_smart here */
+        APP(&ilist, INSTR_CREATE_branch(dcontext, opnd_create_instr(compare_tag)));
     } 
 
     /* there is no fall-through through here: we insert separate entry points here */
@@ -5534,7 +5539,7 @@ emit_indirect_branch_lookup(dcontext_t *dcontext, generated_code_t *code, byte *
                              (ptr_uint_t*)&ibl_code->trace_cmp_unlinked);
             insert_restore_eflags(dcontext, &ilist, NULL, 0, true/*tls*/, false/*!abs*/,
                                   x86_to_x64);
-            APP(&ilist, INSTR_CREATE_jmp(dcontext, opnd_create_instr(unlinked)));
+            APP(&ilist, INSTR_CREATE_branch(dcontext, opnd_create_instr(unlinked)));
         }
     }
 #endif
@@ -5579,13 +5584,13 @@ emit_indirect_branch_lookup(dcontext_t *dcontext, generated_code_t *code, byte *
             APP(&ilist, instr_create_save_immed_to_dcontext
                 (dcontext, (int)(ptr_int_t) get_ibl_deleted_linkstub(), R7_OFFSET));
         } else if (table_in_tls) {
-            APP(&ilist, INSTR_CREATE_mov_st
+            APP(&ilist, INSTR_CREATE_mov_reg
                 (dcontext, OPND_TLS_FIELD(TLS_R2_SLOT),
                  IF_X64_ELSE(opnd_create_reg(REG_RR3),
                              OPND_CREATE_INTPTR((ptr_int_t)get_ibl_deleted_linkstub()))));
         } else {
             append_shared_get_dcontext(dcontext, &ilist, true); /* doesn't touch xbx */
-            APP(&ilist, INSTR_CREATE_mov_st
+            APP(&ilist, INSTR_CREATE_mov_reg
                 (dcontext, OPND_DC_FIELD(absolute, dcontext, OPSZ_PTR, R7_OFFSET),
                  IF_X64_ELSE(opnd_create_reg(REG_RR3),
                              OPND_CREATE_INTPTR((ptr_int_t)get_ibl_deleted_linkstub()))));
@@ -5615,7 +5620,7 @@ emit_indirect_branch_lookup(dcontext_t *dcontext, generated_code_t *code, byte *
         }
     } else {
         APP(&ilist,
-            INSTR_CREATE_mov_ld(dcontext, 
+            INSTR_CREATE_mov_reg(dcontext, 
                                 opnd_create_reg(REG_RR3),
                                 OPND_CREATE_MEMPTR(REG_RR1, FRAGMENT_TAG_OFFS)));
     }
@@ -5752,7 +5757,7 @@ emit_indirect_branch_lookup(dcontext_t *dcontext, generated_code_t *code, byte *
         /* put &linkstub where dispatch expects it */
         /*>>>    mov     %xbx,%xax                                       */
         if (linkstub == NULL) {
-            APP(&ilist, INSTR_CREATE_mov_ld(dcontext, opnd_create_reg(REG_RR0),
+            APP(&ilist, INSTR_CREATE_mov_reg(dcontext, opnd_create_reg(REG_RR0),
                                             opnd_create_reg(REG_RR3)));
         } else {
             APP(&ilist, INSTR_CREATE_mov_imm(dcontext, opnd_create_reg(REG_RR0),
@@ -5771,7 +5776,7 @@ emit_indirect_branch_lookup(dcontext_t *dcontext, generated_code_t *code, byte *
         APP(&ilist, SAVE_TO_DC(dcontext, REG_RR1, NEXT_TAG_OFFSET));
 
         if (linkstub == NULL) {
-            post_linkcount = INSTR_CREATE_mov_ld(dcontext, opnd_create_reg(REG_RR0),
+            post_linkcount = INSTR_CREATE_mov_reg(dcontext, opnd_create_reg(REG_RR0),
                                                  opnd_create_reg(REG_RR3));
         } else {
             /* there is no exit-specific stub -- we use a generic one here */
@@ -5824,7 +5829,7 @@ emit_indirect_branch_lookup(dcontext_t *dcontext, generated_code_t *code, byte *
         }
         /* pretending we came from a direct exit stub - linkstub in XAX, all
          * other app registers restored */
-        APP(&ilist, INSTR_CREATE_jmp(dcontext, opnd_create_pc(fcache_return_pc)));
+        APP(&ilist, INSTR_CREATE_branch(dcontext, opnd_create_pc(fcache_return_pc)));
     }
     
     if (inline_ibl_head && !DYNAMO_OPTION(atomic_inlined_linking)) {
@@ -5868,7 +5873,7 @@ emit_indirect_branch_lookup(dcontext_t *dcontext, generated_code_t *code, byte *
                     RESTORE_FROM_TLS(dcontext, REG_RR7, HTABLE_STATS_SPILL_SLOT));
             }
             APP(&ilist,
-                INSTR_CREATE_jmp_short(dcontext, opnd_create_instr(fragment_not_found)));
+                INSTR_CREATE_branch_short(dcontext, opnd_create_instr(fragment_not_found)));
         }
         race_target = instr_get_next(race_target);
 #endif
@@ -5905,7 +5910,7 @@ emit_indirect_branch_lookup(dcontext_t *dcontext, generated_code_t *code, byte *
             APP(&ilist, RESTORE_FROM_TLS(dcontext, REG_RR1, R3_OFFSET));
             APP(&ilist, SAVE_TO_TLS(dcontext, REG_RR3, R3_OFFSET));
         }
-        APP(&ilist, INSTR_CREATE_jmp_short(dcontext, opnd_create_instr(old_unlinked_target)));
+        APP(&ilist, INSTR_CREATE_branch_short(dcontext, opnd_create_instr(old_unlinked_target)));
     } else {
         /* get a patch marker at the instruction the label is at: */
 #ifdef HASHTABLE_STATISTICS
@@ -5952,7 +5957,7 @@ emit_indirect_branch_lookup(dcontext_t *dcontext, generated_code_t *code, byte *
              * ibl.  We just use a regular jmp since this code isn't even in a
              * release build. FIXME - would be a good place for a real
              * jmp_smart opcode xref case 5232. */
-            APP(&ilist, INSTR_CREATE_jmp(dcontext, opnd_create_instr(old_unlinked)));
+            APP(&ilist, INSTR_CREATE_branch(dcontext, opnd_create_instr(old_unlinked)));
         } else 
 #endif
         {
@@ -6116,123 +6121,18 @@ emit_far_ibl(dcontext_t *dcontext, byte *pc, ibl_code_t *ibl_code,
     instrlist_t ilist;
     instrlist_init(&ilist);
 
-#ifdef X64
-    if (mixed_mode_enabled()) {
-        instr_t *change_mode = INSTR_CREATE_label(dcontext);
-        bool source_is_x86 = DYNAMO_OPTION(x86_to_x64) ? ibl_code->x86_to_x64_mode
-                                                       : ibl_code->x86_mode;
-        short selector = source_is_x86 ? CS64_SELECTOR : CS32_SELECTOR;
-
-        /* all scratch space should be in TLS only */
-        ASSERT(ibl_code->thread_shared_routine || DYNAMO_OPTION(private_ib_in_tls));
-
-        if (ibl_code->x86_mode) {
-            /* we're going to look up rcx in ibl table but we only saved the
-             * bottom half so zero top half now
-             */
-            APP(&ilist, INSTR_CREATE_mov_imm
-                (dcontext, opnd_create_tls_slot(os_tls_offset(MANGLE_XCX_SPILL_SLOT) + 4), 
-                 OPND_CREATE_INT32(0)));
-        }
-
-        APP(&ilist, INSTR_CREATE_xchg
-            (dcontext, opnd_create_reg(REG_RR3), opnd_create_reg(REG_RR1)));
-        /* segment is just 2 bytes but need addr prefix if don't have rex prefix */
-        APP(&ilist, INSTR_CREATE_lea
-            (dcontext, opnd_create_reg(REG_RR1),
-             opnd_create_base_disp(REG_RR1, REG_NULL, 0, -selector, OPSZ_lea)));
-        APP(&ilist, INSTR_CREATE_jecxz
-            (dcontext, opnd_create_instr(change_mode)));
-
-        APP(&ilist, INSTR_CREATE_xchg
-            (dcontext, opnd_create_reg(REG_RR3), opnd_create_reg(REG_RR1)));
-        if (ibl_code->x86_to_x64_mode) {
-            APP(&ilist, INSTR_CREATE_mov_ld
-                (dcontext, opnd_create_reg(REG_RR3), opnd_create_reg(REG_RR10)));
-        } else {
-            APP(&ilist,
-                RESTORE_FROM_TLS(dcontext, REG_RR3, MANGLE_FAR_SPILL_SLOT));
-        }
-        APP(&ilist, INSTR_CREATE_jmp
-            (dcontext, opnd_create_pc(ibl_same_mode_tgt)));
-
-        APP(&ilist, change_mode);
-        APP(&ilist, instr_create_restore_from_tls
-            (dcontext, REG_RR1, TLS_DCONTEXT_SLOT));
-        /* FIXME: for SELFPROT_DCONTEXT we'll need to exit to dispatch every time
-         * and add logic there to set x86_mode based on LINK_FAR.
-         * We do not want x86_mode sitting in unprotected_context_t.
-         */
-        ASSERT_NOT_IMPLEMENTED(!TEST(SELFPROT_DCONTEXT, DYNAMO_OPTION(protect_mask)));
-        APP(&ilist, INSTR_CREATE_mov_st
-            (dcontext, OPND_CREATE_MEM8(REG_RR1, (int)offsetof(dcontext_t, x86_mode)),
-             OPND_CREATE_INT8(source_is_x86 ? 0 : 1)));
-        APP(&ilist, INSTR_CREATE_xchg
-            (dcontext, opnd_create_reg(REG_RR3), opnd_create_reg(REG_RR1)));
-        if (ibl_code->x86_to_x64_mode) {
-            APP(&ilist, INSTR_CREATE_mov_ld
-                (dcontext, opnd_create_reg(REG_RR3), opnd_create_reg(REG_RR10)));
-        } else {
-            APP(&ilist,
-                RESTORE_FROM_TLS(dcontext, REG_RR3, MANGLE_FAR_SPILL_SLOT));
-        }
-        if (ibl_code->x86_mode) {
-            /* FIXME i#865: restore 64-bit regs here */
-        } else if (ibl_code->x86_to_x64_mode) {
-            /* In the current mode, XCX is spilled into R9.
-             * After mode switch, will use MANGLE_XCX_SPILL_SLOT for spilling XCX.
-             */
-            APP(&ilist, SAVE_TO_TLS(dcontext, REG_RR9, MANGLE_XCX_SPILL_SLOT));
-            /* FIXME i#865: restore 64-bit regs here */
-        } else {
-            /* FIXME i#865: save 64-bit regs here */
-            /* In the current mode, XCX is spilled into MANGLE_XCX_SPILL_SLOT.
-             * After mode switch, will use R9 for spilling XCX.
-             */
-            APP(&ilist, RESTORE_FROM_TLS(dcontext, REG_RR9, MANGLE_XCX_SPILL_SLOT));
-        }
-        /* For now we assume we're WOW64 and thus in low 4GB.  For general mixed-mode
-         * and reachability (xref i#774) we will need a trampoline in low 4GB.
-         * Note that targeting the tail of the not-taken jecxz above doesn't help
-         * b/c then that needs to be 32-bit reachable.
-         */
-        ASSERT(CHECK_TRUNCATE_TYPE_uint((ptr_uint_t)far_jmp_opnd));
-        APP(&ilist, INSTR_CREATE_jmp_far_ind
-            (dcontext, opnd_create_base_disp(REG_NULL, REG_NULL, 0,
-                                             (uint)(ptr_uint_t)far_jmp_opnd, OPSZ_6)));
-        /* For -x86_to_x64, we can disallow 32-bit fragments from having
-         * indirect branches or far branches or system calls, and thus ibl
-         * is always 64-bit.
-         * Even if we allow 32-bit indirection, here we have to pick one
-         * lookup method, and we'd go w/ the most common, which would assume
-         * a 32-bit target has been translated: so even for a same-mode far
-         * cti in a 32-bit (untranslated) fragment, we'd want to do a mode
-         * change here.
-         */
-        /* caller will set target: we just set selector */
-        far_jmp_opnd->selector = DYNAMO_OPTION(x86_to_x64) ? CS64_SELECTOR
-                                                           : (ushort) selector;
-
-        if (ibl_code->x86_mode) {
-            instrlist_convert_to_x86(&ilist);
-        }
-    } else {
-#endif
-        /* We didn't spill or store into xbx when mangling so just jmp to ibl.
-         * Note that originally I had the existence of far_ibl, and LINK_FAR,
-         * as X64 only, and only emitted far_ibl for mixed-mode.  But given that
-         * it's simpler to have far direct as indirect all the time, I decided
-         * to also go through a far ibl all the time.  Eventually to fully
-         * handle any cs change we'll want it this way.
-         *
-         * XXX i#823: store cs into xbx when mangling, and then do cs
-         * change here.
-         */
-        APP(&ilist, INSTR_CREATE_jmp
-            (dcontext, opnd_create_pc(ibl_same_mode_tgt)));
-#ifdef X64
-    }
-#endif
+    /* We didn't spill or store into xbx when mangling so just jmp to ibl.
+     * Note that originally I had the existence of far_ibl, and LINK_FAR,
+     * as X64 only, and only emitted far_ibl for mixed-mode.  But given that
+     * it's simpler to have far direct as indirect all the time, I decided
+     * to also go through a far ibl all the time.  Eventually to fully
+     * handle any cs change we'll want it this way.
+     *
+     * XXX i#823: store cs into xbx when mangling, and then do cs
+     * change here.
+     */
+    APP(&ilist, INSTR_CREATE_branch
+        (dcontext, opnd_create_pc(ibl_same_mode_tgt)));
 
     pc = instrlist_encode(dcontext, &ilist, pc, true/*instr targets*/);
     ASSERT(pc != NULL);
@@ -6620,7 +6520,7 @@ emit_shared_syscall(dcontext_t *dcontext, generated_code_t *code, byte *pc,
                                           OPND_CREATE_INT32(1));
         } else {
 # endif
-            linked = INSTR_CREATE_mov_st(dcontext,
+            linked = INSTR_CREATE_mov_reg(dcontext,
                                          OPND_TLS_FIELD_SZ(MANGLE_XCX_SPILL_SLOT, OPSZ_4),
                                          OPND_CREATE_INT32(1));
 # ifdef X64
@@ -6635,7 +6535,7 @@ emit_shared_syscall(dcontext_t *dcontext, generated_code_t *code, byte *pc,
 # ifdef SIDELINE
     if (dynamo_options.sideline) {
         /* clear cur-trace field so we don't think cur trace is still running */
-        APP(&ilist, INSTR_CREATE_mov_st
+        APP(&ilist, INSTR_CREATE_mov_reg
             (dcontext, OPND_CREATE_ABSMEM((void *)&sideline_trace, OPSZ_4),
              OPND_CREATE_INT32(0)));
     }
@@ -6651,7 +6551,7 @@ emit_shared_syscall(dcontext_t *dcontext, generated_code_t *code, byte *pc,
         if (syscall_method != SYSCALL_METHOD_SYSENTER) {
             /* Move the next tag field from TLS into the proper slot. */
             APP(&ilist,
-                INSTR_CREATE_mov_ld(dcontext, opnd_create_reg(REG_RR7),
+                INSTR_CREATE_mov_reg(dcontext, opnd_create_reg(REG_RR7),
                                     opnd_create_tls_slot(os_tls_offset(MANGLE_NEXT_TAG_SLOT))));
             APP(&ilist,
                 instr_create_save_to_dcontext(dcontext, REG_RR7, R6_OFFSET));
@@ -6707,7 +6607,7 @@ emit_shared_syscall(dcontext_t *dcontext, generated_code_t *code, byte *pc,
     if (!INTERNAL_OPTION(shared_syscalls_fastpath) && DYNAMO_OPTION(indirect_stubs)) {
         if (DYNAMO_OPTION(shared_fragment_shared_syscalls)) {
             APP(&ilist,
-                INSTR_CREATE_mov_ld(dcontext, opnd_create_reg(REG_RR3),
+                INSTR_CREATE_mov_reg(dcontext, opnd_create_reg(REG_RR3),
                                     opnd_create_tls_slot(os_tls_offset(INDIRECT_STUB_SPILL_SLOT))));
         }
         else {
@@ -6739,7 +6639,7 @@ emit_shared_syscall(dcontext_t *dcontext, generated_code_t *code, byte *pc,
     ASSERT(!TEST(SELFPROT_DCONTEXT, DYNAMO_OPTION(protect_mask)));
     if (all_shared) {
         /* readers of at_syscall are ok w/ us not quite having xdi restored yet */
-        APP(&ilist, INSTR_CREATE_mov_st
+        APP(&ilist, INSTR_CREATE_mov_reg
             (dcontext,
              opnd_create_dcontext_field_via_reg_sz(dcontext, REG_NULL/*default*/,
                                                    AT_SYSCALL_OFFSET, OPSZ_4),
@@ -6773,7 +6673,7 @@ emit_shared_syscall(dcontext_t *dcontext, generated_code_t *code, byte *pc,
          * and intercept_nt_continue() as not all routines looking at the stack
          * differentiate. */
         /* pop stack leaving old value (after_shared_syscall) in place */
-        APP(&ilist, INSTR_CREATE_add(dcontext, opnd_create_reg(REG_RR13),
+        APP(&ilist, INSTR_CREATE_add_reg(dcontext, opnd_create_reg(REG_RR13),
                                      OPND_CREATE_INT8(4)));
         APP(&ilist,
             INSTR_CREATE_pop(dcontext,
@@ -6811,7 +6711,7 @@ emit_shared_syscall(dcontext_t *dcontext, generated_code_t *code, byte *pc,
      * target of the unlinked path's jmp is the syscall itself.
      */
     /* these two in reverse order since prepended */
-    instrlist_prepend(&ilist, INSTR_CREATE_jmp
+    instrlist_prepend(&ilist, INSTR_CREATE_branch
                       (dcontext, opnd_create_instr(instr_get_next(linked))));
     if (all_shared) {
         /* xax and xbx tls slots are taken so we use xcx */
@@ -6821,7 +6721,7 @@ emit_shared_syscall(dcontext_t *dcontext, generated_code_t *code, byte *pc,
                               (dcontext, opnd_create_reg(REG_RR9D), OPND_CREATE_INT32(0)));
         } else {
 # endif
-            instrlist_prepend(&ilist, INSTR_CREATE_mov_st
+            instrlist_prepend(&ilist, INSTR_CREATE_mov_reg
                               (dcontext,
                                /* simpler to do 4 bytes even on x64 */
                                OPND_TLS_FIELD_SZ(MANGLE_XCX_SPILL_SLOT, OPSZ_4),
@@ -6838,7 +6738,7 @@ emit_shared_syscall(dcontext_t *dcontext, generated_code_t *code, byte *pc,
     if (all_shared) {
         /* readers of at_syscall are ok w/ us spilling xdi first */
         append_shared_get_dcontext(dcontext, &ilist, true/*save xdi*/);
-        APP(&ilist, INSTR_CREATE_mov_st
+        APP(&ilist, INSTR_CREATE_mov_reg
             (dcontext, 
              opnd_create_dcontext_field_via_reg_sz(dcontext, REG_NULL/*default*/,
                                                    AT_SYSCALL_OFFSET, OPSZ_4),
@@ -6927,7 +6827,7 @@ emit_shared_syscall(dcontext_t *dcontext, generated_code_t *code, byte *pc,
 # ifdef X64
         }
         /* clear top 32 bits */
-        APP(&ilist, INSTR_CREATE_mov_st
+        APP(&ilist, INSTR_CREATE_mov_reg
             (dcontext, opnd_create_reg(REG_ECX), opnd_create_reg(REG_ECX)));
 # endif
         /* app xdi is restored later after we've restored next_tag from xsi slot */
@@ -7006,7 +6906,7 @@ emit_shared_syscall(dcontext_t *dcontext, generated_code_t *code, byte *pc,
      * hole.
      */
     if (!inline_ibl_head) {
-        APP(&ilist, INSTR_CREATE_jmp(dcontext, opnd_create_pc(ind_br_lookup_pc)));
+        APP(&ilist, INSTR_CREATE_branch(dcontext, opnd_create_pc(ind_br_lookup_pc)));
     } else {
         append_ibl_head(dcontext, &ilist, ibl_code, patch, NULL, NULL, NULL,
                         opnd_create_pc(ind_br_lookup_pc),
@@ -7045,7 +6945,7 @@ emit_shared_syscall(dcontext_t *dcontext, generated_code_t *code, byte *pc,
                  R7_OFFSET));
         }
         else {
-            APP(&ilist, INSTR_CREATE_mov_st
+            APP(&ilist, INSTR_CREATE_mov_reg
                 (dcontext, OPND_TLS_FIELD(TLS_XDX_SLOT),
                  OPND_CREATE_INTPTR((ptr_int_t)get_shared_syscalls_unlinked_linkstub())));
         }
@@ -7075,7 +6975,7 @@ emit_shared_syscall(dcontext_t *dcontext, generated_code_t *code, byte *pc,
                 APP(&ilist, SAVE_TO_TLS(dcontext, REG_RR3, TLS_XBX_SLOT));
         }
     }
-    APP(&ilist, INSTR_CREATE_jmp(dcontext, opnd_create_pc(unlinked_ib_lookup_pc)));
+    APP(&ilist, INSTR_CREATE_branch(dcontext, opnd_create_pc(unlinked_ib_lookup_pc)));
 
     pc += encode_with_patch_list(dcontext, patch, &ilist, pc);
     if (syscall_method == SYSCALL_METHOD_SYSENTER) {
@@ -7106,12 +7006,12 @@ emit_dispatch_template(dcontext_t *dcontext, byte *pc, uint offset)
     append_shared_get_dcontext(dcontext, &ilist, true);
 
     /* load the generated_code_t address */
-    APP(&ilist, INSTR_CREATE_mov_ld(dcontext, opnd_create_reg(REG_EDI),
+    APP(&ilist, INSTR_CREATE_mov_reg(dcontext, opnd_create_reg(REG_EDI),
                                     OPND_DC_FIELD(false, dcontext, OPSZ_PTR,
                                                   PRIVATE_CODE_OFFSET)));
 
     /* jump thru the address in the offset */
-    APP(&ilist, INSTR_CREATE_jmp_ind(dcontext, OPND_CREATE_MEM32(REG_EDI, offset)));
+    APP(&ilist, INSTR_CREATE_branch_ind(dcontext, OPND_CREATE_MEM32(REG_EDI, offset)));
 
     pc = instrlist_encode(dcontext, &ilist, pc, false /* no instr targets */);
     ASSERT(pc != NULL);
@@ -7325,15 +7225,15 @@ emit_detach_callback_code(dcontext_t *dcontext, byte *buf,
         (dcontext, opnd_create_reg(REG_RR3),
          OPND_CREATE_MEMPTR(REG_RR0, offsetof(detach_callback_stack_t, tid))));
     APP(&ilist, INSTR_CREATE_jcc_short(dcontext, OP_je, opnd_create_instr(match_found)));
-    APP(&ilist, INSTR_CREATE_add(dcontext, opnd_create_reg(REG_RR0),
+    APP(&ilist, INSTR_CREATE_add_imm(dcontext, opnd_create_reg(REG_RR0), opnd_create_reg(REG_RR0),
                                  OPND_CREATE_INT_32OR8(sizeof(detach_callback_stack_t))));
-    APP(&ilist, INSTR_CREATE_jmp(dcontext, opnd_create_instr(match_tid)));
+    APP(&ilist, INSTR_CREATE_branch(dcontext, opnd_create_instr(match_tid)));
     APP(&ilist, match_found);
     /* found matching tid ptr is in xax
      * spill registers into local slots and restore TEB fields */
     APP(&ilist, INSTR_CREATE_xchg(dcontext, opnd_create_tls_slot(TID_TIB_OFFSET),
                                   opnd_create_reg(REG_RR3)));
-    APP(&ilist, INSTR_CREATE_mov_st
+    APP(&ilist, INSTR_CREATE_mov_reg
         (dcontext,
          OPND_CREATE_MEMPTR(REG_RR0, offsetof(detach_callback_stack_t, xbx_save)),
          opnd_create_reg(REG_RR3)));
@@ -7342,47 +7242,47 @@ emit_detach_callback_code(dcontext_t *dcontext, byte *buf,
          OPND_CREATE_INTPTR((ptr_uint_t)get_process_id())));
     APP(&ilist, INSTR_CREATE_xchg(dcontext, opnd_create_tls_slot(PID_TIB_OFFSET),
                                   opnd_create_reg(REG_RR3)));
-    APP(&ilist, INSTR_CREATE_mov_st
+    APP(&ilist, INSTR_CREATE_mov_reg
         (dcontext,
          OPND_CREATE_MEMPTR(REG_RR0, offsetof(detach_callback_stack_t, xax_save)),
          opnd_create_reg(REG_RR3)));
-    APP(&ilist, INSTR_CREATE_mov_st
+    APP(&ilist, INSTR_CREATE_mov_reg
         (dcontext,
          OPND_CREATE_MEMPTR(REG_RR0, offsetof(detach_callback_stack_t, xcx_save)),
          opnd_create_reg(REG_RR1)));
     /* now find the right address and move it into target while updating the
      * thread private count */
-    APP(&ilist, INSTR_CREATE_mov_ld
+    APP(&ilist, INSTR_CREATE_mov_reg
         (dcontext, opnd_create_reg(REG_RR3),
          OPND_CREATE_MEMPTR(REG_RR0, offsetof(detach_callback_stack_t, count))));
     /* see earlier comment on clobbering eflags */
     APP(&ilist, INSTR_CREATE_sub(dcontext, opnd_create_reg(REG_RR3),
                                  OPND_CREATE_INT8(1)));
-    APP(&ilist, INSTR_CREATE_mov_st
+    APP(&ilist, INSTR_CREATE_mov_reg
         (dcontext,
          OPND_CREATE_MEMPTR(REG_RR0, offsetof(detach_callback_stack_t, count)),
          opnd_create_reg(REG_RR3)));
-    APP(&ilist, INSTR_CREATE_mov_ld
+    APP(&ilist, INSTR_CREATE_mov_reg
         (dcontext, opnd_create_reg(REG_RR1),
          OPND_CREATE_MEMPTR(REG_RR0, offsetof(detach_callback_stack_t, callback_addrs))));
-    APP(&ilist, INSTR_CREATE_mov_ld
+    APP(&ilist, INSTR_CREATE_mov_reg
         (dcontext, opnd_create_reg(REG_RR1),
          opnd_create_base_disp(REG_RR1, REG_RR3, sizeof(app_pc), 0, OPSZ_PTR)));
-    APP(&ilist, INSTR_CREATE_mov_st
+    APP(&ilist, INSTR_CREATE_mov_reg
         (dcontext,
          OPND_CREATE_MEMPTR(REG_RR0, offsetof(detach_callback_stack_t, target)),
          opnd_create_reg(REG_RR1)));
-    APP(&ilist, INSTR_CREATE_mov_ld
+    APP(&ilist, INSTR_CREATE_mov_reg
         (dcontext, opnd_create_reg(REG_RR1),
          OPND_CREATE_MEMPTR(REG_RR0, offsetof(detach_callback_stack_t, xcx_save))));
-    APP(&ilist, INSTR_CREATE_mov_ld
+    APP(&ilist, INSTR_CREATE_mov_reg
         (dcontext, opnd_create_reg(REG_RR3),
          OPND_CREATE_MEMPTR(REG_RR0, offsetof(detach_callback_stack_t, xbx_save))));
     APP(&ilist, INSTR_CREATE_lea
         (dcontext, opnd_create_reg(REG_RR0),
          OPND_CREATE_MEM_lea(REG_RR0, REG_NULL, 0,
                              offsetof(detach_callback_stack_t, code_buf))));
-    APP(&ilist, INSTR_CREATE_jmp_ind(dcontext, opnd_create_reg(REG_RR0)));
+    APP(&ilist, INSTR_CREATE_branch_ind(dcontext, opnd_create_reg(REG_RR0)));
 
     /* now encode the instructions */
     pc = instrlist_encode(dcontext, &ilist, pc, true /* instr targets */);
@@ -7406,10 +7306,10 @@ emit_detach_callback_final_jmp(dcontext_t *dcontext,
     instrlist_init(&ilist);
 
     /* restore eax and jmp target */
-    APP(&ilist, INSTR_CREATE_mov_ld
+    APP(&ilist, INSTR_CREATE_mov_reg
         (dcontext, opnd_create_reg(REG_RR0),
          OPND_CREATE_ABSMEM(&(callback_state->xax_save), OPSZ_PTR)));
-    APP(&ilist, INSTR_CREATE_jmp_ind
+    APP(&ilist, INSTR_CREATE_branch_ind
         (dcontext, OPND_CREATE_ABSMEM(&(callback_state->target), OPSZ_PTR)));
 
     /* now encode the instructions */
@@ -7435,7 +7335,7 @@ emit_patch_syscall(dcontext_t *dcontext, byte *target _IF_X64(gencode_mode_t mod
          * after_do_syscall and fetch the correct address off of our
          * callback stack copy. It "just works".
          */
-        instr_t *instr = INSTR_CREATE_jmp(dcontext, opnd_create_pc(pc));
+        instr_t *instr = INSTR_CREATE_branch(dcontext, opnd_create_pc(pc));
         DEBUG_DECLARE(byte *nxt_pc =)
             instr_encode(dcontext, instr,
                          after_shared_syscall_code_ex(dcontext _IF_X64(mode)));
@@ -7456,11 +7356,11 @@ emit_patch_syscall(dcontext_t *dcontext, byte *target _IF_X64(gencode_mode_t mod
     /* Note that on 64-bit target may not be reachable in which case we need to inline
      * the first register spill here so we can jmp reg. We go ahead and the spill here
      * and jmp through reg for 32-bit as well for consistency. */
-    APP(&ilist, INSTR_CREATE_mov_st(dcontext, opnd_create_tls_slot(PID_TIB_OFFSET),
+    APP(&ilist, INSTR_CREATE_mov_reg(dcontext, opnd_create_tls_slot(PID_TIB_OFFSET),
                                     opnd_create_reg(REG_RR0)));
     APP(&ilist, INSTR_CREATE_mov_imm(dcontext, opnd_create_reg(REG_RR0),
                                      OPND_CREATE_INTPTR((ptr_uint_t)target)));
-    APP(&ilist, INSTR_CREATE_jmp_ind(dcontext, opnd_create_reg(REG_RR0)));
+    APP(&ilist, INSTR_CREATE_branch_ind(dcontext, opnd_create_reg(REG_RR0)));
 
     /* now encode the instructions */
     pc = instrlist_encode(dcontext, &ilist, pc, true /* instr targets */);
@@ -7547,7 +7447,7 @@ emit_do_syscall_common(dcontext_t *dcontext, generated_code_t *code,
     APP(&ilist, INSTR_CREATE_mov_imm
         (dcontext, opnd_create_reg(REG_RR0),
          OPND_CREATE_INTPTR((ptr_int_t)get_syscall_linkstub())));
-    APP(&ilist, INSTR_CREATE_jmp(dcontext, opnd_create_pc(fcache_return_pc)));
+    APP(&ilist, INSTR_CREATE_branch(dcontext, opnd_create_pc(fcache_return_pc)));
 
 #ifdef LINUX
     if (handle_clone) {
@@ -7610,7 +7510,7 @@ emit_do_callback_return(dcontext_t *dcontext, byte *pc, byte *fcache_return_pc,
     /* for x64 we rely on sign-extension to fill out rax */
     APP(&ilist, INSTR_CREATE_mov_imm(dcontext, opnd_create_reg(REG_EAX),
                                      OPND_CREATE_INT32(0)));
-    APP(&ilist, INSTR_CREATE_jmp(dcontext, opnd_create_pc(fcache_return_pc)));
+    APP(&ilist, INSTR_CREATE_branch(dcontext, opnd_create_pc(fcache_return_pc)));
 
     /* now encode the instructions */
     pc = instrlist_encode(dcontext, &ilist, pc, false /* no instr targets */);
@@ -7854,7 +7754,7 @@ emit_new_thread_dynamo_start(dcontext_t *dcontext, byte *pc)
     APP(&ilist, INSTR_CREATE_lea
         (dcontext, opnd_create_reg(REG_RR0),
          OPND_CREATE_MEM_lea(REG_RR13, REG_NULL, 0, sizeof(priv_mcontext_t))));
-    APP(&ilist, INSTR_CREATE_mov_st
+    APP(&ilist, INSTR_CREATE_mov_reg
         (dcontext, OPND_CREATE_MEMPTR(REG_RR13, offsetof(priv_mcontext_t, xsp)),
          opnd_create_reg(REG_RR0)));
 #endif
@@ -7944,7 +7844,7 @@ emit_trace_head_incr(dcontext_t *dcontext, byte *pc, byte *fcache_return_pc)
         APP(&ilist, instr_create_save_to_dcontext(dcontext, REG_ECX, R0_OFFSET));
     }
     APP(&ilist, instr_create_save_to_dcontext(dcontext, REG_EAX, R3_OFFSET));
-    APP(&ilist, INSTR_CREATE_mov_ld(dcontext, opnd_create_reg(REG_EAX),
+    APP(&ilist, INSTR_CREATE_mov_reg(dcontext, opnd_create_reg(REG_EAX),
                             OPND_CREATE_MEM32(REG_EAX, LINKSTUB_TARGET_FRAG_OFFS)));
     ASSERT_NOT_IMPLEMENTED(false && "must handle LINKSTUB_CBR_FALLTHROUGH case by calculating target tag")
     APP(&ilist, INSTR_CREATE_movzx(dcontext, opnd_create_reg(REG_ECX),
@@ -7953,7 +7853,7 @@ emit_trace_head_incr(dcontext_t *dcontext, byte *pc, byte *fcache_return_pc)
     APP(&ilist, INSTR_CREATE_lea(dcontext, opnd_create_reg(REG_ECX),
                               opnd_create_base_disp(REG_ECX, REG_NULL, 0, 1, OPSZ_lea)));
     /* data16 prefix is set auto-magically */
-    APP(&ilist, INSTR_CREATE_mov_st(dcontext,
+    APP(&ilist, INSTR_CREATE_mov_reg(dcontext,
                                     opnd_create_base_disp(REG_EAX, REG_NULL, 0,
                                                           FRAGMENT_COUNTER_OFFS, OPSZ_2),
                                     opnd_create_reg(REG_CX)));
@@ -7961,7 +7861,7 @@ emit_trace_head_incr(dcontext_t *dcontext, byte *pc, byte *fcache_return_pc)
                               opnd_create_base_disp(REG_ECX, REG_NULL, 0,
                                             -((int)INTERNAL_OPTION(trace_threshold)), OPSZ_lea)));
     APP(&ilist, INSTR_CREATE_jecxz(dcontext, opnd_create_instr(is_hot)));
-    APP(&ilist, INSTR_CREATE_mov_ld(dcontext, opnd_create_reg(REG_ECX),
+    APP(&ilist, INSTR_CREATE_mov_reg(dcontext, opnd_create_reg(REG_ECX),
                          OPND_CREATE_MEM32(REG_EAX, FRAGMENT_START_PC_OFFS)));
     APP(&ilist, INSTR_CREATE_movzx(dcontext, opnd_create_reg(REG_EAX),
                                    opnd_create_base_disp(REG_EAX, REG_NULL, 0,
@@ -7971,11 +7871,11 @@ emit_trace_head_incr(dcontext_t *dcontext, byte *pc, byte *fcache_return_pc)
     APP(&ilist, instr_create_save_to_dcontext(dcontext, REG_ECX, TRACE_HEAD_PC_OFFSET));
     APP(&ilist, instr_create_restore_from_dcontext(dcontext, REG_ECX, R1_OFFSET));
     APP(&ilist, instr_create_restore_from_dcontext(dcontext, REG_EAX, R0_OFFSET));
-    APP(&ilist, INSTR_CREATE_jmp_ind(dcontext,
+    APP(&ilist, INSTR_CREATE_branch_ind(dcontext,
                           opnd_create_dcontext_field(dcontext, TRACE_HEAD_PC_OFFSET)));
     APP(&ilist, is_hot);
     APP(&ilist, instr_create_restore_from_dcontext(dcontext, REG_ECX, R1_OFFSET));
-    APP(&ilist, INSTR_CREATE_jmp(dcontext, opnd_create_pc(fcache_return_pc)));
+    APP(&ilist, INSTR_CREATE_branch(dcontext, opnd_create_pc(fcache_return_pc)));
 
     /* now encode the instructions */
     pc = instrlist_encode(dcontext, &ilist, pc, true /* instr targets */);
@@ -8060,7 +7960,7 @@ emit_client_ibl_xfer(dcontext_t *dcontext, byte *pc, generated_code_t *code)
         APP(&ilist, SAVE_TO_DC(dcontext, REG_RR1, R1_OFFSET));
     }
 
-    APP(&ilist, INSTR_CREATE_mov_ld
+    APP(&ilist, INSTR_CREATE_mov_reg
         (dcontext, opnd_create_reg(REG_RR1),
          reg_spill_slot_opnd(dcontext, SPILL_SLOT_REDIRECT_NATIVE_TGT)));
 
@@ -8091,7 +7991,7 @@ emit_client_ibl_xfer(dcontext_t *dcontext, byte *pc, generated_code_t *code)
          */
         APP(&ilist, nop_inst);
     }
-    APP(&ilist, INSTR_CREATE_jmp(dcontext, opnd_create_pc(ibl_tgt)));
+    APP(&ilist, INSTR_CREATE_branch(dcontext, opnd_create_pc(ibl_tgt)));
     add_patch_marker(&patch, instrlist_last(&ilist),
                      PATCH_UINT_SIZED /* pc relative */,
                      0 /* point at opcode of jecxz */,

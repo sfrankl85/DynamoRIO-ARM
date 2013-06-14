@@ -116,7 +116,7 @@ emit_pextrw(dcontext_t *dcontext, byte *pc)
             INSTR_CREATE_pinsrw(dcontext, opnd_create_reg(REG_START_XMM + (i / 8)),
                                 OPND_CREATE_MEM32(REG_ESP, 0),
                                 OPND_CREATE_INT8(i % 8)));
-        instrlist_append(&ilist, INSTR_CREATE_jmp(dcontext, opnd_create_instr(end)));
+        instrlist_append(&ilist, INSTR_CREATE_branch(dcontext, opnd_create_instr(end)));
         instrlist_append(&ilist, INSTR_CREATE_nop(dcontext));
     }
     /* entry 62 */
@@ -188,17 +188,17 @@ check_return_handle_call(dcontext_t *dcontext, instrlist_t *ilist, instr_t *inst
                          opnd_create_base_disp(REG_ECX, REG_ECX, 2, 0xaaaaaaaa, OPSZ_lea)));
 #if DISABLE_FOR_ANALYSIS
     PRE(ilist, instr,
-        INSTR_CREATE_jmp(dcontext, opnd_create_instr(end)));
+        INSTR_CREATE_branch(dcontext, opnd_create_instr(end)));
 #else
     PRE(ilist, instr,
-        INSTR_CREATE_jmp_ind(dcontext, opnd_create_reg(REG_ECX)));
+        INSTR_CREATE_branch_ind(dcontext, opnd_create_reg(REG_ECX)));
 #endif
     for (i=0; i<62; i++) {
         PRE(ilist, instr,
             INSTR_CREATE_pinsrw(dcontext, opnd_create_reg(REG_START_XMM + (i / 8)),
                                 OPND_CREATE_MEM32(REG_ESP, 0),
                                 OPND_CREATE_INT8(i % 8)));
-        PRE(ilist, instr, INSTR_CREATE_jmp(dcontext, opnd_create_instr(end)));
+        PRE(ilist, instr, INSTR_CREATE_branch(dcontext, opnd_create_instr(end)));
         PRE(ilist, instr, INSTR_CREATE_nop(dcontext));
     }
     /* entry 62 */
@@ -270,14 +270,14 @@ check_return_handle_return(dcontext_t *dcontext, instrlist_t *ilist, instr_t *in
     PRE(ilist, instr,
         instr_create_save_to_dcontext(dcontext, REG_EDX, XDX_OFFSET));
     PRE(ilist, instr,
-        INSTR_CREATE_mov_ld(dcontext, opnd_create_reg(REG_EDX), opnd_create_reg(REG_ECX)));
+        INSTR_CREATE_mov_imm(dcontext, opnd_create_reg(REG_EDX), opnd_create_reg(REG_ECX)));
     PRE(ilist, instr,
         INSTR_CREATE_pextrw(dcontext, opnd_create_reg(REG_ECX),
                             opnd_create_reg(REG_XMM7),
                             OPND_CREATE_INT8(7)));
 #if DISABLE_FOR_ANALYSIS
     PRE(ilist, instr,
-        INSTR_CREATE_jmp(dcontext, opnd_create_instr(ra_not_mangled)));
+        INSTR_CREATE_branch(dcontext, opnd_create_instr(ra_not_mangled)));
 #endif
     PRE(ilist, instr,
         INSTR_CREATE_jecxz(dcontext, opnd_create_instr(at_zero)));
@@ -285,7 +285,7 @@ check_return_handle_return(dcontext_t *dcontext, instrlist_t *ilist, instr_t *in
         INSTR_CREATE_lea(dcontext, opnd_create_reg(REG_ECX),
                          opnd_create_base_disp(REG_ECX, REG_NULL, 0, -1, OPSZ_lea)));
     PRE(ilist, instr,
-        INSTR_CREATE_jmp(dcontext, opnd_create_instr(non_zero)));
+        INSTR_CREATE_branch(dcontext, opnd_create_instr(non_zero)));
     PRE(ilist, instr, at_zero);
     dr_insert_clean_call(dcontext, ilist, instr, (app_pc)check_return_too_shallow,
                          false/*!fp*/, 1, OPND_CREATE_INTPTR(dcontext));
@@ -298,14 +298,14 @@ check_return_handle_return(dcontext_t *dcontext, instrlist_t *ilist, instr_t *in
         INSTR_CREATE_lea(dcontext, opnd_create_reg(REG_ECX),
                          opnd_create_base_disp(REG_ECX, REG_ECX, 4, 0xaaaaaaaa, OPSZ_lea)));
     PRE(ilist, instr,
-        INSTR_CREATE_jmp_ind(dcontext, opnd_create_reg(REG_ECX)));
+        INSTR_CREATE_branch_ind(dcontext, opnd_create_reg(REG_ECX)));
     for (i=0; i<63; i++) {
         PRE(ilist, instr,
             INSTR_CREATE_pextrw(dcontext, opnd_create_reg(REG_ECX),
                                 opnd_create_reg(REG_START_XMM + (i / 8)),
                                 OPND_CREATE_INT8(i % 8)));
         PRE(ilist, instr,
-            INSTR_CREATE_jmp(dcontext, opnd_create_instr(end)));
+            INSTR_CREATE_branch(dcontext, opnd_create_instr(end)));
     }
     PRE(ilist, instr, end);
     PRE(ilist, instr, INSTR_CREATE_not(dcontext, opnd_create_reg(REG_ECX)));
@@ -318,7 +318,7 @@ check_return_handle_return(dcontext_t *dcontext, instrlist_t *ilist, instr_t *in
                          false/*!fp*/, 1, OPND_CREATE_INTPTR(dcontext));
     PRE(ilist, instr, ra_not_mangled);
     PRE(ilist, instr,
-        INSTR_CREATE_mov_ld(dcontext, opnd_create_reg(REG_ECX), OPND_CREATE_MEM32(REG_ESP, -4)));
+        INSTR_CREATE_mov_imm(dcontext, opnd_create_reg(REG_ECX), OPND_CREATE_MEM32(REG_ESP, -4)));
 }
 
 /* touches up jmp* for table (needs address of start of table) */
@@ -680,7 +680,7 @@ check_return_handle_call(dcontext_t *dcontext, instrlist_t *ilist, instr_t *inst
     PRE(ilist, instr,
         INSTR_CREATE_jecxz(dcontext, opnd_create_instr(overflow)));
     PRE(ilist, instr,
-        INSTR_CREATE_jmp(dcontext, opnd_create_instr(non_overflow)));
+        INSTR_CREATE_branch(dcontext, opnd_create_instr(non_overflow)));
     PRE(ilist, instr, overflow);
     dr_insert_clean_call(dcontext, ilist, instr, (app_pc)check_return_too_deep,
                          false/*!fp*/, 1, OPND_CREATE_INTPTR(dcontext));
@@ -830,7 +830,7 @@ check_return_handle_return(dcontext_t *dcontext, instrlist_t *ilist, instr_t *in
     instr_t *ra_not_mangled = 
         instr_create_restore_from_dcontext(dcontext, REG_EBX, XBX_OFFSET);
     instr_t *end =
-        INSTR_CREATE_mov_ld(dcontext, opnd_create_reg(REG_ECX), opnd_create_reg(REG_EDX));
+        INSTR_CREATE_mov_imm(dcontext, opnd_create_reg(REG_ECX), opnd_create_reg(REG_EDX));
     instr_t *at_zero = INSTR_CREATE_nop(dcontext);
     instr_t *non_zero =
         INSTR_CREATE_pextrw(dcontext, opnd_create_reg(REG_EBX),
@@ -838,7 +838,7 @@ check_return_handle_return(dcontext_t *dcontext, instrlist_t *ilist, instr_t *in
     PRE(ilist, instr,
         instr_create_save_to_dcontext(dcontext, REG_EDX, XDX_OFFSET));
     PRE(ilist, instr,
-        INSTR_CREATE_mov_ld(dcontext, opnd_create_reg(REG_EDX), opnd_create_reg(REG_ECX)));
+        INSTR_CREATE_mov_imm(dcontext, opnd_create_reg(REG_EDX), opnd_create_reg(REG_ECX)));
     PRE(ilist, instr,
         instr_create_save_to_dcontext(dcontext, REG_EBX, XBX_OFFSET));
 
@@ -853,7 +853,7 @@ check_return_handle_return(dcontext_t *dcontext, instrlist_t *ilist, instr_t *in
         INSTR_CREATE_pextrw(dcontext, opnd_create_reg(REG_ECX),
                             opnd_create_reg(REG_XMM7), OPND_CREATE_INT8(7)));
     PRE(ilist, instr,
-        INSTR_CREATE_mov_ld(dcontext, opnd_create_reg(REG_EBX), opnd_create_reg(REG_ECX)));
+        INSTR_CREATE_mov_imm(dcontext, opnd_create_reg(REG_EBX), opnd_create_reg(REG_ECX)));
     PRE(ilist, instr,
         INSTR_CREATE_jecxz(dcontext, opnd_create_instr(at_zero)));
     PRE(ilist, instr,
@@ -863,12 +863,12 @@ check_return_handle_return(dcontext_t *dcontext, instrlist_t *ilist, instr_t *in
         INSTR_CREATE_pinsrw(dcontext, opnd_create_reg(REG_XMM7),
                             opnd_create_reg(REG_ECX), OPND_CREATE_INT8(7)));
     PRE(ilist, instr,
-        INSTR_CREATE_jmp(dcontext, opnd_create_instr(non_zero)));
+        INSTR_CREATE_branch(dcontext, opnd_create_instr(non_zero)));
     PRE(ilist, instr, at_zero);
     dr_insert_clean_call(dcontext, ilist, instr, (app_pc)check_return_too_shallow,
                          false/*!fp*/, 1, OPND_CREATE_INTPTR(dcontext));
     PRE(ilist, instr,
-        INSTR_CREATE_jmp(dcontext, opnd_create_instr(end)));
+        INSTR_CREATE_branch(dcontext, opnd_create_instr(end)));
     PRE(ilist, instr, non_zero);
     PRE(ilist, instr,
         INSTR_CREATE_psrldq(dcontext, opnd_create_reg(REG_XMM0), OPND_CREATE_INT8(2)));
@@ -902,7 +902,7 @@ check_return_handle_return(dcontext_t *dcontext, instrlist_t *ilist, instr_t *in
                          false/*!fp*/, 1, OPND_CREATE_INTPTR(dcontext));
     PRE(ilist, instr, ra_not_mangled);
     PRE(ilist, instr,
-        INSTR_CREATE_mov_ld(dcontext, opnd_create_reg(REG_ECX), opnd_create_reg(REG_EDX)));
+        INSTR_CREATE_mov_imm(dcontext, opnd_create_reg(REG_ECX), opnd_create_reg(REG_EDX)));
     PRE(ilist, instr,
         instr_create_restore_from_dcontext(dcontext, REG_EDX, XDX_OFFSET));
 }

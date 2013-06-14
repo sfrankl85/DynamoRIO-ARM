@@ -754,7 +754,6 @@ opnd_disassemble_noimplicit(char *buf, size_t bufsz, size_t *sofar INOUT,
 {
     switch (optype) {
     case TYPE_REG:
-    case TYPE_VAR_REG:
         /* we do want to print implicit operands for opcode-decides-register
          * instrs like inc-reg and pop-reg, but not for say lahf, aaa, or cdq.
          */
@@ -762,27 +761,16 @@ opnd_disassemble_noimplicit(char *buf, size_t bufsz, size_t *sofar INOUT,
             return false;
         /* else fall through */
     case TYPE_A:
-    case TYPE_E:
-    case TYPE_INDIR_E:
-    case TYPE_G:
-    case TYPE_H:
     case TYPE_I:
     case TYPE_J:
-    case TYPE_L:
     case TYPE_M:
     case TYPE_O:
-    case TYPE_P:
-    case TYPE_Q:
-    case TYPE_R:
-    case TYPE_S:
-    case TYPE_V:
-    case TYPE_W:
-    case TYPE_FLOATMEM:
     case TYPE_1:
         if (prev)
             print_to_buffer(buf, bufsz, sofar, ", ");
         internal_opnd_disassemble(buf, bufsz, sofar, dcontext, opnd);
         return true;
+#ifdef NO
     case TYPE_X:
         if (opnd_get_segment(opnd) != SEG_DS) {
             /* FIXME: really we should put before opcode */
@@ -792,7 +780,7 @@ opnd_disassemble_noimplicit(char *buf, size_t bufsz, size_t *sofar INOUT,
                             postop_suffix());
             return true;
         }
-    case TYPE_Y:
+#endif //NO
     case TYPE_INDIR_REG:
         /* implicit operand */
         return false;

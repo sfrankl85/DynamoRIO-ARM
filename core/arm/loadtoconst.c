@@ -1315,7 +1315,8 @@ restore_eflags_list(dcontext_t *dcontext,fragment_t *frag)
 
     if (((frag->flags & FRAG_WRITES_EFLAGS_OF) == 0)||dynamo_options.safe_loads_to_const) {
         instrlist_append(ilist,
-                        INSTR_CREATE_add(dcontext, 
+                        INSTR_CREATE_add_imm(dcontext, 
+                                         opnd_create_reg(REG_AL),
                                          opnd_create_reg(REG_AL),
                                          OPND_CREATE_INT8(0x7f)));
 
@@ -1702,7 +1703,7 @@ instr_arithmatic_simplify(dcontext_t *dcontext, instr_t *in)
                     is this fucking necessary?
                     if (!instr_is_encoding_possible(newinstr)) {
                     instr_free(dcontext,newinstr);
-                    newinstr=INSTR_CREATE_mov_st(dcontext,instr_get_dst(in,0),op1);
+                    newinstr=INSTR_CREATE_mov_reg(dcontext,instr_get_dst(in,0),op1);
                     }
             */
             break;
@@ -1962,7 +1963,7 @@ instrlist_setup_pseudo_exitstubs(dcontext_t *dcontext,instrlist_t *trace)
     for (instr = instrlist_first(trace); instr!=NULL; instr = instr_get_next(instr)) {
         if (instr->exitlist) {
             ASSERT(instr_is_cti(instr));
-            instrlist_append(instr->exitlist,INSTR_CREATE_jmp(dcontext,
+            instrlist_append(instr->exitlist,INSTR_CREATE_branch(dcontext,
                                                               instr_get_target(instr)));
             loginst(dcontext,3,instr,"setting up pseudo exit stub for me");
 

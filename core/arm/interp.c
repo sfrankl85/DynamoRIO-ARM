@@ -498,7 +498,7 @@ bb_add_native_direct_xfer(dcontext_t *dcontext, build_bb_t *bb, bool appended)
     instrlist_meta_append(bb->ilist, INSTR_CREATE_mov_imm
                           (dcontext, tls_slot, OPND_CREATE_INT32((int)(tgt >> 32))));
     if (instr_is_ubr(bb->instr)) {
-        instrlist_meta_append(bb->ilist, INSTR_CREATE_jmp_ind
+        instrlist_meta_append(bb->ilist, INSTR_CREATE_branch_ind
                               (dcontext,
                                opnd_create_tls_slot(os_tls_offset(TLS_XAX_SLOT))));
         bb->exit_type |= instr_branch_type(bb->instr);
@@ -3696,7 +3696,7 @@ build_bb_ilist(dcontext_t *dcontext, build_bb_t *bb)
     if (bb->mangle_ilist &&
         (bb->instr == NULL || !instr_opcode_valid(bb->instr) ||
          !instr_is_near_ubr(bb->instr) || !instr_ok_to_mangle(bb->instr))) {
-        instr_t *exit_instr = INSTR_CREATE_jmp(dcontext, opnd_create_pc(bb->exit_target));
+        instr_t *exit_instr = INSTR_CREATE_branch(dcontext, opnd_create_pc(bb->exit_target));
         if (bb->record_translation) {
             app_pc translation = NULL;
             if (bb->instr == NULL || !instr_opcode_valid(bb->instr)) {
@@ -4156,7 +4156,7 @@ build_native_exec_bb(dcontext_t *dcontext, build_bb_t *bb)
         instr_set_ok_to_mangle(in, false);
 
     /* this is a jump for a dummy exit cti */
-    instrlist_append(bb->ilist, INSTR_CREATE_jmp(dcontext, opnd_create_pc(bb->start_pc)));
+    instrlist_append(bb->ilist, INSTR_CREATE_branch(dcontext, opnd_create_pc(bb->start_pc)));
 
     if (DYNAMO_OPTION(shared_bbs))
         bb->flags |= FRAG_SHARED;
@@ -5032,7 +5032,7 @@ insert_increment_stat_counter(dcontext_t *dcontext, instrlist_t *trace, instr_t 
     /*>>>    movl    %ecx, counter */
     /* x64: the counter is still 32 bits */
     added_size += tracelist_add(dcontext, trace, next,
-                                INSTR_CREATE_mov_ld(dcontext, opnd_create_reg(REG_ECX),
+                                INSTR_CREATE_mov_imm(dcontext, opnd_create_reg(REG_ECX),
                                                     private_branchtype_counter)
                                 );
     added_size += tracelist_add(dcontext, trace, next,
@@ -5040,7 +5040,7 @@ insert_increment_stat_counter(dcontext_t *dcontext, instrlist_t *trace, instr_t 
                                                  opnd_create_base_disp(REG_ECX, 
                                                                        REG_NULL, 0, 1, OPSZ_lea)));
     added_size += tracelist_add(dcontext, trace, next,
-                                INSTR_CREATE_mov_st(dcontext, 
+                                INSTR_CREATE_mov_reg(dcontext, 
                                                     private_branchtype_counter,
                                                     opnd_create_reg(REG_ECX)));
     return added_size;
@@ -5060,11 +5060,11 @@ insert_restore_spilled_xcx(dcontext_t *dcontext, instrlist_t *trace, instr_t *ne
     if (DYNAMO_OPTION(private_ib_in_tls)) {
         if (X64_CACHE_MODE_DC(dcontext) && !X64_MODE_DC(dcontext)) {
             added_size += tracelist_add(dcontext, trace, next,
-                INSTR_CREATE_mov_ld(dcontext, opnd_create_reg(REG_RR1),
+                INSTR_CREATE_mov_imm(dcontext, opnd_create_reg(REG_RR1),
                                     opnd_create_reg(REG_RR9)));
         } else {
             added_size += tracelist_add(dcontext, trace, next,
-                INSTR_CREATE_mov_ld(dcontext,
+                INSTR_CREATE_mov_imm(dcontext,
                                     opnd_create_reg(REG_RR1),
                                     opnd_create_tls_slot
                                     (os_tls_offset(MANGLE_XCX_SPILL_SLOT))));
@@ -5142,7 +5142,7 @@ mangle_x64_ib_in_trace(dcontext_t *dcontext, instrlist_t *trace,
     int added_size = 0;
     if (X64_MODE_DC(dcontext)) {
         added_size += tracelist_add
-            (dcontext, trace, targeter, INSTR_CREATE_mov_st
+            (dcontext, trace, targeter, INSTR_CREATE_mov_reg
              (dcontext, opnd_create_tls_slot(os_tls_offset(PREFIX_XAX_SPILL_SLOT)),
               opnd_create_reg(REG_RR0)));
         added_size += tracelist_add
@@ -5152,7 +5152,7 @@ mangle_x64_ib_in_trace(dcontext_t *dcontext, instrlist_t *trace,
     } else {
         ASSERT(X64_CACHE_MODE_DC(dcontext));
         added_size += tracelist_add
-            (dcontext, trace, targeter, INSTR_CREATE_mov_ld
+            (dcontext, trace, targeter, INSTR_CREATE_mov_imm
              (dcontext, opnd_create_reg(REG_RR8), opnd_create_reg(REG_RR0)));
         added_size += tracelist_add
             (dcontext, trace, targeter, INSTR_CREATE_mov_imm
@@ -5165,7 +5165,7 @@ mangle_x64_ib_in_trace(dcontext_t *dcontext, instrlist_t *trace,
     if (!DYNAMO_OPTION(unsafe_ignore_eflags_trace)) {
         if (X64_MODE_DC(dcontext)) {
             added_size += tracelist_add
-                (dcontext, trace, targeter, INSTR_CREATE_mov_st
+                (dcontext, trace, targeter, INSTR_CREATE_mov_reg
                  (dcontext, opnd_create_tls_slot
                   (os_tls_offset(INDIRECT_STUB_SPILL_SLOT)),
                   opnd_create_reg(REG_RR0)));
@@ -5494,7 +5494,7 @@ mangle_indirect_branch_in_trace(dcontext_t *dcontext, instrlist_t *trace,
                 !INTERNAL_OPTION(unsafe_ignore_overflow)) { 
                 /* restore OF using add that overflows if OF was on when we did seto */
                 added_size += tracelist_add
-                    (dcontext, trace, next, INSTR_CREATE_add
+                    (dcontext, trace, next, INSTR_CREATE_add_imm
                      (dcontext, opnd_create_reg(REG_AL), OPND_CREATE_INT8(0x7f)));
             }
             added_size += tracelist_add
@@ -5504,12 +5504,12 @@ mangle_indirect_branch_in_trace(dcontext_t *dcontext, instrlist_t *trace,
         /* TODO optimization: check if xax is live or not in next bb */
         if (X64_MODE_DC(dcontext)) {
             added_size += tracelist_add
-                (dcontext, trace, next, INSTR_CREATE_mov_ld
+                (dcontext, trace, next, INSTR_CREATE_mov_imm
                  (dcontext, opnd_create_reg(REG_RR0),
                   opnd_create_tls_slot(os_tls_offset(PREFIX_XAX_SPILL_SLOT))));
         } else {
             added_size += tracelist_add
-                (dcontext, trace, next, INSTR_CREATE_mov_ld
+                (dcontext, trace, next, INSTR_CREATE_mov_imm
                  (dcontext, opnd_create_reg(REG_RR0), opnd_create_reg(REG_RR8)));
         }
     }
@@ -5524,7 +5524,7 @@ mangle_indirect_branch_in_trace(dcontext_t *dcontext, instrlist_t *trace,
                                                 TOP_OF_RSTACK_OFFSET);
         /* insert prior to restoring flags (add clobbers them)! */
         added_size += tracelist_add(dcontext, trace, next,
-                                    INSTR_CREATE_add(dcontext, top, OPND_CREATE_INT8(8)));
+                                    INSTR_CREATE_add_imm(dcontext, top, top, OPND_CREATE_INT8(8)));
         
         /* FIXME: we need to execute a ret instruction in order to
          * clear the hardware's return stack!  And if we do that there
@@ -5818,7 +5818,7 @@ append_trace_speculate_last_ibl(dcontext_t *dcontext, instrlist_t *trace,
 
             added_size += 
                 tracelist_add(dcontext, trace, where, 
-                              INSTR_CREATE_mov_st(dcontext,
+                              INSTR_CREATE_mov_reg(dcontext,
                                                   opnd_create_tls_slot(tls_stat_scratch_slot),
                                                   opnd_create_reg(REG_RR1)));
             added_size += 
@@ -5828,7 +5828,7 @@ append_trace_speculate_last_ibl(dcontext_t *dcontext, instrlist_t *trace,
                                               ->ib_trace_last_ibl_exit);
             added_size += 
                 tracelist_add(dcontext, trace, where, 
-                              INSTR_CREATE_mov_ld(dcontext,
+                              INSTR_CREATE_mov_imm(dcontext,
                                                   opnd_create_reg(REG_RR1),
                                                   opnd_create_tls_slot(tls_stat_scratch_slot)));
         }
@@ -5872,7 +5872,7 @@ append_trace_speculate_last_ibl(dcontext_t *dcontext, instrlist_t *trace,
             /* restore XCX to app IB target*/
             added_size += 
                 tracelist_add(dcontext, trace, next, 
-                              INSTR_CREATE_mov_ld(dcontext,
+                              INSTR_CREATE_mov_imm(dcontext,
                                                   opnd_create_reg(REG_RR1),
                                                   opnd_create_tls_slot(tls_stat_scratch_slot)));
         }
@@ -5916,7 +5916,7 @@ append_trace_speculate_last_ibl(dcontext_t *dcontext, instrlist_t *trace,
 
     /* add a new direct exit stub */
     added_size += tracelist_add(dcontext, trace, next, 
-                                INSTR_CREATE_jmp(dcontext, opnd_create_pc(speculate_next_tag)));
+                                INSTR_CREATE_branch(dcontext, opnd_create_pc(speculate_next_tag)));
     LOG(THREAD, LOG_INTERP, 3,
         "append_trace_speculate_last_ibl: added cmp vs. "PFX" for ind br\n",
         speculate_next_tag);
@@ -5964,7 +5964,7 @@ append_ib_trace_last_ibl_exit_stat(dcontext_t *dcontext, instrlist_t *trace,
                 
     ASSERT(ok);
     added_size += tracelist_add(dcontext, trace, where, 
-                                INSTR_CREATE_mov_st(dcontext,
+                                INSTR_CREATE_mov_reg(dcontext,
                                                     opnd_create_tls_slot(tls_stat_scratch_slot),
                                                     opnd_create_reg(REG_RR1)));
     added_size += 
@@ -5972,7 +5972,7 @@ append_ib_trace_last_ibl_exit_stat(dcontext_t *dcontext, instrlist_t *trace,
                                       &get_ibl_per_type_statistics(dcontext, ibl_type.branch_type)
                                       ->ib_trace_last_ibl_exit);
     added_size += tracelist_add(dcontext, trace, where, 
-                                INSTR_CREATE_mov_ld(dcontext,
+                                INSTR_CREATE_mov_imm(dcontext,
                                                     opnd_create_reg(REG_RR1),
                                                     opnd_create_tls_slot(tls_stat_scratch_slot)));
 
@@ -6002,12 +6002,12 @@ append_ib_trace_last_ibl_exit_stat(dcontext_t *dcontext, instrlist_t *trace,
                                           ->ib_trace_last_ibl_speculate_success);
         /* restore ECX */
         added_size += tracelist_add(dcontext, trace, next, 
-                                INSTR_CREATE_mov_ld(dcontext,
+                                INSTR_CREATE_mov_imm(dcontext,
                                                     opnd_create_reg(REG_ECX),
                                                     opnd_create_tls_slot(tls_stat_scratch_slot)));
         /* jmp where */
         added_size += tracelist_add(dcontext, trace, next, 
-                                    INSTR_CREATE_jmp_short(dcontext, opnd_create_instr(where)));
+                                    INSTR_CREATE_branch_short(dcontext, opnd_create_instr(where)));
     }
 #endif
     return added_size;
@@ -6129,7 +6129,7 @@ static instr_t *
 create_exit_jmp(dcontext_t *dcontext, app_pc target, app_pc translation,
                 uint branch_type)
 {
-    instr_t *jmp = INSTR_CREATE_jmp(dcontext, opnd_create_pc(target));
+    instr_t *jmp = INSTR_CREATE_branch(dcontext, opnd_create_pc(target));
     instr_set_translation(jmp, translation);
     if (branch_type == 0)
         instr_exit_branch_set_type(jmp, instr_branch_type(jmp));
@@ -6676,7 +6676,7 @@ decode_fragment(dcontext_t *dcontext, fragment_t *f, byte *buf, /*IN/OUT*/uint *
                     if (stop) {
                         /* Add the ubr ourselves */
                         ASSERT(cti == NULL);
-                        cti = INSTR_CREATE_jmp(dcontext, opnd_create_pc(pc));
+                        cti = INSTR_CREATE_branch(dcontext, opnd_create_pc(pc));
                         /* It's up to the caller to decide whether to mark this
                          * as do-not-emit or not */
                         /* Process as an exit cti */

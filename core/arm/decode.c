@@ -149,44 +149,13 @@ get_x86_mode(dcontext_t *dcontext)
 static bool
 is_variable_size(opnd_size_t sz)
 {
-    switch (sz) {
-    case OPSZ_2_short1:
-    case OPSZ_4_short2:
-    case OPSZ_4x8:
-    case OPSZ_4x8_short2:
-    case OPSZ_4x8_short2xi8:
-    case OPSZ_4_short2xi4:
-    case OPSZ_4_rex8_short2:
-    case OPSZ_4_rex8:
-    case OPSZ_6_irex10_short4:
-    case OPSZ_6x10:
-    case OPSZ_8_short2:
-    case OPSZ_8_short4:
-    case OPSZ_28_short14:
-    case OPSZ_108_short94:
-    case OPSZ_1_reg4:
-    case OPSZ_2_reg4:
-    case OPSZ_4_reg16:
-    case OPSZ_32_short16:
-    case OPSZ_8_rex16:
-    case OPSZ_8_rex16_short4:
-    case OPSZ_12_rex40_short6:
-    case OPSZ_16_vex32:
-        return true;
-    default:
-        return false;
-    }
+    /* SJF No variable regs for now */
+    return false;
 }
 #endif
 
-opnd_size_t
-resolve_var_reg_size(opnd_size_t sz, bool is_reg)
+opnd_size_t resolve_var_reg_size(opnd_size_t sz, bool is_reg)
 {
-    switch (sz) {
-    case OPSZ_1_reg4: return (is_reg ? OPSZ_4 : OPSZ_1);
-    case OPSZ_2_reg4: return (is_reg ? OPSZ_4 : OPSZ_2);
-    case OPSZ_4_reg16: return (is_reg ? OPSZ_16 : OPSZ_4);
-    }
     return sz;
 }
 
@@ -197,67 +166,8 @@ opnd_size_t
 resolve_variable_size(decode_info_t *di/*IN: x86_mode, prefixes*/,
                       opnd_size_t sz, bool is_reg)
 {
+/* SJF No more variable reg sizes */
     switch (sz) {
-    case OPSZ_2_short1: return (TEST(PREFIX_DATA, di->prefixes) ? OPSZ_1 : OPSZ_2);
-    case OPSZ_4_short2: return (TEST(PREFIX_DATA, di->prefixes) ? OPSZ_2 : OPSZ_4);
-    case OPSZ_4x8: return (X64_MODE(di) ? OPSZ_8 : OPSZ_4);
-    case OPSZ_4x8_short2:
-        return (TEST(PREFIX_DATA, di->prefixes) ? OPSZ_2 :
-                (X64_MODE(di) ? OPSZ_8 : OPSZ_4));
-/* TODO SJF Comment out all INTEL/AMD stuff 
-    case OPSZ_4x8_short2xi8:
-        return (X64_MODE(di) ? (proc_get_vendor() == VENDOR_INTEL ? OPSZ_8 :
-                              (TEST(PREFIX_DATA, di->prefixes) ? OPSZ_2 : OPSZ_8)) :
-                (TEST(PREFIX_DATA, di->prefixes) ? OPSZ_2 : OPSZ_4));
-    case OPSZ_4_short2xi4:
-        return ((X64_MODE(di) && proc_get_vendor() == VENDOR_INTEL) ? OPSZ_4 :
-                (TEST(PREFIX_DATA, di->prefixes) ? OPSZ_2 : OPSZ_4));
-*/
-    case OPSZ_4_rex8_short2: /* rex.w trumps data prefix */
-        return (TEST(PREFIX_REX_W, di->prefixes) ? OPSZ_8 :
-                (TEST(PREFIX_DATA, di->prefixes) ? OPSZ_2 : OPSZ_4));
-    case OPSZ_4_rex8: return (TEST(PREFIX_REX_W, di->prefixes) ? OPSZ_8 : OPSZ_4);
-    case OPSZ_6_irex10_short4: /* rex.w trumps data prefix, but is ignored on AMD */
-        DODEBUG({
-            /* less annoying than a CURIOSITY assert when testing */
-            if (TEST(PREFIX_REX_W, di->prefixes))
-                SYSLOG_INTERNAL_INFO_ONCE("curiosity: rex.w on OPSZ_6_irex10_short4!");
-        });
-/* TODO SJF Comment out all AMD/INTEL stuff 
-        return ((TEST(PREFIX_REX_W, di->prefixes) && proc_get_vendor() != VENDOR_AMD) ?
-                OPSZ_10 : (TEST(PREFIX_DATA, di->prefixes) ? OPSZ_4 : OPSZ_6));
-*/
-    case OPSZ_6x10: return (X64_MODE(di) ? OPSZ_10 : OPSZ_6);
-    case OPSZ_8_short2: return (TEST(PREFIX_DATA, di->prefixes) ? OPSZ_2 : OPSZ_8);
-    case OPSZ_8_short4: return (TEST(PREFIX_DATA, di->prefixes) ? OPSZ_4 : OPSZ_8);
-    case OPSZ_8_rex16: return (TEST(PREFIX_REX_W, di->prefixes) ? OPSZ_16 : OPSZ_8);
-    case OPSZ_8_rex16_short4: /* rex.w trumps data prefix */
-        return (TEST(PREFIX_REX_W, di->prefixes) ? OPSZ_16 :
-                (TEST(PREFIX_DATA, di->prefixes) ? OPSZ_4 : OPSZ_8));
-    case OPSZ_12_rex40_short6: /* rex.w trumps data prefix */
-        return (TEST(PREFIX_REX_W, di->prefixes) ? OPSZ_40 :
-                (TEST(PREFIX_DATA, di->prefixes) ? OPSZ_6 : OPSZ_12));
-    case OPSZ_16_vex32: return (TEST(PREFIX_VEX_L, di->prefixes) ? OPSZ_32 : OPSZ_16);
-    case OPSZ_32_short16:
-        return (TEST(PREFIX_DATA, di->prefixes) ?  OPSZ_16 : OPSZ_32);
-    case OPSZ_28_short14:
-        return (TEST(PREFIX_DATA, di->prefixes) ?  OPSZ_14 : OPSZ_28);
-    case OPSZ_108_short94:
-        return (TEST(PREFIX_DATA, di->prefixes) ?  OPSZ_94 : OPSZ_108);
-    case OPSZ_1_reg4:
-    case OPSZ_2_reg4:
-    case OPSZ_4_reg16:
-        return resolve_var_reg_size(sz, is_reg);
-    /* The _of_ types are not exposed to the user so convert here */
-    case OPSZ_4_of_8:
-    case OPSZ_4_of_16:
-        return OPSZ_4;
-    case OPSZ_8_of_16:
-        return OPSZ_8;
-    case OPSZ_8_of_16_vex32:
-        return (TEST(PREFIX_VEX_L, di->prefixes) ?  OPSZ_32 : OPSZ_8);
-    case OPSZ_16_of_32:
-        return OPSZ_16;
     }
     return sz;
 }
@@ -366,7 +276,9 @@ read_operand(byte *pc, decode_info_t *di, byte optype, opnd_size_t opsize)
             }
 #endif
             /* ok b/c only instr_info_t fields passed */
+/*
             CLIENT_ASSERT(opsize == OPSZ_6_irex10_short4, "decode A operand error");
+*/
             if (TEST(PREFIX_DATA, di->prefixes)) {
                 /* 4-byte immed */
                 pc = read_immed(pc, di, OPSZ_4, &val);
@@ -430,12 +342,14 @@ read_operand(byte *pc, decode_info_t *di, byte optype, opnd_size_t opsize)
 */
             break;
         }
+#ifdef NO
     case TYPE_L:
         {
             /* part of AVX: top 4 bits of 8-bit immed select xmm/ymm register */
             pc = read_immed(pc, di, OPSZ_1, &val);
             break;
         }
+#endif
     case TYPE_O:
         {
             /* no modrm byte, offset follows directly.  this is address-sized,
@@ -1076,6 +990,7 @@ decode_reg(decode_reg_t which_reg, decode_info_t *di, byte optype, opnd_size_t o
     }
 
     switch (optype) {
+/*
     case TYPE_P:
     case TYPE_Q:
     case TYPE_V:
@@ -1089,6 +1004,7 @@ decode_reg(decode_reg_t which_reg, decode_info_t *di, byte optype, opnd_size_t o
     case TYPE_G:
     case TYPE_R:
     case TYPE_M:
+*/
     case TYPE_INDIR_E:
     case TYPE_FLOATMEM:
         /* GPR: fall-through since variable subset of full register */
@@ -1102,8 +1018,10 @@ decode_reg(decode_reg_t which_reg, decode_info_t *di, byte optype, opnd_size_t o
      * into asserts or crashes instead of invalid instrs based on events as fragile
      * as these decode routines moving sizes around?
      */
+/*
     if (opsize != OPSZ_6_irex10_short4 && opsize != OPSZ_8_short4)
         opsize = resolve_variable_size(di, opsize, true);
+*/
 
     switch (opsize) {
     case OPSZ_1:
@@ -1113,8 +1031,6 @@ decode_reg(decode_reg_t which_reg, decode_info_t *di, byte optype, opnd_size_t o
     case OPSZ_8:
         return (extend? (REG_START_64 + 8 + reg) : (REG_START_64 + reg));
     case OPSZ_6:
-    case OPSZ_6_irex10_short4:
-    case OPSZ_8_short4:
         /* invalid: no register of size p */
         return REG_NULL;
     default:
@@ -1385,12 +1301,6 @@ decode_operand(decode_info_t *di, byte optype, opnd_size_t opsize, opnd_t *opnd)
     case TYPE_REG:
         *opnd = opnd_create_reg(opsize);
         return true;
-    case TYPE_VAR_REG:
-        *opnd = opnd_create_reg(resolve_var_reg
-                                (di, opsize, false/*!addr*/, true/*shrinkable*/
-                                 _IF_X64(false/*d32*/) _IF_X64(true/*growable*/)
-                                 _IF_X64(false/*!extendable*/)));
-        return true;
 #ifdef NO
     case TYPE_VARZ_REG:
         *opnd = opnd_create_reg(resolve_var_reg
@@ -1436,7 +1346,6 @@ decode_operand(decode_info_t *di, byte optype, opnd_size_t opsize, opnd_t *opnd)
         return true;
 #endif
     case TYPE_FLOATMEM:
-    case TYPE_M:
         /* ensure referencing memory */
         if (di->mod >= 3)
             return false;
@@ -1480,6 +1389,7 @@ decode_operand(decode_info_t *di, byte optype, opnd_size_t opsize, opnd_t *opnd)
         return true;
     case TYPE_A: 
         {
+#ifdef NO
             /* ok since instr_info_t fields */
             CLIENT_ASSERT(!X64_MODE(di), "x64 has no type A instructions");
             CLIENT_ASSERT(opsize == OPSZ_6_irex10_short4, "decode A operand error");
@@ -1502,6 +1412,7 @@ decode_operand(decode_info_t *di, byte optype, opnd_size_t opsize, opnd_t *opnd)
                 di->size_immed2 = OPSZ_NA;
             }
             return true;
+#endif //NO
         }
     case TYPE_O:
         {
@@ -1591,7 +1502,6 @@ decode_operand(decode_info_t *di, byte optype, opnd_size_t opsize, opnd_t *opnd)
          * besides, Ap is just as indirect as i_Ep!
          */
         return decode_operand(di, TYPE_E, opsize, opnd);
-#endif
     case TYPE_L:
         {
             /* part of AVX: top 4 bits of 8-bit immed select xmm/ymm register */
@@ -1618,6 +1528,7 @@ decode_operand(decode_info_t *di, byte optype, opnd_size_t opsize, opnd_t *opnd)
 */
             return true;
         }
+#endif
     default:
         /* ok to assert, types coming only from instr_info_t */
         CLIENT_ASSERT(false, "decode error: unknown operand type");

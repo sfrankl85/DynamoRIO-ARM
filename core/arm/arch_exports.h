@@ -54,7 +54,7 @@
  * adding new ones, so code operating on XMM often also operates on YMM,
  * and thus some *XMM* macros also apply to *YMM*.
  */
-#define QR_REG_SIZE 128
+#define QR_REG_SIZE 16 
 #define QR_SAVED_REG_SIZE  QR_REG_SIZE /* space in priv_mcontext_t for xmm/ymm */
 #define QR_SLOTS_SIZE  (NUM_QR_SLOTS*QR_SAVED_REG_SIZE)
 #define QR_SAVED_SIZE  (NUM_QR_SAVED*QR_SAVED_REG_SIZE)
@@ -493,8 +493,9 @@ static inline int64 atomic_add_exchange_int64(volatile int64 *var, int64 value) 
 static inline void stats_atomic_inc( int var )
 {
     int t = 0, tmp = 0;
-
+/*
     ATOMIC_INC(int, var, t, tmp);
+*/
 }
 
 static inline void stats_atomic_dec( int *var )
@@ -1024,8 +1025,8 @@ void back_from_native(void);
 /* These two are labels, not functions. */
 void back_from_native_retstubs(void);
 void back_from_native_retstubs_end(void);
-/* Each stub should be 4 bytes: push imm8 + jmp rel8 */
-enum { BACK_FROM_NATIVE_RETSTUB_SIZE = 4 };
+/* Each stub should be 12 bytes: mov reg, imm; str reg, mem; b rel;  */
+enum { BACK_FROM_NATIVE_RETSTUB_SIZE = 12 };
 #ifdef LINUX
 void native_plt_call(void);
 #endif

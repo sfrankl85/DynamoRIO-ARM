@@ -1090,15 +1090,19 @@ const instr_info_t * const op_instr[] =
 #define xx  TYPE_NONE, OPSZ_NA
 
 /* from ARM document. Couldnt find a table. Is there one? */
-#define Ra  TYPE_REG, OPSZ_4
-#define I3  TYPE_I,   OPSZ_3
-#define I4  TYPE_I,   OPSZ_4
-#define I5  TYPE_I,   OPSZ_5
-#define I6  TYPE_I,   OPSZ_6
-#define I8  TYPE_I,   OPSZ_8
-#define I12 TYPE_I,   OPSZ_12
-#define I16 TYPE_I,   OPSZ_16
-#define I24 TYPE_I,   OPSZ_24
+#define Ra  TYPE_REG,    OPSZ_4
+#define Cr  TYPE_CO_REG, OPSZ_4
+#define I3  TYPE_I,      OPSZ_3
+#define I4  TYPE_I,      OPSZ_4
+#define I5  TYPE_I,      OPSZ_5
+#define I6  TYPE_I,      OPSZ_6
+#define I8  TYPE_I,      OPSZ_8
+#define I12 TYPE_I,      OPSZ_12
+#define I16 TYPE_I,      OPSZ_16
+#define I24 TYPE_I,      OPSZ_24
+
+#define A24 TYPE_A,      OPSZ_3  //24 bit/3 byte immediate that contains an address
+#define J24 TYPE_J,      OPSZ_3  //24 bit/3 byte immediate that contains a near address
 
 
 #define r0  TYPE_REG, REG_RR0
@@ -1199,51 +1203,51 @@ const instr_info_t invalid_instr =
 
 /* At intruction F* page A8-100 in ARMv7-A tech manual. */
 const instr_info_t armv7a_instrs[] = {
-    {OP_adc_imm,  0x000001, "adc_imm",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*adc_imm()*/
-    {OP_adc_reg,  0x000001, "adc_reg",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*adc_reg()*/
-    {OP_adc_rsr,  0x000001, "adc_rsr",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*adc_rsr()*/
-    {OP_add_imm,  0x000001, "add_imm",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*add_imm()*/
-    {OP_add_reg,  0x000001, "add_reg",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*add_reg()*/
-    {OP_add_rsr,  0x000001, "add_rsr",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*add_rsr()*/
-    {OP_add_sp_imm,  0x000001, "add_sp_imm",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*add_sp_imm()*/
-    {OP_add_sp_reg,  0x000001, "add_sp_reg",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*add_sp_reg()*/
-    {OP_adr,  0x000001, "adr",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*adr()*/
-    {OP_and_imm,  0x000001, "and_imm",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*and_imm()*/
-    {OP_and_reg,  0x000001, "and_reg",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*and_reg()*/
-    {OP_and_rsr,  0x000001, "and_rsr",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*and_rsr()*/
-    {OP_asr_imm,  0x000001, "asr_imm",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*asr_imm()*/
-    {OP_asr_reg,  0x000001, "asr_reg",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*asr_reg()*/
-    {OP_b,  0x000001, "b",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*b()*/
-    {OP_bfc,  0x000001, "bfc",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*bfc()*/
-    {OP_bfi,  0x000001, "bfi",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*bfi()*/
-    {OP_bic_imm,  0x000001, "bic_imm",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*bic_imm()*/
-    {OP_bic_reg,  0x000001, "bic_reg",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*bic_reg()*/
-    {OP_bic_rsr,  0x000001, "bic_rsr",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*bic_rsr()*/
-    {OP_bkpt,  0x000001, "bkpt",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*bkpt()*/
-    {OP_bl,  0x000001, "bl",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*bl()*/
-    {OP_blx_imm,  0x000001, "blx_imm",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*blx_imm()*/
-    {OP_blx_reg,  0x000001, "blx_reg",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*blx_reg()*/
-    {OP_bx,  0x000001, "bx",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*bx()*/
-    {OP_bxj,  0x000001, "bxj",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*bxj()*/
+    {OP_adc_imm,     0x000001, "adc_imm",  Ra, xx, Ra,  I12, xx,  0x0,  mrm, fW6, END_LIST}, /*adc_imm()*/
+    {OP_adc_reg,     0x000001, "adc_reg",  Ra, xx, Ra,  Ra,  I5,  0x0,  mrm, fW6, END_LIST}, /*adc_reg()*/
+    {OP_adc_rsr,     0x000001, "adc_rsr",  Ra, xx, Ra,  Ra,  Ra,  0x0,  mrm, fW6, END_LIST}, /*adc_rsr()*/
+    {OP_add_imm,     0x000001, "add_imm",  Ra, xx, Ra,  I12, xx,  0x0,  mrm, fW6, END_LIST}, /*add_imm()*/
+    {OP_add_reg,     0x000001, "add_reg",  Ra, xx, Ra,  Ra,  I5,  0x0,  mrm, fW6, END_LIST}, /*add_reg()*/
+    {OP_add_rsr,     0x000001, "add_rsr",  Ra, xx, Ra,  Ra,  Ra,  0x0,  mrm, fW6, END_LIST}, /*add_rsr()*/
+    {OP_add_sp_imm,  0x000001, "add_sp_imm",  Ra, xx, I12, xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*add_sp_imm()*/
+    {OP_add_sp_reg,  0x000001, "add_sp_reg",  Ra, xx, Ra,  I5,  xx,  0x0,  mrm, fW6, END_LIST}, /*add_sp_reg()*/
+    {OP_adr,         0x000001, "adr",      Ra, xx, xx,  I12,  xx,  0x0,  mrm, fW6, END_LIST}, /*adr()*/
+    {OP_and_imm,     0x000001, "and_imm",  Ra, xx, Ra,  I12, xx,  0x0,  mrm, fW6, END_LIST}, /*and_imm()*/
+    {OP_and_reg,     0x000001, "and_reg",  Ra, xx, Ra,  Ra,  I5,  0x0,  mrm, fW6, END_LIST}, /*and_reg()*/
+    {OP_and_rsr,     0x000001, "and_rsr",  Ra, xx, Ra,  Ra,  Ra,  0x0,  mrm, fW6, END_LIST}, /*and_rsr()*/
+    {OP_asr_imm,     0x000001, "asr_imm",  Ra, xx, Ra,  I5,  xx,  0x0,  mrm, fW6, END_LIST}, /*asr_imm()*/
+    {OP_asr_reg,     0x000001, "asr_reg",  Ra, xx, Ra,  Ra,  xx,  0x0,  mrm, fW6, END_LIST}, /*asr_reg()*/
+    {OP_b,           0x000001, "b",        xx, xx, J24, xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*b()*/
+    {OP_bfc,         0x000001, "bfc",      Ra, xx, I5,  I5,  xx,  0x0,  mrm, fW6, END_LIST}, /*bfc()*/
+    {OP_bfi,         0x000001, "bfi",      Ra, xx, Ra,  I5,  I5,  0x0,  mrm, fW6, END_LIST}, /*bfi()*/
+    {OP_bic_imm,     0x000001, "bic_imm",  Ra, xx, Ra,  I12, xx,  0x0,  mrm, fW6, END_LIST}, /*bic_imm()*/
+    {OP_bic_reg,     0x000001, "bic_reg",  Ra, xx, Ra,  Ra,  I5,  0x0,  mrm, fW6, END_LIST}, /*bic_reg()*/
+    {OP_bic_rsr,     0x000001, "bic_rsr",  Ra, xx, Ra,  Ra,  Ra,  0x0,  mrm, fW6, END_LIST}, /*bic_rsr()*/
+    {OP_bkpt,        0x000001, "bkpt",     xx, xx, I12, I4,  xx,  0x0,  mrm, fW6, END_LIST}, /*bkpt()*/
+    {OP_bl,          0x000001, "bl",       xx, xx, I12, xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*bl()*/
+    {OP_blx_imm,     0x000001, "blx_imm",  xx, xx, I12, xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*blx_imm()*/
+    {OP_blx_reg,     0x000001, "blx_reg",  xx, xx, Ra,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*blx_reg()*/
+    {OP_bx,          0x000001, "bx",  xx, xx, xx,  Ra,  xx,  0x0,  mrm, fW6, END_LIST}, /*bx()*/
+    {OP_bxj,  0x000001, "bxj",  xx, xx, xx,  Ra,  xx,  0x0,  mrm, fW6, END_LIST}, /*bxj()*/
     {OP_cbnz,  0x000001, "cbnz",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*cbnz()*/
     {op_cbz,  0x000001, "cbz",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*cbz()*/
     {OP_cdp,  0x000001, "cdp",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*cdp()*/
     {OP_cdp2,  0x000001, "cdp2",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*cdp2()*/
     {OP_clrex,  0x000001, "clrex",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*clrex()*/
-    {OP_clz,  0x000001, "clz",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*clz()*/
-    {OP_cmn_imm,  0x000001, "cmn_imm",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*cmn_imm()*/
-    {OP_cmn_reg,  0x000001, "cmn_reg",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*cmn_reg()*/
-    {OP_cmn_rsr,  0x000001, "cmn_rsr",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*cmn_rsr()*/
-    {OP_cmp_imm,  0x000001, "cmp_imm",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*cmp_imm()*/
-    {OP_cmp_reg,  0x000001, "cmp_reg",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*cmp_reg()*/
-    {OP_cmp_rsr,  0x000001, "cmp_rsr",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*cmp_rsr()*/
+    {OP_clz,  0x000001, "clz",  Ra, xx, Ra,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*clz()*/
+    {OP_cmn_imm,  0x000001, "cmn_imm",  Ra, xx, I12, xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*cmn_imm()*/
+    {OP_cmn_reg,  0x000001, "cmn_reg",  Ra, xx, Ra,  I5,  xx,  0x0,  mrm, fW6, END_LIST}, /*cmn_reg()*/
+    {OP_cmn_rsr,  0x000001, "cmn_rsr",  Ra, xx, Ra,  Ra,  xx,  0x0,  mrm, fW6, END_LIST}, /*cmn_rsr()*/
+    {OP_cmp_imm,  0x000001, "cmp_imm",  Ra, xx, I12, xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*cmp_imm()*/
+    {OP_cmp_reg,  0x000001, "cmp_reg",  Ra, xx, Ra,  I5,  xx,  0x0,  mrm, fW6, END_LIST}, /*cmp_reg()*/
+    {OP_cmp_rsr,  0x000001, "cmp_rsr",  Ra, xx, Ra,  Ra,  xx,  0x0,  mrm, fW6, END_LIST}, /*cmp_rsr()*/
     {OP_cps,  0x000001, "cps",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*cps()*/
     {OP_dbg,  0x000001, "dbg",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*dbg()*/
     {OP_dmb,  0x000001, "dmb",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*dmb()*/
     {OP_dsb,  0x000001, "dsb",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*dsb()*/
-    {OP_eor_imm,  0x000001, "eor_imm",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*eor_imm()*/
-    {OP_eor_reg,  0x000001, "eor_reg",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*eor_reg()*/
-    {OP_eor_rsr,  0x000001, "eor_rsr",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*eor_rsr()*/
+    {OP_eor_imm,  0x000001, "eor_imm",  Ra, xx, Ra,  I12, xx,  0x0,  mrm, fW6, END_LIST}, /*eor_imm()*/
+    {OP_eor_reg,  0x000001, "eor_reg",  Ra, xx, Ra,  Ra,  I5,  0x0,  mrm, fW6, END_LIST}, /*eor_reg()*/
+    {OP_eor_rsr,  0x000001, "eor_rsr",  Ra, xx, Ra,  Ra,  Ra,  0x0,  mrm, fW6, END_LIST}, /*eor_rsr()*/
     {OP_isb,  0x000001, "isb",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*isb()*/
     {OP_it,  0x000001, "it",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*it()*/
     {OP_ldc_imm,  0x000001, "ldc_imm",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*ldc_imm()*/
@@ -1259,46 +1263,46 @@ const instr_info_t armv7a_instrs[] = {
     {OP_ldmea,  0x000001, "ldmea",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*ldmea()*/
     {OP_ldmib,  0x000001, "ldmib",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*ldmib()*/
     {OP_ldmed,  0x000001, "ldmed",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*ldmed()*/
-    {OP_ldr_imm,  0x000001, "ldr_imm",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*ldr_imm()*/
-    {OP_ldr_lit,  0x000001, "ldr_lit",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*ldr_lit()*/
-    {OP_ldr_reg,  0x000001, "ldr_reg",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*ldr_reg()*/
-    {OP_ldrb_imm,  0x000001, "ldrb_imm",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*ldrb_imm()*/
-    {OP_ldrb_lit,  0x000001, "ldrb_lit",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*ldrb_lit()*/
-    {OP_ldrb_reg,  0x000001, "ldrb_reg",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*ldrb_reg()*/
-    {OP_ldrbt,  0x000001, "ldrbt",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*ldrbt()*/
-    {OP_ldrd_imm,  0x000001, "ldrd_imm",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*ldrd_imm()*/
-    {OP_ldrd_lit,  0x000001, "ldrd_lit",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*ldrd_lit()*/
-    {OP_ldrd_reg,  0x000001, "ldrd_reg",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*ldrd_reg()*/
-    {OP_ldrex,  0x000001, "ldrex",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*ldrex()*/
-    {OP_ldrexb,  0x000001, "ldrexb",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*ldrexb()*/
-    {OP_ldrexd,  0x000001, "ldrexd",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*ldrexd()*/
-    {OP_ldrexh,  0x000001, "ldrexh",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*ldrexh()*/
-    {OP_ldrh_imm,  0x000001, "ldrh_imm",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*ldrh_imm()*/
-    {OP_ldrh_lit,  0x000001, "ldrh_lit",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*ldrh_lit()*/
-    {OP_ldrh_reg,  0x000001, "ldrh_reg",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*ldrh_reg()*/
-    {OP_ldrht,  0x000001, "ldrht",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*ldrht()*/
-    {OP_ldrsb_imm,  0x000001, "ldrsb_imm",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*ldrsb_imm()*/
-    {OP_ldrsb_lit,  0x000001, "ldrsb_lit",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*ldrsb_lit()*/
-    {OP_ldrsb_reg,  0x000001, "ldrsb_reg",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*ldrsb_reg()*/
-    {OP_ldrsbt,  0x000001, "ldrsbt",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*ldrsbt()*/
-    {OP_ldrsh_imm,  0x000001, "ldrsh_imm",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*ldrsh_imm()*/
-    {OP_ldrsh_lit,  0x000001, "ldrsh_lit",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*ldrsh_lit()*/
-    {OP_ldrsh_reg,  0x000001, "ldrsh_reg",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*ldrsh_reg()*/
-    {OP_ldrsht,  0x000001, "ldrsht",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*ldrsht()*/
-    {OP_ldrt,  0x000001, "ldrt",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*ldrt()*/
-    {OP_lsl_imm,  0x000001, "lsl_imm",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*lsl_imm()*/
-    {OP_lsl_reg,  0x000001, "lsl_reg",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*lsl_reg()*/
-    {OP_lsr_imm,  0x000001, "lsr_imm",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*lsr_imm()*/
-    {OP_lsr_reg,  0x000001, "lsr_reg",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*lsr_reg()*/
+    {OP_ldr_imm,  0x000001, "ldr_imm",  Ra, xx, Ra,  I12, xx,  0x0,  mrm, fW6, END_LIST}, /*ldr_imm()*/
+    {OP_ldr_lit,  0x000001, "ldr_lit",  Ra, xx, I12, xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*ldr_lit()*/
+    {OP_ldr_reg,  0x000001, "ldr_reg",  Ra, xx, Ra,  Ra,  I5,  0x0,  mrm, fW6, END_LIST}, /*ldr_reg()*/
+    {OP_ldrb_imm,  0x000001, "ldrb_imm",  Ra, xx, Ra,  I12, xx,  0x0,  mrm, fW6, END_LIST}, /*ldrb_imm()*/
+    {OP_ldrb_lit,  0x000001, "ldrb_lit",  Ra, xx, I12, xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*ldrb_lit()*/
+    {OP_ldrb_reg,  0x000001, "ldrb_reg",  Ra, xx, Ra,  Ra,  I5,  0x0,  mrm, fW6, END_LIST}, /*ldrb_reg()*/
+    {OP_ldrbt,  0x000001, "ldrbt",  Ra, xx, Ra,  I12, xx,  0x0,  mrm, fW6, END_LIST}, /*ldrbt()*/
+    {OP_ldrd_imm,  0x000001, "ldrd_imm",  Ra, xx, Ra,  I4,  I4,  0x0,  mrm, fW6, END_LIST}, /*ldrd_imm()*/
+    {OP_ldrd_lit,  0x000001, "ldrd_lit",  Ra, xx, I4,  I4,  xx,  0x0,  mrm, fW6, END_LIST}, /*ldrd_lit()*/
+    {OP_ldrd_reg,  0x000001, "ldrd_reg",  Ra, xx, Ra,  Ra,  xx,  0x0,  mrm, fW6, END_LIST}, /*ldrd_reg()*/
+    {OP_ldrex,  0x000001, "ldrex",  Ra, xx, Ra,  I8,  xx,  0x0,  mrm, fW6, END_LIST}, /*ldrex()*/
+    {OP_ldrexb,  0x000001, "ldrexb",  Ra, xx, Ra,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*ldrexb()*/
+    {OP_ldrexd,  0x000001, "ldrexd",  Ra, xx, Ra,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*ldrexd()*/
+    {OP_ldrexh,  0x000001, "ldrexh",  Ra, xx, Ra,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*ldrexh()*/
+    {OP_ldrh_imm,  0x000001, "ldrh_imm",  Ra, xx, Ra,  I4,  I4,  0x0,  mrm, fW6, END_LIST}, /*ldrh_imm()*/
+    {OP_ldrh_lit,  0x000001, "ldrh_lit",  Ra, xx, I4,  I4,  xx,  0x0,  mrm, fW6, END_LIST}, /*ldrh_lit()*/
+    {OP_ldrh_reg,  0x000001, "ldrh_reg",  Ra, xx, Ra,  Ra,  xx,  0x0,  mrm, fW6, END_LIST}, /*ldrh_reg()*/
+    {OP_ldrht,  0x000001, "ldrht",  Ra, xx, Ra,  I4,  I4,  0x0,  mrm, fW6, END_LIST}, /*ldrht()*/
+    {OP_ldrsb_imm,  0x000001, "ldrsb_imm",  Ra, xx, Ra,  I4,  I4,  0x0,  mrm, fW6, END_LIST}, /*ldrsb_imm()*/
+    {OP_ldrsb_lit,  0x000001, "ldrsb_lit",  Ra, xx, I4,  I4,  xx,  0x0,  mrm, fW6, END_LIST}, /*ldrsb_lit()*/
+    {OP_ldrsb_reg,  0x000001, "ldrsb_reg",  Ra, xx, Ra,  Ra,  xx,  0x0,  mrm, fW6, END_LIST}, /*ldrsb_reg()*/
+    {OP_ldrsbt,  0x000001, "ldrsbt",  Ra, xx, Ra,  I4,  I4,  0x0,  mrm, fW6, END_LIST}, /*ldrsbt()*/
+    {OP_ldrsh_imm,  0x000001, "ldrsh_imm",  Ra, xx, Ra,  I4,  I4,  0x0,  mrm, fW6, END_LIST}, /*ldrsh_imm()*/
+    {OP_ldrsh_lit,  0x000001, "ldrsh_lit",  Ra, xx, I4,  I4,  xx,  0x0,  mrm, fW6, END_LIST}, /*ldrsh_lit()*/
+    {OP_ldrsh_reg,  0x000001, "ldrsh_reg",  Ra, xx, Ra,  Ra,  xx,  0x0,  mrm, fW6, END_LIST}, /*ldrsh_reg()*/
+    {OP_ldrsht,  0x000001, "ldrsht",  Ra, xx, Ra,  I4,  I4,  0x0,  mrm, fW6, END_LIST}, /*ldrsht()*/
+    {OP_ldrt,  0x000001, "ldrt",  Ra, xx, Ra,  I12, xx,  0x0,  mrm, fW6, END_LIST}, /*ldrt()*/
+    {OP_lsl_imm,  0x000001, "lsl_imm",  Ra, xx, Ra,  I5,  xx,  0x0,  mrm, fW6, END_LIST}, /*lsl_imm()*/
+    {OP_lsl_reg,  0x000001, "lsl_reg",  Ra, xx, Ra,  Ra,  xx,  0x0,  mrm, fW6, END_LIST}, /*lsl_reg()*/
+    {OP_lsr_imm,  0x000001, "lsr_imm",  Ra, xx, Ra,  I5,  xx,  0x0,  mrm, fW6, END_LIST}, /*lsr_imm()*/
+    {OP_lsr_reg,  0x000001, "lsr_reg",  Ra, xx, Ra,  Ra,  xx,  0x0,  mrm, fW6, END_LIST}, /*lsr_reg()*/
     {OP_mcr,  0x000001, "mcr",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*mcr()*/
     {OP_mcr2,  0x000001, "mcr2",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*mcr2()*/
     {OP_mcrr,  0x000001, "mcrr",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*mcrr()*/
     {OP_mcrr2,  0x000001, "mcrr2",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*mcrr2()*/
     {OP_mla,  0x000001, "mla",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*mla()*/
     {OP_mls,  0x000001, "mls",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*mls()*/
-    {OP_mov_imm,  0x000001, "mov_imm",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*mov_imm()*/
-    {OP_mov_reg,  0x000001, "mov_reg",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*mov_reg()*/
-    {OP_movt,  0x000001, "movt",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*movt()*/
+    {OP_mov_imm,  0x000001, "mov_imm",  Ra, xx, I12, xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*mov_imm()*/
+    {OP_mov_reg,  0x000001, "mov_reg",  Ra, xx, Ra,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*mov_reg()*/
+    {OP_movt,  0x000001, "movt",  Ra, xx, I4,  I12,  xx,  0x0,  mrm, fW6, END_LIST}, /*movt()*/
     {OP_mrc,  0x000001, "mrc",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*mrc()*/
     {OP_mrc2,  0x000001, "mrc2",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*mrc2()*/
     {OP_mrrc,  0x000001, "mrrc",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*mrrc()*/
@@ -1306,16 +1310,16 @@ const instr_info_t armv7a_instrs[] = {
     {OP_mrs,  0x000001, "mrs",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*mrs()*/
     {OP_msr_imm,  0x000001, "msr_imm",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*msr_imm()*/
     {OP_msr_reg,  0x000001, "msr_reg",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*msr_reg()*/
-    {OP_mul,  0x000001, "mul",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*mul()*/
-    {OP_mvn_imm,  0x000001, "mvn_imm",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*mvn_imm()*/
-    {OP_mvn_reg,  0x000001, "mvn_reg",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*mvn_reg()*/
-    {OP_mvn_rsr,  0x000001, "mvn_rsr",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*mvn_rsr()*/
+    {OP_mul,  0x000001, "mul",  Ra, xx, Ra,  Ra,  xx,  0x0,  mrm, fW6, END_LIST}, /*mul()*/
+    {OP_mvn_imm,  0x000001, "mvn_imm",  Ra, xx, I12, xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*mvn_imm()*/
+    {OP_mvn_reg,  0x000001, "mvn_reg",  Ra, xx, Ra,  I5,  xx,  0x0,  mrm, fW6, END_LIST}, /*mvn_reg()*/
+    {OP_mvn_rsr,  0x000001, "mvn_rsr",  Ra, xx, Ra,  Ra,  xx,  0x0,  mrm, fW6, END_LIST}, /*mvn_rsr()*/
     {OP_nop,  0x000001, "nop",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*nop()*/
-    {OP_orn_imm,  0x000001, "orn_imm",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*orn_imm()*/
-    {OP_orn_reg,  0x000001, "orn_reg",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*orn_reg()*/
-    {OP_orr_imm,  0x000001, "orr_imm",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*orr_imm()*/
-    {OP_orr_reg,  0x000001, "orr_reg",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*orr_reg()*/
-    {OP_orr_rsr,  0x000001, "orr_rsr",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*orr_rsr()*/
+    {OP_orn_imm,  0x000001, "orn_imm",  Ra, xx, Ra,  I3,  I8,  0x0,  mrm, fW6, END_LIST}, /*orn_imm()*/
+    {OP_orn_reg,  0x000001, "orn_reg",  Ra, xx, Ra,  Ra,  I5,  0x0,  mrm, fW6, END_LIST}, /*orn_reg()*/
+    {OP_orr_imm,  0x000001, "orr_imm",  Ra, xx, Ra,  I12, xx,  0x0,  mrm, fW6, END_LIST}, /*orr_imm()*/
+    {OP_orr_reg,  0x000001, "orr_reg",  Ra, xx, Ra,  Ra,  I5,  0x0,  mrm, fW6, END_LIST}, /*orr_reg()*/
+    {OP_orr_rsr,  0x000001, "orr_rsr",  Ra, xx, Ra,  Ra,  Ra,  0x0,  mrm, fW6, END_LIST}, /*orr_rsr()*/
     {OP_pkh,  0x000001, "pkh",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*pkh()*/
     {OP_pld_imm,  0x000001, "pld_imm",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*pld_imm()*/
     {OP_pldw_imm,  0x000001, "pldw_imm",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*pldw_imm()*/
@@ -1343,8 +1347,8 @@ const instr_info_t armv7a_instrs[] = {
     {OP_rev16,  0x000001, "rev16",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*rev16()*/
     {OP_revsh,  0x000001, "revsh",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*revsh()*/
     {OP_rfe,  0x000001, "rfe",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*rfe()*/
-    {OP_ror_imm,  0x000001, "ror_imm",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*ror_imm()*/
-    {OP_ror_reg,  0x000001, "ror_reg",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*ror_reg()*/
+    {OP_ror_imm,  0x000001, "ror_imm",  Ra, xx, Ra,  I5,  xx,  0x0,  mrm, fW6, END_LIST}, /*ror_imm()*/
+    {OP_ror_reg,  0x000001, "ror_reg",  Ra, xx, Ra,  Ra,  xx,  0x0,  mrm, fW6, END_LIST}, /*ror_reg()*/
     {OP_rrx,  0x000001, "rrx",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*rrx()*/
     {OP_rsb_imm,  0x000001, "rsb_imm",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*rsb_imm()*/
     {OP_rsb_reg,  0x000001, "rsb_reg",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*rsb_reg()*/
@@ -1412,28 +1416,28 @@ const instr_info_t armv7a_instrs[] = {
     {OP_stmfd,  0x000001, "stmfd",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*stmfd()*/
     {OP_stmib,  0x000001, "stmib",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*stmib()*/
     {OP_stmfa,  0x000001, "stmfa",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*stmfa()*/
-    {OP_str_imm,  0x000001, "str_imm",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*str_imm()*/
-    {OP_str_reg,  0x000001, "str_reg",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*str_reg()*/
-    {OP_strb_imm,  0x000001, "strb_imm",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*strb_imm()*/
-    {OP_strb_reg,  0x000001, "strb_reg",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*strb_reg()*/
-    {OP_strbt,  0x000001, "strbt",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*strbt()*/
-    {OP_strd_imm,  0x000001, "strd_imm",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*strd_imm()*/
-    {OP_strd_reg,  0x000001, "strd_reg",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*strd_reg()*/
-    {OP_strex,  0x000001, "strex",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*strex()*/
-    {OP_strexb,  0x000001, "strexb",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*strexb()*/
-    {OP_strexd,  0x000001, "strexd",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*strexd()*/
-    {OP_strexh,  0x000001, "strexh",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*strexh()*/
-    {OP_strh_imm,  0x000001, "strh_imm",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*strh_imm()*/
-    {OP_strh_reg,  0x000001, "strh_reg",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*strh_reg()*/
-    {OP_strht,  0x000001, "strht",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*strht()*/
-    {OP_strt,  0x000001, "strt",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*strt()*/
-    {OP_sub_imm,  0x000001, "sub_imm",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*sub_imm()*/
-    {OP_sub_reg,  0x000001, "sub_reg",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*sub_reg()*/
-    {OP_sub_rsr,  0x000001, "sub_rsr",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*sub_rsr()*/
-    {OP_sub_sp_imm,  0x000001, "sub_sp_imm",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*sub_sp_imm()*/
-    {OP_sub_sp_reg,  0x000001, "sub_sp_reg",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*sub_sp_reg()*/
+    {OP_str_imm,  0x000001, "str_imm",  Ra, xx, Ra,  I12, xx,  0x0,  mrm, fW6, END_LIST}, /*str_imm()*/
+    {OP_str_reg,  0x000001, "str_reg",  Ra, xx, Ra,  Ra,  I5,  0x0,  mrm, fW6, END_LIST}, /*str_reg()*/
+    {OP_strb_imm,  0x000001, "strb_imm",  Ra, xx, Ra,  I12, xx,  0x0,  mrm, fW6, END_LIST}, /*strb_imm()*/
+    {OP_strb_reg,  0x000001, "strb_reg",  Ra, xx, Ra,  Ra,  I5,  0x0,  mrm, fW6, END_LIST}, /*strb_reg()*/
+    {OP_strbt,  0x000001, "strbt",  Ra, xx, Ra,  Ra,  I5,  0x0,  mrm, fW6, END_LIST}, /*strbt()*/
+    {OP_strd_imm,  0x000001, "strd_imm",  Ra, xx, Ra,  I4,  I4,  0x0,  mrm, fW6, END_LIST}, /*strd_imm()*/
+    {OP_strd_reg,  0x000001, "strd_reg",  Ra, xx, Ra,  Ra,  xx,  0x0,  mrm, fW6, END_LIST}, /*strd_reg()*/
+    {OP_strex,  0x000001, "strex",  Ra, xx, Ra,  Ra,  xx,  0x0,  mrm, fW6, END_LIST}, /*strex()*/
+    {OP_strexb,  0x000001, "strexb",  Ra, xx, Ra,  Ra,  xx,  0x0,  mrm, fW6, END_LIST}, /*strexb()*/
+    {OP_strexd,  0x000001, "strexd",  Ra, xx, Ra,  Ra,  xx,  0x0,  mrm, fW6, END_LIST}, /*strexd()*/
+    {OP_strexh,  0x000001, "strexh",  Ra, xx, Ra,  Ra,  xx,  0x0,  mrm, fW6, END_LIST}, /*strexh()*/
+    {OP_strh_imm,  0x000001, "strh_imm",  Ra, xx, Ra,  I4,  I4,  0x0,  mrm, fW6, END_LIST}, /*strh_imm()*/
+    {OP_strh_reg,  0x000001, "strh_reg",  Ra, xx, Ra,  Ra,  xx,  0x0,  mrm, fW6, END_LIST}, /*strh_reg()*/
+    {OP_strht,  0x000001, "strht",  Ra, xx, Ra,  Ra,  xx,  0x0,  mrm, fW6, END_LIST}, /*strht()*/
+    {OP_strt,  0x000001, "strt",  Ra, xx, Ra,  I12, xx,  0x0,  mrm, fW6, END_LIST}, /*strt()*/
+    {OP_sub_imm,  0x000001, "sub_imm",  Ra, xx, Ra,  I12, xx,  0x0,  mrm, fW6, END_LIST}, /*sub_imm()*/
+    {OP_sub_reg,  0x000001, "sub_reg",  Ra, xx, Ra,  Ra,  I5,  0x0,  mrm, fW6, END_LIST}, /*sub_reg()*/
+    {OP_sub_rsr,  0x000001, "sub_rsr",  Ra, xx, Ra,  Ra,  Ra,  0x0,  mrm, fW6, END_LIST}, /*sub_rsr()*/
+    {OP_sub_sp_imm,  0x000001, "sub_sp_imm",  Ra, xx, I12, xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*sub_sp_imm()*/
+    {OP_sub_sp_reg,  0x000001, "sub_sp_reg",  Ra, xx, Ra,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*sub_sp_reg()*/
     {OP_subs,  0x000001, "subs",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*subs()*/
-    {OP_svc,  0x000001, "svc",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*svc()*/
+    {OP_svc,  0x000001, "svc",  xx, xx, I24, xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*svc()*/
     {OP_swp,  0x000001, "swp",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*swp()*/
     {OP_swpb,  0x000001, "swpb",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*swpb()*/
     {OP_sxtab,  0x000001, "sxtab",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*sxtab()*/
@@ -1441,12 +1445,12 @@ const instr_info_t armv7a_instrs[] = {
     {OP_sxth,  0x000001, "sxth",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*sxth()*/
     {OP_tbb,  0x000001, "tbb",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*tbb()*/
     {OP_tbh,  0x000001, "tbh",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*tbh()*/
-    {OP_teq_imm,  0x000001, "teq_imm",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*teq_imm()*/
-    {OP_teq_reg,  0x000001, "teq_reg",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*teq_reg()*/
-    {OP_teq_rsr,  0x000001, "teq_rsr",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*teq_rsr()*/
-    {OP_tst_imm,  0x000001, "tst_imm",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*tst_imm()*/
-    {OP_tst_reg,  0x000001, "tst_reg",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*tst_reg()*/
-    {OP_tst_rsr,  0x000001, "tst_rsr",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*tst_rsr()*/
+    {OP_teq_imm,  0x000001, "teq_imm",  Ra, xx, I12, xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*teq_imm()*/
+    {OP_teq_reg,  0x000001, "teq_reg",  Ra, xx, Ra,  I5,  xx,  0x0,  mrm, fW6, END_LIST}, /*teq_reg()*/
+    {OP_teq_rsr,  0x000001, "teq_rsr",  Ra, xx, Ra,  Ra,  xx,  0x0,  mrm, fW6, END_LIST}, /*teq_rsr()*/
+    {OP_tst_imm,  0x000001, "tst_imm",  Ra, xx, I12, xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*tst_imm()*/
+    {OP_tst_reg,  0x000001, "tst_reg",  Ra, xx, Ra,  I5,  xx,  0x0,  mrm, fW6, END_LIST}, /*tst_reg()*/
+    {OP_tst_rsr,  0x000001, "tst_rsr",  Ra, xx, Ra,  Ra,  xx,  0x0,  mrm, fW6, END_LIST}, /*tst_rsr()*/
     {OP_uadd16,  0x000001, "uadd16",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*uadd16()*/
     {OP_uadd8,  0x000001, "uadd8",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*uadd8()*/
     {OP_uasx,  0x000001, "uasx",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*uasx()*/
@@ -1662,9 +1666,11 @@ const instr_info_t armv7a_instrs[] = {
 
 };
 
+/* SJF TODO 
 const instr_info_t thumb_instrs[] = {
     {OP_and,  0x000000, "add",  Ra, xx, Ra, Ra, xx, mrm, fW6, END_LIST},
 };
+*/
 
 
 /****************************************************************************
@@ -1688,341 +1694,467 @@ const instr_info_t * const op_instr[] =
     /* OP_UNDECODED */ NULL,
     /* OP_CONTD   */   NULL,
     /* OP_LABEL   */   NULL,
+    /* OP_adc_imm */    &armv7a_instrs[0],
+    /* OP_adc_reg */    &armv7a_instrs[1],
+    /* OP_adc_rsr */    &armv7a_instrs[2],
+    /* OP_add_imm */    &armv7a_instrs[3],
+    /* OP_add_reg */    &armv7a_instrs[4],
+    /* OP_add_rsr */    &armv7a_instrs[5],
+    /* OP_add_sp_imm */    &armv7a_instrs[6],
+    /* OP_add_sp_reg */    &armv7a_instrs[7],
+    /* OP_adr */    &armv7a_instrs[8],
+    /* OP_and_imm */    &armv7a_instrs[9],
+    /* OP_and_reg */    &armv7a_instrs[10],
+    /* OP_and_rsr */    &armv7a_instrs[11],
+    /* OP_asr_imm */    &armv7a_instrs[12],
+    /* OP_asr_reg */    &armv7a_instrs[13],
+    /* OP_b */    &armv7a_instrs[14],
+    /* OP_bfc */    &armv7a_instrs[15],
+    /* OP_bfi */    &armv7a_instrs[16],
+    /* OP_bic_imm */    &armv7a_instrs[17],
+    /* OP_bic_reg */    &armv7a_instrs[18],
+    /* OP_bic_rsr */    &armv7a_instrs[19],
+    /* OP_bkpt */    &armv7a_instrs[20],
+    /* OP_bl */    &armv7a_instrs[21],
+    /* OP_blx_imm */    &armv7a_instrs[22],
+    /* OP_blx_reg */    &armv7a_instrs[23],
+    /* OP_bx */    &armv7a_instrs[24],
+    /* OP_bxj */    &armv7a_instrs[25],
+    /* OP_cbnz */    &armv7a_instrs[26],
+    /* op_cbz */    &armv7a_instrs[27],
+    /* OP_cdp */    &armv7a_instrs[28],
+    /* OP_cdp2 */    &armv7a_instrs[29],
+    /* OP_clrex */    &armv7a_instrs[30],
+    /* OP_clz */    &armv7a_instrs[31],
+    /* OP_cmn_imm */    &armv7a_instrs[32],
+    /* OP_cmn_reg */    &armv7a_instrs[33],
+    /* OP_cmn_rsr */    &armv7a_instrs[34],
+    /* OP_cmp_imm */    &armv7a_instrs[35],
+    /* OP_cmp_reg */    &armv7a_instrs[36],
+    /* OP_cmp_rsr */    &armv7a_instrs[37],
+    /* OP_cps */    &armv7a_instrs[38],
+    /* OP_dbg */    &armv7a_instrs[39],
+    /* OP_dmb */    &armv7a_instrs[40],
+    /* OP_dsb */    &armv7a_instrs[41],
+    /* OP_eor_imm */    &armv7a_instrs[42],
+    /* OP_eor_reg */    &armv7a_instrs[43],
+    /* OP_eor_rsr */    &armv7a_instrs[44],
+    /* OP_isb */    &armv7a_instrs[45],
+    /* OP_it */    &armv7a_instrs[46],
+    /* OP_ldc_imm */    &armv7a_instrs[47],
+    /* OP_ldc2_imm */    &armv7a_instrs[48],
+    /* OP_ldc_lit */    &armv7a_instrs[49],
+    /* OP_ldc2_lit */    &armv7a_instrs[50],
+    /* OP_ldm */    &armv7a_instrs[51],
+    /* OP_ldmia */    &armv7a_instrs[52],
+    /* OP_ldmfd */    &armv7a_instrs[53],
+    /* OP_ldmda */    &armv7a_instrs[54],
+    /* OP_ldmfa */    &armv7a_instrs[55],
+    /* OP_ldmdb */    &armv7a_instrs[56],
+    /* OP_ldmea */    &armv7a_instrs[57],
+    /* OP_ldmib */    &armv7a_instrs[58],
+    /* OP_ldmed */    &armv7a_instrs[59],
+    /* OP_ldr_imm */    &armv7a_instrs[60],
+    /* OP_ldr_lit */    &armv7a_instrs[61],
+    /* OP_ldr_reg */    &armv7a_instrs[62],
+    /* OP_ldrb_imm */    &armv7a_instrs[63],
+    /* OP_ldrb_lit */    &armv7a_instrs[64],
+    /* OP_ldrb_reg */    &armv7a_instrs[65],
+    /* OP_ldrbt */    &armv7a_instrs[66],
+    /* OP_ldrd_imm */    &armv7a_instrs[67],
+    /* OP_ldrd_lit */    &armv7a_instrs[68],
+    /* OP_ldrd_reg */    &armv7a_instrs[69],
+    /* OP_ldrex */    &armv7a_instrs[70],
+    /* OP_ldrexb */    &armv7a_instrs[71],
+    /* OP_ldrexd */    &armv7a_instrs[72],
+    /* OP_ldrexh */    &armv7a_instrs[73],
+    /* OP_ldrh_imm */    &armv7a_instrs[74],
+    /* OP_ldrh_lit */    &armv7a_instrs[75],
+    /* OP_ldrh_reg */    &armv7a_instrs[76],
+    /* OP_ldrht */    &armv7a_instrs[77],
+    /* OP_ldrsb_imm */    &armv7a_instrs[78],
+    /* OP_ldrsb_lit */    &armv7a_instrs[79],
+    /* OP_ldrsb_reg */    &armv7a_instrs[80],
+    /* OP_ldrsbt */    &armv7a_instrs[81],
+    /* OP_ldrsh_imm */    &armv7a_instrs[82],
+    /* OP_ldrsh_lit */    &armv7a_instrs[83],
+    /* OP_ldrsh_reg */    &armv7a_instrs[84],
+    /* OP_ldrsht */    &armv7a_instrs[85],
+    /* OP_ldrt */    &armv7a_instrs[86],
+    /* OP_lsl_imm */    &armv7a_instrs[87],
+    /* OP_lsl_reg */    &armv7a_instrs[88],
+    /* OP_lsr_imm */    &armv7a_instrs[89],
+    /* OP_lsr_reg */    &armv7a_instrs[90],
+    /* OP_mcr */    &armv7a_instrs[91],
+    /* OP_mcr2 */    &armv7a_instrs[92],
+    /* OP_mcrr */    &armv7a_instrs[93],
+    /* OP_mcrr2 */    &armv7a_instrs[94],
+    /* OP_mla */    &armv7a_instrs[95],
+    /* OP_mls */    &armv7a_instrs[96],
+    /* OP_mov_imm */    &armv7a_instrs[97],
+    /* OP_mov_reg */    &armv7a_instrs[98],
+    /* OP_movt */    &armv7a_instrs[99],
+    /* OP_mrc */    &armv7a_instrs[100],
+    /* OP_mrc2 */    &armv7a_instrs[101],
+    /* OP_mrrc */    &armv7a_instrs[102],
+    /* OP_mrrc2 */    &armv7a_instrs[103],
+    /* OP_mrs */    &armv7a_instrs[104],
+    /* OP_msr_imm */    &armv7a_instrs[105],
+    /* OP_msr_reg */    &armv7a_instrs[106],
+    /* OP_mul */    &armv7a_instrs[107],
+    /* OP_mvn_imm */    &armv7a_instrs[108],
+    /* OP_mvn_reg */    &armv7a_instrs[109],
+    /* OP_mvn_rsr */    &armv7a_instrs[110],
+    /* OP_nop */    &armv7a_instrs[111],
+    /* OP_orn_imm */    &armv7a_instrs[112],
+    /* OP_orn_reg */    &armv7a_instrs[113],
+    /* OP_orr_imm */    &armv7a_instrs[114],
+    /* OP_orr_reg */    &armv7a_instrs[115],
+    /* OP_orr_rsr */    &armv7a_instrs[116],
+    /* OP_pkh */    &armv7a_instrs[117],
+    /* OP_pld_imm */    &armv7a_instrs[118],
+    /* OP_pldw_imm */    &armv7a_instrs[119],
+    /* OP_pld_lit */    &armv7a_instrs[120],
+    /* OP_pldw_lit */    &armv7a_instrs[121],
+    /* OP_pld_reg */    &armv7a_instrs[122],
+    /* OP_pldw_reg */    &armv7a_instrs[123],
+    /* OP_pli_imm */    &armv7a_instrs[124],
+    /* OP_pli_lit */    &armv7a_instrs[125],
+    /* OP_pli_reg */    &armv7a_instrs[126],
+    /* OP_pop */    &armv7a_instrs[127],
+    /* OP_push */    &armv7a_instrs[128],
+    /* OP_qadd */    &armv7a_instrs[129],
+    /* OP_qadd16 */    &armv7a_instrs[130],
+    /* OP_qadd8 */    &armv7a_instrs[131],
+    /* OP_qasx */    &armv7a_instrs[132],
+    /* OP_qdadd */    &armv7a_instrs[133],
+    /* OP_qdsub */    &armv7a_instrs[134],
+    /* OP_qsax */    &armv7a_instrs[135],
+    /* OP_qsub */    &armv7a_instrs[136],
+    /* OP_qsub16 */    &armv7a_instrs[137],
+    /* OP_qsub8 */    &armv7a_instrs[138],
+    /* OP_rbit */    &armv7a_instrs[139],
+    /* OP_rev */    &armv7a_instrs[140],
+    /* OP_rev16 */    &armv7a_instrs[141],
+    /* OP_revsh */    &armv7a_instrs[142],
+    /* OP_rfe */    &armv7a_instrs[143],
+    /* OP_ror_imm */    &armv7a_instrs[144],
+    /* OP_ror_reg */    &armv7a_instrs[145],
+    /* OP_rrx */    &armv7a_instrs[146],
+    /* OP_rsb_imm */    &armv7a_instrs[147],
+    /* OP_rsb_reg */    &armv7a_instrs[148],
+    /* OP_rsb_rsr */    &armv7a_instrs[149],
+    /* OP_rsc_imm */    &armv7a_instrs[150],
+    /* OP_rsc_reg */    &armv7a_instrs[151],
+    /* OP_rsc_rsr */    &armv7a_instrs[152],
+    /* OP_sadd16 */    &armv7a_instrs[153],
+    /* OP_sadd8 */    &armv7a_instrs[154],
+    /* OP_sasx */    &armv7a_instrs[155],
+    /* OP_sbc_imm */    &armv7a_instrs[156],
+    /* OP_sbc_reg */    &armv7a_instrs[157],
+    /* OP_sbc_rsr */    &armv7a_instrs[158],
+    /* OP_sbfx */    &armv7a_instrs[159],
+    /* OP_sdiv */    &armv7a_instrs[160],
+    /* OP_sel */    &armv7a_instrs[161],
+    /* OP_setend */    &armv7a_instrs[162],
+    /* OP_sev */    &armv7a_instrs[163],
+    /* OP_shadd16 */    &armv7a_instrs[164],
+    /* OP_shadd8 */    &armv7a_instrs[165],
+    /* OP_shsax */    &armv7a_instrs[166],
+    /* OP_shsub16 */    &armv7a_instrs[167],
+    /* OP_shsub8 */    &armv7a_instrs[168],
+    /* OP_smlabb */    &armv7a_instrs[169],
+    /* OP_smlabt */    &armv7a_instrs[170],
+    /* OP_smlatb */    &armv7a_instrs[171],
+    /* OP_smlatt */    &armv7a_instrs[172],
+    /* OP_smlad */    &armv7a_instrs[173],
+    /* OP_smlal */    &armv7a_instrs[174],
+    /* OP_smlalbb */    &armv7a_instrs[175],
+    /* OP_smlalbt */    &armv7a_instrs[176],
+    /* OP_smlaltb */    &armv7a_instrs[177],
+    /* OP_smlaltt */    &armv7a_instrs[178],
+    /* OP_smlald */    &armv7a_instrs[179],
+    /* OP_smlawr */    &armv7a_instrs[180],
+    /* OP_smlawt */    &armv7a_instrs[181],
+    /* OP_smlsd */    &armv7a_instrs[182],
+    /* OP_smlsld */    &armv7a_instrs[183],
+    /* OP_smmla */    &armv7a_instrs[184],
+    /* OP_smmls */    &armv7a_instrs[185],
+    /* OP_smmul */    &armv7a_instrs[186],
+    /* OP_smuad */    &armv7a_instrs[187],
+    /* OP_smulbb */    &armv7a_instrs[188],
+    /* OP_smulbt */    &armv7a_instrs[189],
+    /* OP_smultb */    &armv7a_instrs[190],
+    /* OP_smultt */    &armv7a_instrs[191],
+    /* OP_smull */    &armv7a_instrs[192],
+    /* OP_smulwb */    &armv7a_instrs[193],
+    /* OP_smulwt */    &armv7a_instrs[194],
+    /* OP_smusd */    &armv7a_instrs[195],
+    /* OP_srs */    &armv7a_instrs[196],
+    /* OP_ssat */    &armv7a_instrs[197],
+    /* OP_ssat16 */    &armv7a_instrs[198],
+    /* OP_ssax */    &armv7a_instrs[199],
+    /* OP_ssub16 */    &armv7a_instrs[200],
+    /* OP_ssub8 */    &armv7a_instrs[201],
+    /* OP_stc */    &armv7a_instrs[202],
+    /* OP_stc2 */    &armv7a_instrs[203],
+    /* OP_stm */    &armv7a_instrs[204],
+    /* OP_stmia */    &armv7a_instrs[205],
+    /* OP_stmea */    &armv7a_instrs[206],
+    /* OP_stmda */    &armv7a_instrs[207],
+    /* OP_stmed */    &armv7a_instrs[208],
+    /* OP_stmdb */    &armv7a_instrs[209],
+    /* OP_stmfd */    &armv7a_instrs[210],
+    /* OP_stmib */    &armv7a_instrs[211],
+    /* OP_stmfa */    &armv7a_instrs[212],
+    /* OP_str_imm */    &armv7a_instrs[213],
+    /* OP_str_reg */    &armv7a_instrs[214],
+    /* OP_strb_imm */    &armv7a_instrs[215],
+    /* OP_strb_reg */    &armv7a_instrs[216],
+    /* OP_strbt */    &armv7a_instrs[217],
+    /* OP_strd_imm */    &armv7a_instrs[218],
+    /* OP_strd_reg */    &armv7a_instrs[219],
+    /* OP_strex */    &armv7a_instrs[220],
+    /* OP_strexb */    &armv7a_instrs[221],
+    /* OP_strexd */    &armv7a_instrs[222],
+    /* OP_strexh */    &armv7a_instrs[223],
+    /* OP_strh_imm */    &armv7a_instrs[224],
+    /* OP_strh_reg */    &armv7a_instrs[225],
+    /* OP_strht */    &armv7a_instrs[226],
+    /* OP_strt */    &armv7a_instrs[227],
+    /* OP_sub_imm */    &armv7a_instrs[228],
+    /* OP_sub_reg */    &armv7a_instrs[229],
+    /* OP_sub_rsr */    &armv7a_instrs[230],
+    /* OP_sub_sp_imm */    &armv7a_instrs[231],
+    /* OP_sub_sp_reg */    &armv7a_instrs[232],
+    /* OP_subs */    &armv7a_instrs[233],
+    /* OP_svc */    &armv7a_instrs[234],
+    /* OP_swp */    &armv7a_instrs[235],
+    /* OP_swpb */    &armv7a_instrs[236],
+    /* OP_sxtab */    &armv7a_instrs[237],
+    /* OP_sxtab16 */    &armv7a_instrs[238],
+    /* OP_sxth */    &armv7a_instrs[239],
+    /* OP_tbb */    &armv7a_instrs[240],
+    /* OP_tbh */    &armv7a_instrs[241],
+    /* OP_teq_imm */    &armv7a_instrs[242],
+    /* OP_teq_reg */    &armv7a_instrs[243],
+    /* OP_teq_rsr */    &armv7a_instrs[244],
+    /* OP_tst_imm */    &armv7a_instrs[245],
+    /* OP_tst_reg */    &armv7a_instrs[246],
+    /* OP_tst_rsr */    &armv7a_instrs[247],
+    /* OP_uadd16 */    &armv7a_instrs[248],
+    /* OP_uadd8 */    &armv7a_instrs[249],
+    /* OP_uasx */    &armv7a_instrs[250],
+    /* OP_ubfx */    &armv7a_instrs[251],
+    /* OP_udiv */    &armv7a_instrs[252],
+    /* OP_uhadd16 */    &armv7a_instrs[253],
+    /* OP_uhadd8 */    &armv7a_instrs[254],
+    /* OP_uhsax */    &armv7a_instrs[255],
+    /* OP_uhsub16 */    &armv7a_instrs[256],
+    /* OP_uhsub8 */    &armv7a_instrs[257],
+    /* OP_umaal */    &armv7a_instrs[258],
+    /* OP_umlal */    &armv7a_instrs[259],
+    /* OP_umull */    &armv7a_instrs[260],
+    /* OP_uqadd16 */    &armv7a_instrs[261],
+    /* OP_uqadd8 */    &armv7a_instrs[262],
+    /* OP_uqasx */    &armv7a_instrs[263],
+    /* OP_uqsax */    &armv7a_instrs[264],
+    /* OP_usub16 */    &armv7a_instrs[265],
+    /* OP_usub8 */    &armv7a_instrs[266],
+    /* OP_usad8 */    &armv7a_instrs[267],
+    /* OP_usada8 */    &armv7a_instrs[268],
+    /* OP_usat */    &armv7a_instrs[269],
+    /* OP_usat16 */    &armv7a_instrs[270],
+    /* OP_usax */    &armv7a_instrs[271],
+    /* OP_uxtab */    &armv7a_instrs[272],
+    /* OP_uxtab16 */    &armv7a_instrs[273],
+    /* OP_uxtah */    &armv7a_instrs[274],
+    /* OP_uxtb */    &armv7a_instrs[275],
+    /* OP_uxtb16 */    &armv7a_instrs[276],
+    /* OP_uxth */    &armv7a_instrs[277],
+    /* OP_vaba */    &armv7a_instrs[278],
+    /* OP_vabal_int */    &armv7a_instrs[279],
+    /* OP_vabd_int */    &armv7a_instrs[280],
+    /* OP_vabd_flt */    &armv7a_instrs[281],
+    /* OP_vabs */    &armv7a_instrs[282],
+    /* OP_vacge */    &armv7a_instrs[283],
+    /* OP_vacgt */    &armv7a_instrs[284],
+    /* OP_vacle */    &armv7a_instrs[285],
+    /* OP_vaclt */    &armv7a_instrs[286],
+    /* OP_vadd_int */    &armv7a_instrs[287],
+    /* OP_vadd_flt */    &armv7a_instrs[288],
+    /* OP_vaddhn */    &armv7a_instrs[289],
+    /* OP_vaddl */    &armv7a_instrs[290],
+    /* OP_vaddw */    &armv7a_instrs[291],
+    /* OP_vand_imm */    &armv7a_instrs[292],
+    /* OP_vand_reg */    &armv7a_instrs[293],
+    /* OP_vbic_imm */    &armv7a_instrs[294],
+    /* OP_vbic_reg */    &armv7a_instrs[295],
+    /* OP_vbif */    &armv7a_instrs[296],
+    /* OP_vbsl */    &armv7a_instrs[297],
+    /* OP_vceq_reg */    &armv7a_instrs[298],
+    /* OP_vceq_imm */    &armv7a_instrs[299],
+    /* OP_vcge_reg */    &armv7a_instrs[300],
+    /* OP_vcge_imm */    &armv7a_instrs[301],
+    /* OP_vcgt_reg */    &armv7a_instrs[302],
+    /* OP_vcgt_imm */    &armv7a_instrs[303],
+    /* OP_vcle_reg */    &armv7a_instrs[304],
+    /* OP_vcle_imm */    &armv7a_instrs[305],
+    /* OP_vcls */    &armv7a_instrs[306],
+    /* OP_vclt_reg */    &armv7a_instrs[307],
+    /* OP_vclt_imm */    &armv7a_instrs[308],
+    /* OP_vclz */    &armv7a_instrs[309],
+    /* OP_vcmp */    &armv7a_instrs[310],
+    /* OP_vcmpe */    &armv7a_instrs[311],
+    /* OP_vcnt */    &armv7a_instrs[312],
+    /* OP_vcvt_flt_int_simd */    &armv7a_instrs[313],
+    /* OP_vcvt_flt_int_vfp */    &armv7a_instrs[314],
+    /* OP_vcvtr_flt_int_vfp */    &armv7a_instrs[315],
+    /* OP_vcvt_flt_fip_simd */    &armv7a_instrs[316],
+    /* OP_vcvt_dp_sp */    &armv7a_instrs[317],
+    /* OP_vcvt_hp_sp_simd */    &armv7a_instrs[318],
+    /* OP_vcvtb_hp_sp_vfp */    &armv7a_instrs[319],
+    /* OP_vcvtt_hp_sp_vfp */    &armv7a_instrs[320],
+    /* OP_vdiv */    &armv7a_instrs[321],
+    /* OP_vdup_scl */    &armv7a_instrs[322],
+    /* OP_vdup_reg */    &armv7a_instrs[323],
+    /* OP_veor */    &armv7a_instrs[324],
+    /* OP_vext */    &armv7a_instrs[325],
+    /* OP_vhadd */    &armv7a_instrs[326],
+    /* OP_vhsub */    &armv7a_instrs[327],
+    /* OP_vld1_mse */    &armv7a_instrs[328],
+    /* OP_vld1_se1 */    &armv7a_instrs[329],
+    /* OP_vld1_sea */    &armv7a_instrs[330],
+    /* OP_vld2_m2es */    &armv7a_instrs[331],
+    /* OP_vld2_s2e1 */    &armv7a_instrs[332],
+    /* OP_vld2_s2ea */    &armv7a_instrs[333],
+    /* OP_vld3_m3s */    &armv7a_instrs[334],
+    /* OP_vld3_se1 */    &armv7a_instrs[335],
+    /* OP_vld3_sea */    &armv7a_instrs[336],
+    /* OP_vld4_m4es */    &armv7a_instrs[337],
+    /* OP_vld4_se1 */    &armv7a_instrs[338],
+    /* OP_vld4_s4ea */    &armv7a_instrs[339],
+    /* OP_vldm */    &armv7a_instrs[340],
+    /* OP_vldr */    &armv7a_instrs[341],
+    /* OP_vmax_int */    &armv7a_instrs[342],
+    /* OP_vmin_int */    &armv7a_instrs[343],
+    /* OP_vmax_flt */    &armv7a_instrs[344],
+    /* OP_vmin_flt */    &armv7a_instrs[345],
+    /* OP_vmla_int */    &armv7a_instrs[346],
+    /* OP_vmlal_int */    &armv7a_instrs[347],
+    /* OP_vmls_int */    &armv7a_instrs[348],
+    /* OP_vmlsl_int */    &armv7a_instrs[349],
+    /* OP_vmla_flt */    &armv7a_instrs[350],
+    /* OP_vmls_flt */    &armv7a_instrs[351],
+    /* OP_vmla_scl */    &armv7a_instrs[352],
+    /* OP_vmlal_scl */    &armv7a_instrs[353],
+    /* OP_vmls_scl */    &armv7a_instrs[354],
+    /* OP_vmlsl_scl */    &armv7a_instrs[355],
+    /* OP_vmov_imm */    &armv7a_instrs[356],
+    /* OP_vmov_reg */    &armv7a_instrs[357],
+    /* OP_vmov_reg_scl */    &armv7a_instrs[358],
+    /* OP_vmov_scl_reg */    &armv7a_instrs[359],
+    /* OP_vmov_reg_sp */    &armv7a_instrs[360],
+    /* OP_vmov_2reg_2sp */    &armv7a_instrs[361],
+    /* OP_vmov_2reg_2dp */    &armv7a_instrs[362],
+    /* OP_vmovl */    &armv7a_instrs[363],
+    /* OP_vmovn */    &armv7a_instrs[364],
+    /* OP_vmrs */    &armv7a_instrs[365],
+    /* OP_vmsr */    &armv7a_instrs[366],
+    /* OP_vmul_int */    &armv7a_instrs[367],
+    /* OP_vmull_int */    &armv7a_instrs[368],
+    /* OP_vmul_flp */    &armv7a_instrs[369],
+    /* OP_vmul_scl */    &armv7a_instrs[370],
+    /* OP_vmull_scl */    &armv7a_instrs[371],
+    /* OP_vmvn_imm */    &armv7a_instrs[372],
+    /* OP_vmvn_reg */    &armv7a_instrs[373],
+    /* OP_vneg */    &armv7a_instrs[374],
+    /* OP_vnmla */    &armv7a_instrs[375],
+    /* OP_vnmls */    &armv7a_instrs[376],
+    /* OP_vnmul */    &armv7a_instrs[377],
+    /* OP_vorn_imm */    &armv7a_instrs[378],
+    /* OP_vorn_reg */    &armv7a_instrs[379],
+    /* OP_vorr_imm */    &armv7a_instrs[380],
+    /* OP_vorr_reg */    &armv7a_instrs[381],
+    /* OP_vpadal */    &armv7a_instrs[382],
+    /* OP_vpadd_int */    &armv7a_instrs[383],
+    /* OP_vpadd_flp */    &armv7a_instrs[384],
+    /* OP_vpaddl */    &armv7a_instrs[385],
+    /* OP_vpmax_int */    &armv7a_instrs[386],
+    /* OP_vpmin_int */    &armv7a_instrs[387],
+    /* OP_vpmax_flp */    &armv7a_instrs[388],
+    /* OP_vpmin_flp */    &armv7a_instrs[389],
+    /* OP_vpop */    &armv7a_instrs[390],
+    /* OP_vpush */    &armv7a_instrs[391],
+    /* OP_vqabs */    &armv7a_instrs[392],
+    /* OP_vqadd */    &armv7a_instrs[393],
+    /* OP_vqdmlal */    &armv7a_instrs[394],
+    /* OP_vqdmlsl */    &armv7a_instrs[395],
+    /* OP_vqdmulh */    &armv7a_instrs[396],
+    /* OP_vqdmull */    &armv7a_instrs[397],
+    /* OP_vqdmovn */    &armv7a_instrs[398],
+    /* OP_vqdmovun */    &armv7a_instrs[399],
+    /* OP_vqneq */    &armv7a_instrs[400],
+    /* OP_vqrdmulh */    &armv7a_instrs[401],
+    /* OP_vqrshl */    &armv7a_instrs[402],
+    /* OP_vqrshrn */    &armv7a_instrs[403],
+    /* OP_vqrshrun */    &armv7a_instrs[404],
+    /* OP_vqshl_reg */    &armv7a_instrs[405],
+    /* OP_vqshl_imm */    &armv7a_instrs[406],
+    /* OP_vqshlu_imm */    &armv7a_instrs[407],
+    /* OP_vqshrn */    &armv7a_instrs[408],
+    /* OP_vqshrun */    &armv7a_instrs[409],
+    /* OP_vqsub */    &armv7a_instrs[410],
+    /* OP_vqraddhn */    &armv7a_instrs[411],
+    /* OP_vqrecpe */    &armv7a_instrs[412],
+    /* OP_vqrecps */    &armv7a_instrs[413],
+    /* OP_vrev16 */    &armv7a_instrs[414],
+    /* OP_vrev32 */    &armv7a_instrs[415],
+    /* OP_vrev64 */    &armv7a_instrs[416],
+    /* OP_vrhadd */    &armv7a_instrs[417],
+    /* OP_vrshl */    &armv7a_instrs[418],
+    /* OP_vrshr */    &armv7a_instrs[419],
+    /* OP_vrshrn */    &armv7a_instrs[420],
+    /* OP_vrsqrte */    &armv7a_instrs[421],
+    /* OP_vrsqrts */    &armv7a_instrs[422],
+    /* OP_vrsra */    &armv7a_instrs[423],
+    /* OP_vrsubhn */    &armv7a_instrs[424],
+    /* OP_vshl_imm */    &armv7a_instrs[425],
+    /* OP_vshl_reg */    &armv7a_instrs[426],
+    /* OP_vshll */    &armv7a_instrs[427],
+    /* OP_vshr */    &armv7a_instrs[428],
+    /* OP_vshrn */    &armv7a_instrs[429],
+    /* OP_vsli */    &armv7a_instrs[430],
+    /* OP_vsqrt */    &armv7a_instrs[431],
+    /* OP_vsra */    &armv7a_instrs[432],
+    /* OP_vsri */    &armv7a_instrs[433],
+    /* OP_vst1_mse */    &armv7a_instrs[434],
+    /* OP_vst1_se1 */    &armv7a_instrs[435],
+    /* OP_vst2_m2e */    &armv7a_instrs[436],
+    /* OP_vst2_s2e1 */    &armv7a_instrs[437],
+    /* OP_vst3_m3es */    &armv7a_instrs[438],
+    /* OP_vst3_s3e1 */    &armv7a_instrs[439],
+    /* OP_vst4_m4es */    &armv7a_instrs[440],
+    /* OP_vst4_s4e1 */    &armv7a_instrs[441],
+    /* OP_vstm */    &armv7a_instrs[442],
+    /* OP_vstr */    &armv7a_instrs[443],
+    /* OP_vsub_int */    &armv7a_instrs[444],
+    /* OP_vsub_flp */    &armv7a_instrs[445],
+    /* OP_vsubhn */    &armv7a_instrs[446],
+    /* OP_vsubl */    &armv7a_instrs[447],
+    /* OP_vsubw */    &armv7a_instrs[448],
+    /* OP_vswp */    &armv7a_instrs[449],
+    /* OP_vtbl */    &armv7a_instrs[450],
+    /* OP_vtbx */    &armv7a_instrs[451],
+    /* OP_vtrn */    &armv7a_instrs[452],
+    /* OP_vtst */    &armv7a_instrs[453],
+    /* OP_vuzp */    &armv7a_instrs[454],
+    /* OP_vzip */    &armv7a_instrs[455],
+    /* OP_wfe */    &armv7a_instrs[456],
+    /* OP_wfi */    &armv7a_instrs[457],
+    /* OP_yield */    &armv7a_instrs[458],
 
-    /* OP_nop   */     &armv7a_instrs[40],
-    /* OP_adc */       &armv7a_instrs[0],
-    /* OP_add */       &armv7a_instrs[3],
-    /* OP_adr */       &armv7a_instrs[7],
-    /* OP_and */       &armv7a_instrs[8],
-    /* OP_asr */       &armv7a_instrs[11],
-    /* OP_b */         &armv7a_instrs[13],
-    /* OP_bfc */       &armv7a_instrs[14],
-    /* OP_bfi */       NULL,
-    /* OP_bic */       &armv7a_instrs[16],
-    /* OP_bkpt */      &armv7a_instrs[19],
-    /* OP_bl */        &armv7a_instrs[20],
-    /* OP_blx */       &armv7a_instrs[21],
-    /* OP_bx */        &armv7a_instrs[22],
-    /* OP_bxj */       &armv7a_instrs[23],
-    /* OP_cdp */       &armv7a_instrs[24],
-    /* OP_cdp2 */      &armv7a_instrs[25],
-    /* OP_clrex */     &armv7a_instrs[26],
-    /* OP_clz */       &armv7a_instrs[27],
-    /* OP_cmn */       &armv7a_instrs[28],
-    /* OP_cmp */       &armv7a_instrs[31],
-    /* OP_dbg */       &armv7a_instrs[34],
-    /* OP_dmg */       NULL,
-    /* OP_dsb */       NULL,
-    /* OP_eop */       &armv7a_instrs[37],
-    /* OP_ldc */       NULL, 
-    /* OP_ldc2 */      NULL,
-    /* OP_ldm */       NULL,
-    /* OP_ldmia */     NULL,
-    /* OP_ldmfd */     NULL,
-    /* OP_ldmda */     NULL,
-    /* OP_ldmfa */     NULL,
-    /* OP_ldmdb */     NULL,
-    /* OP_ldmea */     NULL,
-    /* OP_ldmib */     NULL,
-    /* OP_ldmed */     NULL,
-    /* OP_ldr */       NULL,
-    /* OP_ldrb */      NULL,
-    /* OP_ldrbt */     NULL,
-    /* OP_ldrd */      NULL,
-    /* OP_ldrex */     NULL,
-    /* OP_ldrexb */    NULL,
-    /* OP_ldrexd */    NULL,
-    /* OP_ldrexh */    NULL,
-    /* OP_ldrh */      NULL,
-    /* OP_ldrht */     NULL,
-    /* OP_ldrsb */     NULL,
-    /* OP_ldrsbt */    NULL,
-    /* OP_ldrsh */     NULL,
-    /* OP_ldrsht */    NULL,
-    /* OP_ldrt */      NULL,
-    /* OP_lsl */       NULL,
-    /* OP_lsr */       NULL,
-    /* OP_mcr */       NULL,
-    /* OP_mcr2 */      NULL,
-    /* OP_mcrr */      NULL,
-    /* OP_mcrr2 */     NULL,
-    /* OP_mla */       NULL,
-    /* OP_mls */       NULL,
-    /* OP_mov */       &armv7a_instrs[75],
-    /* OP_movt */      NULL,
-    /* OP_mrc */       NULL,
-    /* OP_mrc2 */      NULL,
-    /* OP_mrrc */      NULL,
-    /* OP_mrrc2 */     NULL,
-    /* OP_mrs */       NULL,
-    /* OP_msr */       NULL,
-    /* OP_mul */       NULL,
-    /* OP_mvn */       NULL,
-    /* OP_neg */       NULL,
-    /* OP_orn */       NULL,
-    /* OP_orr */       NULL,
-    /* OP_pkh */       NULL,
-    /* OP_pld */       NULL,
-    /* OP_pli */       NULL,
-    /* OP_pop */       NULL,
-    /* OP_push */      NULL,
-    /* OP_qadd */      NULL,
-    /* OP_qadd16 */    NULL,
-    /* OP_qadd8 */     NULL,
-    /* OP_qasx */      NULL,
-    /* OP_qdadd */     NULL,
-    /* OP_qdsub */     NULL,
-    /* OP_qsax */      NULL,
-    /* OP_qsub */      NULL,
-    /* OP_qsub16 */    NULL,
-    /* OP_qsub8 */     NULL,
-    /* OP_rbit */      NULL,
-    /* OP_rev */       NULL,
-    /* OP_rev16 */     NULL,
-    /* OP_revsh */     NULL,
-    /* OP_rfe */       NULL,
-    /* OP_ror */       NULL,
-    /* OP_rrx */       NULL,
-    /* OP_rsb */       NULL,
-    /* OP_rsc */       NULL,
-    /* OP_sadd16 */    NULL,
-    /* OP_sadd8 */     NULL,
-    /* OP_sasx */      NULL,
-    /* OP_sbc */       NULL,
-    /* OP_sbfx */      NULL,
-    /* OP_sdiv */      NULL,
-    /* OP_sel */       NULL,
-    /* OP_setend */    NULL,
-    /* OP_sev */       NULL,
-    /* OP_shadd16 */   NULL,
-    /* OP_shadd8 */    NULL,
-    /* OP_shasx */     NULL,
-    /* OP_shsub16 */   NULL,
-    /* OP_shsub8 */    NULL,
-    /* OP_smc */       NULL,
-    /* OP_smlabb */    NULL,
-    /* OP_smlabt */    NULL,
-    /* OP_smlatb */    NULL,
-    /* OP_smlatt */    NULL,
-    /* OP_smlad */     NULL,
-    /* OP_smlal */     NULL,
-    /* OP_smlalbb */   NULL,
-    /* OP_smlalbt */   NULL,
-    /* OP_smlaltb */   NULL,
-    /* OP_smlaltt */   NULL,
-    /* OP_smlald */    NULL,
-    /* OP_smlawr */    NULL,
-    /* OP_smlawt */    NULL,
-    /* OP_smlsd */     NULL,
-    /* OP_smlsld */    NULL,
-    /* OP_smmla */     NULL,
-    /* OP_smmls */     NULL,
-    /* OP_smmul */     NULL,
-    /* OP_smuad */     NULL,
-    /* OP_smulbb */    NULL,
-    /* OP_smulbt */    NULL,
-    /* OP_smultb */    NULL,
-    /* OP_smultt */    NULL,
-    /* OP_smull */     NULL,
-    /* OP_smulwb */    NULL,
-    /* OP_smulwt */    NULL,
-    /* OP_smusd */     NULL,
-    /* OP_srs */       NULL,
-    /* OP_ssat */      NULL,
-    /* OP_ssat16 */    NULL,
-    /* OP_ssax */      NULL,
-    /* OP_ssub16 */    NULL,
-    /* OP_ssub8 */     NULL,
-    /* OP_stc */       NULL,
-    /* OP_stc2 */      NULL,
-    /* OP_stm */       NULL,
-    /* OP_stmia */     NULL,
-    /* OP_stmea */     NULL,
-    /* OP_stmda */     NULL,
-    /* OP_stmed */     NULL,
-    /* OP_stmdb */     NULL,
-    /* OP_stmfd */     NULL,
-    /* OP_stmib */     NULL,
-    /* OP_stmfa */     NULL,
-    /* OP_str */       NULL,
-    /* OP_strb */      NULL,
-    /* OP_strbt */     NULL,
-    /* OP_strd */      NULL,
-    /* OP_strex */     NULL,
-    /* OP_strexb */    NULL,
-    /* OP_strexd */    NULL,
-    /* OP_strexh */    NULL,
-    /* OP_strh */      NULL,
-    /* OP_strht */     NULL,
-    /* OP_strt */      NULL,
-    /* OP_sub */       NULL,
-    /* OP_subs */      NULL,
-    /* OP_svc */       NULL,
-    /* OP_swp */       NULL,
-    /* OP_swpb */      NULL,
-    /* OP_sxtab */     NULL,
-    /* OP_sxtab16 */   NULL,
-    /* OP_sxtah */     NULL,
-    /* OP_sxth */      NULL,
-    /* OP_sxtb */      NULL,
-    /* OP_sxtb16 */    NULL,
-    /* OP_tbb */       NULL,
-    /* OP_tbh */       NULL,
-    /* OP_teq */       NULL,
-    /* OP_tst */       NULL,
-    /* OP_uadd16 */    NULL,
-    /* OP_uadd8 */     NULL,
-    /* OP_uasx */      NULL,
-    /* OP_ubfx */      NULL,
-    /* OP_udiv */      NULL,
-    /* OP_uhadd16 */   NULL,
-    /* OP_uhadd8 */    NULL,
-    /* OP_uhasx */     NULL,
-    /* OP_uhsub16 */   NULL,
-    /* OP_uhsub8 */    NULL,
-    /* OP_umaal */     NULL,
-    /* OP_umlal */     NULL,
-    /* OP_umull */     NULL,
-    /* OP_uqadd16 */   NULL,
-    /* OP_uqadd8 */    NULL,
-    /* OP_uqasx */     NULL,
-    /* OP_usub16 */    NULL,
-    /* OP_usub8 */     NULL,
-    /* OP_uxtab */     NULL,
-    /* OP_uxtab16 */   NULL,
-    /* OP_uxtah */     NULL,
-    /* OP_uxtb */      NULL,
-    /* OP_uxtb16 */    NULL,
-    /* OP_uxth */      NULL,
-    /* OP_vaba */      NULL,
-    /* OP_vabal */     NULL,
-    /* OP_vabd */      NULL,
-    /* OP_vabdl */     NULL,
-    /* OP_vabs */      NULL,
-    /* OP_vacge */     NULL,
-    /* OP_vacgt */     NULL,
-    /* OP_vacle */     NULL,
-    /* OP_vaclt */     NULL,
-    /* OP_vadd */      NULL,
-    /* OP_vaddhn */    NULL,
-    /* OP_vaddl */     NULL,
-    /* OP_vaddw */     NULL,
-    /* OP_vand */      NULL,
-    /* OP_vbic */      NULL,
-    /* OP_vbif */      NULL,
-    /* OP_vbsl */      NULL,
-    /* OP_vceq */      NULL,
-    /* OP_vcge */      NULL,
-    /* OP_vcgt */      NULL,
-    /* OP_vcle */      NULL,
-    /* OP_vcls */      NULL,
-    /* OP_vclt */      NULL,
-    /* OP_vclz */      NULL,
-    /* OP_vcmp */      NULL,
-    /* OP_vcmpe */     NULL,
-    /* OP_vcnt */      NULL,
-    /* OP_vcvt */      NULL,
-    /* OP_vcvtr */     NULL,
-    /* OP_vcvtb */     NULL,
-    /* OP_vcvtt */     NULL,
-    /* OP_vdiv */      NULL,
-    /* OP_vdup */      NULL,
-    /* OP_veor */      NULL,
-    /* OP_vext */      NULL,
-    /* OP_vhadd */     NULL,
-    /* OP_vhsub */     NULL,
-    /* OP_vld1 */      NULL,
-    /* OP_vld2 */      NULL,
-    /* OP_vld3 */      NULL,
-    /* OP_vld4 */      NULL,
-    /* OP_vldm */      NULL,
-    /* OP_vldr */      NULL,
-    /* OP_vmax */      NULL,
-    /* OP_vmin */      NULL,
-    /* OP_vmla */      NULL,
-    /* OP_vmlal */     NULL,
-    /* OP_vmls */      NULL,
-    /* OP_vmlsl */     NULL,
-    /* OP_vmov */      NULL,
-    /* OP_vmovl */     NULL,
-    /* OP_vmovn */     NULL,
-    /* OP_vmrs */      NULL,
-    /* OP_vmsr */      NULL,
-    /* OP_vmul */      NULL,
-    /* OP_vmull */     NULL,
-    /* OP_vmvn */      NULL,
-    /* OP_vneg */      NULL,
-    /* OP_vnmla */     NULL,
-    /* OP_vnmls */     NULL,
-    /* OP_vnmul */     NULL,
-    /* OP_vorn */      NULL,
-    /* OP_vpadal */    NULL,
-    /* OP_vpadd */     NULL,
-    /* OP_vpaddl */    NULL,
-    /* OP_vpmax */     NULL,
-    /* OP_vpmin */     NULL,
-    /* OP_vpop */      NULL,
-    /* OP_vpush */     NULL,
-    /* OP_vqabs */     NULL,
-    /* OP_vqadd */     NULL,
-    /* OP_vqdmlal */   NULL,
-    /* OP_vqdmlsl */   NULL,
-    /* OP_vqdmulh */   NULL,
-    /* OP_vqdmull */   NULL,
-    /* OP_vqdmovn */   NULL,
-    /* OP_vqdmovun */  NULL,
-    /* OP_vqneq */     NULL,
-    /* OP_vqrdmulh */  NULL,
-    /* OP_vqrshl */    NULL,
-    /* OP_vqrshrn */   NULL,
-    /* OP_vqrshrun */  NULL,
-    /* OP_vqshl */     NULL,
-    /* OP_vqshlu */    NULL,
-    /* OP_vqshrn */    NULL,
-    /* OP_vqshrun */   NULL,
-    /* OP_vqsub */     NULL,
-    /* OP_vqraddhn */  NULL,
-    /* OP_vqrecpe */   NULL,
-    /* OP_vqrecps */   NULL,
-    /* OP_vrev16 */    NULL,
-    /* OP_vrev32 */    NULL,
-    /* OP_vrev64 */    NULL,
-    /* OP_vrhadd */    NULL,
-    /* OP_vrshl */     NULL,
-    /* OP_vrshr */     NULL,
-    /* OP_vrshrn */    NULL,
-    /* OP_vrsqrte */   NULL,
-    /* OP_vrsqrts */   NULL,
-    /* OP_vrsra */     NULL,
-    /* OP_vrsubhn */   NULL,
-    /* OP_vshl */      NULL,
-    /* OP_vshll */     NULL,
-    /* OP_vshr */      NULL,
-    /* OP_vshrn */     NULL,
-    /* OP_vsli */      NULL,
-    /* OP_vsqrt */     NULL,
-    /* OP_vsra */      NULL,
-    /* OP_vsri */      NULL,
-    /* OP_vst1 */      NULL,
-    /* OP_vst2 */      NULL,
-    /* OP_vst3 */      NULL,
-    /* OP_vst4 */      NULL,
-    /* OP_vstm */      NULL,
-    /* OP_vsub */      NULL,
-    /* OP_vsubhn */    NULL,
-    /* OP_vsubl */     NULL,
-    /* OP_vsubw */     NULL,
-    /* OP_vswp */      NULL,
-    /* OP_vtbl */      NULL,
-    /* OP_vtbx */      NULL,
-    /* OP_vtrn */      NULL,
-    /* OP_vtst */      NULL,
-    /* OP_vuzp */      NULL,
-    /* OP_vzip */      NULL,
-    /* OP_wfe */       NULL,
-    /* OP_wfi */       NULL,
-    /* OP_yield */     NULL,
-    /* OP_ud2 */       NULL
+
 };
 
 #ifdef NO

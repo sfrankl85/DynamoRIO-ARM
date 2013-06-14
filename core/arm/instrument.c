@@ -4308,7 +4308,7 @@ cleanup_after_call_ex(dcontext_t *dcontext, clean_call_info_t *cci,
                       "cleanup_after_call_ex: sizeof_param_area must be <= 127");
         /* mark it meta down below */
         instrlist_preinsert(ilist, where,
-            INSTR_CREATE_add(dcontext, opnd_create_reg(REG_RR13),
+            INSTR_CREATE_add_imm(dcontext, opnd_create_reg(REG_RR13), opnd_create_reg(REG_RR13),
                              OPND_CREATE_INT8(sizeof_param_area)));
     }
     cleanup_after_clean_call(dcontext, cci, ilist, where);
@@ -4404,8 +4404,8 @@ dr_insert_clean_call_ex_varg(void *drcontext, instrlist_t *ilist, instr_t *where
         pad = ALIGN_FORWARD_UINT(dstack_offs, 16) - dstack_offs;
         IF_X64(CLIENT_ASSERT(CHECK_TRUNCATE_TYPE_int(buf_sz + pad),
                              "dr_insert_clean_call: internal truncation error"));
-        MINSERT(ilist, where, INSTR_CREATE_sub(dcontext, opnd_create_reg(REG_RR13),
-                                               OPND_CREATE_INT32((int)(buf_sz + pad))));
+        MINSERT(ilist, where, INSTR_CREATE_sub_imm(dcontext, opnd_create_reg(REG_RR13),
+                                                   OPND_CREATE_INT32((int)(buf_sz + pad))));
         dr_insert_save_fpstate(drcontext, ilist, where,
                                opnd_create_base_disp(REG_RR13, REG_NULL, 0, 0,
                                                      OPSZ_512));
@@ -4435,8 +4435,9 @@ dr_insert_clean_call_ex_varg(void *drcontext, instrlist_t *ilist, instr_t *where
         dr_insert_restore_fpstate(drcontext, ilist, where,
                                   opnd_create_base_disp(REG_RR13, REG_NULL, 0, 0,
                                                         OPSZ_512));
-        MINSERT(ilist, where, INSTR_CREATE_add(dcontext, opnd_create_reg(REG_RR13),
-                                               OPND_CREATE_INT32(buf_sz + pad)));
+        MINSERT(ilist, where, INSTR_CREATE_add_imm(dcontext, opnd_create_reg(REG_RR13), 
+                                                             opnd_create_reg(REG_RR13),
+                                                   OPND_CREATE_INT32(buf_sz + pad)));
     }
     cleanup_after_call_ex(dcontext, &cci, ilist, where, 0);
 }
@@ -4583,7 +4584,7 @@ dr_save_reg(void *drcontext, instrlist_t *ilist, instr_t *where, reg_id_t reg,
     if (slot <= SPILL_SLOT_TLS_MAX) {
         ushort offs = os_tls_offset(SPILL_SLOT_TLS_OFFS[slot]);
         MINSERT(ilist, where,
-                INSTR_CREATE_mov_st(dcontext, opnd_create_tls_slot(offs),
+                INSTR_CREATE_mov_reg(dcontext, opnd_create_tls_slot(offs),
                                     opnd_create_reg(reg)));
     } else {
         reg_id_t reg_slot = SPILL_SLOT_MC_REG[slot - NUM_TLS_SPILL_SLOTS];
@@ -4629,7 +4630,7 @@ dr_restore_reg(void *drcontext, instrlist_t *ilist, instr_t *where, reg_id_t reg
     if (slot <= SPILL_SLOT_TLS_MAX) {
         ushort offs = os_tls_offset(SPILL_SLOT_TLS_OFFS[slot]);
         MINSERT(ilist, where,
-                INSTR_CREATE_mov_ld(dcontext, opnd_create_reg(reg),
+                INSTR_CREATE_mov_imm(dcontext, opnd_create_reg(reg),
                                     opnd_create_tls_slot(offs)));
     } else {
         reg_id_t reg_slot = SPILL_SLOT_MC_REG[slot - NUM_TLS_SPILL_SLOTS];
@@ -4768,11 +4769,11 @@ dr_insert_read_tls_field(void *drcontext, instrlist_t *ilist, instr_t *where,
                 (dcontext, reg, TLS_DCONTEXT_SLOT));
         MINSERT(ilist, where, instr_create_restore_from_dc_via_reg
                 (dcontext, reg, reg, CLIENT_DATA_OFFSET));
-        MINSERT(ilist, where, INSTR_CREATE_mov_ld
+        MINSERT(ilist, where, INSTR_CREATE_mov_imm
                 (dcontext, opnd_create_reg(reg),
                  OPND_CREATE_MEMPTR(reg, offsetof(client_data_t, user_field))));
     } else {
-        MINSERT(ilist, where, INSTR_CREATE_mov_ld
+        MINSERT(ilist, where, INSTR_CREATE_mov_imm
                 (dcontext, opnd_create_reg(reg),
                  OPND_CREATE_ABSMEM(&dcontext->client_data->user_field, OPSZ_PTR)));
     }
@@ -4802,14 +4803,14 @@ dr_insert_write_tls_field(void *drcontext, instrlist_t *ilist, instr_t *where,
                 (dcontext, spill, TLS_DCONTEXT_SLOT));
         MINSERT(ilist, where, instr_create_restore_from_dc_via_reg
                 (dcontext, spill, spill, CLIENT_DATA_OFFSET));
-        MINSERT(ilist, where, INSTR_CREATE_mov_st
+        MINSERT(ilist, where, INSTR_CREATE_mov_reg
                 (dcontext, OPND_CREATE_MEMPTR(spill,
                                               offsetof(client_data_t, user_field)),
                  opnd_create_reg(reg)));
         MINSERT(ilist, where,
                 instr_create_restore_from_tls(dcontext, spill, TLS_R0_SLOT));
     } else {
-        MINSERT(ilist, where, INSTR_CREATE_mov_st
+        MINSERT(ilist, where, INSTR_CREATE_mov_reg
                 (dcontext, OPND_CREATE_ABSMEM
                  (&dcontext->client_data->user_field, OPSZ_PTR),
                  opnd_create_reg(reg)));
@@ -4885,7 +4886,8 @@ dr_restore_arith_flags_from_xax(void *drcontext, instrlist_t *ilist,
      * the MSB of saveto to 1
      */
     MINSERT(ilist, where,
-            INSTR_CREATE_add(dcontext, opnd_create_reg(REG_AL), OPND_CREATE_INT8(0x7f)));
+            INSTR_CREATE_add_imm(dcontext, opnd_create_reg(REG_AL), 
+                                 opnd_create_reg(REG_AL), OPND_CREATE_INT8(0x7f)));
     MINSERT(ilist, where, INSTR_CREATE_sahf(dcontext));
 #endif
 }
@@ -4984,7 +4986,7 @@ dr_insert_mbr_instrumentation(void *drcontext, instrlist_t *ilist, instr_t *inst
     /* Note that since we're using a client exposed slot we know it will be
      * preserved across the clean call. */
     tls_opnd = dr_reg_spill_slot_opnd(drcontext, scratch_slot);
-    newinst = INSTR_CREATE_mov_st(dcontext, tls_opnd, opnd_create_reg(REG_RR1));
+    newinst = INSTR_CREATE_mov_reg(dcontext, tls_opnd, opnd_create_reg(REG_RR1));
 
     /* PR 214962: ensure we'll properly translate the de-ref of app
      * memory by marking the spill and de-ref as INSTR_OUR_MANGLING.
@@ -6081,7 +6083,7 @@ dr_insert_get_seg_base(void *drcontext, instrlist_t *ilist, instr_t *instr,
     if (seg == SEG_TLS) {
         instrlist_meta_preinsert
             (ilist, instr,
-             INSTR_CREATE_mov_ld(drcontext,
+             INSTR_CREATE_mov_imm(drcontext,
                                  opnd_create_reg(reg),
                                  opnd_create_far_base_disp(SEG_TLS, REG_NULL, REG_NULL,
                                                            0, SELF_TIB_OFFSET, OPSZ_PTR)));

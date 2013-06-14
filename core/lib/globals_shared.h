@@ -1580,9 +1580,9 @@ typedef union _dr_xmm_t {
 
 /** 128-bit Q0-Q15 register. */
 typedef union _dr_qr_t {
-    uint   u32[4]; /**< Representation as 8 32-bit integers. */
+    uint   u32[4]; /**< Representation as 4 32-bit integers. */
     byte   u8[16]; /**< Representation as 32 8-bit integers. */
-    reg_t  reg[4]; /**< Representation as 4 or 8 registers. */
+    reg_t  reg[4]; /**< Representation as 4  registers. */
 } dr_qr_t;
 
 
@@ -1631,7 +1631,7 @@ typedef union _dr_ymm_t {
 #endif
 #ifdef ARM
 # define NUM_QR_SLOTS    16 /**< Number of quad word reg slots in dr_mcontext_t */ /*qr0-15*/
-# define PRE_QR_PADDING  24 /**< Bytes of padding before xmm/ymm dr_mcontext_t slots */
+# define PRE_QR_PADDING  120 /**< Bytes of padding before xmm/ymm dr_mcontext_t slots */
 #else 
 # ifdef X64
 #  ifdef WINDOWS

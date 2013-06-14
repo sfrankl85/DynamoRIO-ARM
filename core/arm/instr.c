@@ -221,9 +221,11 @@ opnd_get_size(opnd_t opnd)
     case INSTR_kind:
     case PC_kind:
         return OPSZ_PTR;
+#ifdef NO
     case FAR_PC_kind:
     case FAR_INSTR_kind:
         return OPSZ_6_irex10_short4;
+#endif //NO
     case NULL_kind:
         return OPSZ_NA;
     default:
@@ -1141,73 +1143,35 @@ opnd_size_in_bytes(opnd_size_t size)
     case OPSZ_0:
         return 0;
     case OPSZ_1:
-    case OPSZ_1_reg4: /* mem size */
         return 1;
-    case OPSZ_2_short1: /* default size */
     case OPSZ_2:
-    case OPSZ_2_reg4: /* mem size */
         return 2;
-    case OPSZ_4_of_8:
-    case OPSZ_4_of_16:
-    case OPSZ_4_short2: /* default size */
-#ifndef X64
-    case OPSZ_4x8: /* default size */
-    case OPSZ_4x8_short2: /* default size */
-    case OPSZ_4x8_short2xi8: /* default size */
-#endif
-    case OPSZ_4_short2xi4: /* default size */
-    case OPSZ_4_rex8_short2: /* default size */
-    case OPSZ_4_rex8:
     case OPSZ_4:
-    case OPSZ_4_reg16: /* mem size */
         return 4;
-    case OPSZ_6_irex10_short4: /* default size */
     case OPSZ_6:
         return 6;
-    case OPSZ_8_of_16:
-    case OPSZ_8_of_16_vex32:
-    case OPSZ_8_short2:
-    case OPSZ_8_short4:
     case OPSZ_8:
-#ifdef X64
-    case OPSZ_4x8: /* default size */
-    case OPSZ_4x8_short2: /* default size */
-    case OPSZ_4x8_short2xi8: /* default size */
-#endif
-    case OPSZ_8_rex16: /* default size */
-    case OPSZ_8_rex16_short4: /* default size */
         return 8;
     case OPSZ_16:
-    case OPSZ_16_vex32:
-    case OPSZ_16_of_32:
         return 16;
-    case OPSZ_6x10:
-        /* table base + limit; w/ addr16, different format, but same total footprint */
-        return IF_X64_ELSE(6, 10);
     case OPSZ_10:
         return 10;
     case OPSZ_12:
-    case OPSZ_12_rex40_short6: /* default size */
         return 12;
     case OPSZ_14:
         return 14;
-    case OPSZ_28_short14: /* default size */
     case OPSZ_28:
         return 28;
     case OPSZ_32:
-    case OPSZ_32_short16: /* default size */
         return 32;
     case OPSZ_40:
         return 40;
     case OPSZ_94:
         return 94;
-    case OPSZ_108_short94: /* default size */
     case OPSZ_108:
         return 108;
     case OPSZ_512:
         return 512;
-    case OPSZ_xsave:
-        return 0; /* > 512 bytes: use cpuid to determine */
     default:
         CLIENT_ASSERT(false, "opnd_size_in_bytes: invalid opnd type");
         return 0;
@@ -3797,7 +3761,7 @@ bool
 instr_is_mov(instr_t *instr)
 {
     int opc = instr_get_opcode(instr);
-    return (opc == OP_mov); 
+    return (opc == OP_mov_imm || opc == OP_mov_reg || opc == OP_movt ); 
 }
 
 static bool
@@ -4176,14 +4140,15 @@ instr_is_wow64_syscall(instr_t *instr)
 bool
 instr_is_mov_constant(instr_t *instr, ptr_int_t *value)
 {
+/* SJF Moves constant value into reg. Might be more. */
     int opc = instr_get_opcode(instr);
-    if (opc == OP_eor) {
+    if (opc == OP_eor_reg ) {
         if (opnd_same(instr_get_src(instr, 0), instr_get_dst(instr, 0))) {
             *value = 0;
             return true;
         } else
             return false;
-    } else if (opc == OP_mov) {
+    } else if (opc == OP_mov_imm) {
         opnd_t op = instr_get_src(instr, 0);
         if (opnd_is_immed_int(op)) {
             *value = opnd_get_immed_int(op);
@@ -4560,8 +4525,8 @@ instr_is_label(instr_t *instr)
 bool 
 instr_is_undefined(instr_t *instr)
 {
-    return (instr_opcode_valid(instr) &&
-            (instr_get_opcode(instr) == OP_ud2)); 
+/* SJF No ARM undefined instruction opcode so return false */ 
+  return false;
 }
 
 DR_API
@@ -5282,11 +5247,11 @@ instr_create_nbyte_nop(dcontext_t *dcontext, uint num_bytes, bool raw)
     } else {
         switch(num_bytes) {
         case 1 :
-            return INSTR_CREATE_nop1byte(dcontext);
+            return INSTR_CREATE_RAW_nop1byte(dcontext);
         case 2:
-            return INSTR_CREATE_nop2byte(dcontext);
+            return INSTR_CREATE_RAW_nop2byte(dcontext);
         case 3:
-            return INSTR_CREATE_nop3byte(dcontext);
+            return INSTR_CREATE_RAW_nop3byte(dcontext);
         }
     }
     CLIENT_ASSERT(false, "instr_create_nbyte_nop: invalid parameters");
@@ -5399,7 +5364,7 @@ instr_create_restore_from_dcontext(dcontext_t *dcontext, reg_id_t reg, int offs)
 {
     opnd_t memopnd = opnd_create_dcontext_field(dcontext, offs);
 
-    return INSTR_CREATE_mov_ld(dcontext, opnd_create_reg(reg), memopnd);
+    return INSTR_CREATE_mov_imm(dcontext, opnd_create_reg(reg), memopnd);
 }
 
 instr_t *
@@ -5414,7 +5379,7 @@ instr_create_save_to_dcontext(dcontext_t *dcontext, reg_id_t reg, int offs)
     if (reg_is_xmm(reg) || reg_is_mmx(reg))
         return INSTR_CREATE_movd(dcontext, memopnd, opnd_create_reg(reg));
     else
-        return INSTR_CREATE_mov_st(dcontext, memopnd, opnd_create_reg(reg));
+        return INSTR_CREATE_mov_reg(dcontext, memopnd, opnd_create_reg(reg));
 #endif //NO
 }
 
@@ -5428,7 +5393,7 @@ instr_create_restore_from_dc_via_reg(dcontext_t *dcontext, reg_id_t basereg,
     /* use movd for xmm/mmx, and OPSZ_PTR */
     opnd_t memopnd = opnd_create_dcontext_field_via_reg_sz
         (dcontext, basereg, offs, reg_get_size(reg));
-    return INSTR_CREATE_mov_ld(dcontext, opnd_create_reg(reg), memopnd);
+    return INSTR_CREATE_mov_imm(dcontext, opnd_create_reg(reg), memopnd);
 }
 
 /* Use basereg==REG_NULL to get default (xdi, or xsi for upcontext) 
@@ -5446,7 +5411,7 @@ instr_create_save_to_dc_via_reg(dcontext_t *dcontext, reg_id_t basereg,
     } else {
         opnd_t memopnd = opnd_create_dcontext_field_via_reg_sz
             (dcontext, basereg, offs, reg_get_size(reg));
-        return INSTR_CREATE_mov_st(dcontext, memopnd, opnd_create_reg(reg));
+        return INSTR_CREATE_mov_reg(dcontext, memopnd, opnd_create_reg(reg));
     }
 #endif //NO
 }
@@ -5458,7 +5423,7 @@ instr_create_save_immed_to_dcontext(dcontext_t *dcontext, int immed, int offs)
     opnd_t memopnd = opnd_create_dcontext_field(dcontext, offs);
     /* PR 244737: thread-private scratch space needs to fixed for x64 */
     IF_X64(ASSERT_NOT_IMPLEMENTED(false));
-    return INSTR_CREATE_mov_st(dcontext, memopnd, OPND_CREATE_INT32(immed));
+    return INSTR_CREATE_mov_reg(dcontext, memopnd, OPND_CREATE_INT32(immed));
 #endif //NO
 }
 
@@ -5475,7 +5440,7 @@ instr_create_jump_via_dcontext(dcontext_t *dcontext, int offs)
 {
 #ifdef NO
     opnd_t memopnd = opnd_create_dcontext_field(dcontext, offs);
-    return INSTR_CREATE_jmp_ind(dcontext, memopnd);
+    return INSTR_CREATE_branch_ind(dcontext, memopnd);
 #endif //NO
 }
 
@@ -5754,14 +5719,14 @@ instr_is_reg_spill_or_restore(dcontext_t *dcontext, instr_t *instr,
 instr_t *
 instr_create_save_to_tls(dcontext_t *dcontext, reg_id_t reg, ushort offs)
 {
-    return INSTR_CREATE_mov_st(dcontext, opnd_create_tls_slot(os_tls_offset(offs)), 
+    return INSTR_CREATE_mov_reg(dcontext, opnd_create_tls_slot(os_tls_offset(offs)), 
                                opnd_create_reg(reg));
 }
 
 instr_t *
 instr_create_restore_from_tls(dcontext_t *dcontext, reg_id_t reg, ushort offs)
 {
-    return INSTR_CREATE_mov_ld(dcontext, opnd_create_reg(reg), 
+    return INSTR_CREATE_mov_imm(dcontext, opnd_create_reg(reg), 
                                opnd_create_tls_slot(os_tls_offset(offs)));
 }
 
@@ -5769,13 +5734,13 @@ instr_create_restore_from_tls(dcontext_t *dcontext, reg_id_t reg, ushort offs)
 instr_t *
 instr_create_save_to_reg(dcontext_t *dcontext, reg_id_t reg1, reg_id_t reg2)
 {
-    return INSTR_CREATE_mov_ld(dcontext, opnd_create_reg(reg2), opnd_create_reg(reg1));
+    return INSTR_CREATE_mov_imm(dcontext, opnd_create_reg(reg2), opnd_create_reg(reg1));
 }
 
 instr_t *
 instr_create_restore_from_reg(dcontext_t *dcontext, reg_id_t reg1, reg_id_t reg2)
 {
-    return INSTR_CREATE_mov_ld(dcontext, opnd_create_reg(reg1), opnd_create_reg(reg2));
+    return INSTR_CREATE_mov_imm(dcontext, opnd_create_reg(reg1), opnd_create_reg(reg2));
 }
 
 #ifdef X64
