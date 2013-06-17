@@ -970,8 +970,6 @@ int
 insert_exit_stub_other_flags(dcontext_t *dcontext, fragment_t *f,
                              linkstub_t *l, cache_pc stub_pc, ushort l_flags)
 {
-#ifdef NO
-//TODO SJF
     byte *pc = (byte *)stub_pc;
     cache_pc exit_target;
     bool indirect = false;
@@ -1004,9 +1002,7 @@ insert_exit_stub_other_flags(dcontext_t *dcontext, fragment_t *f,
                                              EXIT_TARGET_TAG(dcontext, f, l));
         }
         indirect = true;
-# ifdef WINDOWS
-        can_inline = (exit_target != unlinked_shared_syscall_routine(dcontext));
-# endif
+
         if (can_inline) {
             ibl_code_t *ibl_code = 
                 get_ibl_routine_code(dcontext, 
@@ -1029,45 +1025,18 @@ insert_exit_stub_other_flags(dcontext_t *dcontext, fragment_t *f,
          * so we store target info to memory instead of a register.
          * The exact bytes used here are assumed by entrance_stub_target_tag().
          */
-#ifdef X64
-        if (!FRAG_IS_32(f->flags)) {
-            app_pc tgt = EXIT_TARGET_TAG(dcontext, f, l);
-            /* Both entrance_stub_target_tag() and coarse_indirect_stub_jmp_target()
-             * assume that the addr prefix is present for 32-bit but not 64-bit.
-             */
-            /* since we have no 8-byte-immed-to-memory, we split into two pieces */
-            *pc = TLS_SEG_OPCODE; pc++;
-            *pc = MOV_IMM2MEM_OPCODE; pc++;
-            *pc = MODRM_BYTE(0/*mod*/, 0/*reg*/, 4/*rm*/); pc++; /* => no base, w/ sib */
-            *pc = SIB_DISP32; pc++; /* just disp32 */
-            /* low 32 bits */
-            *((uint *)pc) = (uint) os_tls_offset(DIRECT_STUB_SPILL_SLOT); pc+=4;
-            *((uint *)pc) = (uint)(ptr_uint_t) tgt; pc += 4;
-            
-            *pc = TLS_SEG_OPCODE; pc++;
-            *pc = MOV_IMM2MEM_OPCODE; pc++;
-            *pc = MODRM_BYTE(0/*mod*/, 0/*reg*/, 4/*rm*/); pc++; /* => no base, w/ sib */
-            *pc = SIB_DISP32; pc++; /* just disp32 */
-            /* high 32 bits */
-            *((uint *)pc) = 4 + (uint) os_tls_offset(DIRECT_STUB_SPILL_SLOT); pc+=4;
-            *((uint *)pc) = (uint)(((ptr_uint_t)tgt) >> 32); pc += 4;
-        } else {
-#endif /* X64 */
-            /* We must be at or below 15 bytes so we require addr16. 
-             * Both entrance_stub_target_tag() and coarse_indirect_stub_jmp_target()
-             * assume that the addr prefix is present for 32-bit but not 64-bit.
-             */
-            /* addr16 mov <target>, fs:<dir-stub-spill> */
-            /* FIXME: PR 209709: test perf and remove if outweighs space */
-            *pc = ADDR_PREFIX_OPCODE; pc++;
-            *pc = TLS_SEG_OPCODE; pc++;
-            *pc = MOV_IMM2MEM_OPCODE; pc++;
-            *pc = MODRM16_DISP16; pc++;
-            *((ushort *)pc) = os_tls_offset(DIRECT_STUB_SPILL_SLOT); pc+=2;
-            *((uint *)pc) = (uint)(ptr_uint_t) EXIT_TARGET_TAG(dcontext, f, l); pc += 4;
-#ifdef X64
-        }
-#endif /* X64 */
+        /* We must be at or below 15 bytes so we require addr16. 
+         * Both entrance_stub_target_tag() and coarse_indirect_stub_jmp_target()
+         * assume that the addr prefix is present for 32-bit but not 64-bit.
+         */
+        /* addr16 mov <target>, fs:<dir-stub-spill> */
+        /* FIXME: PR 209709: test perf and remove if outweighs space */
+        *pc = ADDR_PREFIX_OPCODE; pc++;
+        *pc = TLS_SEG_OPCODE; pc++;
+        *pc = MOV_IMM2MEM_OPCODE; pc++;
+        *pc = MODRM16_DISP16; pc++;
+        *((ushort *)pc) = os_tls_offset(DIRECT_STUB_SPILL_SLOT); pc+=2;
+        *((uint *)pc) = (uint)(ptr_uint_t) EXIT_TARGET_TAG(dcontext, f, l); pc += 4;
         /* jmp to exit target */
         pc = insert_relative_jump(pc, exit_target, NOT_HOT_PATCHABLE);
     } else {
@@ -1086,26 +1055,11 @@ insert_exit_stub_other_flags(dcontext_t *dcontext, fragment_t *f,
         }
 #endif
         /* mov $linkstub_ptr,%xax */
-#ifdef X64
-        if (FRAG_IS_32(f->flags)) {
-            /* XXX i#829: we only support stubs in the low 4GB which is ok for
-             * WOW64 mixed-mode but long-term for 64-bit flexibility (i#774) we
-             * may need to store the other half of the pointer somewhere
-             */
-            uint l_uint;
-            ASSERT_TRUNCATE(l_uint, uint, (ptr_uint_t)l);
-            l_uint = (uint)(ptr_uint_t) l;
-            *pc = MOV_IMM2XAX_OPCODE; pc++;
-            *((uint *)pc) = l_uint; pc += sizeof(l_uint);
-        } else {
-            *pc = REX_PREFIX_BASE_OPCODE | REX_PREFIX_W_OPFLAG; pc++;
-#endif
-            /* shared w/ 32-bit and 64-bit !FRAG_IS_32 */
-            *pc = MOV_IMM2XAX_OPCODE; pc++;
-            *((ptr_uint_t *)pc) = (ptr_uint_t)l; pc += sizeof(l);
-#ifdef X64
-        }
-#endif
+
+        /* shared w/ 32-bit and 64-bit !FRAG_IS_32 */
+        *pc = MOV_IMM2XAX_OPCODE; pc++;
+        *((ptr_uint_t *)pc) = (ptr_uint_t)l; pc += sizeof(l);
+
         /* jmp to exit target */
         pc = insert_relative_jump(pc, exit_target, NOT_HOT_PATCHABLE);
 
@@ -1127,7 +1081,6 @@ insert_exit_stub_other_flags(dcontext_t *dcontext, fragment_t *f,
 
     IF_X64(ASSERT(CHECK_TRUNCATE_TYPE_int(pc - stub_pc)));
     return (int) (pc - stub_pc);
-#endif //NO
 }
 
 int
@@ -3424,7 +3377,6 @@ emit_fcache_enter_common(dcontext_t *dcontext, generated_code_t *code, byte *pc,
    and decode_table.c updating correctly.
    I dont even have a suitable structure to store 
    ARM instructions in yet! SJF TODO */
-#ifdef NO
     instrlist_t ilist;
     patch_list_t patch;
     instr_t *post_hook = INSTR_CREATE_label(dcontext);
@@ -3477,9 +3429,11 @@ emit_fcache_enter_common(dcontext_t *dcontext, generated_code_t *code, byte *pc,
 
     APP(&ilist, post_hook/*label*/);
     APP(&ilist, RESTORE_FROM_DC(dcontext, REG_RR0, R0_OFFSET));
-    APP(&ilist, INSTR_CREATE_push(dcontext, opnd_create_reg(REG_RR0)));
+    /*APP(&ilist, INSTR_CREATE_push(dcontext, opnd_create_reg(REG_RR0))); 
+        Do not push R1 onto stack as we can just restore it to cpsr directly. */
     /* restore eflags temporarily using dstack */
-    APP(&ilist, INSTR_CREATE_RAW_popf(dcontext));
+    APP(&ilist, INSTR_CREATE_msr(dcontext, opnd_create_reg(REG_CPSR), opnd_create_reg(REG_RR0)));
+
 #ifdef NO
 //TODO SJF Leave xmm/qr stuff for now
     if (preserve_qr_caller_saved()) {
@@ -3538,9 +3492,9 @@ emit_fcache_enter_common(dcontext_t *dcontext, generated_code_t *code, byte *pc,
     } else {
         if (shared) {
             /* next_tag placed into tls slot earlier in this routine */
-            APP(&ilist, INSTR_CREATE_branch_ind(dcontext, 
-                                             OPND_TLS_FIELD(FCACHE_ENTER_TARGET_SLOT)));
-
+            /* SJF How to do indirect branches on ARM. Hop it uses branch_via_dc above */
+            APP(&ilist, INSTR_CREATE_ldr_reg(dcontext, REG_RR7, OPND_TLS_FIELD(FCACHE_ENTER_TARGET_SLOT));
+            APP(&ilist, INSTR_CREATE_branch_ind(dcontext, REG_RR7));
         } else {
             /* no special scratch slot! */
             ASSERT_NOT_IMPLEMENTED(false);
@@ -3553,7 +3507,6 @@ emit_fcache_enter_common(dcontext_t *dcontext, generated_code_t *code, byte *pc,
 
     /* free the instrlist_t elements */
     instrlist_clear(dcontext, &ilist);
-#endif
 
     return pc + len;
 }
@@ -3767,26 +3720,12 @@ append_fcache_return_common(dcontext_t *dcontext, generated_code_t *code,
                             bool coarse_info)
 {
     bool instr_targets = false;
-#ifdef NO
-//TODO SJF INSTR
 
     /* no support for absolute addresses on x64: we always use tls */
     IF_X64(ASSERT_NOT_IMPLEMENTED(!absolute && shared));
 
     /* currently linkstub is only used for coarse-grain exits */
     ASSERT(linkstub == NULL || !absolute);
-
-#ifdef X64
-    if (GENCODE_IS_X86(code->gencode_mode)) {
-        instr_t *label = INSTR_CREATE_label(dcontext);
-        instr_t *ljmp = INSTR_CREATE_branch_far
-            (dcontext, opnd_create_far_instr(CS64_SELECTOR, label));
-        instr_set_x86_mode(ljmp, true/*x86*/);
-        APP(ilist, ljmp);
-        APP(ilist, label);
-        instr_targets = true;
-    }
-#endif
 
     if (!absolute) {
         /* only support non-absolute w/ shared cache */
@@ -3822,16 +3761,7 @@ append_fcache_return_common(dcontext_t *dcontext, generated_code_t *code,
                                             OPND_CREATE_INTPTR((ptr_int_t)linkstub)));
             if (coarse_info) {
                 APP(ilist, SAVE_TO_DC(dcontext, REG_RR1, COARSE_DIR_EXIT_OFFSET));
-#ifdef X64
-                /* XXX: there are a few ways to perhaps make this a little
-                 * cleaner: maybe a restore_indirect_branch_spill() or sthg,
-                 * and IBL_REG to indirect xcx.
-                 */
-                if (GENCODE_IS_X86_TO_X64(code->gencode_mode))
-                    APP(ilist, RESTORE_FROM_REG(dcontext, REG_RR1, REG_RR9));
-                else
-#endif
-                    APP(ilist, RESTORE_FROM_TLS(dcontext, REG_RR1, MANGLE_XCX_SPILL_SLOT));
+                APP(ilist, RESTORE_FROM_TLS(dcontext, REG_RR1, MANGLE_XCX_SPILL_SLOT));
             }
         } else {
             APP(ilist, SAVE_TO_DC(dcontext, REG_RR3, R0_OFFSET));
@@ -3856,16 +3786,8 @@ append_fcache_return_common(dcontext_t *dcontext, generated_code_t *code,
         APP(ilist, SAVE_TO_DC(dcontext, REG_RR7, R7_OFFSET));
     APP(ilist, SAVE_TO_DC(dcontext, REG_RR5, R5_OFFSET));
     APP(ilist, SAVE_TO_DC(dcontext, REG_RR13, R13_OFFSET));
-#ifdef X64
-    APP(ilist, SAVE_TO_DC(dcontext, REG_RR8, R8_OFFSET));
-    APP(ilist, SAVE_TO_DC(dcontext, REG_RR9, R9_OFFSET));
-    APP(ilist, SAVE_TO_DC(dcontext, REG_RR10, R10_OFFSET));
-    APP(ilist, SAVE_TO_DC(dcontext, REG_RR11, R11_OFFSET));
-    APP(ilist, SAVE_TO_DC(dcontext, REG_RR12, R12_OFFSET));
-    APP(ilist, SAVE_TO_DC(dcontext, REG_RR13, R13_OFFSET));
-    APP(ilist, SAVE_TO_DC(dcontext, REG_RR14, R14_OFFSET));
-    APP(ilist, SAVE_TO_DC(dcontext, REG_RR15, R15_OFFSET));
-#endif
+#ifdef NO
+//SJF No XMM/QR for now
     if (preserve_xmm_caller_saved()) {
         /* PR 264138: we must preserve xmm0-5 if on a 64-bit kernel.
          * Rather than try and optimize we save/restore on every cxt sw.
@@ -3884,6 +3806,7 @@ append_fcache_return_common(dcontext_t *dcontext, generated_code_t *code,
                  opnd_create_reg(REG_SAVED_XMM0 + (reg_id_t)i)));
         }
     }
+#endif
 
     /* Switch to a clean dstack as part of our scheme to avoid state kept
      * unprotected across cache executions.
@@ -3897,14 +3820,17 @@ append_fcache_return_common(dcontext_t *dcontext, generated_code_t *code,
     /* now save eflags -- too hard to do without a stack! */    
     APP(ilist, INSTR_CREATE_RAW_pushf(dcontext));
     APP(ilist, INSTR_CREATE_pop(dcontext, opnd_create_reg(REG_RR3)));
-    APP(ilist, SAVE_TO_DC(dcontext, REG_RR3, XFLAGS_OFFSET));
+    APP(ilist, SAVE_TO_DC(dcontext, REG_RR3, CPSR_OFFSET));
                 
     /* clear eflags now to avoid app's eflags (namely an app std)
      * messing up our ENTER_DR_HOOK
      */
-    /* on x64 a push immed is sign-extended to 64-bit */
+    APP(ilist, INSTR_CREATE_mov_imm( dcontext, REG_RR7, OPND_CREATE_INT8(0) );
+    APP(ilist, INSTR_CREATE_msr_cpsr( dcontext, REG_RR7 );
+/*
     APP(ilist, INSTR_CREATE_push_imm(dcontext, OPND_CREATE_INT8(0)));
     APP(ilist, INSTR_CREATE_RAW_popf(dcontext));
+*/
 
     if (ENTER_DR_HOOK != NULL) {
         /* xax is only reg we need to save around the call.
@@ -3921,21 +3847,6 @@ append_fcache_return_common(dcontext_t *dcontext, generated_code_t *code,
             APP(ilist, INSTR_CREATE_push(dcontext, opnd_create_reg(REG_RR6)));
         }
         APP(ilist, INSTR_CREATE_push(dcontext, opnd_create_reg(REG_RR0)));
-#ifdef WINDOWS
-        if (absolute) {
-            /* For thread-private (used for syscalls), don't call if
-             * dcontext->ignore_enterexit.  This is a perf hit to check: could
-             * instead have a space hit via a separate routine.  This is only
-             * needed right now for NtSuspendThread handling (see case 4942).
-             */
-            APP(ilist, RESTORE_FROM_DC(dcontext, REG_EDI, IGNORE_ENTEREXIT_OFFSET));
-            /* P4 opt guide says to use test to cmp reg with 0: shorter instr */
-            APP(ilist, INSTR_CREATE_test(dcontext, opnd_create_reg(REG_EDI),
-                                         opnd_create_reg(REG_EDI)));
-            APP(ilist, INSTR_CREATE_jcc(dcontext, OP_jnz, opnd_create_instr(post_hook)));
-            instr_targets = true;
-        }
-#endif
         /* make sure to use dr_insert_call() rather than a raw OP_call instr,
          * since x64 windows requires 32 bytes of stack space even w/ no args,
          * and we don't want anyone clobbering our pushed registers!
@@ -3960,16 +3871,6 @@ append_fcache_return_common(dcontext_t *dcontext, generated_code_t *code,
     /* save last_exit, currently in xax, into dcontext->last_exit */
     APP(ilist, SAVE_TO_DC(dcontext, REG_RR0, LAST_EXIT_OFFSET));
 
-#ifdef WINDOWS
-# ifdef CLIENT_INTERFACE
-    /* i#249: isolate the PEB */
-    if (INTERNAL_OPTION(private_peb) && should_swap_peb_pointer()) {
-        preinsert_swap_peb(dcontext, ilist, NULL, absolute, REG_RR7,
-                           REG_RR0/*scratch*/, true/*to priv*/);
-    }
-# endif
-#endif
-
 #ifdef SIDELINE
     if (dynamo_options.sideline) {
         /* clear cur-trace field so we don't think cur trace is still running */
@@ -3992,9 +3893,8 @@ append_fcache_return_common(dcontext_t *dcontext, generated_code_t *code,
     /* dispatch() shouldn't return! */
     insert_reachable_cti(dcontext, ilist, NULL, vmcode_get_start(),
                          (byte *)unexpected_return, true/*jmp*/, false/*!precise*/,
-                         DR_REG_RR11/*scratch*/, NULL);
+                         DR_REG_R11/*scratch*/, NULL);
 
-#endif //NO
     return instr_targets;
 }
 
@@ -7780,7 +7680,7 @@ emit_new_thread_dynamo_start(dcontext_t *dcontext, byte *pc)
     /* should not return */
     insert_reachable_cti(dcontext, &ilist, NULL, vmcode_get_start(),
                          (byte *)unexpected_return, true/*jmp*/, false/*!precise*/,
-                         DR_REG_RR11/*scratch*/, NULL);
+                         DR_REG_R11/*scratch*/, NULL);
 
     /* now encode the instructions */
     pc = instrlist_encode(dcontext, &ilist, pc, true /* instr targets */);

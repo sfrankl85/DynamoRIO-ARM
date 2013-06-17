@@ -254,6 +254,7 @@
     opnd_create_base_disp(DR_REG_R13, DR_REG_NULL, 0, 0, OPSZ_VARSTACK))
 
 
+
 /* SJF Neew instr create macros */
 /* TODO Fill in with the correct calls as needed */
 #define INSTR_CREATE_adc_imm(dc, d, s, i) \
@@ -380,8 +381,8 @@
     instr_create_1dst_2src((dc), OP_ldr_imm, (d), (s), (i))
 #define INSTR_CREATE_ldr_lit(dc, d, s, i) \
     instr_create_1dst_2src((dc), OP_ldr_lit, (d), (s), (i))
-#define INSTR_CREATE_ldr_reg(dc, d, s, i) \
-    instr_create_1dst_2src((dc), OP_ldr_reg, (d), (s), (i))
+#define INSTR_CREATE_ldr_reg(dc, d, s) \
+    instr_create_1dst_1src((dc), OP_ldr_reg, (d), (s))
 #define INSTR_CREATE_ldrb_imm(dc) \
     instr_create_0dst_0src((dc), OP_ldrb_imm)
 #define INSTR_CREATE_ldrb_lit(dc) \
@@ -678,8 +679,8 @@
     instr_create_0dst_0src((dc), OP_stmfa)
 #define INSTR_CREATE_str_imm(dc, d, s, i) \
     instr_create_1dst_2src((dc), OP_str_imm, (d), (s), (i))
-#define INSTR_CREATE_str_reg(dc, d, s, i) \
-    instr_create_1dst_2src((dc), OP_str_reg, (d), (s), (i))
+#define INSTR_CREATE_str_reg(dc, d, s) \
+    instr_create_1dst_1src((dc), OP_str_reg, (d), (s))
 #define INSTR_CREATE_strb_imm(dc, d, s, i) \
     instr_create_1dst_2src((dc), OP_strb_imm, (d))
 #define INSTR_CREATE_strb_reg(dc, d, s, i) \
@@ -1201,6 +1202,23 @@ INSTR_CREATE_nop3byte_reg(dcontext_t *dcontext, reg_id_t reg)
    /* SJF ?? What is going on here */
    return INSTR_CREATE_mov_imm(dcontext, opnd_create_reg(reg), opnd_create_reg(reg));
 }
+
+static inline instr_t *
+INSTR_CREATE_branch_ind(dcontext_t *dcontext, reg_id_t reg)
+{
+   /* Move the value held in the reg passed into pc. This performs an
+      indirect branch in combination with the address being put into reg */
+   return INSTR_CREATE_mov_reg(dcontext, opnd_create_reg(REG_R15), opnd_create_reg(reg));
+}
+
+static inline instr_t* 
+INSTR_CREATE_msr_cpsr(dcontext_t *dcontext, reg_id_t reg)
+{
+   /* Move the value held in the reg passed into pc. This performs an
+      indirect branch in combination with the address being put into reg */
+   return INSTR_CREATE_mov_reg(dcontext, opnd_create_reg(REG_CPSR), opnd_create_reg(reg));
+}
+
 
 
 

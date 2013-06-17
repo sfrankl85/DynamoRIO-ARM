@@ -1334,11 +1334,13 @@ create_ldt_entry(void *base, size_t size, uint index)
 static void
 clear_ldt_entry(uint index)
 {
+#ifdef HAVE_TLS
     our_modify_ldt_t array;
     int ret;
     clear_ldt_struct(&array, index);
     ret = modify_ldt_syscall(1, (void *)&array, sizeof(array));
     ASSERT(ret >= 0);
+#endif
 }
 
 #endif /* HAVE_TLS */
@@ -1465,24 +1467,40 @@ typedef struct _os_local_state_t {
 #define WRITE_TLS_SLOT_IMM(imm, var)                                  \
     IF_NOT_HAVE_TLS(ASSERT_NOT_REACHED());                            \
     ASSERT(sizeof(var) == sizeof(void*));                             \
-    asm volatile("nop");
+    asm("nop"); 
+/*
+    asm volatile("str %0, [r13, %1]" : : "r"(var), "i"(imm));
+*/
 
 #define READ_TLS_SLOT_IMM(imm, var)                  \
     IF_NOT_HAVE_TLS(ASSERT_NOT_REACHED());           \
     ASSERT(sizeof(var) == sizeof(void*));            \
-    asm volatile("nop");
+    asm("nop"); 
+/*
+    asm volatile("ldr %0, [r13, %1]" : "=r"(var) : "i"(imm));
+*/
 
 /* FIXME: need dedicated-storage var for _TLS_SLOT macros, can't use expr */
 #define WRITE_TLS_SLOT(idx, var)                            \
     IF_NOT_HAVE_TLS(ASSERT_NOT_REACHED());                  \
     ASSERT(sizeof(var) == sizeof(void*));                   \
     ASSERT(sizeof(idx) == 2);                               \
-    asm volatile("nop");
+    asm("nop"); 
+/*
+    asm("mov %0, %%"ASM_R0 : : "m"((var)) : ASM_R0);      \
+    asm("mov %0, %%"ASM_R2 : : "m"((idx)) : ASM_R2); \
+    asm("mov %%"ASM_R0", %(%%"ASM_R2")" : : : ASM_R0, ASM_R2);
+*/
 
 #define READ_TLS_SLOT(idx, var)                                    \
     ASSERT(sizeof(var) == sizeof(void*));                          \
     ASSERT(sizeof(idx) == 2);                                      \
-    asm("mov %%"ASM_XAX", %"ASM_SEG":(%%"ASM_XDX")" : : : ASM_XAX, ASM_XDX);
+    asm("nop"); 
+/*
+    asm("mov %0, %%"ASM_R0: : "m"((idx)) : ASM_R0); \
+    asm("mov %(%%"ASM_R0"), %%"ASM_R0 : : : ASM_R0);  \
+    asm("mov %%"ASM_R0", %0" : "=m"((var)) : : ASM_R0);
+*/
 
 # else
 
@@ -1518,8 +1536,14 @@ typedef struct _os_local_state_t {
 static bool
 is_segment_register_initialized(void)
 {
+#ifdef ARM
+    /* ARM Does not have segments but this needs to return true 
+           so just do it. */
+    return true;
+#else
     if (read_selector(SEG_TLS) != 0)
         return true;
+#endif
 #ifdef X64
     if (tls_using_msr) {
         /* When the MSR is used, the selector in the register remains 0.
@@ -1580,11 +1604,10 @@ static os_local_state_t *
 get_os_tls(void)
 {
     os_local_state_t *os_tls;
-#ifdef NO
-//TODO SJF
+
     ASSERT(is_segment_register_initialized());
     READ_TLS_SLOT_IMM(TLS_SELF_OFFSET, os_tls);
-#endif //NO
+
     return os_tls;
 }
 
@@ -1656,20 +1679,16 @@ void *
 get_tls(ushort tls_offs)
 {
     void *val;
-#ifdef NO
-//TODO SJF
+
     READ_TLS_SLOT(tls_offs, val);
-#endif
+
     return val;
 }
 
 void
 set_tls(ushort tls_offs, void *value)
 {
-#ifdef NO
-//TODO SJF
     WRITE_TLS_SLOT(tls_offs, value);
-#endif
 }
 
 
@@ -1846,6 +1865,7 @@ os_handle_mov_seg(dcontext_t *dcontext, byte *pc)
 static void
 choose_gdt_slots(os_local_state_t *os_tls)
 {
+#ifdef HAVE_TLS
     static bool tls_global_init = false;
     our_modify_ldt_t desc;
     int i;
@@ -1911,8 +1931,10 @@ choose_gdt_slots(os_local_state_t *os_tls)
     }
 
 # ifndef VMX86_SERVER
+#  ifdef HAVE_TLS
     ASSERT_CURIOSITY(tls_gdt_index ==
                      (kernel_is_64bit() ? GDT_64BIT : GDT_32BIT));
+#  endif //HAVE_TLS
 # endif
 
 # ifdef CLIENT_INTERFACE
@@ -1944,6 +1966,7 @@ choose_gdt_slots(os_local_state_t *os_tls)
         lib_tls_gdt_index = index;
     }
 # endif
+#endif
 }
 
 /* initialization for mangle_app_seg, must be called before
@@ -1952,6 +1975,7 @@ choose_gdt_slots(os_local_state_t *os_tls)
 static void
 os_tls_app_seg_init(os_local_state_t *os_tls, void *segment)
 {
+#ifdef HAVE_TLS //SJF Remove TLs shit
     int i, index;
     our_modify_ldt_t *desc;
     app_pc app_fs_base, app_gs_base;
@@ -2007,13 +2031,13 @@ os_tls_app_seg_init(os_local_state_t *os_tls, void *segment)
         get_thread_id(), os_tls->app_fs_base, os_tls->app_gs_base);
     LOG(THREAD_GET, LOG_THREADS, 1, "thread %d DR fs: "PFX", gs: "PFX"\n",
         get_thread_id(), os_tls->os_seg_info.dr_fs_base, os_tls->os_seg_info.dr_gs_base);
+#endif
 }
 
 void
 os_tls_init(void)
 {
-#ifdef NO
-//TODO SJF
+#ifdef NO //SJF Comment out all TLS/LDT/GDT shit for ARM
 #ifdef HAVE_TLS
     /* We create a 1-page segment with an LDT entry for each thread and load its
      * selector into fs/gs.
@@ -2213,9 +2237,9 @@ os_tls_init(void)
     memset(tls_table, 0, MAX_THREADS*sizeof(tls_slot_t));
 #endif
     /* store type in global var for convenience: should be same for all threads */
-    tls_type = os_tls->tls_type;
+    tls_type = TLS_TYPE_NONE; //SJF Removed HAVE_TLS error 
     ASSERT(is_segment_register_initialized());
-#endif //NO
+#endif
 }
 
 /* Frees local_state.  If the calling thread is exiting (i.e.,
@@ -2288,6 +2312,7 @@ os_tls_get_gdt_index(dcontext_t *dcontext)
 void
 os_tls_pre_init(int gdt_index)
 {
+#ifdef HAVE_TLS //SJF Remove tls shit
     /* Only set to above 0 for tls_type == TLS_TYPE_GDT */
     if (gdt_index > 0) {
         /* PR 458917: clear gdt slot to avoid leak across exec */ 
@@ -2302,6 +2327,7 @@ os_tls_pre_init(int gdt_index)
         res = dynamorio_syscall(SYS_set_thread_area, 1, &desc);
         ASSERT(res >= 0);        
     }
+#endif
 }
 
 #ifdef CLIENT_INTERFACE
@@ -2387,6 +2413,7 @@ os_thread_init(dcontext_t *dcontext)
     /* i#107, initialize thread area information,
      * the value was first get in os_tls_init and stored in os_tls
      */
+/* SJF Ignore TLS Stuff 
     ostd->dr_gs_base = os_tls->os_seg_info.dr_gs_base;
     ostd->dr_fs_base = os_tls->os_seg_info.dr_fs_base;
     if (INTERNAL_OPTION(mangle_app_seg)) {
@@ -2397,6 +2424,7 @@ os_thread_init(dcontext_t *dcontext)
                os_tls->os_seg_info.app_thread_areas,
                sizeof(our_modify_ldt_t) * GDT_NUM_TLS_SLOTS);
     }
+*/
 
     LOG(THREAD, LOG_THREADS, 1, "cur gs base is "PFX"\n", get_segment_base(SEG_GS));
     LOG(THREAD, LOG_THREADS, 1, "cur fs base is "PFX"\n", get_segment_base(SEG_FS));
@@ -2710,8 +2738,6 @@ get_thread_private_dcontext(void)
      * the current thread, they cannot both execute simultaneously for the
      * same tid, right?
      */
-#ifdef NO
-//TODO SJF
     thread_id_t tid = get_thread_id();
     int i;
     if (tls_table != NULL) {
@@ -2721,9 +2747,10 @@ get_thread_private_dcontext(void)
             }
         }
     }
-#endif //NO
     return NULL;
+
 #endif
+
 }
 
 /* sets the thread-private dcontext pointer for the calling thread */
@@ -3490,6 +3517,8 @@ dr_create_client_thread(void (*func)(void *param), void *arg)
      * that will be used (such as tcbhead_t.sysinfo @0x10) are read-only.
      */
     our_modify_ldt_t desc;
+
+#ifdef HAVE_TLS //SJF Uses TLS vars here
     /* if get_segment_base() returned size too we could use it */
     uint index = lib_tls_gdt_index;
     ASSERT(lib_tls_gdt_index != -1);
@@ -3501,6 +3530,8 @@ dr_create_client_thread(void (*func)(void *param), void *arg)
             __FUNCTION__, index, res);
         return false;
     }
+#endif //HAVE_TLS
+
 #endif
     LOG(THREAD, LOG_ALL, 1, "dr_create_client_thread xsp="PFX" dstack="PFX"\n",
         xsp, get_clone_record_dstack(crec));
@@ -5549,6 +5580,7 @@ static bool
 os_switch_seg_to_context(dcontext_t *dcontext, reg_id_t seg, bool to_app)
 {
     int res = -1;
+#ifdef HAVE_TLS
     app_pc base;
     os_local_state_t *os_tls = get_os_tls_from_dc(dcontext);
 
@@ -5625,6 +5657,7 @@ os_switch_seg_to_context(dcontext_t *dcontext, reg_id_t seg, bool to_app)
     }
     ASSERT(BOOLS_MATCH(to_app, os_using_app_state(dcontext)));
     /* FIXME: We do not support using ldt yet. */
+#endif //HAVE_TLS
     return (res >= 0);
 }
 

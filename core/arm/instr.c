@@ -5364,7 +5364,7 @@ instr_create_restore_from_dcontext(dcontext_t *dcontext, reg_id_t reg, int offs)
 {
     opnd_t memopnd = opnd_create_dcontext_field(dcontext, offs);
 
-    return INSTR_CREATE_mov_imm(dcontext, opnd_create_reg(reg), memopnd);
+    return INSTR_CREATE_ldr_reg(dcontext, opnd_create_reg(reg), memopnd);
 }
 
 instr_t *
@@ -5379,8 +5379,8 @@ instr_create_save_to_dcontext(dcontext_t *dcontext, reg_id_t reg, int offs)
     if (reg_is_xmm(reg) || reg_is_mmx(reg))
         return INSTR_CREATE_movd(dcontext, memopnd, opnd_create_reg(reg));
     else
-        return INSTR_CREATE_mov_reg(dcontext, memopnd, opnd_create_reg(reg));
 #endif //NO
+    return INSTR_CREATE_str_reg(dcontext, opnd_create_reg(reg), memopnd);
 }
 
 /* Use basereg==REG_NULL to get default (xdi, or xsi for upcontext) 
@@ -5393,7 +5393,7 @@ instr_create_restore_from_dc_via_reg(dcontext_t *dcontext, reg_id_t basereg,
     /* use movd for xmm/mmx, and OPSZ_PTR */
     opnd_t memopnd = opnd_create_dcontext_field_via_reg_sz
         (dcontext, basereg, offs, reg_get_size(reg));
-    return INSTR_CREATE_mov_imm(dcontext, opnd_create_reg(reg), memopnd);
+    return INSTR_CREATE_ldr_reg(dcontext, opnd_create_reg(reg), memopnd);
 }
 
 /* Use basereg==REG_NULL to get default (xdi, or xsi for upcontext) 

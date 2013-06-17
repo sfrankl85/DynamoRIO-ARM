@@ -139,6 +139,10 @@ dispatch(dcontext_t *dcontext)
      * done in post_system_call()).  NULL dcontext thus returned causes 
      * logging/core dumping to malfunction; kstats trigger asserts.
      */
+    /* SJF Added pid_cached here. Prob not right as comparison below will not fail */
+    pid_t pid_cached;
+    pid_cached = get_process_id();
+
     ASSERT(dcontext == get_thread_private_dcontext() || pid_cached != get_process_id());
 # endif
 #endif

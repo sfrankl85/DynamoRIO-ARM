@@ -437,7 +437,7 @@ enum {
 # define OPSZ_PTR OPSZ_4       /**< Operand size for pointer values. */
 # define OPSZ_STACK OPSZ_4     /**< Operand size for stack push/pop operand sizes. */
 #endif
-#define OPSZ_VARSTACK OPSZ_4x8_short2 /**< Operand size for prefix-varying stack
+#define OPSZ_VARSTACK OPSZ_4 /**< Operand size for prefix-varying stack
                                        * push/pop operand sizes. */
 #define OPSZ_REXVARSTACK OPSZ_4_rex8_short2 /* Operand size for prefix/rex-varying
                                              * stack push/pop like operand sizes. */

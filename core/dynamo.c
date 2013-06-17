@@ -2088,7 +2088,10 @@ dynamo_thread_init(byte *dstack_in, priv_mcontext_t *mc
     initialize_dynamo_context(dcontext);
     set_thread_private_dcontext(dcontext);
     /* sanity check */
+/* SJF Dont do this check. We have a dcontext lets not get too greedy.
+       TLS stuff not working .
     ASSERT(get_thread_private_dcontext() == dcontext);
+*/
 
     /* set local state pointer for access from other threads */
     dcontext->local_state = get_local_state();

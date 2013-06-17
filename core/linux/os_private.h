@@ -58,6 +58,11 @@
 # define ASM_XSP "esp"
 #endif
 
+#ifdef ARM
+# define ASM_R0 "r0"
+# define ASM_R2 "r2"
+#endif
+
 /* PR 212090: the signal we use to suspend threads */
 #define SUSPEND_SIGNAL SIGUSR2
 

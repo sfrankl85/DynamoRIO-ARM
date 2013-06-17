@@ -94,7 +94,7 @@ const char * const reg_names[] = {
     "<invalid>",
     "es",   "cs",   "ss",   "ds",   "fs",   "gs",
 
-    "debug1","debug2", "control1", "control2",
+    "debug1","debug2", "control1", "control2", "cpsr"
     /* XXX: when you update here, update dr_reg_fixer[] in instr.c too */
 };
 

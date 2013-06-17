@@ -173,6 +173,8 @@ enum {
     DR_REG_DEBUG1,  DR_REG_DEBUG2, 
     DR_REG_CONTROL1,  DR_REG_CONTROL2, 
 
+    DR_REG_CPSR,
+
 #ifdef NO // TODO SJF Remove the debug regs for now.
     /* Coprocessor registers from the ARM tech manual ??? Is this right. All for CP15 */
     /* TODO Maybe rearrange these to group by function instead of location */
@@ -332,8 +334,8 @@ extern const reg_id_t dr_reg_fixer[];
  * Last valid register enum value.  Note: DR_REG_INVALID is now smaller 
  * than this value.
  */
-#define DR_REG_LAST_VALID_ENUM  DR_REG_CONTROL2 
-#define DR_REG_LAST_ENUM        DR_REG_CONTROL2 /**< Last value of register enums */
+#define DR_REG_LAST_VALID_ENUM  DR_REG_CPSR 
+#define DR_REG_LAST_ENUM        DR_REG_CPSR /**< Last value of register enums */
 /* DR_API EXPORT END */
 #define REG_START_SPILL   DR_REG_R7
 #define REG_STOP_SPILL    DR_REG_R14
@@ -450,6 +452,7 @@ extern const reg_id_t dr_reg_fixer[];
 # define REG_DEBUG2           DR_REG_DEBUG2
 # define REG_CONTROL1         DR_REG_CONTROL1 
 # define REG_CONTROL2         DR_REG_CONTROL2
+# define REG_CPSR             DR_REG_CPSR
 
 
 # define REG_INVALID         DR_REG_INVALID

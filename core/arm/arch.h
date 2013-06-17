@@ -109,6 +109,8 @@ mixed_mode_enabled(void)
   #define R15_OFFSET       ((MC_OFFS) + (offsetof(priv_mcontext_t, r15)))
   #define PC_OFFSET        ((MC_OFFS) + (offsetof(priv_mcontext_t, r15))) /* Define both pc and r15 even though the same */
 
+  #define CPSR_OFFSET      ((MC_OFFS) + (offsetof(priv_mcontext_t, cpsr))) /* Define both pc and r15 even though the same */
+
 #else
   #define XAX_OFFSET        ((MC_OFFS) + (offsetof(priv_mcontext_t, xax)))
   #define XBX_OFFSET        ((MC_OFFS) + (offsetof(priv_mcontext_t, xbx)))
