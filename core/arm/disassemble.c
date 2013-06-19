@@ -804,9 +804,6 @@ instr_disassemble_opnds_noimplicit(char *buf, size_t bufsz, size_t *sofar INOUT,
     bool prev = false, multiple_encodings = false;
 
     info = instr_get_instr_info(instr);
-    if (info != NULL && get_next_instr_info(info) != NULL &&
-        !TESTALL(HAS_EXTRA_OPERANDS | EXTRAS_IN_CODE_FIELD, info->flags))
-        multiple_encodings = true;
 
     info = get_encoding_info(instr);
     if (info == NULL) {
@@ -958,40 +955,7 @@ internal_instr_disassemble(char *buf, size_t bufsz, size_t *sofar INOUT,
     } else
         name = "<RAW>";
 
-    if ((instr->prefixes & PREFIX_LOCK) != 0)
-        print_to_buffer(buf, bufsz, sofar, "lock ");
-    /* Note that we do not try to figure out data16 or addr16 prefixes
-     * if they are not already set from a recent decode;
-     * we don't want to enforce a valid encoding at this point.
-     *
-     * To walk the operands and find addr16, we'd need to look for
-     * opnd_is_disp_short_addr() as well as push/pop of REG_SP, jecxz/loop* of
-     * REG_CX, or string ops, maskmov*, or xlat of REG_DI or REG_SI.
-     * For data16, we'd look for 16-bit reg or OPSZ_2 immed or base_disp.
-     */
-    if (!DYNAMO_OPTION(syntax_intel)) {
-        if (TEST(PREFIX_DATA, instr->prefixes))
-            print_to_buffer(buf, bufsz, sofar, "data16 ");
-        if (TEST(PREFIX_ADDR, instr->prefixes)) {
-            print_to_buffer(buf, bufsz, sofar,
-                            X64_MODE_DC(dcontext) ? "addr32 " : "addr16 ");
-        }
-#if 0 /* disabling for PR 256226 */
-        if (TEST(PREFIX_REX_W, instr->prefixes))
-            print_to_buffer(buf, bufsz, sofar, "rex.w ");
-#endif
-    }
-
     print_to_buffer(buf, bufsz, sofar, "%s%s", name, instr_opcode_name_suffix(instr));
-
-    if (TEST(PREFIX_JCC_TAKEN, instr->prefixes)) {
-        print_to_buffer(buf, bufsz, sofar, ",pt ");
-        name_width -= 3;
-    } else if (TEST(PREFIX_JCC_NOT_TAKEN, instr->prefixes)) {
-        print_to_buffer(buf, bufsz, sofar, ",pn ");
-        name_width -= 3;
-    } else
-        print_to_buffer(buf, bufsz, sofar, " ");
 
     IF_X64(CLIENT_ASSERT(CHECK_TRUNCATE_TYPE_int(strlen(name)),
                          "instr_disassemble: internal truncation error"));

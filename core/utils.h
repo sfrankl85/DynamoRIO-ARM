@@ -160,6 +160,12 @@ void external_error(const char *file, int line, const char *msg);
 #define CHECK_TRUNCATE_TYPE_ushort(val) ((val) >= 0 && (val) <= USHRT_MAX)
 #define CHECK_TRUNCATE_TYPE_short(val) ((val) <= SHRT_MAX && ((int64)(val)) >= SHRT_MIN)
 #define CHECK_TRUNCATE_TYPE_uint(val) ((val) >= 0 && (val) <= UINT_MAX)
+#define CHECK_TRUNCATE_TYPE_3bit(val) ((val) >= INT3_MIN && (val) <= INT3_MAX )
+#define CHECK_TRUNCATE_TYPE_5bit(val)  ((val) >= INT5_MIN && (val) <= INT5_MAX )
+#define CHECK_TRUNCATE_TYPE_6bit(val) ((val) >= INT6_MIN && (val) <= INT6_MAX )
+#define CHECK_TRUNCATE_TYPE_10bit(val) ((val) >= INT10_MIN && (val) <= INT10_MAX )
+#define CHECK_TRUNCATE_TYPE_12bit(val) ((val) >= INT12_MIN && (val) <= INT12_MAX )
+#define CHECK_TRUNCATE_TYPE_24bit(val) ((val) >= INT24_MIN && (val) <= INT24_MAX )
 #ifdef LINUX
 /* We can't do the proper int check on Linux because it generates a warning if val has
  * type uint that I can't seem to cast around and is impossible to ignore -

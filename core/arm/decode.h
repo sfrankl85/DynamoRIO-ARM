@@ -166,6 +166,7 @@ enum {
  *   gives size x (not present in Intel's table)
  */
 typedef struct instr_info_t {
+    /* SJF Remove this?? Replaced with instr_type??? */
     unsigned int type; /* an OP_ constant or special type code below */
     /* EVERY arm instruction has an condition. bits 31-28 SJF TODO Commented out for now
     byte cond;
@@ -196,7 +197,8 @@ typedef struct instr_info_t {
      *                       3 bytes, with the first being an implied 0x0f (so
      *                       the 2nd byte is stored as "1st" and 3rd as "2nd").
      */
-    unsigned int opcode;
+    int          instr_type;
+    unsigned int flags1;  //SJF Flags at bits[24,21]
     const char *name;
     /* operands
      * the opnd_size_t will instead be reg_id_t for TYPE_*REG*
@@ -209,10 +211,8 @@ typedef struct instr_info_t {
 
     /* ARM opcodes are split across multiple bits. Soemtimes the second
        one isnt even used. It is used for regs or imms or whatever. */ 
-    unsigned int opcode2;
 
-    byte flags; /* modrm and extra operand flags */
-    uint eflags; /* combination of read & write flags from instr.h */
+    byte flags2; /* flags and possible opcode2 */
     ptr_int_t code; /* for PREFIX: one of the PREFIX_ constants, or SEG_ constant
                      * for EXTENSION and *_EXT: index into extensions table
                      * for OP_: pointer to next entry of that opcode
@@ -295,24 +295,19 @@ typedef struct decode_info_t {
      * depending on our build) and that the address and data size
      * prefixes can be treated as absolute.
      */
-    uint prefixes;
-    byte seg_override; /* REG enum of seg, REG_NULL if none */
-    /* modrm info */
-    byte modrm;
-    byte mod;
-    byte reg;
-    byte rm;
-    bool has_sib;
-    byte scale;
-    byte index;
-    byte base;
-    bool has_disp;
-    int disp;
+    /* SJF Remove x86 stuff from here. No modrm or prefixes or seg_override.
+           Add ARM specific info such as condition code, instr_type.
+           Not altering it too much as not sure what most of it does */
+    byte cond;
+    byte instr_type;
+    byte flags;
+
     /* immed info */
     opnd_size_t size_immed;
     opnd_size_t size_immed2;
     ptr_int_t immed;
     ptr_int_t immed2; /* this additional field could be 32-bit on all platforms */
+
     /* These fields are only used when decoding rip-relative data refs */
     byte *start_pc;
     byte *final_pc;
@@ -321,14 +316,7 @@ typedef struct decode_info_t {
      * To save space we could make it a union with disp.
      */
     byte *disp_abs;
-#ifdef X64
-    /* Since the mode when an instr_t is involved is per-instr rather than
-     * per-dcontext we have our own field here instead of passing dcontext around.
-     * It's up to the caller to set this field to match either the instr_t
-     * or the dcontext_t field.
-     */
-    bool x86_mode;
-#endif
+
     /* PR 302353: support decoding as though somewhere else */
     byte *orig_pc;
     /* these 3 prefixes may be part of opcode */
@@ -354,8 +342,9 @@ enum {
     TYPE_A, /* immediate that is absolute address */
     TYPE_I, /* immediate */
     TYPE_J, /* immediate that is relative offset of R13 */
-    TYPE_M,
+    TYPE_M, /* Memory address */
     TYPE_O, /* immediate that is memory offset */
+    TYPE_P, /* register that is memory offset */
     TYPE_1,
     TYPE_FLOATCONST,
     TYPE_FLOATMEM,
@@ -408,16 +397,11 @@ enum {
     OPSZ_0,  /* "sizeless" */
     OPSZ_1, 
     OPSZ_2,
-    OPSZ_3,
     OPSZ_4,
-    OPSZ_5,
-    OPSZ_6,
-    OPSZ_8,
-    OPSZ_10,
-    OPSZ_12,
            
-    OPSZ_16,
+    OPSZ_10, 
     OPSZ_14, 
+    OPSZ_16, 
     OPSZ_24, 
     OPSZ_28, 
     OPSZ_32, 
@@ -425,6 +409,19 @@ enum {
     OPSZ_94, 
     OPSZ_108, 
     OPSZ_512, 
+
+    /* These operands are instrsize_opndsize in bits.
+       So an immediate with 5 bits of storage in a 4 byte instruction(all ARM instrs)
+       then it has a OPSZ_4_5 type. */
+    OPSZ_4_3,
+    OPSZ_4_4,
+    OPSZ_4_5,
+    OPSZ_4_6,
+    OPSZ_4_8,
+    OPSZ_4_10,
+    OPSZ_4_12,
+    OPSZ_4_16,
+    OPSZ_4_24,
 
     /* Add new size here.  Also update size_names[] in encode.c. */
     OPSZ_LAST,
@@ -439,12 +436,6 @@ enum {
 #endif
 #define OPSZ_VARSTACK OPSZ_4 /**< Operand size for prefix-varying stack
                                        * push/pop operand sizes. */
-#define OPSZ_REXVARSTACK OPSZ_4_rex8_short2 /* Operand size for prefix/rex-varying
-                                             * stack push/pop like operand sizes. */
-
-#define OPSZ_ret OPSZ_4x8_short2xi8 /**< Operand size for ret instruction. */
-#define OPSZ_call OPSZ_ret         /**< Operand size for push portion of call. */
-
 /* Convenience defines for specific opcodes */
 #define OPSZ_lea OPSZ_0              /**< Operand size for lea memory reference. */
 #define OPSZ_invlpg OPSZ_0           /**< Operand size for invlpg memory reference. */
@@ -494,7 +485,7 @@ opnd_size_t resolve_var_reg_size(opnd_size_t sz, bool is_reg);
 opnd_size_t resolve_variable_size(decode_info_t *di/*IN: x86_mode, prefixes*/,
                                   opnd_size_t sz, bool is_reg);
 opnd_size_t resolve_variable_size_dc(dcontext_t *dcontext,
-                                     uint prefixes, opnd_size_t sz, bool is_reg);
+                                     opnd_size_t sz, bool is_reg);
 /* Also takes in reg8 for TYPE_REG_EX mov_imm */
 reg_id_t resolve_var_reg(decode_info_t *di/*IN: x86_mode, prefixes*/,
                          reg_id_t reg32, bool addr, bool can_shrink

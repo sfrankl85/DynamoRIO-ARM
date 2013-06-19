@@ -917,9 +917,6 @@ decode_cti(dcontext_t *dcontext, byte *pc, instr_t *instr)
 
     /* find and remember the instruction and its size */
     int prefixes;
-    /* next two needed for eflags analysis */
-    int eflags;
-    int i;
     byte modrm = 0;    /* used only for EFLAGS_6_SPECIAL */
 #ifdef X64
     /* PR 251479: we need to know about all rip-relative addresses.
@@ -965,66 +962,6 @@ decode_cti(dcontext_t *dcontext, byte *pc, instr_t *instr)
     byte0 = *pc;
     byte1 = *(pc + 1);
 
-    /* eflags analysis
-     * we do this even if -unsafe_ignore_eflags b/c it doesn't cost that
-     * much and we can use the analysis to detect any bb that reads a flag
-     * prior to writing it
-     */
-    eflags = eflags_6[byte0];
-    if (eflags == EFLAGS_6_ESCAPE) {
-        eflags = escape_eflags_6[byte1];
-        if (eflags == EFLAGS_6_SPECIAL)
-            modrm = *(pc + 2);
-    } else if (eflags == EFLAGS_6_SPECIAL) {
-        modrm = byte1;
-    }
-    if (eflags == EFLAGS_6_SPECIAL) {
-        /* a number of cases exist beyond the ability of 2 tables
-         * to distinguish
-         */
-        int opc_ext = (modrm >> 3) & 7; /* middle 3 bits */
-        if (byte0 <= 0x84) {
-            /* group 1* (80-83): all W6 except /2,/3=B */
-            if (opc_ext == 2 || opc_ext == 3)
-                eflags = EFLAGS_WRITE_6|EFLAGS_READ_CF;
-            else
-                eflags = EFLAGS_WRITE_6;
-        } else if (byte0 <= 0xd3) {
-            /* group 2* (c0,c1,d0-d3): /0,/1=WC|WO, /2,/3=WC|WO|RC, /4,/5,/7=W6 */
-            if (opc_ext == 0 || opc_ext == 1)
-                eflags = EFLAGS_WRITE_CF|EFLAGS_WRITE_OF;
-            else if (opc_ext == 2 || opc_ext == 3)
-                eflags = EFLAGS_WRITE_CF|EFLAGS_WRITE_OF|EFLAGS_READ_CF;
-            else if (opc_ext == 4 || opc_ext == 5 || opc_ext == 7)
-                eflags = EFLAGS_WRITE_6;
-            else
-                eflags = 0;
-        } else if (byte0 <= 0xdf) {
-            /* floats: dac0-dadf and dbc0-dbdf = RC|RP|RZ */
-            if ((byte0 == 0xda || byte0 == 0xdb) &&
-                modrm >= 0xc0 && modrm <= 0xdf)
-                eflags = EFLAGS_READ_CF|EFLAGS_READ_PF|EFLAGS_READ_ZF;
-            /* floats: dbe8-dbf7 and dfe8-dff7 = WC|WP|WZ */
-            else if ((byte0 == 0xdb || byte0 == 0xdf) &&
-                     modrm >= 0xe8 && modrm <= 0xf7)
-                eflags = EFLAGS_WRITE_CF|EFLAGS_WRITE_PF|EFLAGS_WRITE_ZF;
-            else
-                eflags = 0;
-        } else if (byte0 <= 0xf7) {
-            /* group 3a (f6) & 3b (f7): all W except /2 (OP_not) */
-            if (opc_ext == 2)
-                eflags = 0;
-            else
-                eflags = EFLAGS_WRITE_6;
-        } else {
-            /* group 4 (fe) & 5 (ff): /0,/1=W5 */
-            if (opc_ext == 0 || opc_ext == 1)
-                eflags = EFLAGS_WRITE_6 & (~EFLAGS_WRITE_CF);
-            else
-                eflags = 0;
-        }
-    }
-    instr->eflags = eflags;
     instr_set_arith_flags_valid(instr, true);
 
     if (interesting[byte0] == 0) {

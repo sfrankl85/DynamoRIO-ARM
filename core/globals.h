@@ -1036,6 +1036,11 @@ dr_app_start_helper(priv_mcontext_t *mc);
 DYNAMORIO_EXPORT void
 dynamorio_app_take_over_helper(priv_mcontext_t *mc);
 
+/* SJF TODO Added global doncontext var here to avoid TLS dcontext errors.
+            Need to fix the TLS/segment stuff so that I can get 
+            get_dcontext to return the value from the stack.
+            Defined in core/linux/os.c*/
+extern dcontext_t* global_dcontext;
 
 /* Code cleanliness rules */
 #ifdef WINDOWS
@@ -1065,5 +1070,7 @@ dynamorio_app_take_over_helper(priv_mcontext_t *mc);
 #  define time         time_forbidden_function
 #  define modify_ldt   modify_ldt_forbidden_function
 #endif
+
+
 
 #endif /* _GLOBALS_H_ */

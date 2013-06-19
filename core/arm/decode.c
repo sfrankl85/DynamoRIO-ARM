@@ -173,21 +173,23 @@ resolve_variable_size(decode_info_t *di/*IN: x86_mode, prefixes*/,
 }
 
 opnd_size_t
-resolve_variable_size_dc(dcontext_t *dcontext, uint prefixes, opnd_size_t sz, bool is_reg)
+resolve_variable_size_dc(dcontext_t *dcontext, opnd_size_t sz, bool is_reg)
 {
     decode_info_t di;
-    IF_X64(di.x86_mode = get_x86_mode(dcontext));
-    di.prefixes = prefixes;
     return resolve_variable_size(&di, sz, is_reg);
 }
 
 opnd_size_t
 resolve_addr_size(decode_info_t *di/*IN: x86_mode, prefixes*/)
 {
+    /* Only 4 byte addr size */
+    return OPSZ_4;
+/*
     if (TEST(PREFIX_ADDR, di->prefixes))
         return (X64_MODE(di) ? OPSZ_4 : OPSZ_2);
     else
         return (X64_MODE(di) ? OPSZ_8 : OPSZ_4);
+*/
 }
 
 bool
@@ -233,10 +235,12 @@ read_immed(byte *pc, decode_info_t *di, opnd_size_t size, ptr_int_t *result)
      */
     switch (size) {
     case OPSZ_1:
+    case OPSZ_4_8:
         *result = (ptr_int_t) (char) *pc; /* sign-extend */
         pc++;
         break;
     case OPSZ_2:
+    case OPSZ_4_16:
         *result = (ptr_int_t) *((short*)pc); /* sign-extend */
         pc += 2;
         break;
@@ -244,12 +248,35 @@ read_immed(byte *pc, decode_info_t *di, opnd_size_t size, ptr_int_t *result)
         *result = (ptr_int_t) *((int*)pc); /* sign-extend */
         pc += 4;
         break;
-    case OPSZ_8:
-        CLIENT_ASSERT(X64_MODE(di), "decode immediate: invalid size");
-        CLIENT_ASSERT(sizeof(ptr_int_t) == 8, "decode immediate: internal size error");
-        *result = *((ptr_int_t*)pc);
-        pc += 8;
+    case OPSZ_4_3:
+        *result = (ptr_int_t) (*((char*)pc) & 0x7); /* only get 3 bits */
+        pc += 0;  /* Not read an entire byte here. So dont inc pc??? */
         break;
+    case OPSZ_4_4:
+        *result = (ptr_int_t) (*((char*)pc) & 0xf); /* only get 3 bits */
+        pc += 0;  /* Not read an entire byte here. So dont inc pc??? */
+        break;
+    case OPSZ_4_5:
+        *result = (ptr_int_t) (*((short*)pc) & 0x1f); /* only get 3 bits */
+        pc += 0;  /* Read 5 bit here. So inc pc by zero??? */
+        break;
+    case OPSZ_4_6:
+        *result = (ptr_int_t) (*((short*)pc) & 0x3f); /* only get 3 bits */
+        pc += 0;  /* Read 6 bits here. So inc pc by zero??? */
+        break;
+    case OPSZ_4_10:
+        *result = (ptr_int_t) (*((int*)pc) & 0x3ff); /* only get 3 bits */
+        pc += 1;  /* Read one byte + 2 bits here. So inc pc by two??? */
+        break;
+    case OPSZ_4_12:
+        *result = (ptr_int_t) (*((int*)pc) & 0xfff); /* only get 12 bits */
+        pc += 1;  /* Read one byte + 4 bits here. So inc pc by one??? */
+        break;
+    case OPSZ_4_24:
+        *result = (ptr_int_t) (*((int*)pc) & 0xffffff); /* only get 24 bits */
+        pc += 3;  /* Read three bytes here. So inc pc by three??? */
+        break;
+
     default:
         /* called internally w/ instr_info_t fields or hardcoded values,
          * so ok to assert */
@@ -265,6 +292,8 @@ read_operand(byte *pc, decode_info_t *di, byte optype, opnd_size_t opsize)
     ptr_int_t val = 0;
     opnd_size_t size = opsize;
     switch (optype) {
+#ifdef NO
+//SJF Remove types that are not needed or understood 
     case TYPE_A:
         {
             CLIENT_ASSERT(!X64_MODE(di), "x64 has no type A instructions");
@@ -282,12 +311,6 @@ read_operand(byte *pc, decode_info_t *di, byte optype, opnd_size_t opsize)
             if (TEST(PREFIX_DATA, di->prefixes)) {
                 /* 4-byte immed */
                 pc = read_immed(pc, di, OPSZ_4, &val);
-#ifdef X64
-                if (!X64_MODE(di)) {
-                    /* we do not want the sign extension that read_immed() applied */
-                    val &= (ptr_int_t) 0x00000000ffffffff;
-                }
-#endif
                 /* ok b/c only instr_info_t fields passed */
                 CLIENT_ASSERT(di->size_immed == OPSZ_NA &&
                               di->size_immed2 == OPSZ_NA, "decode A operand error");
@@ -300,12 +323,7 @@ read_operand(byte *pc, decode_info_t *di, byte optype, opnd_size_t opsize)
                 /* little-endian: segment comes last */
                 pc = read_immed(pc, di, OPSZ_4, &val2);
                 pc = read_immed(pc, di, OPSZ_2, &val);
-#ifdef X64
-                if (!X64_MODE(di)) {
-                    /* we do not want the sign extension that read_immed() applied */
-                    val2 &= (ptr_int_t) 0x00000000ffffffff;
-                }
-#endif
+
                 /* ok b/c only instr_info_t fields passed */
                 CLIENT_ASSERT(di->size_immed == OPSZ_NA &&
                               di->size_immed2 == OPSZ_NA, "decode A operand error");
@@ -317,6 +335,7 @@ read_operand(byte *pc, decode_info_t *di, byte optype, opnd_size_t opsize)
             }
             return pc;
         }
+#endif //NO
     case TYPE_I:
         {
             pc = read_immed(pc, di, opsize, &val);
@@ -334,41 +353,13 @@ read_operand(byte *pc, decode_info_t *di, byte optype, opnd_size_t opsize)
                 end_pc = pc;
             /* convert from relative offset to absolute target pc */
             val = ((ptr_int_t)end_pc) + val;
-/* TODO SJF Comment all AMD/INTEL Stuff 
-            if ((!X64_MODE(di) || proc_get_vendor() != VENDOR_INTEL) &&
-                TEST(PREFIX_DATA, di->prefixes)) {
-                val &= (ptr_int_t) 0x0000ffff;
-            }
-*/
-            break;
         }
-#ifdef NO
-    case TYPE_L:
-        {
-            /* part of AVX: top 4 bits of 8-bit immed select xmm/ymm register */
-            pc = read_immed(pc, di, OPSZ_1, &val);
-            break;
-        }
-#endif
     case TYPE_O:
         {
             /* no modrm byte, offset follows directly.  this is address-sized,
              * so 64-bit for x64, and addr prefix affects it. */
             size = resolve_addr_size(di);
             pc = read_immed(pc, di, size, &val);
-            if (TEST(PREFIX_ADDR, di->prefixes)) {
-                /* need to clear upper bits */
-                if (X64_MODE(di))
-                    val &= (ptr_int_t) 0xffffffff;
-                else
-                    val &= (ptr_int_t) 0x0000ffff;
-            }
-#ifdef X64
-            if (!X64_MODE(di)) {
-                /* we do not want the sign extension that read_immed() applied */
-                val &= (ptr_int_t) 0x00000000ffffffff;
-            }
-#endif
             break;
         }
     default:
@@ -382,74 +373,6 @@ read_operand(byte *pc, decode_info_t *di, byte optype, opnd_size_t opsize)
         CLIENT_ASSERT(di->size_immed2 == OPSZ_NA, "decode operand error");
         di->size_immed2 = size;
         di->immed2 = val;
-    }
-    return pc;
-}
-
-/* reads the modrm byte and any following sib and offset bytes */
-static byte *
-read_modrm(byte *pc, decode_info_t *di)
-{
-    byte modrm = *pc;
-    pc++;
-    di->modrm = modrm;
-    di->mod = (byte)((modrm >> 6) & 0x3); /* top 2 bits */
-    di->reg = (byte)((modrm >> 3) & 0x7); /* middle 3 bits */
-    di->rm  = (byte)(modrm & 0x7);        /* bottom 3 bits */
-
-    /* addr16 displacement */
-    if (!X64_MODE(di) && TEST(PREFIX_ADDR, di->prefixes)) {
-        di->has_sib = false;
-        if ((di->mod == 0 && di->rm == 6) || di->mod == 2) {
-            /* 2-byte disp */
-            di->has_disp = true;
-            if (di->mod == 0 && di->rm == 6) {
-                /* treat absolute addr as unsigned */
-                di->disp = (int) *((ushort *)pc); /* zero-extend */
-            } else {
-                /* treat relative addr as signed */
-                di->disp = (int) *((short *)pc); /* sign-extend */
-            }
-            pc += 2;
-        } else if (di->mod == 1) {
-            /* 1-byte disp */
-            di->has_disp = true;
-            di->disp = (int) (char) *pc; /* sign-extend */
-            pc++;
-        } else {
-            di->has_disp = false;
-        }
-    } else {
-        /* 32-bit, which sometimes has a SIB */
-        if (di->rm == 4 && di->mod != 3) {
-            /* need SIB */
-            byte sib = *pc;
-            pc++;
-            di->has_sib = true;
-            di->scale = (byte)((sib >> 6) & 0x3); /* top 2 bits */
-            di->index = (byte)((sib >> 3) & 0x7); /* middle 3 bits */
-            di->base  = (byte)(sib & 0x7);        /* bottom 3 bits */
-        } else {
-            di->has_sib = false;
-        }
-
-        /* displacement */
-        if ((di->mod == 0 && di->rm == 5) ||
-            (di->has_sib && di->mod == 0 && di->base == 5) ||
-            di->mod == 2) {
-            /* 4-byte disp */
-            di->has_disp = true;
-            di->disp = *((int *)pc);
-            IF_X64(di->disp_abs = pc); /* used to set instr->rip_rel_pos */
-            pc += 4;
-        } else if (di->mod == 1) {
-            /* 1-byte disp */
-            di->has_disp = true;
-            di->disp = (int) (char) *pc; /* sign-extend */
-            pc++;
-        } else {
-            di->has_disp = false;
-        }
     }
     return pc;
 }
@@ -671,12 +594,6 @@ read_instruction(byte *pc, byte *orig_pc,
         else
             info = &third_byte_3a[third_byte_3a_index[instr_byte]];
     }
-
-    /* all FLOAT_EXT and PREFIX_EXT (except nop & pause) and EXTENSION need modrm,
-     * get it now 
-     */
-    if ((info->flags & HAS_MODRM) != 0)
-        pc = read_modrm(pc, di);
 
     if (info->type == FLOAT_EXT) {
         if (di->modrm <= 0xbf) {
@@ -976,40 +893,13 @@ decode_reg(decode_reg_t which_reg, decode_info_t *di, byte optype, opnd_size_t o
 {
     bool extend = false;
     byte reg = 0;
-    switch (which_reg) {
-    case DECODE_REG_RREG:
-        reg = di->reg;   extend = X64_MODE(di) && TEST(PREFIX_REX_R, di->prefixes); break;
-    case DECODE_REG_BASE:
-        reg = di->base;  extend = X64_MODE(di) && TEST(PREFIX_REX_B, di->prefixes); break;
-    case DECODE_REG_INDEX:
-        reg = di->index; extend = X64_MODE(di) && TEST(PREFIX_REX_X, di->prefixes); break;
-    case DECODE_REG_RRM:
-        reg = di->rm;    extend = X64_MODE(di) && TEST(PREFIX_REX_B, di->prefixes); break;
-    default:
-        CLIENT_ASSERT(false, "internal unknown reg error");
-    }
 
     switch (optype) {
-/*
-    case TYPE_P:
-    case TYPE_Q:
-    case TYPE_V:
-    case TYPE_W:
-        return 0;
-    case TYPE_S:
-        if (reg >= 6)
-            return REG_NULL;
-        return (REG_START_SEGMENT + reg);
-    case TYPE_E:
-    case TYPE_G:
-    case TYPE_R:
-    case TYPE_M:
-*/
-    case TYPE_INDIR_E:
-    case TYPE_FLOATMEM:
+      case TYPE_INDIR_E:
+      case TYPE_FLOATMEM:
         /* GPR: fall-through since variable subset of full register */
         break;
-    default:
+      default:
         CLIENT_ASSERT(false, "internal unknown reg error");
     }
 
@@ -1023,17 +913,12 @@ decode_reg(decode_reg_t which_reg, decode_info_t *di, byte optype, opnd_size_t o
         opsize = resolve_variable_size(di, opsize, true);
 */
 
-    switch (opsize) {
-    case OPSZ_1:
-    case OPSZ_2:
-    case OPSZ_4:
+    /* SJF Only 32 bit values allowed for registers*/
+    switch (opsize) 
+    {
+      case OPSZ_4:
         return (extend? (REG_START_32 + 8 + reg) : (REG_START_32 + reg));
-    case OPSZ_8:
-        return (extend? (REG_START_64 + 8 + reg) : (REG_START_64 + reg));
-    case OPSZ_6:
-        /* invalid: no register of size p */
-        return REG_NULL;
-    default:
+      default:
         /* ok to assert since params controlled by us */
         CLIENT_ASSERT(false, "decode error: unknown register size");
         return REG_NULL;
@@ -1274,16 +1159,6 @@ resolve_var_reg(decode_info_t *di/*IN: x86_mode, prefixes*/,
 static reg_id_t
 ds_seg(decode_info_t *di)
 {
-    if (di->seg_override != REG_NULL) {
-#ifdef X64
-        /* Although the AMD docs say that es,cs,ss,ds prefixes are NOT treated as
-         * segment override prefixes and instead as NULL prefixes, Intel docs do not
-         * say that, and both gdb and windbg disassemble as though the prefixes are
-         * taking effect.  We therefore do not suppress those prefixes.
-         */
-#endif
-        return di->seg_override;
-    }
     return SEG_DS;
 }
 
@@ -1301,76 +1176,9 @@ decode_operand(decode_info_t *di, byte optype, opnd_size_t opsize, opnd_t *opnd)
     case TYPE_REG:
         *opnd = opnd_create_reg(opsize);
         return true;
-#ifdef NO
-    case TYPE_VARZ_REG:
-        *opnd = opnd_create_reg(resolve_var_reg
-                                (di, opsize, false/*!addr*/, true/*shrinkable*/
-                                 _IF_X64(false/*d32*/) _IF_X64(false/*!growable*/)
-                                 _IF_X64(false/*!extendable*/)));
-        return true;
-    case TYPE_VAR_XREG:
-        *opnd = opnd_create_reg(resolve_var_reg
-                                (di, opsize, false/*!addr*/, true/*shrinkable*/
-                                 _IF_X64(true/*d64*/) _IF_X64(false/*!growable*/)
-                                 _IF_X64(false/*!extendable*/)));
-        return true;
-    case TYPE_VAR_ADDR_XREG:
-        *opnd = opnd_create_reg(resolve_var_reg
-                                (di, opsize, true/*addr*/, true/*shrinkable*/
-                                 _IF_X64(true/*d64*/) _IF_X64(false/*!growable*/)
-                                 _IF_X64(false/*!extendable*/)));
-        return true;
-    case TYPE_REG_EX:
-        *opnd = opnd_create_reg(resolve_var_reg
-                                (di, opsize, false/*!addr*/, false/*!shrink*/
-                                 _IF_X64(false/*d32*/) _IF_X64(false/*!growable*/)
-                                 _IF_X64(true/*extendable*/)));
-        return true;
-    case TYPE_VAR_REG_EX:
-        *opnd = opnd_create_reg(resolve_var_reg
-                                (di, opsize, false/*!addr*/, true/*shrinkable*/
-                                 _IF_X64(false/*d32*/) _IF_X64(true/*growable*/)
-                                 _IF_X64(true/*extendable*/)));
-        return true;
-    case TYPE_VAR_XREG_EX:
-        *opnd = opnd_create_reg(resolve_var_reg
-                                (di, opsize, false/*!addr*/, true/*shrinkable*/
-                                 _IF_X64(true/*d64*/) _IF_X64(false/*!growable*/)
-                                 _IF_X64(true/*extendable*/)));
-        return true;
-    case TYPE_VAR_REGX_EX:
-        *opnd = opnd_create_reg(resolve_var_reg
-                                (di, opsize, false/*!addr*/, false/*!shrink*/
-                                 _IF_X64(false/*d64*/) _IF_X64(true/*growable*/)
-                                 _IF_X64(true/*extendable*/)));
-        return true;
-#endif
     case TYPE_FLOATMEM:
-        /* ensure referencing memory */
-        if (di->mod >= 3)
-            return false;
-        /* fall through */
-
-/* SJF Comment this out as no modrm in ARM. Uses combination 
-   of other values to determine what the operans are. i.e. I(imm) bit.
-    case TYPE_E:
-    case TYPE_Q:
-    case TYPE_W:
-        return decode_modrm(di, optype, opsize, NULL, opnd);
-    case TYPE_R:
-    case TYPE_P_MODRM:
-    case TYPE_V_MODRM:
-        if (di->mod != 3)
-            return false;
-        return decode_modrm(di, optype, opsize, NULL, opnd);
-    case TYPE_G:
-    case TYPE_P:
-    case TYPE_V:
-    case TYPE_S:
-    case TYPE_C:
-    case TYPE_D:
-        return decode_modrm(di, optype, opsize, opnd, NULL);
-*/
+        /* ??? What do */
+        return false;
     case TYPE_I:
         *opnd = opnd_create_immed_int(get_immed(di, opsize), ressize);
         return true;
@@ -1389,146 +1197,20 @@ decode_operand(decode_info_t *di, byte optype, opnd_size_t opsize, opnd_t *opnd)
         return true;
     case TYPE_A: 
         {
-#ifdef NO
-            /* ok since instr_info_t fields */
-            CLIENT_ASSERT(!X64_MODE(di), "x64 has no type A instructions");
-            CLIENT_ASSERT(opsize == OPSZ_6_irex10_short4, "decode A operand error");
-            /* just ignore segment prefixes -- don't assert */
-            if (TEST(PREFIX_DATA, di->prefixes)) {
-                /* 4-byte immed */
-                ptr_int_t val = get_immed(di, opsize);
-                *opnd = opnd_create_far_pc
-                    ((ushort) (((ptr_int_t)val & 0xffff0000) >> 16),
-                     (app_pc)((ptr_int_t)val & 0x0000ffff));
-            } else {
-                /* 6-byte immed */
-                /* ok since instr_info_t fields */
-                CLIENT_ASSERT(di->size_immed == OPSZ_6 &&
-                              di->size_immed2 == OPSZ_6,
-                              "decode A operand 6-byte immed error");
-                ASSERT(CHECK_TRUNCATE_TYPE_short(di->immed));
-                *opnd = opnd_create_far_pc((ushort)(short)di->immed, (app_pc) di->immed2);
-                di->size_immed = OPSZ_NA;
-                di->size_immed2 = OPSZ_NA;
-            }
-            return true;
-#endif //NO
+          return false; //SJF ??
         }
     case TYPE_O:
         {
             /* no modrm byte, offset follows directly */
             ptr_int_t immed = get_immed(di, resolve_addr_size(di));
-            *opnd = opnd_create_far_abs_addr(di->seg_override, (void *) immed, ressize);
+            *opnd = opnd_create_far_abs_addr(SEG_DS, (void *) immed, ressize);
             return true;
         }
-#ifdef NO
-    case TYPE_X:
-        /* this means the memory address DS:(E)SI */
-        if (!X64_MODE(di) && TEST(PREFIX_ADDR, di->prefixes))
-            *opnd = opnd_create_far_base_disp(ds_seg(di), REG_SI, REG_NULL,0,0,ressize);
-        else if (!X64_MODE(di) || TEST(PREFIX_ADDR, di->prefixes))
-            *opnd = opnd_create_far_base_disp(ds_seg(di), REG_ESI, REG_NULL,0,0,ressize);
-        else
-            *opnd = opnd_create_far_base_disp(ds_seg(di), REG_RRSI, REG_NULL,0,0,ressize);
-        return true;
-    case TYPE_Y:
-        /* this means the memory address ES:(E)DI */
-        if (!X64_MODE(di) && TEST(PREFIX_ADDR, di->prefixes))
-            *opnd = opnd_create_far_base_disp(SEG_ES, REG_DI, REG_NULL, 0, 0, ressize);
-        else if (!X64_MODE(di) || TEST(PREFIX_ADDR, di->prefixes))
-            *opnd = opnd_create_far_base_disp(SEG_ES, REG_EDI, REG_NULL, 0, 0, ressize);
-        else
-            *opnd = opnd_create_far_base_disp(SEG_ES, REG_RRDI, REG_NULL, 0, 0, ressize);
-        return true;
-    case TYPE_XLAT:
-        /* this means the memory address DS:(E)BX+AL */
-        if (!X64_MODE(di) && TEST(PREFIX_ADDR, di->prefixes))
-            *opnd = opnd_create_far_base_disp(ds_seg(di), REG_BX, REG_AL,1,0,ressize);
-        else if (!X64_MODE(di) || TEST(PREFIX_ADDR, di->prefixes))
-            *opnd = opnd_create_far_base_disp(ds_seg(di), REG_EBX, REG_AL,1,0,ressize);
-        else
-            *opnd = opnd_create_far_base_disp(ds_seg(di), REG_RRBX, REG_AL,1,0,ressize);
-        return true;
-    case TYPE_MASKMOVQ:
-        /* this means the memory address DS:(E)DI */
-        if (!X64_MODE(di) && TEST(PREFIX_ADDR, di->prefixes))
-            *opnd = opnd_create_far_base_disp(ds_seg(di), REG_DI, REG_NULL,0,0,ressize);
-        else if (!X64_MODE(di) || TEST(PREFIX_ADDR, di->prefixes))
-            *opnd = opnd_create_far_base_disp(ds_seg(di), REG_EDI, REG_NULL,0,0,ressize);
-        else
-            *opnd = opnd_create_far_base_disp(ds_seg(di), REG_RRDI, REG_NULL,0,0,ressize);
-        return true;
-#endif
     case TYPE_INDIR_REG:
         /* FIXME: how know data size?  for now just use reg size: our only use
          * of this does not have a varying hardcoded reg, fortunately. */
         *opnd = opnd_create_base_disp(opsize, REG_NULL, 0, 0, reg_get_size(opsize));
         return true;
-#ifdef NO
-    /* SJF TODO this was removed  and I only allowed one indirect reg type */
-    case TYPE_INDIR_VAR_XREG: /* indirect reg varies by addr16 not data16, base is 4x8,
-                               * opsize varies by data16 */
-    case TYPE_INDIR_VAR_REG: /* indirect reg varies by addr16 not data16, base is 4x8,
-                              * opsize varies by rex and data16 */
-    case TYPE_INDIR_VAR_XIREG: /* indirect reg varies by addr16 not data16, base is 4x8,
-                                * opsize varies by data16 except on 64-bit Intel */
-    case TYPE_INDIR_VAR_XREG_OFFS_1: /* TYPE_INDIR_VAR_XREG + an offset */
-    case TYPE_INDIR_VAR_XREG_OFFS_8: /* TYPE_INDIR_VAR_XREG + an offset + scale */
-    case TYPE_INDIR_VAR_XREG_OFFS_N: /* TYPE_INDIR_VAR_XREG + an offset + scale */
-    case TYPE_INDIR_VAR_XIREG_OFFS_1:/* TYPE_INDIR_VAR_XIREG + an offset + scale */
-    case TYPE_INDIR_VAR_REG_OFFS_2:  /* TYPE_INDIR_VAR_REG + offset + scale */
-    case TYPE_INDIR_VAR_XREG_SIZEx8: /* TYPE_INDIR_VAR_XREG + scale */
-    case TYPE_INDIR_VAR_REG_SIZEx2:  /* TYPE_INDIR_VAR_REG + scale */
-    case TYPE_INDIR_VAR_REG_SIZEx3x5:/* TYPE_INDIR_VAR_REG + scale */
-        {
-            reg_id_t reg =
-                resolve_var_reg(di, opsize, true/*addr*/, true/*shrinkable*/
-                                _IF_X64(true/*d64*/) _IF_X64(false/*!growable*/)
-                                _IF_X64(false/*!extendable*/));
-            opnd_size_t sz =
-                resolve_variable_size(di, indir_var_reg_size(di, optype),
-                                      false/*not reg*/);
-            /* NOTE - needs to match size in opnd_type_ok() and instr_create.h */
-            *opnd = opnd_create_base_disp (reg, REG_NULL, 0,
-                                           indir_var_reg_offs_factor(optype) *
-                                           opnd_size_in_bytes(sz),
-                                           sz);
-            return true;
-        }
-    case TYPE_INDIR_E:
-        /* how best mark as indirect?
-         * in current usage decode_modrm will be treated as indirect, becoming
-         * a base_disp operand, vs. an immed, which becomes a pc operand
-         * besides, Ap is just as indirect as i_Ep!
-         */
-        return decode_operand(di, TYPE_E, opsize, opnd);
-    case TYPE_L:
-        {
-            /* part of AVX: top 4 bits of 8-bit immed select xmm/ymm register */
-            ptr_int_t immed = get_immed(di, OPSZ_1);
-            reg_id_t reg = (reg_id_t) (immed & 0xf0) >> 4;
-            *opnd = opnd_create_reg( REG_START_QWR + reg );
-	    /* SJF Changde this to only use the quad word regs */
-            return true;
-        }
-    case TYPE_H:
-        {
-            /* part of AVX: vex.vvvv selects xmm/ymm register */
-            reg_id_t reg = (~di->vex_vvvv) & 0xf; /* bit-inverted */
-	    opnd_create_reg( REG_START_QWR + reg );
-
-/*
-            *opnd = opnd_create_reg(((TEST(di->prefixes, PREFIX_VEX_L) &&
-                                       * we use this to indicate .LIG since all
-                                       * {VHW}s{sd} types and no others are .LIG
-                                       *
-                                      opsize != OPSZ_4_of_16 &&
-                                      opsize != OPSZ_8_of_16) ?
-                                     REG_START_YMM : REG_START_XMM) + reg);
-*/
-            return true;
-        }
-#endif
     default:
         /* ok to assert, types coming only from instr_info_t */
         CLIENT_ASSERT(false, "decode error: unknown operand type");
@@ -1540,30 +1222,15 @@ decode_operand(decode_info_t *di, byte optype, opnd_size_t opsize, opnd_t *opnd)
  * Exported routines
  */
 
-/* Decodes only enough of the instruction at address pc to determine
- * its eflags usage, which is returned in usage as EFLAGS_ constants
- * or'ed together.
- * This corresponds to halfway between Level 1 and Level 2: a Level 1 decoding
- * plus eflags information (usually only at Level 2).
- * Returns the address of the next byte after the decoded instruction.
- * Returns NULL on decoding an invalid instruction.
- *
- * N.B.: an instruction that has an "undefined" effect on eflags is considered
- * to write to eflags.  This is fine since programs shouldn't be reading
- * eflags after an undefined modification to them, but a weird program that
- * relies on some undefined eflag thing might behave differently under dynamo
- * than not!
- */
 byte *
-decode_eflags_usage(dcontext_t *dcontext, byte *pc, uint *usage)
+decode_flags1_usage(dcontext_t *dcontext, byte *pc, uint *usage)
 {
     const instr_info_t *info;
     decode_info_t di;
-    IF_X64(di.x86_mode = get_x86_mode(dcontext));
 
     /* don't decode immeds, instead use decode_next_pc, it's faster */
     read_instruction(pc, pc, &info, &di, true /* just opcode */ _IF_DEBUG(true));
-    *usage = info->eflags;
+    *usage = info->flags1;
     pc = decode_next_pc(dcontext, pc);
     /* failure handled fine -- we'll go ahead and return the NULL */
 
@@ -1611,7 +1278,6 @@ decode_opcode(dcontext_t *dcontext, byte *pc, instr_t *instr)
         CLIENT_ASSERT(!instr_valid(instr), "decode_opcode: invalid instr");
         return NULL;
     }
-    instr->eflags = info->eflags;
     instr_set_eflags_valid(instr, true);
     /* operands are NOT set */
     instr_set_operands_valid(instr, false);

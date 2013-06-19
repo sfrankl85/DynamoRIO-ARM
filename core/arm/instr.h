@@ -109,6 +109,18 @@ struct instr_info_t;
 # endif
 #endif
 
+/* Enum to store the type of the instruction */
+enum
+{
+  INSTR_TYPE_UNKNOWN,
+
+  INSTR_TYPE_DATA_PROCESSING,
+  INSTR_TYPE_DATA_MOVEMENT,
+  INSTR_TYPE_DATA_EXECUTION,
+
+  INSTR_TYPE_INVALID
+}; 
+
 #ifdef AVOID_API_EXPORT
 /* We encode this enum plus the OPSZ_ extensions in bytes, so we can have
  * at most 256 total DR_REG_ plus OPSZ_ values.  Currently there are 165-odd.
@@ -309,7 +321,7 @@ extern const reg_id_t dr_reg_fixer[];
 #define DR_NUM_GPR_REGS (DR_REG_STOP_GPR - DR_REG_START_GPR)
 #define DR_REG_START_64    DR_REG_D0  /**< Start of 32-bit general register enum values */
 #define DR_REG_STOP_64     DR_REG_D31 /**< End of 32-bit general register enum values */  
-#define DR_REG_START_32    DR_REG_R0  /**< Start of 32-bit general register enum values */
+#define DR_REG_START_32    DR_REG_NULL /**< Start of 32-bit general register enum values */
 #define DR_REG_STOP_32     DR_REG_R15 /**< End of 32-bit general register enum values */  
 #define DR_REG_START_16    DR_REG_R0   /**< Start of 16-bit general register enum values */
 #define DR_REG_STOP_16     DR_REG_R15 /**< End of 16-bit general register enum values */  
@@ -494,8 +506,20 @@ extern const reg_id_t dr_reg_fixer[];
 /* DR_API EXPORT END */
 
 #ifndef INT8_MIN
+# define INT3_MIN   -4
+# define INT3_MAX   4
+# define INT4_MIN   -8
+# define INT4_MAX   8
+# define INT5_MIN   -16
+# define INT5_MAX   16 
+# define INT6_MIN   -32
+# define INT6_MAX   32 
 # define INT8_MIN   SCHAR_MIN
 # define INT8_MAX   SCHAR_MAX
+# define INT10_MIN  -512
+# define INT10_MAX  512 
+# define INT12_MIN  -2048
+# define INT12_MAX  2048 
 # define INT16_MIN  SHRT_MIN
 # define INT16_MAX  SHRT_MAX
 # define INT24_MIN  -8388608
@@ -600,10 +624,6 @@ enum {
     BASE_DISP_kind, /* optional DR_SEG_ reg + base reg + scaled index reg + disp */
     FAR_PC_kind,    /* a segment is specified as a selector value */
     FAR_INSTR_kind, /* a segment is specified as a selector value */
-#ifdef X64
-    REL_ADDR_kind,  /* pc-relative address: x64 only */
-    ABS_ADDR_kind,  /* 64-bit absolute address: x64 only */
-#endif
     MEM_INSTR_kind,
     LAST_kind,      /* sentinal; not a valid opnd kind */
 };
@@ -1559,6 +1579,20 @@ opnd_size_in_bytes(opnd_size_t size);
 
 DR_API
 /** 
+ * Assumes \p size is a OPSZ_ or a DR_REG_ constant.
+ * If \p size is a DR_REG_ constant, first calls reg_get_size(\p size)
+ * to get a OPSZ_ constant.
+ * Returns the number of bits the OPSZ_ constant represents.
+ * If OPSZ_ is a variable-sized size, returns the default size,
+ * which may or may not match the actual size decided up on at
+ * encoding time (that final size depends on other operands).
+ */
+uint
+opnd_size_in_bits(opnd_size_t size);
+
+
+DR_API
+/** 
  * Returns the appropriate OPSZ_ constant for the given number of bytes.
  * Returns OPSZ_NA if there is no such constant.
  * The intended use case is something like "opnd_size_in_bytes(sizeof(foo))" for
@@ -1808,7 +1842,14 @@ struct _instr_t {
     /* translation target for this instr */
     app_pc  translation;
 
-    uint    opcode;
+    /* SJF ARM specific fields here. 
+           Cond is the 4 bit condition code
+           instrtype is bits[27,25] and specifiy the class
+           of instruciton that the instr belongs to(data processing/movement)
+           flags1 contains P,U,B,W,L,N,S flags depending on the instructions type. */
+    byte    cond;
+    byte    instr_type;
+    byte    flags1;
 
 #ifdef X64
     /* PR 251479: offset into instr's raw bytes of rip-relative 4-byte displacement */
@@ -1835,9 +1876,9 @@ struct _instr_t {
         dr_instr_label_data_t label_data;
     };
 
-    uint    prefixes; /* data size, addr size, or lock prefix info */
-    uint    eflags;   /* contains EFLAGS_ bits, but amount of info varies
-                       * depending on how instr was decoded/built */
+    /* SJF Flags 2 contains flags or possible op2 depening on instruction type */
+    uint    flags2;   /* contains flags contained in bits[7,4] of the instr
+                         May contain opcode for coprocessor instrs */ 
 
     /* this field is for the use of passes as an annotation.
      * it is also used to hold the offset of an instruction when encoding

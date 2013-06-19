@@ -41,8 +41,10 @@
  *   "Intel Architecture Software Developer's Manual", 1999.
  */
 
+
 #ifndef _ARCH_EXPORTS_H_
 #define _ARCH_EXPORTS_H_ 1
+
 
 /* stack slot width */
 #define XSP_SZ (sizeof(reg_t))

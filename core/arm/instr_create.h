@@ -114,6 +114,15 @@
 /** Create a pointer-sized immediate integer operand. */
 # define OPND_CREATE_INTPTR OPND_CREATE_INT32
 #endif
+#define OPND_CREATE_IMM3(val) opnd_create_immed_int((ptr_int_t)(val), OPSZ_4_3)
+#define OPND_CREATE_IMM5(val) opnd_create_immed_int((ptr_int_t)(val), OPSZ_4_5)
+#define OPND_CREATE_IMM6(val) opnd_create_immed_int((ptr_int_t)(val), OPSZ_4_6)
+#define OPND_CREATE_IMM8(val) opnd_create_immed_int((ptr_int_t)(val), OPSZ_4_8)
+#define OPND_CREATE_IMM10(val) opnd_create_immed_int((ptr_int_t)(val), OPSZ_4_10)
+#define OPND_CREATE_IMM12(val) opnd_create_immed_int((ptr_int_t)(val), OPSZ_4_12)
+#define OPND_CREATE_IMM24(val) opnd_create_immed_int((ptr_int_t)(val), OPSZ_4_24)
+
+
 /** Create a 4-byte immediate integer operand. */
 #define OPND_CREATE_INT32(val) opnd_create_immed_int((ptr_int_t)(val), OPSZ_4)
 /** Create a 2-byte immediate integer operand. */
@@ -377,8 +386,8 @@
     instr_create_0dst_0src((dc), OP_ldmib)
 #define INSTR_CREATE_ldmed(dc) \
     instr_create_0dst_0src((dc), OP_ldmed)
-#define INSTR_CREATE_ldr_imm(dc, d, s, i) \
-    instr_create_1dst_2src((dc), OP_ldr_imm, (d), (s), (i))
+#define INSTR_CREATE_ldr_imm(dc, d, s) \
+    instr_create_1dst_1src((dc), OP_ldr_imm, (d), (s))
 #define INSTR_CREATE_ldr_lit(dc, d, s, i) \
     instr_create_1dst_2src((dc), OP_ldr_lit, (d), (s), (i))
 #define INSTR_CREATE_ldr_reg(dc, d, s) \
@@ -465,12 +474,12 @@
     instr_create_0dst_0src((dc), OP_mrrc)
 #define INSTR_CREATE_mrrc2(dc) \
     instr_create_0dst_0src((dc), OP_mrrc2)
-#define INSTR_CREATE_mrs(dc) \
-    instr_create_0dst_0src((dc), OP_mrs)
-#define INSTR_CREATE_msr_imm(dc) \
-    instr_create_0dst_0src((dc), OP_msr_imm)
-#define INSTR_CREATE_msr_reg(dc) \
-    instr_create_0dst_0src((dc), OP_msr_reg)
+#define INSTR_CREATE_mrs(dc, d, s) \
+    instr_create_1dst_1src((dc), OP_mrs, (d), (s))
+#define INSTR_CREATE_msr_imm(dc, d) \
+    instr_create_0dst_1src((dc), OP_msr_imm, (d))
+#define INSTR_CREATE_msr_reg(dc, d, s) \
+    instr_create_1dst_1src((dc), OP_msr_reg, (d), (s))
 #define INSTR_CREATE_mul(dc) \
     instr_create_0dst_0src((dc), OP_mul)
 #define INSTR_CREATE_mvn_imm(dc) \
@@ -677,8 +686,8 @@
     instr_create_0dst_0src((dc), OP_stmib)
 #define INSTR_CREATE_stmfa(dc) \
     instr_create_0dst_0src((dc), OP_stmfa)
-#define INSTR_CREATE_str_imm(dc, d, s, i) \
-    instr_create_1dst_2src((dc), OP_str_imm, (d), (s), (i))
+#define INSTR_CREATE_str_imm(dc, d, s) \
+    instr_create_1dst_1src((dc), OP_str_imm, (d), (s))
 #define INSTR_CREATE_str_reg(dc, d, s) \
     instr_create_1dst_1src((dc), OP_str_reg, (d), (s))
 #define INSTR_CREATE_strb_imm(dc, d, s, i) \
@@ -721,8 +730,8 @@
     instr_create_0dst_0src((dc), OP_subs)
 #define INSTR_CREATE_svc(dc) \
     instr_create_0dst_0src((dc), OP_svc)
-#define INSTR_CREATE_swp(dc) \
-    instr_create_0dst_0src((dc), OP_swp)
+#define INSTR_CREATE_swp(dc, d, s) \
+    instr_create_1dst_1src((dc), OP_swp, (d), (s))
 #define INSTR_CREATE_swpb(dc) \
     instr_create_0dst_0src((dc), OP_swpb)
 #define INSTR_CREATE_sxtab(dc) \
@@ -1204,11 +1213,11 @@ INSTR_CREATE_nop3byte_reg(dcontext_t *dcontext, reg_id_t reg)
 }
 
 static inline instr_t *
-INSTR_CREATE_branch_ind(dcontext_t *dcontext, reg_id_t reg)
+INSTR_CREATE_branch_ind(dcontext_t *dcontext, opnd_t opnd)
 {
    /* Move the value held in the reg passed into pc. This performs an
       indirect branch in combination with the address being put into reg */
-   return INSTR_CREATE_mov_reg(dcontext, opnd_create_reg(REG_R15), opnd_create_reg(reg));
+   return INSTR_CREATE_mov_reg(dcontext, opnd_create_reg(DR_REG_R15), opnd);
 }
 
 static inline instr_t* 
@@ -1216,8 +1225,17 @@ INSTR_CREATE_msr_cpsr(dcontext_t *dcontext, reg_id_t reg)
 {
    /* Move the value held in the reg passed into pc. This performs an
       indirect branch in combination with the address being put into reg */
-   return INSTR_CREATE_mov_reg(dcontext, opnd_create_reg(REG_CPSR), opnd_create_reg(reg));
+   return INSTR_CREATE_msr_reg(dcontext, opnd_create_reg(DR_REG_CPSR), opnd_create_reg(reg));
 }
+
+static inline instr_t* 
+INSTR_CREATE_mrs_cpsr(dcontext_t *dcontext, reg_id_t reg)
+{
+   /* Move the value held in the reg passed into pc. This performs an
+      indirect branch in combination with the address being put into reg */
+   return INSTR_CREATE_mrs(dcontext, opnd_create_reg(DR_REG_CPSR), opnd_create_reg(reg));
+}
+
 
 
 

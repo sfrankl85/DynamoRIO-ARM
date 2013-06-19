@@ -212,20 +212,11 @@ opnd_get_size(opnd_t opnd)
     case IMMED_INTEGER_kind:
     case IMMED_FLOAT_kind:
     case BASE_DISP_kind:
-#ifdef X64
-    case REL_ADDR_kind: 
-    case ABS_ADDR_kind: 
-#endif
     case MEM_INSTR_kind:
         return opnd.size;
     case INSTR_kind:
     case PC_kind:
         return OPSZ_PTR;
-#ifdef NO
-    case FAR_PC_kind:
-    case FAR_INSTR_kind:
-        return OPSZ_6_irex10_short4;
-#endif //NO
     case NULL_kind:
         return OPSZ_NA;
     default:
@@ -263,16 +254,35 @@ opnd_create_immed_int(ptr_int_t i, opnd_size_t size)
     opnd.size = size;
     opnd.value.immed_int = i;
     DOCHECK(1, {
-        uint sz = opnd_size_in_bytes(size);
-        if (sz == 1) {
+        /* SJF Change to check bits here as ARM operands can be < 1 byte */
+        uint sz = opnd_size_in_bits(size);
+        if (sz == 8) {
             CLIENT_ASSERT(CHECK_TRUNCATE_TYPE_sbyte(i),
                           "opnd_create_immed_int: value too large for 8-bit size");
-        } else if (sz == 2) {
+        } else if (sz == 16) {
             CLIENT_ASSERT(CHECK_TRUNCATE_TYPE_short(i),
                           "opnd_create_immed_int: value too large for 16-bit size");
-        } else if (sz == 4) {
+        } else if (sz == 32) {
             CLIENT_ASSERT(CHECK_TRUNCATE_TYPE_int(i),
                           "opnd_create_immed_int: value too large for 32-bit size");
+        } else if (sz == 3){
+            CLIENT_ASSERT(CHECK_TRUNCATE_TYPE_3bit(i),
+                          "opnd_create_immed_int: value too large for 3-bit size");
+        } else if (sz == 5){
+            CLIENT_ASSERT(CHECK_TRUNCATE_TYPE_5bit(i),
+                          "opnd_create_immed_int: value too large for 5-bit size");
+        } else if (sz == 6){
+            CLIENT_ASSERT(CHECK_TRUNCATE_TYPE_6bit(i),
+                          "opnd_create_immed_int: value too large for 6-bit size");
+        } else if (sz == 10){
+            CLIENT_ASSERT(CHECK_TRUNCATE_TYPE_10bit(i),
+                          "opnd_create_immed_int: value too large for 10-bit size");
+        } else if (sz == 12){
+            CLIENT_ASSERT(CHECK_TRUNCATE_TYPE_12bit(i),
+                          "opnd_create_immed_int: value too large for 12-bit size");
+        } else if (sz == 24){
+            CLIENT_ASSERT(CHECK_TRUNCATE_TYPE_24bit(i),
+                          "opnd_create_immed_int: value too large for 24-bit size");
         }
     });
     return opnd;
@@ -787,7 +797,7 @@ void
 reg_check_reg_fixer(void)
 {
     /* ignore REG_INVALID, so should equal REG_LAST_ENUM */
-    CLIENT_ASSERT(sizeof(dr_reg_fixer)/sizeof(dr_reg_fixer[0]) == REG_LAST_ENUM + 1,
+    CLIENT_ASSERT(sizeof(dr_reg_fixer)/sizeof(dr_reg_fixer[0]) == REG_LAST_ENUM,
                   "internal register enum error");
 }
 #endif
@@ -952,8 +962,6 @@ opnd_same_sizes_ok(opnd_size_t s1, opnd_size_t s2, bool is_reg)
      * then we'll have to hook into encode's size resolution to resolve all
      * operands with each other's constraints at the instr level before coming here.
      */
-    IF_X64(di.x86_mode = false);
-    di.prefixes = 0;
     s1_default = resolve_variable_size(&di, s1, is_reg);
     s2_default = resolve_variable_size(&di, s2, is_reg);
     return (s1_default == s2_default);
@@ -1148,16 +1156,10 @@ opnd_size_in_bytes(opnd_size_t size)
         return 2;
     case OPSZ_4:
         return 4;
-    case OPSZ_6:
-        return 6;
-    case OPSZ_8:
-        return 8;
     case OPSZ_16:
         return 16;
     case OPSZ_10:
         return 10;
-    case OPSZ_12:
-        return 12;
     case OPSZ_14:
         return 14;
     case OPSZ_28:
@@ -1178,6 +1180,64 @@ opnd_size_in_bytes(opnd_size_t size)
     }
 }
 
+uint
+opnd_size_in_bits(opnd_size_t size)
+{
+    /* allow some REG_ constants, convert them to OPSZ_ constants */
+    if (size < OPSZ_FIRST)
+        size = reg_get_size(size);
+    switch (size) {
+    case OPSZ_0:
+        return 0;
+    case OPSZ_1:
+        return 8;
+    case OPSZ_2:
+        return 16;
+    case OPSZ_4:
+        return 32;
+    case OPSZ_16:
+        return 128;
+    case OPSZ_10:
+        return 80;
+    case OPSZ_14:
+        return 112;
+    case OPSZ_28:
+        return 224;
+    case OPSZ_32:
+        return 256;
+    case OPSZ_40:
+        return 320;
+    case OPSZ_94:
+        return 752;
+    case OPSZ_108:
+        return 864;
+    case OPSZ_512:
+        return 4096;
+    case OPSZ_4_3:
+        return 3;
+    case OPSZ_4_4:
+        return 4;
+    case OPSZ_4_5:
+        return 5;
+    case OPSZ_4_6:
+        return 6;
+    case OPSZ_4_8:
+        return 8;
+    case OPSZ_4_10:
+        return 10;
+    case OPSZ_4_12:
+        return 12;
+    case OPSZ_4_16:
+        return 16;
+    case OPSZ_4_24:
+        return 24;
+
+    default:
+        CLIENT_ASSERT(false, "opnd_size_in_bits: invalid opnd type");
+        return 0;
+    }
+}
+
 DR_API
 opnd_size_t
 opnd_size_from_bytes(uint bytes)
@@ -1187,8 +1247,6 @@ opnd_size_from_bytes(uint bytes)
     case 1: return OPSZ_1;
     case 2: return OPSZ_2;
     case 4: return OPSZ_4;
-    case 6: return OPSZ_6;
-    case 8: return OPSZ_8;
     case 10: return OPSZ_10;
     case 16: return OPSZ_16;
     case 14: return OPSZ_14;
@@ -1599,30 +1657,23 @@ reg_get_bits(reg_id_t reg)
 opnd_size_t
 reg_get_size(reg_id_t reg)
 {
-#ifdef X64
-    if (reg >= REG_START_64 && reg <= REG_STOP_64)
-        return OPSZ_8;
-#endif
+    /* SJF Special case for CPSR. Just another 32 bit reg */
+    if ( reg == DR_REG_CPSR )
+        return OPSZ_4;
     if (reg >= REG_START_32 && reg <= REG_STOP_32)
         return OPSZ_4;
-/* TODO SJF
-    if (reg >= REG_START_8 && reg <= REG_STOP_8)
-        return OPSZ_1;
-*/
-#ifdef X64
-    if (reg >= REG_START_x64_8 && reg <= REG_STOP_x64_8) /* alternates to AH-BH */
-        return OPSZ_1;
-#endif
     if (reg >= REG_START_16 && reg <= REG_STOP_16)
         return OPSZ_2;
+/* SJF Ignore QW/DW/SW regs for now 
     if (reg >= REG_START_QWR && reg <= REG_STOP_QWR)
         return OPSZ_16;
     if (reg >= REG_START_DWR && reg <= REG_STOP_DWR)
         return OPSZ_8;
     if (reg >= REG_START_SWR && reg <= REG_STOP_SWR)
         return OPSZ_4;
+*/
     if (reg >= REG_START_SEGMENT && reg <= REG_STOP_SEGMENT)
-        return OPSZ_2;
+        return OPSZ_4;
     if (reg >= REG_START_DR && reg <= REG_STOP_DR)
         return OPSZ_4;
     if (reg >= REG_START_CR && reg <= REG_STOP_CR)
@@ -1951,9 +2002,9 @@ private_instr_encode(dcontext_t *dcontext, instr_t *instr, bool always_cache)
 
 #define inlined_instr_get_opcode(instr) \
     (IF_DEBUG_(CLIENT_ASSERT(sizeof(*instr) == sizeof(instr_t), "invalid type")) \
-     (((instr)->opcode == OP_UNDECODED) ? \
-      (instr_decode_with_current_dcontext(instr), (instr)->opcode) : \
-      (instr)->opcode))
+     (((instr)->instr_type == OP_UNDECODED) ? \
+      (instr_decode_with_current_dcontext(instr), (instr)->instr_type) : \
+      (instr)->instr_type))
 int
 instr_get_opcode(instr_t *instr)
 {
@@ -1974,15 +2025,15 @@ instr_being_modified(instr_t *instr, bool raw_bits_valid)
 }
 
 void
-instr_set_opcode(instr_t *instr, int opcode)
+instr_set_instr_type(instr_t *instr, int instr_type)
 {
-    instr->opcode = opcode;
+    instr->instr_type = instr_type;
     /* if we're modifying opcode, don't use original bits to encode! */
     instr_being_modified(instr, false/*raw bits invalid*/);
     /* do not assume operands are valid, they are separate from opcode,
      * but if opcode is invalid operands shouldn't be valid
      */
-    CLIENT_ASSERT((opcode != OP_INVALID && opcode != OP_UNDECODED) ||
+    CLIENT_ASSERT((instr_type != OP_INVALID && instr_type != OP_UNDECODED) ||
                   !instr_operands_valid(instr),
                   "instr_set_opcode: operand-opcode validity mismatch");
 }
@@ -1997,7 +2048,7 @@ instr_set_opcode(instr_t *instr, int opcode)
 bool 
 instr_valid(instr_t *instr)
 {
-    return (instr->opcode != OP_INVALID);
+    return (instr->instr_type != OP_INVALID);
 }
 
 DR_API
@@ -2016,7 +2067,7 @@ instr_get_app_pc(instr_t *instr)
 bool 
 instr_opcode_valid(instr_t *instr)
 {
-    return (instr->opcode != OP_INVALID && instr->opcode != OP_UNDECODED);
+    return (instr->instr_type != OP_INVALID && instr->instr_type != OP_UNDECODED);
 }
 
 
@@ -2131,33 +2182,6 @@ instr_set_target(instr_t *instr, opnd_t target)
     instr_being_modified(instr, instr_is_cti_short_rewrite(instr, NULL));
     /* assume all operands are valid */
     instr_set_operands_valid(instr, true);
-}
-
-instr_t *
-instr_set_prefix_flag(instr_t *instr, uint prefix)
-{
-    instr->prefixes |= prefix;
-    instr_being_modified(instr, false/*raw bits invalid*/);
-    return instr;
-}
-
-bool
-instr_get_prefix_flag(instr_t *instr, uint prefix)
-{
-    return ((instr->prefixes & prefix) != 0);
-}
-
-void
-instr_set_prefixes(instr_t *instr, uint prefixes)
-{
-    instr->prefixes = prefixes;
-    instr_being_modified(instr, false/*raw bits invalid*/);
-}
-
-uint
-instr_get_prefixes(instr_t *instr)
-{
-    return instr->prefixes;
 }
 
 #ifdef X64
@@ -2358,102 +2382,6 @@ instr_exit_stub_code(instr_t *instr)
     return (instrlist_t *) instr->dsts;
 }
 #endif
-
-uint
-instr_get_eflags(instr_t *instr)
-{
-    if ((instr->flags & INSTR_EFLAGS_VALID) == 0) {
-        bool encoded = false;
-        dcontext_t *dcontext = get_thread_private_dcontext();
-        IF_X64(bool old_mode;)
-        /* we assume we cannot trust the opcode independently of operands */
-        if (instr_needs_encoding(instr)) {
-            int len;
-            encoded = true;
-            len = private_instr_encode(dcontext, instr, true/*cache*/);
-            if (len == 0) {
-                if (!instr_is_label(instr))
-                    CLIENT_ASSERT(false, "instr_get_eflags: invalid instr");
-                return 0;
-            }
-        }
-        IF_X64(old_mode = set_x86_mode(dcontext, instr_get_x86_mode(instr)));
-        decode_eflags_usage(dcontext, instr_get_raw_bits(instr), &instr->eflags);
-        IF_X64(set_x86_mode(dcontext, old_mode));
-        if (encoded) {
-            /* if private_instr_encode passed us back whether it's valid
-             * to cache (i.e., non-meta instr that can reach) we could skip
-             * this invalidation for such cases */
-            instr_free_raw_bits(dcontext, instr);
-            CLIENT_ASSERT(!instr_raw_bits_valid(instr), "internal encoding buf error");
-        }
-        /* even if decode fails, set valid to true -- ok?  FIXME */
-        instr_set_eflags_valid(instr, true);
-    }
-    return instr->eflags;
-}
-
-DR_API
-/* Returns the eflags usage of instructions with opcode "opcode",
- * as EFLAGS_ constants or'ed together 
- */
-uint 
-instr_get_opcode_eflags(int opcode)
-{
-    /* assumption: all encoding of an opcode have same eflags behavior! */
-    const instr_info_t *info = get_instr_info(opcode);
-    return info->eflags;
-}
-
-uint
-instr_get_arith_flags(instr_t *instr)
-{
-    if ((instr->flags & INSTR_EFLAGS_6_VALID) == 0) {
-        /* just get info on all the flags */
-        return instr_get_eflags(instr);
-    }
-    return instr->eflags;
-}
-
-bool
-instr_eflags_valid(instr_t *instr)
-{
-    return ((instr->flags & INSTR_EFLAGS_VALID) != 0);
-}
-
-void
-instr_set_eflags_valid(instr_t *instr, bool valid)
-{
-    if (valid) {
-        instr->flags |= INSTR_EFLAGS_VALID;
-        instr->flags |= INSTR_EFLAGS_6_VALID;
-    } else {
-        /* assume that arith flags are also invalid */
-        instr->flags &= ~INSTR_EFLAGS_VALID;
-        instr->flags &= ~INSTR_EFLAGS_6_VALID;
-    }
-}
-
-/* Returns true iff instr's arithmetic flags (the 6 bottom eflags) are
- * up to date */
-bool 
-instr_arith_flags_valid(instr_t *instr)
-{
-    return ((instr->flags & INSTR_EFLAGS_6_VALID) != 0);
-}
-
-/* Sets instr's arithmetic flags (the 6 bottom eflags) to be valid if
- * valid is true, invalid otherwise */
-void 
-instr_set_arith_flags_valid(instr_t *instr, bool valid)
-{
-    if (valid)
-        instr->flags |= INSTR_EFLAGS_6_VALID;
-    else {
-        instr->flags &= ~INSTR_EFLAGS_VALID;
-        instr->flags &= ~INSTR_EFLAGS_6_VALID;
-    }
-}
 
 void
 instr_set_operands_valid(instr_t *instr, bool valid)
@@ -3668,44 +3596,6 @@ instr_branch_type(instr_t *cti_instr)
     case OP_b:
         return LINK_DIRECT|LINK_JMP;     /* unconditional */
 
-
-#ifdef NO
-    case OP_call:
-        return LINK_DIRECT|LINK_CALL;     /* unconditional */
-    case OP_jmp_short: case OP_jmp:
-        return LINK_DIRECT|LINK_JMP;     /* unconditional */
-    case OP_ret:
-        return LINK_INDIRECT|LINK_RETURN;
-    case OP_jmp_ind:
-        return LINK_INDIRECT|LINK_JMP;
-    case OP_call_ind:
-        return LINK_INDIRECT|LINK_CALL;
-    case OP_jb_short: case OP_jnb_short: case OP_jbe_short: case OP_jnbe_short:
-    case OP_jl_short: case OP_jnl_short: case OP_jle_short: case OP_jnle_short:
-    case OP_jo_short: case OP_jno_short: case OP_jp_short: case OP_jnp_short:
-    case OP_js_short: case OP_jns_short: case OP_jz_short: case OP_jnz_short:
-        /* alternative names (e.g., OP_jae_short) are equivalent, 
-         * so don't need to list them */
-    case OP_jecxz: case OP_loop: case OP_loope: case OP_loopne: 
-    case OP_jb: case OP_jnb: case OP_jbe: case OP_jnbe:
-    case OP_jl: case OP_jnl: case OP_jle: case OP_jnle:
-    case OP_jo: case OP_jno: case OP_jp: case OP_jnp:
-    case OP_js: case OP_jns: case OP_jz: case OP_jnz:
-        return LINK_DIRECT|LINK_JMP;     /* conditional */
-    case OP_jmp_far:
-        /* far direct is treated as indirect (i#823) */
-        return LINK_INDIRECT|LINK_JMP|LINK_FAR;
-    case OP_jmp_far_ind:
-        return LINK_INDIRECT|LINK_JMP|LINK_FAR;
-    case OP_call_far:
-        /* far direct is treated as indirect (i#823) */
-        return LINK_INDIRECT|LINK_CALL|LINK_FAR;
-    case OP_call_far_ind:
-        return LINK_INDIRECT|LINK_CALL|LINK_FAR;
-    case OP_ret_far: case OP_iret:
-        return LINK_INDIRECT|LINK_RETURN|LINK_FAR;
-#endif
-
     default:
         LOG(THREAD_GET, LOG_ALL, 0, "branch_type: unknown opcode: %d\n",
             instr_get_opcode(cti_instr));
@@ -3734,6 +3624,13 @@ instr_set_branch_target_pc(instr_t *cti_instr, app_pc pc)
     instr_set_target(cti_instr, op);
 }
 
+DR_API
+bool
+instr_is_data_execution(int instr_type)
+{
+    return( instr_type == INSTR_TYPE_DATA_EXECUTION );
+}
+
 /* An exit CTI is a control-transfer instruction whose target
  * is a pc (and not an instr_t pointer).  This routine assumes
  * that no other input operands exist in a CTI.
@@ -3744,13 +3641,13 @@ instr_set_branch_target_pc(instr_t *cti_instr, app_pc pc)
 bool
 instr_is_exit_cti(instr_t *instr)
 {
-    int opc;
+    int instr_type;
     if (!instr_operands_valid(instr) || /* implies !opcode_valid */
         !instr_ok_to_mangle(instr))
         return false;
     /* XXX: avoid conditional decode in instr_get_opcode() for speed. */
-    opc = instr->opcode;
-    if (opcode_is_ubr(opc) || opcode_is_cbr(opc)) {
+    instr_type = instr->instr_type;
+    if (instr_type_is_data_execution(instr_type) ) {
         /* far pc should only happen for mangle's call to here */
         return opnd_is_pc(instr_get_target(instr));
     }
@@ -4567,14 +4464,6 @@ instr_invert_cbr(instr_t *instr)
         default: CLIENT_ASSERT(false, "instr_invert_cbr: unknown opcode"); break;
         }
         instr_set_opcode(instr, opc);
-        /* reverse any branch hint */
-        if (TEST(PREFIX_JCC_TAKEN, instr_get_prefixes(instr))) {
-            instr->prefixes &= ~PREFIX_JCC_TAKEN;
-            instr->prefixes |= PREFIX_JCC_NOT_TAKEN;
-        } else if (TEST(PREFIX_JCC_NOT_TAKEN, instr_get_prefixes(instr))) {
-            instr->prefixes &= ~PREFIX_JCC_NOT_TAKEN;
-            instr->prefixes |= PREFIX_JCC_TAKEN;
-        }
     } else
         CLIENT_ASSERT(false, "instr_invert_cbr: unknown opcode");
 }
@@ -5364,7 +5253,8 @@ instr_create_restore_from_dcontext(dcontext_t *dcontext, reg_id_t reg, int offs)
 {
     opnd_t memopnd = opnd_create_dcontext_field(dcontext, offs);
 
-    return INSTR_CREATE_ldr_reg(dcontext, opnd_create_reg(reg), memopnd);
+    return INSTR_CREATE_ldr_reg(dcontext, opnd_create_reg(reg),
+                                memopnd);
 }
 
 instr_t *
@@ -5380,7 +5270,7 @@ instr_create_save_to_dcontext(dcontext_t *dcontext, reg_id_t reg, int offs)
         return INSTR_CREATE_movd(dcontext, memopnd, opnd_create_reg(reg));
     else
 #endif //NO
-    return INSTR_CREATE_str_reg(dcontext, opnd_create_reg(reg), memopnd);
+    return INSTR_CREATE_str_reg(dcontext, memopnd, opnd_create_reg(reg));
 }
 
 /* Use basereg==REG_NULL to get default (xdi, or xsi for upcontext) 
@@ -5393,7 +5283,9 @@ instr_create_restore_from_dc_via_reg(dcontext_t *dcontext, reg_id_t basereg,
     /* use movd for xmm/mmx, and OPSZ_PTR */
     opnd_t memopnd = opnd_create_dcontext_field_via_reg_sz
         (dcontext, basereg, offs, reg_get_size(reg));
-    return INSTR_CREATE_ldr_reg(dcontext, opnd_create_reg(reg), memopnd);
+
+    return INSTR_CREATE_ldr_reg(dcontext, opnd_create_reg(reg), 
+                                memopnd);
 }
 
 /* Use basereg==REG_NULL to get default (xdi, or xsi for upcontext) 
@@ -5403,17 +5295,10 @@ instr_t *
 instr_create_save_to_dc_via_reg(dcontext_t *dcontext, reg_id_t basereg,
                                 reg_id_t reg, int offs)
 {
-#ifdef NO
     /* use movd for xmm/mmx, and OPSZ_PTR */
-    if (reg_is_xmm(reg) || reg_is_mmx(reg)) {
-        opnd_t memopnd = opnd_create_dcontext_field_via_reg(dcontext, basereg, offs);
-        return INSTR_CREATE_movd(dcontext, memopnd, opnd_create_reg(reg));
-    } else {
-        opnd_t memopnd = opnd_create_dcontext_field_via_reg_sz
-            (dcontext, basereg, offs, reg_get_size(reg));
-        return INSTR_CREATE_mov_reg(dcontext, memopnd, opnd_create_reg(reg));
-    }
-#endif //NO
+    opnd_t memopnd = opnd_create_dcontext_field_via_reg_sz
+                        (dcontext, basereg, offs, reg_get_size(reg));
+    return INSTR_CREATE_str_reg(dcontext, memopnd, opnd_create_reg(reg));
 }
 
 instr_t *
@@ -5427,22 +5312,18 @@ instr_create_save_immed_to_dcontext(dcontext_t *dcontext, int immed, int offs)
 #endif //NO
 }
 
-instr_t *
-instr_create_branch_via_dcontext(dcontext_t *dcontext, int offs)
+void
+instr_create_branch_via_dcontext(instrlist_t* ilist, dcontext_t *dcontext, int offs)
 {
     opnd_t memopnd = opnd_create_dcontext_field(dcontext, offs);
-    return INSTR_CREATE_branch(dcontext, memopnd);
+
+    instrlist_meta_append(&ilist, INSTR_CREATE_ldr_reg(dcontext, opnd_create_reg(REG_RR7),
+                                               memopnd));
+    instrlist_meta_append(&ilist, INSTR_CREATE_branch_ind(dcontext, opnd_create_reg(REG_RR7)));
+ 
+    return; 
 }
 
-
-instr_t *
-instr_create_jump_via_dcontext(dcontext_t *dcontext, int offs)
-{
-#ifdef NO
-    opnd_t memopnd = opnd_create_dcontext_field(dcontext, offs);
-    return INSTR_CREATE_branch_ind(dcontext, memopnd);
-#endif //NO
-}
 
 /* there is no corresponding save routine since we no longer support
  * keeping state on the stack while code other than our own is running
@@ -5719,14 +5600,14 @@ instr_is_reg_spill_or_restore(dcontext_t *dcontext, instr_t *instr,
 instr_t *
 instr_create_save_to_tls(dcontext_t *dcontext, reg_id_t reg, ushort offs)
 {
-    return INSTR_CREATE_mov_reg(dcontext, opnd_create_tls_slot(os_tls_offset(offs)), 
+    return INSTR_CREATE_str_reg(dcontext, opnd_create_tls_slot(os_tls_offset(offs)), 
                                opnd_create_reg(reg));
 }
 
 instr_t *
 instr_create_restore_from_tls(dcontext_t *dcontext, reg_id_t reg, ushort offs)
 {
-    return INSTR_CREATE_mov_imm(dcontext, opnd_create_reg(reg), 
+    return INSTR_CREATE_ldr_reg(dcontext, opnd_create_reg(reg), 
                                opnd_create_tls_slot(os_tls_offset(offs)));
 }
 
@@ -5734,13 +5615,13 @@ instr_create_restore_from_tls(dcontext_t *dcontext, reg_id_t reg, ushort offs)
 instr_t *
 instr_create_save_to_reg(dcontext_t *dcontext, reg_id_t reg1, reg_id_t reg2)
 {
-    return INSTR_CREATE_mov_imm(dcontext, opnd_create_reg(reg2), opnd_create_reg(reg1));
+    return INSTR_CREATE_mov_reg(dcontext, opnd_create_reg(reg2), opnd_create_reg(reg1));
 }
 
 instr_t *
 instr_create_restore_from_reg(dcontext_t *dcontext, reg_id_t reg1, reg_id_t reg2)
 {
-    return INSTR_CREATE_mov_imm(dcontext, opnd_create_reg(reg1), opnd_create_reg(reg2));
+    return INSTR_CREATE_mov_reg(dcontext, opnd_create_reg(reg1), opnd_create_reg(reg2));
 }
 
 #ifdef X64

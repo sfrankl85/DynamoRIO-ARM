@@ -1090,19 +1090,21 @@ const instr_info_t * const op_instr[] =
 #define xx  TYPE_NONE, OPSZ_NA
 
 /* from ARM document. Couldnt find a table. Is there one? */
-#define Ra  TYPE_REG,    OPSZ_4
+#define Ra  TYPE_REG,    OPSZ_4  /* 32 bit value contained in reg */
+#define Ma  TYPE_M,      OPSZ_4  /* Memory address contained in reg */
+#define Oa  TYPE_P,      OPSZ_4  /* Memory address contained in reg */
 #define Cr  TYPE_CO_REG, OPSZ_4
-#define I3  TYPE_I,      OPSZ_3
-#define I4  TYPE_I,      OPSZ_4
-#define I5  TYPE_I,      OPSZ_5
-#define I6  TYPE_I,      OPSZ_6
-#define I8  TYPE_I,      OPSZ_8
-#define I12 TYPE_I,      OPSZ_12
-#define I16 TYPE_I,      OPSZ_16
-#define I24 TYPE_I,      OPSZ_24
+#define I3  TYPE_I,      OPSZ_4_3  /* Immediate value contained in instr */
+#define I4  TYPE_I,      OPSZ_4_4  /* " */
+#define I5  TYPE_I,      OPSZ_4_5  /* " */
+#define I6  TYPE_I,      OPSZ_4_6  /* " */
+#define I8  TYPE_I,      OPSZ_4_8  /* " */ 
+#define I12 TYPE_I,      OPSZ_4_12 /* " */
+#define I16 TYPE_I,      OPSZ_4_16 /* " */
+#define I24 TYPE_I,      OPSZ_4_24 /* " */
 
-#define A24 TYPE_A,      OPSZ_3  //24 bit/3 byte immediate that contains an address
-#define J24 TYPE_J,      OPSZ_3  //24 bit/3 byte immediate that contains a near address
+#define A24 TYPE_A,      OPSZ_4_24  //24 bit/3 byte immediate that contains an address
+#define J24 TYPE_J,      OPSZ_4_24  //24 bit/3 byte immediate that contains a near address
 
 
 #define r0  TYPE_REG, REG_RR0
@@ -1265,7 +1267,7 @@ const instr_info_t armv7a_instrs[] = {
     {OP_ldmed,  0x000001, "ldmed",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*ldmed()*/
     {OP_ldr_imm,  0x000001, "ldr_imm",  Ra, xx, Ra,  I12, xx,  0x0,  mrm, fW6, END_LIST}, /*ldr_imm()*/
     {OP_ldr_lit,  0x000001, "ldr_lit",  Ra, xx, I12, xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*ldr_lit()*/
-    {OP_ldr_reg,  0x000001, "ldr_reg",  Ra, xx, Ra,  Ra,  I5,  0x0,  mrm, fW6, END_LIST}, /*ldr_reg()*/
+    {OP_ldr_reg,  0x000001, "ldr_reg",  Ra, xx, Ma,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*ldr_reg()*/
     {OP_ldrb_imm,  0x000001, "ldrb_imm",  Ra, xx, Ra,  I12, xx,  0x0,  mrm, fW6, END_LIST}, /*ldrb_imm()*/
     {OP_ldrb_lit,  0x000001, "ldrb_lit",  Ra, xx, I12, xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*ldrb_lit()*/
     {OP_ldrb_reg,  0x000001, "ldrb_reg",  Ra, xx, Ra,  Ra,  I5,  0x0,  mrm, fW6, END_LIST}, /*ldrb_reg()*/
@@ -1302,14 +1304,14 @@ const instr_info_t armv7a_instrs[] = {
     {OP_mls,  0x000001, "mls",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*mls()*/
     {OP_mov_imm,  0x000001, "mov_imm",  Ra, xx, I12, xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*mov_imm()*/
     {OP_mov_reg,  0x000001, "mov_reg",  Ra, xx, Ra,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*mov_reg()*/
-    {OP_movt,  0x000001, "movt",  Ra, xx, I4,  I12,  xx,  0x0,  mrm, fW6, END_LIST}, /*movt()*/
-    {OP_mrc,  0x000001, "mrc",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*mrc()*/
-    {OP_mrc2,  0x000001, "mrc2",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*mrc2()*/
-    {OP_mrrc,  0x000001, "mrrc",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*mrrc()*/
-    {OP_mrrc2,  0x000001, "mrrc2",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*mrrc2()*/
-    {OP_mrs,  0x000001, "mrs",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*mrs()*/
+    {OP_movt,     0x000001, "movt",  Ra, xx, I4,  I12,  xx,  0x0,  mrm, fW6, END_LIST}, /*movt()*/
+    {OP_mrc,      0x000001, "mrc",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*mrc()*/
+    {OP_mrc2,     0x000001, "mrc2",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*mrc2()*/
+    {OP_mrrc,     0x000001, "mrrc",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*mrrc()*/
+    {OP_mrrc2,    0x000001, "mrrc2",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*mrrc2()*/
+    {OP_mrs,      0x000001, "mrs",  Ra, xx, Ra,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*mrs()*/
     {OP_msr_imm,  0x000001, "msr_imm",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*msr_imm()*/
-    {OP_msr_reg,  0x000001, "msr_reg",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*msr_reg()*/
+    {OP_msr_reg,  0x000001, "msr_reg",  Ra, xx, Ra,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*msr_reg()*/
     {OP_mul,  0x000001, "mul",  Ra, xx, Ra,  Ra,  xx,  0x0,  mrm, fW6, END_LIST}, /*mul()*/
     {OP_mvn_imm,  0x000001, "mvn_imm",  Ra, xx, I12, xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*mvn_imm()*/
     {OP_mvn_reg,  0x000001, "mvn_reg",  Ra, xx, Ra,  I5,  xx,  0x0,  mrm, fW6, END_LIST}, /*mvn_reg()*/
@@ -1417,7 +1419,7 @@ const instr_info_t armv7a_instrs[] = {
     {OP_stmib,  0x000001, "stmib",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*stmib()*/
     {OP_stmfa,  0x000001, "stmfa",  xx, xx, xx,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*stmfa()*/
     {OP_str_imm,  0x000001, "str_imm",  Ra, xx, Ra,  I12, xx,  0x0,  mrm, fW6, END_LIST}, /*str_imm()*/
-    {OP_str_reg,  0x000001, "str_reg",  Ra, xx, Ra,  Ra,  I5,  0x0,  mrm, fW6, END_LIST}, /*str_reg()*/
+    {OP_str_reg,  0x000001, "str_reg",  Ma, xx, Ra,  xx,  xx,  0x0,  mrm, fW6, END_LIST}, /*str_reg()*/
     {OP_strb_imm,  0x000001, "strb_imm",  Ra, xx, Ra,  I12, xx,  0x0,  mrm, fW6, END_LIST}, /*strb_imm()*/
     {OP_strb_reg,  0x000001, "strb_reg",  Ra, xx, Ra,  Ra,  I5,  0x0,  mrm, fW6, END_LIST}, /*strb_reg()*/
     {OP_strbt,  0x000001, "strbt",  Ra, xx, Ra,  Ra,  I5,  0x0,  mrm, fW6, END_LIST}, /*strbt()*/
