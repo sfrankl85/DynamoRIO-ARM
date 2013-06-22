@@ -962,8 +962,6 @@ decode_cti(dcontext_t *dcontext, byte *pc, instr_t *instr)
     byte0 = *pc;
     byte1 = *(pc + 1);
 
-    instr_set_arith_flags_valid(instr, true);
-
     if (interesting[byte0] == 0) {
         /* assumption: opcode already OP_UNDECODED */
         /* assumption: operands are already marked invalid (instr was reset) */

@@ -67,6 +67,7 @@ const char * const type_names[] = {
     "TYPE_J", /* immediate that is relative offset of EIP */
     "TYPE_M", /* modrm select mem addr */
     "TYPE_O", /* immediate that is memory offset */
+    "TYPE_P",
     "TYPE_1",
     "TYPE_FLOATCONST",
     "TYPE_FLOATMEM",
@@ -216,34 +217,12 @@ template_optype_is_reg(int optype)
 static bool
 type_instr_uses_reg_bits(int type)
 {
-    /* SJF TODO Removed values from here. Is this func needed ?*/
-/*
-    switch (type) {
-    case TYPE_G:
-    case TYPE_P: 
-    case TYPE_S:
-    case TYPE_V: 
-        return true;
-    default:
-*/
         return false;
 }
 
 static bool
 type_uses_modrm_bits(int type)
 {
-    /* SJF TODO Removed values here. Needed? */
-/*
-    switch (type) {
-    case TYPE_E:
-    case TYPE_M: 
-    case TYPE_Q:
-    case TYPE_R: 
-    case TYPE_W:
-    case TYPE_INDIR_E:
-        return true;
-    default:
-*/
         return false;
 }
 
@@ -262,31 +241,12 @@ size_ok_varsz(decode_info_t *di/*prefixes field is IN/OUT; x86_mode is IN*/,
      */
     /* if identical sizes we shouldn't be called */
     CLIENT_ASSERT(size_op != size_template, "size_ok_varsz: internal decoding error");
-    switch (size_op) {
-/* TODO SJF Comment out all Intel/AMD stuff 
-        if (size_template == OPSZ_6_irex10_short4 &&
-            (proc_get_vendor() == VENDOR_AMD || !TEST(PREFIX_REX_W, di->prefixes))) {
-            di->prefixes |= prefix_data_addr;
-            return true;
-        }
-*/
-/* TODO SJF Comment out all Intel/AMD stuff 
-        if (size_template == OPSZ_6_irex10_short4 &&
-            (proc_get_vendor() == VENDOR_AMD || !TEST(PREFIX_REX_W, di->prefixes))) {
-            di->prefixes |= prefix_data_addr;
-            return true;
-        }
-*/
-/* TODO SJF Comment out all Intel/AMD stuff 
-        if (size_template == OPSZ_6_irex10_short4 &&
-            (proc_get_vendor() == VENDOR_AMD || !TEST(PREFIX_REX_W, di->prefixes))) {
-            di->prefixes |= prefix_data_addr;
-            return true;
-        }
-*/
-    default:
-        CLIENT_ASSERT(false, "size_ok_varsz() internal decoding error (invalid size)");
-        break;
+
+    switch (size_op) 
+    {
+        default:
+            CLIENT_ASSERT(false, "size_ok_varsz() internal decoding error (invalid size)");
+            break;
     }
     return false;
 }
@@ -295,12 +255,6 @@ static opnd_size_t
 resolve_var_x64_size(decode_info_t *di/*x86_mode is IN*/,
                      opnd_size_t sz, bool addr_short4)
 {
-    switch (sz) {
-/* TODO SJF Comment out all Intel/AMD stuff 
-    case OPSZ_4_short2xi4: return (X64_MODE(di) && proc_get_vendor() == VENDOR_INTEL ?
-                                  OPSZ_4 : OPSZ_4_short2);
-*/
-    }
     return sz;
 }
 
@@ -321,37 +275,6 @@ size_ok(decode_info_t *di/*prefixes field is IN/OUT; x86_mode is IN*/,
     /* These should just return the size_template passed in */
     size_template = resolve_var_x64_size(di, size_template, addr_short4);
     size_op = resolve_var_x64_size(di, size_op, addr_short4);
-
-    /* register size checks go through reg_size_ok, so collapse sub-reg
-     * sizes to the true sizes
-     */
-#ifdef NO
-//SJF No variable sizes any more so check it is the size expected 
-    switch (size_op) {
-    case OPSZ_4_of_8:
-    case OPSZ_4_of_16:
-        size_op = OPSZ_4;
-        break;
-    case OPSZ_8_of_16: /* OPSZ_8_of_16_vex32 is kept */
-        size_op = OPSZ_8;
-        break;
-    case OPSZ_16_of_32:
-        size_op = OPSZ_16;
-        break;
-    }
-    switch (size_template) {
-    case OPSZ_4_of_8:
-    case OPSZ_4_of_16:
-        size_template = OPSZ_4;
-        break;
-    case OPSZ_8_of_16: /* OPSZ_8_of_16_vex32 is kept */
-        size_template = OPSZ_8;
-        break;
-    case OPSZ_16_of_32:
-        size_template = OPSZ_16;
-        break;
-    }
-#endif //NO
 
     /* prefix doesn't come into play below here: do a direct comparison */
 
@@ -406,14 +329,6 @@ static bool
 reg_set_ext_prefixes(decode_info_t *di/*prefixes field is IN/OUT; x86_mode is IN*/,
                      reg_id_t reg, uint which_rex)
 {
-#ifdef X64
-    if (reg >= REG_START_x64_8 && reg <= REG_STOP_x64_8) {
-        /* alternates to AH-BH that are specified via any rex prefix */
-        if (!TESTANY(PREFIX_REX_ALL, di->prefixes))
-            di->prefixes |= PREFIX_REX_GENERAL;
-    } else if (reg_is_extended(reg))
-        di->prefixes |= which_rex;
-#endif
     return true; /* for use in && series */
 }
 
@@ -1190,6 +1105,591 @@ copy_and_re_relativize_raw_instr(dcontext_t *dcontext, instr_t *instr,
     return orig_dst_pc + instr->length;
 }
 
+/* SJF ARM Specific encoding instructions */
+void
+encode_data_processing_1(dcontext_t* di, instr_t* instr)
+{
+    byte* start_pc = di->start_pc; 
+    byte* final_pc = di->final_pc;
+    byte[4] word = {0};  //Instr encoding in byte array
+    uint        opc;
+    byte        b;
+    uint        opc_bits;
+    opnd_t      opnd;
+    byte*       pc = di->start_pc;
+
+    opc = instr_get_opcode(instr);
+
+    /* 
+       Instruction encoded as 31-0
+       |cond|instr_type|opcode|operands|
+     */
+    
+    //Encode cond
+    if( opcode_is_unconditional( opc ) )
+    {
+        //Encode unconditional
+        b = 0xf0;
+        word[0] |= b; 
+    }
+    else
+    {
+        b = 0;
+        b &= instr->cond;
+        word[0] |= (b << 4); 
+    }
+
+    //encode instr_type 
+    b = 0;
+    word[0] |= b; 
+    
+    info = instr_get_instr_info(instr);
+
+    //get first bit of opcode
+    b = 16; //0001 0000
+    b &= (byte) info->opcode;
+    word[0] |= (b >> 4); 
+
+    //get last 4 bits of opcode
+    b = 15; //0000 1111 
+    b &= (byte) info->opcode;
+    word[1] |= (b << 4);
+
+    //TODO Need to set bit[20] S based on set cpsr flags option
+
+    //Encode operands here  
+
+    //Reg 1
+    
+    if( TEST_OPND(di, info->dst1_type, info->dst1_size, 1, instr->num_dsts, instr_get_dst(instr, 0)))
+    {
+        opnd = instr_get_dst(instr, 0);      
+ 
+        switch( opnd.kind )
+        {
+          case REG_kind:
+            b = opnd.reg;
+
+            b--; //To get actual reg number
+            word[1] |= b;
+            
+          default:
+            CLIENT_ASSERT(false, "instr_encode error: invalid opnd type" );
+            break;
+            
+        }    
+    }
+
+    if( TEST_OPND(di, info->src1_type, info->src1_size, 1, instr->num_srcs, instr_get_src(instr, 0)))
+    {
+        opnd = instr_get_src(instr, 0);
+
+        switch( opnd.kind )
+        {
+          case REG_kind:
+            b = opnd.reg;
+
+            b--; //To get actual reg number
+            word[2] |= (b << 4);
+            break;
+
+          default:
+            CLIENT_ASSERT(false, "instr_encode error: invalid opnd type" );
+            break;
+
+        }
+    }
+
+    if( TEST_OPND(di, info->src2_type, info->src2_size, 2, instr->num_srcs, instr_get_src(instr, 1)))
+    {
+        opnd = instr_get_src(instr, 1);
+
+        switch( opnd.kind )
+        {
+          case IMMED_INTEGER_kind:
+            b = opnd.immed_int;
+
+            b &= 0x1e; //To get 4 imm bits
+            word[2] |= (b >> 1);
+
+            b = opnd.immed_int;
+            b &= 0x1; //To get last bit
+
+            word[3] |= (b << 7);
+            break;
+
+          default:
+            CLIENT_ASSERT(false, "instr_encode error: invalid opnd type" );
+            break;
+
+        }
+    }
+
+    //Also need to set immediate shift type based on shift type in instr
+    //bit[4] already 0
+
+
+    if( TEST_OPND(di, info->src3_type, info->src3_size, 3, instr->num_srcs, instr_get_src(instr, 2)))
+    {
+        opnd = instr_get_src(instr, 2);
+
+        switch( opnd.kind )
+        {
+          case REG_kind:
+            b = opnd.reg;
+            b--;
+
+            b &= 0xf;
+
+            word[3] |= (b);
+            break;
+
+          default:
+            CLIENT_ASSERT(false, "instr_encode error: invalid opnd type" );
+            break;
+
+        }
+    }
+
+
+   //Word should now be an instruction. MSB encoding
+   *((byte *)pc) = word[0];
+   pc++;
+   *((byte *)pc) = word[1];
+   pc++;
+   *((byte *)pc) = word[2];
+   pc++;
+   *((byte *)pc) = word[3];
+   pc++;
+}
+
+void
+encode_data_processing_and_els(dcontext_t* di, instr_t* instr)
+{
+    uint opc;
+
+    opc = instr_get_opcode(instr);
+
+
+    switch( opc )
+    {
+        /* Switch to instruction encoding function 
+           based on opcode 1. Can switch between different encodings
+           in the sub functions */
+        case OP_and_reg:
+        case OP_eor_reg:
+        case OP_sub_reg:
+        case OP_rsb_reg:
+        case OP_add_reg:
+        case OP_adc_reg:
+        case OP_sbc_reg:
+        case OP_rsc_reg:
+        case OP_tst_reg:
+        case OP_teq_reg:
+        case OP_cmp_reg:
+        case OP_cmn_reg:
+        case OP_orr_reg:
+        case OP_mov_reg:
+        case OP_lsl_imm:
+        case OP_lsr_imm:
+        case OP_asr_imm:
+        case OP_rrx:
+        case OP_ror_imm: 
+        case OP_bic_reg:
+        case OP_mvn_reg:
+        case OP_and_rsr:
+        case OP_eor_rsr:
+        case OP_sub_rsr:
+        case OP_rsb_rsr:
+        case OP_add_rsr:
+        case OP_adc_rsr:
+        case OP_sbc_rsr:
+        case OP_rsc_rsr:
+        case OP_tst_rsr:
+        case OP_teq_rsr:
+        case OP_cmp_rsr:
+        case OP_cmn_rsr:
+        case OP_orr_rsr:
+        case OP_lsl_reg:
+        case OP_lsr_reg:
+        case OP_asr_reg:
+        case OP_ror_reg:
+        case OP_bic_rsr:
+        case OP_mvn_rsr:
+          encode_data_processing_1(di, instr);
+          //Multiply instrs
+        case OP_mul:
+        case OP_mla:
+        case OP_umaal:
+        case OP_mls:
+        case OP_umull:
+        case OP_umlal:
+        case OP_smull:
+        case OP_smlal:
+        case OP_qadd:
+        case OP_qsub:
+        case OP_qdadd:
+        case OP_qdsub:
+        case OP_smlabb:
+        case OP_smlabt:
+        case OP_smlatb:
+        case OP_smlatt:
+        case OP_smlawb:
+        case OP_smlawt:
+        case OP_smulwb:
+        case OP_smulwt:
+        case OP_smlalbb:
+        case OP_smlalbt:
+        case OP_smlaltb:
+        case OP_smlaltt:
+        case OP_smulbb:
+        case OP_smulbt:
+        case OP_smultb:
+        case OP_smultt:
+          //Extra load/store
+        case OP_strh_reg:
+        case OP_ldrh_reg:
+        case OP_strh_imm:
+        case OP_ldrh_imm:
+        case OP_ldrh_lit:
+        case OP_ldrd_reg:
+        case OP_ldrsb_imm:
+        case OP_ldrd_imm:
+        case OP_ldrd_lit:
+        case OP_ldrsb_imm:
+        case OP_ldrsb_lit:
+        case OP_strd_reg:
+        case OP_ldrsh_reg:
+        case OP_strd_imm:
+        case OP_ldrsh_imm:
+        case OP_ldrsh_lit:
+        case OP_strht:
+        case OP_ldrht:
+        case OP_ldrsbt:
+        case OP_ldrsht:
+          //Synchro primitves
+        case OP_swp:
+        case OP_swpb:
+        case OP_strex:
+        case OP_ldrex:
+        case OP_strexd:
+        case OP_ldrexd:
+        case OP_strexb:
+        case OP_ldrexb:
+        case OP_strexh:
+        case OP_ldrexh:
+        //misc
+        case OP_cps:
+        case OP_setend:
+          //Add encode func 
+          break;
+        default:
+            CLIENT_ASSERT(false, "instr_encode error: invalid opcode %d for instr_type",
+                                 opcode );
+            break;
+    }
+}
+
+void
+encode_data_processing_imm(dcontext_t* di, instr_t* instr)
+{
+    uint opc;
+
+    opc = instr_get_opcode(instr);
+
+    switch( opc )
+    {
+        case OP_and_imm:
+        case OP_eor_imm:
+        case OP_sub_imm:
+        case OP_adr:
+        case OP_rsb_imm:
+        case OP_add_imm:
+        case OP_adr_imm:
+        case OP_adc_imm:
+        case OP_sbc_imm:
+        case OP_rsc_imm:
+        case OP_tst_imm:
+        case OP_teq_imm:
+        case OP_cmp_imm:
+        case OP_cmn_imm:
+        case OP_orr_imm:
+        case OP_mov_imm:
+        case OP_bic_imm:
+        case OP_mvn_imm:
+        //Extar instrs
+        case OP_nop:
+        case OP_yield:
+        case OP_wfe:
+        case OP_wfi:
+        case OP_sev:
+        case OP_dbg:
+        case OP_msr_imm:
+        //Misc
+        case OP_mrs:
+        case OP_msr_reg:
+        case OP_bx:
+        case OP_clz:
+        case OP_bxj:
+        case OP_blx:
+        case OP_bkpt:
+        case OP_smc:
+        default:
+            CLIENT_ASSERT(false, "instr_encode error: invalid opcode %d for instr_type",
+                                 opcode );
+            break;
+    }
+
+}
+
+void
+encode_load_store_1(dcontext_t* di, instr_t* instr)
+{
+    uint opc;
+
+    opc = instr_get_opcode(instr);
+
+    switch( opc )
+    {
+        case OP_str_imm:
+        case OP_str_reg:
+        case OP_strt:
+        case OP_ldr_imm:
+        case OP_ldr_lit:
+        case OP_ldr_ref:
+        case OP_ldrt:
+        case OP_strb_imm:
+        case OP_strb_reg:
+        case OP_strbt:
+        case OP_ldrb_imm:
+        case OP_ldrb_lit:
+        case OP_ldrb_reg:       
+        case OP_ldrbt:
+        //misc
+        case OP_pli:
+        case OP_pld_imm:
+        case OP_pldw_imm:
+        case OP_pld_lit:
+        case OP_clrex:
+        case OP_dsb:
+        case OP_dmb:
+        case OP_isb:
+          break;
+        default:
+            CLIENT_ASSERT(false, "instr_encode error: invalid opcode %d for instr_type",
+                                 opcode );
+            break;
+    }
+}
+
+void
+encode_load_store_2_and_media(dcontext_t* di, instr_t* instr)
+{
+    uint opc;
+
+    opc = instr_get_opcode(instr);
+
+
+    switch( opc )
+    {
+        //Media instrs
+        case OP_usad8:
+        case OP_usada8:
+        case OP_sbfx:
+        case OP_bfc:
+        case OP_bfi:
+        case OP_ubfx:
+        // Parallel arith
+        case OP_sadd16:
+        case OP_sasx:
+        case OP_ssub16:
+        case OP_sadd8:
+        case OP_ssub8:
+        case OP_qadd16:
+        case OP_qasx:
+        case OP_qsax:
+        case OP_qsub16:
+        case OP_add8:
+        case OP_sub8:
+        case OP_shadd16:
+        case OP_shasx:
+        case OP_shsax:
+        case OP_shsub16:
+        case OP_shadd8:
+        case OP_shsub8:
+        case OP_uadd16:
+        case OP_uasx:
+        case OP_usax:
+        case OP_usub16:
+        case OP_uadd8:
+        case OP_usub8:
+        case OP_uqadd16:
+        case OP_uqasx:
+        case OP_uqsax:
+        case OP_uqsub16:
+        case OP_uqadd8:
+        case OP_uqsub8:
+        case OP_uhadd16:
+        case OP_uhasx:
+        case OP_uhsax:
+        case OP_uhsub16:
+        case OP_uhadd8:
+        case OP_uhsub8:
+        //Packing/Unpacking saturation and reversal
+        case OP_pkh:
+        case OP_ssat:
+        case OP_usat:
+        case OP_sxtab16:
+        case OP_sxtb16:
+        case OP_sel:
+        case OP_ssat16:
+        case OP_sxtab:
+        case OP_sxtb:
+        case OP_rev:
+        case OP_sxtah:
+        case OP_sxth:
+        case OP_rev16:
+        case OP_uxtab16:
+        case OP_uxtb16:
+        case OP_usat16:
+        case OP_uxtab:
+        case OP_uxtb:
+        case OP_rbit:
+        case OP_uxtah:
+        case OP_uxth:
+        case OP_revsh:
+        //Signed Multiple
+        case OP_smlad:
+        case OP_smuad:
+        case OP_smlsd:
+        case OP_smusd:
+        case OP_smlald:
+        case OP_mlsld:
+        case OP_smmla:
+        case OP_smmul:
+        case OP_smmls:
+        //misc
+        case OP_pli_reg:
+        case OP_pld_reg:
+        case OP_pldw_reg:
+          break;
+        default:
+            CLIENT_ASSERT(false, "instr_encode error: invalid opcode %d for instr_type",
+                                 opcode );
+            break;
+    }
+
+}
+
+void
+encode_load_store_multiple(dcontext_t* di, instr_t* instr)
+{
+    uint opc;
+
+    opc = instr_get_opcode(instr);
+
+    switch( opc )
+    {
+        //Store/load multiple
+        case OP_stmda:
+        case OP_stmed:
+        case OP_ldmda:
+        case OP_ldmfa:
+        case OP_stm:
+        case OP_stmia:
+        case OP_stmea:
+        case OP_ldm:
+        case OP_ldmia:
+        case OP_ldmfd:
+        case OP_stmdb:
+        case OP_stmfd:
+        case OP_ldmib:
+        case OP_ldmed:
+        case OP_stm:
+        case OP_ldm:
+        //Uncond instrs
+        case OP_srs:
+        case OP_rfe:
+          break;
+        default:
+            CLIENT_ASSERT(false, "instr_encode error: invalid opcode %d for instr_type",
+                                 opcode );
+            break;
+    }
+}
+
+void
+encode_branch(dcontext_t* di, instr_t* instr)
+{
+    uint opc;
+
+    opc = instr_get_opcode(instr);
+
+    switch( opc )
+    {
+        case OP_b:
+        case OP_bl:
+        case OP_blx:
+          break;
+        default:
+            CLIENT_ASSERT(false, "instr_encode error: invalid opcode %d for instr_type",
+                                 opcode );
+            break;
+    }
+}
+
+void
+encode_coprocessor_data_movement(dcontext_t* di, instr_t* instr)
+{
+    uint opc;
+
+    opc = instr_get_opcode(instr);
+
+    switch( opc )
+    {
+        case OP_ldc_imm:
+        case OP_ldc2_imm:
+        case OP_ldc_lit:
+        case OP_ldc2_lit:
+        case OP_stc:
+        case OP_stc2:
+        case OP_mcrr:
+        case OP_mcrr2:
+        case OP_mrrc:
+        case OP_mrrc2:
+        //Uncond instrs
+
+        default:
+            CLIENT_ASSERT(false, "instr_encode error: invalid opcode %d for instr_type",
+                                 opcode );
+            break;
+    }
+}
+
+void
+encode_advanced_coprocessor_and_syscall(dcontext_t* di, instr_t* instr)
+{
+    uint opc;
+
+    opc = instr_get_opcode(instr);
+
+    switch( opc )
+    {
+        case OP_cdp:
+        case OP_cdp2:
+        case OP_mcr:
+        case OP_mcr2:
+        case OP_mrc:
+        case OP_mrc2:
+          break;
+        default:
+            CLIENT_ASSERT(false, "instr_encode error: invalid opcode %d for instr_type",
+                                 opcode );
+            break;
+    }
+}
+ 
+
 /* Encodes instrustion instr.  The parameter copy_pc points
  * to the address of this instruction in the fragment cache.
  * Checks for and fixes pc-relative instructions.  
@@ -1215,8 +1715,9 @@ instr_encode_common(dcontext_t *dcontext, instr_t *instr, byte *copy_pc, byte *f
     byte *cache_pc = copy_pc;
     byte *field_ptr = cache_pc;
     byte *disp_relativize_at = NULL;
-    uint opc;
+    uint opc, instr_type;
     bool output_initial_opcode = false;
+    
     if (has_instr_opnds != NULL)
         *has_instr_opnds = false;
 
@@ -1228,7 +1729,52 @@ instr_encode_common(dcontext_t *dcontext, instr_t *instr, byte *copy_pc, byte *f
         return copy_and_re_relativize_raw_instr(dcontext, instr, cache_pc, final_pc);
     }
     CLIENT_ASSERT(instr_operands_valid(instr), "instr_encode error: operands invalid");
-    opc = instr_get_opcode(instr);
+
+    /* fill out the other fields of di */
+    /* used for PR 253327 addr32 rip-relative and instr_t targets */
+    di.start_pc = cache_pc;
+    di.final_pc = final_pc;
+
+    di.size_immed = OPSZ_NA;
+    di.size_immed2 = OPSZ_NA;
+
+    instr_type = instr_get_instr_type(instr);
+
+    switch( instr_type )
+    {
+        case INSTR_TYPE_UNKNOWN:
+          //Check for label here
+          break;
+        case INSTR_TYPE_DATA_PROCESSING_AND_ELS:
+          encode_data_processing_and_els(di, instr); 
+          break;
+        case INSTR_TYPE_DATA_PROCESSING_IMM:
+          encode_data_processing_imm(di, instr); 
+          break;
+        case INSTR_TYPE_LOAD_STORE1:
+          encode_load_store_1(di, instr); 
+          break;
+        case INSTR_TYPE_LOAD_STORE2_AND_MEDIA:
+          encode_load_store_2_and_media(di, instr); 
+          break;
+        case INSTR_TYPE_LOAD_STORE_MULTIPLE:
+          encode_load_store_multiple(di, instr); 
+          break;
+        case INSTR_TYPE_BRANCH:
+          encode_branch(di, instr); 
+          break;
+        case INSTR_TYPE_COPROCESSOR_DATA_MOVEMENT:
+          encode_coprocessor_data_movement(di, instr); 
+          break;
+        case INSTR_TYPE_ADVANCED_COPROCESSOR_AND_SYSCALL: 
+          encode_advanced_coprocessor_and_syscall(di, instr); 
+          break;
+        default:
+            CLIENT_ASSERT(false, "instr_encode error: invalid instr_type");
+            return;
+        
+    }
+
 #ifdef NO
 /* TODO SJF Eh? */
 /* Indirect branches */
@@ -1279,13 +1825,6 @@ instr_encode_common(dcontext_t *dcontext, instr_t *instr, byte *copy_pc, byte *f
         }
     }
 
-    /* fill out the other fields of di */
-    /* used for PR 253327 addr32 rip-relative and instr_t targets */
-    di.start_pc = cache_pc;
-    di.final_pc = final_pc;
-
-    di.size_immed = OPSZ_NA;
-    di.size_immed2 = OPSZ_NA;
 
     /* instr_t* operand support */
     di.cur_note = (ptr_int_t) instr->note;
@@ -1326,103 +1865,9 @@ instr_encode_common(dcontext_t *dcontext, instr_t *instr, byte *copy_pc, byte *f
     }
 #endif
 
-    /* vex prefix must be last and if present includes prefix bytes, rex flags,
-     * and some opcode bytes
-     */
-#ifdef NO
-//SJF No vex?? What is vex??? 
-        CLIENT_ASSERT(!TEST(PREFIX_VEX_L, di.prefixes), "internal encode vex error");
-
-        /* output the opcode required prefix byte (if needed) */
-        if (info->opcode > 0xffffff &&
-            /* if OPCODE_{MODRM,SUFFIX} there can be no prefix-opcode byte */
-            !TESTANY(OPCODE_MODRM|OPCODE_SUFFIX, info->opcode)) {
-            /* prefix byte is part of opcode */
-            *field_ptr = (byte)(info->opcode >> 24); 
-            field_ptr++;
-        }
-
-        /* NOTE - the rex prefix must be the last prefix (even if the other prefix is
-         * part of the opcode). Xref PR 271878. */
-        if (TESTANY(PREFIX_REX_ALL, di.prefixes)) {
-            byte rexval = REX_PREFIX_BASE_OPCODE;
-            if (TEST(PREFIX_REX_W, di.prefixes))
-                rexval |= REX_PREFIX_W_OPFLAG;
-            if (TEST(PREFIX_REX_R, di.prefixes))
-                rexval |= REX_PREFIX_R_OPFLAG;
-            if (TEST(PREFIX_REX_X, di.prefixes))
-                rexval |= REX_PREFIX_X_OPFLAG;
-            if (TEST(PREFIX_REX_B, di.prefixes))
-                rexval |= REX_PREFIX_B_OPFLAG;
-            *field_ptr = rexval;
-            field_ptr++;
-        }
-#endif
 #ifdef NO
 //SJF Opcodes completly diff for ARM
-    /* second opcode byte, if there is one */
-    if (TEST(OPCODE_TWOBYTES, info->opcode)) {
-        *field_ptr = (byte)((info->opcode & 0x0000ff00) >> 8); 
-        field_ptr++;
-    }
-    /* /n: part of opcode is in reg of modrm byte */
-    if (TEST(OPCODE_REG, info->opcode)) {
-        CLIENT_ASSERT(di.reg == 8,
-                      "instr_encode error: /n opcode inconsistency"); /* unset */
-        di.reg = (byte) (info->opcode & 0x00000007);
-        if (di.mod == 5) {
-            /* modrm only used for opcode
-             * mod and rm are arbitrary: seem to be set to all 1's by compilers
-             */
-            di.mod = 3;
-            di.rm = 7;
-        }
-    }
-    /* opcode depends on entire modrm byte */
-    if (!TEST(REQUIRES_VEX, info->flags) && TEST(OPCODE_MODRM, info->opcode)) {
-        /* modrm is encoded in prefix byte */
-        *field_ptr = (byte)(info->opcode >> 24); 
-        field_ptr++;
-        di.mod = 5; /* prevent modrm output from opnds below */
-    }
-
-    /* output modrm byte(s) */
-    if (di.mod != 5) {
-        byte modrm;
-        if (di.reg == 8) /* if never set, set to 0 */
-            di.reg = 0;
-        CLIENT_ASSERT(di.mod <= 0x3 && di.reg <= 0x7 && di.rm <= 0x7,
-                      "encode error: invalid modrm");
-        modrm = MODRM_BYTE(di.mod, di.reg, di.rm);
-        *field_ptr = modrm;
-        field_ptr++;
-        if (di.has_sib) {
-            byte sib = (byte) ((di.scale << 6) | (di.index << 3) | (di.base));
-            CLIENT_ASSERT(di.scale <= 0x3 && di.index <= 0x7 && di.base <= 0x7,
-                          "encode error: invalid scale/index/base");
-            *field_ptr = sib;
-            field_ptr++;
-        }
-        if (di.has_disp) {
-            if (di.mod == 1) {
-                *field_ptr = (byte) di.disp;
-                field_ptr++;
-            } else if (!X64_MODE(&di) && TEST(PREFIX_ADDR, di.prefixes)) {
-                CLIENT_ASSERT_TRUNCATE(*((short *)field_ptr), ushort, di.disp,
-                                       "encode error: modrm disp too large for 16-bit");
-                *((short *)field_ptr) = (ushort) di.disp;
-                field_ptr+=2;
-            } else {
-                if (X64_MODE(&di) && di.mod == 0 && di.rm == 5) {
-                    /* pc-relative, but we don't know size of immeds yet */
-                    disp_relativize_at = field_ptr;
-                } else {
-                    *((int *)field_ptr) = di.disp;
-                }
-                field_ptr+=4;
-            }
-        }
-    }
+    //Sets di contents here
 
     /* output immed byte(s) */
     /* HACK: to tell an instr target of a control transfer instruction
@@ -1445,24 +1890,6 @@ instr_encode_common(dcontext_t *dcontext, instr_t *instr, byte *copy_pc, byte *f
         field_ptr++;
     }
 
-    if (disp_relativize_at != NULL) {
-        CLIENT_ASSERT(X64_MODE(&di), "encode error: no rip-relative in x86 mode!");
-        if (check_reachable &&
-            !CHECK_TRUNCATE_TYPE_int(di.disp_abs - (field_ptr - copy_pc + final_pc)) &&
-            /* PR 253327: we auto-add addr prefix for out-of-reach low tgt */
-            (!TEST(PREFIX_ADDR, di.prefixes) || (ptr_uint_t)di.disp_abs > INT_MAX)) {
-            CLIENT_ASSERT(!assert_reachable,
-                          "encode error: rip-relative reference out of 32-bit reach");
-            return NULL;
-        }
-        *((int *)disp_relativize_at) = (int)
-            (di.disp_abs - (field_ptr - copy_pc + final_pc));
-        /* in case caller is caching these bits (in particular,
-         * private_instr_encode()), set rip_rel_pos */
-        CLIENT_ASSERT(CHECK_TRUNCATE_TYPE_byte(disp_relativize_at - di.start_pc),
-                      "internal encode error: rip-relative instr pos too large");
-        IF_X64(instr_set_rip_rel_pos(instr, (byte)(disp_relativize_at - di.start_pc)));
-    }
 #endif
 
 #if DEBUG_DISABLE /* turn back on if want to debug */

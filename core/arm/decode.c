@@ -1222,15 +1222,45 @@ decode_operand(decode_info_t *di, byte optype, opnd_size_t opsize, opnd_t *opnd)
  * Exported routines
  */
 
+/* Decodes only enough of the instruction at address pc to determine
+ * its eflags usage, which is returned in usage as EFLAGS_ constants
+ * or'ed together.
+ * This corresponds to halfway between Level 1 and Level 2: a Level 1 decoding
+ * plus eflags information (usually only at Level 2).
+ * Returns the address of the next byte after the decoded instruction.
+ * Returns NULL on decoding an invalid instruction.
+ *
+ * N.B.: an instruction that has an "undefined" effect on eflags is considered
+ * to write to eflags.  This is fine since programs shouldn't be reading
+ * eflags after an undefined modification to them, but a weird program that
+ * relies on some undefined eflag thing might behave differently under dynamo
+ * than not!
+ */
 byte *
-decode_flags1_usage(dcontext_t *dcontext, byte *pc, uint *usage)
+decode_cpsr_usage(dcontext_t *dcontext, byte *pc, uint *usage)
 {
     const instr_info_t *info;
     decode_info_t di;
 
     /* don't decode immeds, instead use decode_next_pc, it's faster */
     read_instruction(pc, pc, &info, &di, true /* just opcode */ _IF_DEBUG(true));
-    *usage = info->flags1;
+    *usage = info->cpsr;
+    pc = decode_next_pc(dcontext, pc);
+    /* failure handled fine -- we'll go ahead and return the NULL */
+
+    return pc;
+}
+
+
+byte *
+decode_opcode_usage(dcontext_t *dcontext, byte *pc, uint *usage)
+{
+    const instr_info_t *info;
+    decode_info_t di;
+
+    /* don't decode immeds, instead use decode_next_pc, it's faster */
+    read_instruction(pc, pc, &info, &di, true /* just opcode */ _IF_DEBUG(true));
+    *usage = info->opcode;
     pc = decode_next_pc(dcontext, pc);
     /* failure handled fine -- we'll go ahead and return the NULL */
 
@@ -1278,7 +1308,6 @@ decode_opcode(dcontext_t *dcontext, byte *pc, instr_t *instr)
         CLIENT_ASSERT(!instr_valid(instr), "decode_opcode: invalid instr");
         return NULL;
     }
-    instr_set_eflags_valid(instr, true);
     /* operands are NOT set */
     instr_set_operands_valid(instr, false);
     /* raw bits are valid though and crucial for encoding */
@@ -1339,8 +1368,6 @@ decode_common(dcontext_t *dcontext, byte *pc, byte *orig_pc, instr_t *instr)
         CLIENT_ASSERT(!instr_valid(instr), "decode: invalid instr");
         return NULL;
     }
-    instr->eflags = info->eflags;
-    instr_set_eflags_valid(instr, true);
     /* since we don't use set_src/set_dst we must explicitly say they're valid */
     instr_set_operands_valid(instr, true);
     /* read_instruction doesn't set di.len since only needed for rip-relative opnds */

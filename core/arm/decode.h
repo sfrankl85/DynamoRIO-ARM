@@ -198,7 +198,7 @@ typedef struct instr_info_t {
      *                       the 2nd byte is stored as "1st" and 3rd as "2nd").
      */
     int          instr_type;
-    unsigned int flags1;  //SJF Flags at bits[24,21]
+    unsigned int opcode;  //SJF opcode/opc flags at bits[24,21]
     const char *name;
     /* operands
      * the opnd_size_t will instead be reg_id_t for TYPE_*REG*
@@ -212,7 +212,8 @@ typedef struct instr_info_t {
     /* ARM opcodes are split across multiple bits. Soemtimes the second
        one isnt even used. It is used for regs or imms or whatever. */ 
 
-    byte flags2; /* flags and possible opcode2 */
+    byte flags; /* flags and possible opcode2 */
+    byte cpsr; /* CPSR flags  */
     ptr_int_t code; /* for PREFIX: one of the PREFIX_ constants, or SEG_ constant
                      * for EXTENSION and *_EXT: index into extensions table
                      * for OP_: pointer to next entry of that opcode
@@ -300,7 +301,7 @@ typedef struct decode_info_t {
            Not altering it too much as not sure what most of it does */
     byte cond;
     byte instr_type;
-    byte flags;
+    byte opcode;
 
     /* immed info */
     opnd_size_t size_immed;
@@ -532,7 +533,7 @@ DR_API
  */
 #endif
 byte *
-decode_eflags_usage(dcontext_t *dcontext, byte *pc, uint *usage);
+decode_cpsr_usage(dcontext_t *dcontext, byte *pc, uint *usage);
 
 DR_UNS_API
 /**

@@ -1981,16 +1981,6 @@ do_forward_check_eflags(instr_t *inst, uint eflags, uint eflags_valid, uint efla
     return false;
 }
 
-/* looks at the eflags of the instr passed in and checks to see if there
- * is any dependency on the eflags written, gives up at CTI's
- * return true if no dependency found
- */
-static bool 
-forward_check_eflags(instr_t *inst, prop_state_t *state)
-{
-    return do_forward_check_eflags(inst, 0, 0, EFLAGS_WRITE_TO_READ(instr_get_eflags(inst) & EFLAGS_WRITE_ALL), state); 
-}
-
 static instr_t *
 make_imm_store(prop_state_t *state, instr_t *inst, int value)
 {
@@ -2043,16 +2033,12 @@ make_to_nop(prop_state_t *state, instr_t *inst, const char *pre,
             const char *post, const char *fail)
 {
     instr_t *backup;
-    if (forward_check_eflags(inst, state)) {
-        loginst(state->dcontext, 3, inst, pre);
-        backup = INSTR_CREATE_nop(state->dcontext);
-        replace_inst(state->dcontext, state->trace, inst, backup);
-        loginst(state->dcontext, 3, backup, post);
-        return backup;
-    } else {
-        loginst(state->dcontext, 3, inst, fail);
-        return inst;
-    }
+
+    loginst(state->dcontext, 3, inst, pre);
+    backup = INSTR_CREATE_nop(state->dcontext);
+    replace_inst(state->dcontext, state->trace, inst, backup);
+    loginst(state->dcontext, 3, backup, post);
+    return backup;
 }
 
 /* uses < 0 as short for if top bit is set */
@@ -3519,115 +3505,6 @@ stack_adjust_combiner(dcontext_t *dcontext, app_pc tag, instrlist_t *trace)
  * returns, may not always be safe
  */
 
-/* checks to see if the eflags are written before they are read */
-static bool 
-check_eflags_cr(instr_t *inst)
-{
-    uint eflags = EFLAGS_READ_6;
-    uint inst_eflags;
-    for (; inst != NULL; inst = instr_get_next(inst)) {
-        if (instr_is_cti(inst) || instr_is_interrupt(inst))
-            return false;
-        inst_eflags = instr_get_eflags(inst);
-        if ((eflags & inst_eflags) != 0)
-            return false;
-        eflags &= ~(EFLAGS_WRITE_TO_READ(inst_eflags));
-        if (eflags == 0)
-            return true;
-    }
-    return false;
-}
-
-/* removes the return code, pattern matches on our return macro */
-static instr_t *
-remove_return_no_save_eflags(dcontext_t *dcontext, instrlist_t *trace, instr_t *inst)
-{
-#ifdef NO //TODO SJF
-    instr_t *inst2;
-    int to_pop = 4;
-    opnd_t replacement;
-#ifdef DEBUG
-    opt_stats_t.num_returns_removed++;
-    opt_stats_t.num_return_instrs_removed += 4;
-#endif
-
-    inst2 = instr_get_next(inst);
-    ASSERT(instr_get_opcode(inst) == OP_mov_st);
-    loginst(dcontext, 3, inst, "removing");
-    remove_inst(dcontext, trace, inst);
-    inst = inst2;
-
-    inst2 = instr_get_next(inst);
-    ASSERT(instr_get_opcode(inst) == OP_pop);
-    loginst(dcontext, 3, inst, "removing");
-    remove_inst(dcontext, trace, inst);
-    inst = inst2;
-
-    inst2 = instr_get_next(inst);
-    if (instr_get_opcode(inst) == OP_lea) {
-        /* this popping of the stack, lea */
-        to_pop += opnd_get_disp(instr_get_src(inst, 0));
-        loginst(dcontext, 3, inst, "removing");
-        remove_inst(dcontext, trace, inst);
-        inst = inst2;
-#ifdef DEBUG
-        opt_stats_t.num_return_instrs_removed++;
-#endif
-    }
-
-    inst2 = instr_get_next(inst);
-    ASSERT(instr_get_opcode(inst) == OP_cmp);
-    loginst(dcontext, 3, inst, "removing");
-    remove_inst(dcontext, trace, inst);
-    inst = inst2;
-
-    inst2 = instr_get_next(inst);
-    ASSERT(instr_get_opcode(inst) == OP_jne);
-    loginst(dcontext, 3, inst, "removing");
-    remove_inst(dcontext, trace, inst);
-    inst = inst2;
-
-    inst2 = instr_get_next(inst);
-    ASSERT(instr_get_opcode(inst) == OP_mov_ld);
-    loginst(dcontext, 3, inst, "removing");
-    remove_inst(dcontext, trace, inst);
-    inst = inst2;
-
-    /* check for add here, is not uncommon to pop off the args after a return, if so */
-    /* can save an instruction */
-    if ((instr_get_opcode(inst) == OP_add) && opnd_is_reg(instr_get_dst(inst, 0)) && (opnd_get_reg(instr_get_dst(inst, 0)) == REG_ESP) && opnd_is_immed_int(instr_get_src(inst, 0))) {
-        to_pop += (int) opnd_get_immed_int(instr_get_src(inst, 0));
-#ifdef DEBUG
-        opt_stats_t.num_return_instrs_removed++;
-#endif
-        if (to_pop == 0) {
-#ifdef DEBUG
-            opt_stats_t.num_return_instrs_removed++;
-#endif
-            return inst;
-        }
-        if ((to_pop <= 127) && (to_pop >= -128)) {
-            replacement = OPND_CREATE_INT8(to_pop);
-        } else {
-            replacement = OPND_CREATE_INT32(to_pop);
-        }
-        loginst(dcontext, 3, inst, " updating stack adjustment :");
-        instr_set_src(inst, 0, replacement);
-        loginst(dcontext, 3, inst, " to :");
-        return inst;
-    }
-    if ((to_pop <= 127) && (to_pop >= -128)) {
-        replacement = OPND_CREATE_INT8(to_pop);
-    } else {
-        replacement = OPND_CREATE_INT32(to_pop);
-    }
-    inst2 = INSTR_CREATE_add_imm(dcontext, opnd_create_reg(REG_ESP), replacement);
-    loginst(dcontext, 3, inst2, "adjusting stack");
-    instrlist_preinsert(trace, inst, inst2);
-    return inst2;
-#endif //NO
-}
-
 /* removes the return code, pattern matches on our return macro */
 static instr_t *
 remove_return(dcontext_t *dcontext, instrlist_t *trace, instr_t *inst)
@@ -4695,6 +4572,7 @@ replace_self_loop_with_instr(dcontext_t *dcontext, app_pc tag,
 static instr_t *
 get_decision_instr(instr_t *jmp)
 {
+#ifdef NO
     instr_t *inst;
     uint flag_tested = EFLAGS_READ_TO_WRITE(instr_get_eflags(jmp));
     uint eflags;
@@ -4708,6 +4586,7 @@ get_decision_instr(instr_t *jmp)
         }
         inst = instr_get_prev(inst);
     }
+#endif
     return NULL;
 }
 

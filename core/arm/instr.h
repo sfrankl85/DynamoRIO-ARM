@@ -112,11 +112,16 @@ struct instr_info_t;
 /* Enum to store the type of the instruction */
 enum
 {
-  INSTR_TYPE_UNKNOWN,
+  INSTR_TYPE_UNDECODED = 0,
 
-  INSTR_TYPE_DATA_PROCESSING,
-  INSTR_TYPE_DATA_MOVEMENT,
-  INSTR_TYPE_DATA_EXECUTION,
+  INSTR_TYPE_DATA_PROCESSING_AND_ELS, //and extra load/store instructions
+  INSTR_TYPE_DATA_PROCESSING_IMM,
+  INSTR_TYPE_LOAD_STORE1,
+  INSTR_TYPE_LOAD_STORE2_AND_MEDIA,
+  INSTR_TYPE_LOAD_STORE_MULTIPLE,
+  INSTR_TYPE_BRANCH,
+  INSTR_TYPE_COPROCESSOR_DATA_MOVEMENT,
+  INSTR_TYPE_ADVANCED_COPROCESSOR_AND_SYSCALL,
 
   INSTR_TYPE_INVALID
 }; 
@@ -1763,8 +1768,8 @@ enum {
     INSTR_OPERANDS_VALID        = 0x00010000,
     /* meta-flag */
     INSTR_FIRST_NON_LINK_SHARED_FLAG = INSTR_OPERANDS_VALID,
-    INSTR_EFLAGS_VALID          = 0x00020000,
-    INSTR_EFLAGS_6_VALID        = 0x00040000,
+    INSTR_CPSR_VALID          = 0x00020000,
+    INSTR_CPSR_6_VALID        = 0x00040000,
     INSTR_RAW_BITS_VALID        = 0x00080000,
     INSTR_RAW_BITS_ALLOCATED    = 0x00100000,
 /* DR_API EXPORT BEGIN */
@@ -1846,15 +1851,11 @@ struct _instr_t {
            Cond is the 4 bit condition code
            instrtype is bits[27,25] and specifiy the class
            of instruciton that the instr belongs to(data processing/movement)
-           flags1 contains P,U,B,W,L,N,S flags depending on the instructions type. */
+           opcode contains P,U,B,W,L,N,S flags( which determine opcode )
+           depending on the instructions type. */
     byte    cond;
     byte    instr_type;
-    byte    flags1;
-
-#ifdef X64
-    /* PR 251479: offset into instr's raw bytes of rip-relative 4-byte displacement */
-    byte    rip_rel_pos;
-#endif
+    byte    opcode;
 
     /* we dynamically allocate dst and src arrays b/c x86 instrs can have
      * up to 8 of each of them, but most have <=2 dsts and <=3 srcs, and we
@@ -1879,6 +1880,7 @@ struct _instr_t {
     /* SJF Flags 2 contains flags or possible op2 depening on instruction type */
     uint    flags2;   /* contains flags contained in bits[7,4] of the instr
                          May contain opcode for coprocessor instrs */ 
+    uint    cpsr;     /* CPSR flags */
 
     /* this field is for the use of passes as an annotation.
      * it is also used to hold the offset of an instruction when encoding
@@ -2370,11 +2372,6 @@ instr_opcode_valid(instr_t *instr);
 bool 
 instr_arith_flags_valid(instr_t *instr);
 
-/* Sets instr's arithmetic flags (the 6 bottom eflags) to be valid if
- * valid is true, invalid otherwise. */
-void 
-instr_set_arith_flags_valid(instr_t *instr, bool valid);
-
 /* Returns true iff instr's eflags are up to date. */
 bool 
 instr_eflags_valid(instr_t *instr);
@@ -2386,7 +2383,7 @@ instr_set_eflags_valid(instr_t *instr, bool valid);
 DR_API
 /** Returns \p instr's eflags use as EFLAGS_ constants or'ed together. */
 uint 
-instr_get_eflags(instr_t *instr);
+instr_get_cpsr(instr_t *instr);
 
 DR_API
 /** Returns the eflags usage of instructions with opcode \p opcode,
@@ -2602,13 +2599,6 @@ instr_get_prefix_flag(instr_t *instr, uint prefix);
  */
 void 
 instr_set_prefixes(instr_t *instr, uint prefixes);
-
-/* NOT EXPORTED because we want to limit a client to seeing only the
- * handful of PREFIX_ flags we're exporting.
- * Returns instr's prefixes as PREFIX_ constants or-ed together.
- */
-uint 
-instr_get_prefixes(instr_t *instr);
 
 /* DR_API EXPORT BEGIN */
 #ifdef X64

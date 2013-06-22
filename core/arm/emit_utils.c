@@ -3435,36 +3435,6 @@ emit_fcache_enter_common(dcontext_t *dcontext, generated_code_t *code, byte *pc,
     /* restore eflags temporarily using dstack */
     APP(&ilist, INSTR_CREATE_msr_cpsr(dcontext, DR_REG_R0));
 
-#ifdef NO
-//TODO SJF Leave xmm/qr stuff for now
-    if (preserve_qr_caller_saved()) {
-        /* PR 264138: we must preserve xmm0-5 if on a 64-bit kernel.
-         * Rather than try and optimize we save/restore on every cxt
-         * sw.  The xmm field is aligned, so we can use movdqa/movaps,
-         * though movdqu is stated to be as fast as movdqa when aligned:
-         * but if so, why have two versions?  Is it only loads and not stores
-         * for which that is true?  => PR 266305.
-         * It's not clear that movdqa is any faster (and its opcode is longer):
-         * movdqa and movaps are listed as the same latency and throughput in
-         * the AMD optimization guide.  Yet examples of fast memcpy online seem
-         * to use movdqa when sse2 is available.
-         * Note that mov[au]p[sd] and movdq[au] are functionally equivalent.
-         */
-        /* FIXME i#438: once have SandyBridge processor need to measure
-         * cost of vmovdqu and whether worth arranging 32-byte alignment
-         */
-        int i;
-        uint opcode = move_mm_reg_opcode(true/*align32*/, true/*align16*/);
-        ASSERT(proc_has_feature(FEATURE_SSE));
-        for (i=0; i<NUM_XMM_SAVED; i++) {
-            APP(&ilist, instr_create_1dst_1src
-                (dcontext, opcode, opnd_create_reg
-                 (REG_SAVED_XMM0 + (reg_id_t)i),
-                 OPND_DC_FIELD(absolute, dcontext,
-                               OPSZ_SAVED_XMM, XMM_OFFSET + i*XMM_SAVED_REG_SIZE)));
-        }
-    }
-#endif
     APP(&ilist, RESTORE_FROM_DC(dcontext, REG_RR0, R0_OFFSET));
     APP(&ilist, RESTORE_FROM_DC(dcontext, REG_RR3, R3_OFFSET));
     APP(&ilist, RESTORE_FROM_DC(dcontext, REG_RR1, R1_OFFSET));

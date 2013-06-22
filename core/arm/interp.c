@@ -2760,12 +2760,6 @@ client_process_bb(dcontext_t *dcontext, build_bb_t *bb)
      * FIXME: should we not do eflags tracking while decoding, then, and always
      * do it afterward?
      */
-    /* for -fast_client_decode, we don't support the client changing the app code */
-    if (!INTERNAL_OPTION(fast_client_decode)) {
-        bb->eflags = forward_eflags_analysis(dcontext, bb->ilist,
-                                             instrlist_first(bb->ilist));
-    }
-
     if (TEST(DR_EMIT_STORE_TRANSLATIONS, emitflags)) {
         /* PR 214962: let client request storage instead of recreation */
         bb->flags |= FRAG_HAS_TRANSLATION_INFO;
@@ -6392,11 +6386,6 @@ mangle_trace(dcontext_t *dcontext, instrlist_t *ilist, monitor_data_t *md)
                 /* We must do proper analysis so that state translation matches
                  * created traces in whether eflags are restored post-cmp
                  */
-                uint next_flags = forward_eflags_analysis(dcontext, ilist,
-                                                          instr_get_next(inst));
-                next_flags = instr_eflags_to_fragment_eflags(next_flags);
-                LOG(THREAD, LOG_INTERP, 4, "next_flags for fixup_last_cti: 0x%x\n",
-                    next_flags);
                 fixup_last_cti(dcontext, ilist, md->blk_info[blk+1].info.tag,
                                next_flags,
                                md->trace_flags, NULL, NULL,
@@ -6449,35 +6438,6 @@ instr_eflags_to_fragment_eflags(uint instr_eflags)
         frag_eflags |= FRAG_WRITES_EFLAGS_OF;
     }
     return frag_eflags;
-}
-
-/* Returns one of these flags, defined in instr.h:
- *   EFLAGS_WRITE_6   = writes all 6 flags before reading any
- *   EFLAGS_WRITE_OF  = writes OF before reading it
- *   EFLAGS_READ_6    = reads some of 6 before writing
- *   EFLAGS_READ_OF   = reads OF before writing OF
- *   0                = no information before 1st cti
- */
-uint
-forward_eflags_analysis(dcontext_t *dcontext, instrlist_t *ilist, instr_t *instr)
-{
-    instr_t *in;
-    uint eflags_6 = 0; /* holds flags written so far (in read slots) */
-    int eflags_result = 0;
-    for (in = instr; in != NULL; in = instr_get_next_expanded(dcontext, ilist, in)) {
-        if (!instr_valid(in) || instr_is_cti(in)) {
-            /* give up */
-            break;
-        }
-        if (eflags_result != EFLAGS_WRITE_6 && eflags_result != EFLAGS_READ_OF)
-            eflags_result = eflags_analysis(in, eflags_result, &eflags_6);
-        DOLOG(4, LOG_INTERP, {
-            loginst(dcontext, 4, in, "forward_eflags_analysis");
-            LOG(THREAD, LOG_INTERP, 4, "\tinstr %x => %x\n",
-                instr_get_eflags(in), eflags_result);
-        });
-    }
-    return eflags_result;
 }
 
 /* This translates f's code into an instrlist_t and returns it.

@@ -2000,18 +2000,65 @@ private_instr_encode(dcontext_t *dcontext, instr_t *instr, bool always_cache)
 #endif //NO
 }
 
-#define inlined_instr_get_opcode(instr) \
+#define inlined_instr_get_instr_type(instr) \
     (IF_DEBUG_(CLIENT_ASSERT(sizeof(*instr) == sizeof(instr_t), "invalid type")) \
-     (((instr)->instr_type == OP_UNDECODED) ? \
+     (((instr)->instr_type == INSTR_TYPE_UNDECODED) ? \
       (instr_decode_with_current_dcontext(instr), (instr)->instr_type) : \
       (instr)->instr_type))
+
+#define inlined_instr_get_opcode(instr) \
+    (IF_DEBUG_(CLIENT_ASSERT(sizeof(*instr) == sizeof(instr_t), "invalid type")) \
+     (((instr)->opcode == OP_UNDECODED) ? \
+      (instr_decode_with_current_dcontext(instr), (instr)->opcode) : \
+      (instr)->opcode))
+
 int
 instr_get_opcode(instr_t *instr)
 {
     return inlined_instr_get_opcode(instr);
 }
+
+int
+instr_get_instr_type(instr_t *instr)
+{
+    return inlined_instr_get_instr_type(instr);
+}
+
+uint
+instr_get_cpsr(instr_t *instr)
+{   
+    if ((instr->flags & INSTR_CPSR_VALID) == 0) {
+        bool encoded = false;
+        dcontext_t *dcontext = get_thread_private_dcontext();
+        /* we assume we cannot trust the opcode independently of operands */
+        if (instr_needs_encoding(instr)) {
+            int len;
+            encoded = true;
+            len = private_instr_encode(dcontext, instr, true/*cache*/);
+            if (len == 0) {
+                if (!instr_is_label(instr))
+                    CLIENT_ASSERT(false, "instr_get_eflags: invalid instr");
+                return 0;
+            }
+        }
+        decode_cpsr_usage(dcontext, instr_get_raw_bits(instr), &instr->cpsr);
+        if (encoded) {
+            /* if private_instr_encode passed us back whether it's valid
+             * to cache (i.e., non-meta instr that can reach) we could skip
+             * this invalidation for such cases */
+            instr_free_raw_bits(dcontext, instr);
+            CLIENT_ASSERT(!instr_raw_bits_valid(instr), "internal encoding buf error");
+        }
+        /* even if decode fails, set valid to true -- ok?  FIXME */
+        instr_set_cpsr_valid(instr, true);
+    }
+    return instr->cpsr;
+}
+
+
 /* in rest of file, directly de-reference for performance (PR 622253) */
 #define instr_get_opcode inlined_instr_get_opcode
+#define instr_get_instr_type inlined_instr_get_instr_type_
 
 static inline void
 instr_being_modified(instr_t *instr, bool raw_bits_valid)
@@ -2023,6 +2070,21 @@ instr_being_modified(instr_t *instr, bool raw_bits_valid)
     /* PR 214962: if client changes our mangling, un-mark to avoid bad translation */
     instr_set_our_mangling(instr, false);
 }
+
+void
+instr_set_opcode(instr_t *instr, int opcode)
+{
+    instr->opcode = opcode;
+    /* if we're modifying opcode, don't use original bits to encode! */
+    instr_being_modified(instr, false/*raw bits invalid*/);
+    /* do not assume operands are valid, they are separate from opcode,
+     * but if opcode is invalid operands shouldn't be valid
+     */
+    CLIENT_ASSERT((opcode != OP_INVALID && opcode != OP_UNDECODED) ||
+                  !instr_operands_valid(instr),
+                  "instr_set_opcode: operand-opcode validity mismatch");
+}
+
 
 void
 instr_set_instr_type(instr_t *instr, int instr_type)
@@ -2059,6 +2121,13 @@ instr_get_app_pc(instr_t *instr)
     return instr_get_translation(instr);
 }
 
+bool 
+instr_instr_type_valid(instr_t *instr)
+{
+    return (instr->instr_type != INSTR_TYPE_UNDECODED && instr->opcode != INSTR_TYPE_INVALID);
+}
+
+
 /* Returns true iff instr's opcode is valid.  If the opcode is not
  * OP_INVALID or OP_UNDECODED it is assumed to be valid.  However, calling
  * instr_get_opcode() will attempt to decode an OP_UNDECODED opcode, hence the
@@ -2067,7 +2136,7 @@ instr_get_app_pc(instr_t *instr)
 bool 
 instr_opcode_valid(instr_t *instr)
 {
-    return (instr->instr_type != OP_INVALID && instr->instr_type != OP_UNDECODED);
+    return (instr->opcode != OP_INVALID && instr->opcode != OP_UNDECODED);
 }
 
 
@@ -2383,6 +2452,19 @@ instr_exit_stub_code(instr_t *instr)
 }
 #endif
 
+void        
+instr_set_cpsr_valid(instr_t *instr, bool valid)
+{           
+    if (valid) {
+        instr->flags |= INSTR_CPSR_VALID;
+        instr->flags |= INSTR_CPSR_6_VALID;
+    } else {
+        /* assume that arith flags are also invalid */
+        instr->flags &= ~INSTR_CPSR_VALID;
+        instr->flags &= ~INSTR_CPSR_6_VALID;
+    }
+}
+
 void
 instr_set_operands_valid(instr_t *instr, bool valid)
 {
@@ -2488,7 +2570,7 @@ instr_allocate_raw_bits(dcontext_t *dcontext, instr_t *instr, uint num_bytes)
     instr->flags |= INSTR_RAW_BITS_VALID;
     instr->flags |= INSTR_RAW_BITS_ALLOCATED;
     instr->flags &= ~INSTR_OPERANDS_VALID;
-    instr->flags &= ~INSTR_EFLAGS_VALID;
+    instr->flags &= ~INSTR_CPSR_VALID;
 #ifdef X64
     instr_set_rip_rel_valid(instr, false); /* relies on original raw bits */
 #endif
@@ -2610,46 +2692,6 @@ instr_length(dcontext_t *dcontext, instr_t *instr)
 
     /* SJF All 4 bytes */
     return 4;
-#ifdef NO
-/* TODO SJF Only instruciton length is 4 bytes for ARM 2 for THUMB */
-    /* hardcode length for cti */
-    switch (instr_get_opcode(instr)) {
-    case OP_jmp:
-    case OP_call:
-        return 5;
-    case OP_jb: case OP_jnb: case OP_jbe: case OP_jnbe:
-    case OP_jl: case OP_jnl: case OP_jle: case OP_jnle:
-    case OP_jo: case OP_jno: case OP_jp: case OP_jnp:
-    case OP_js: case OP_jns: case OP_jz: case OP_jnz:
-        return 6 + ((TEST(PREFIX_JCC_TAKEN, instr_get_prefixes(instr)) ||
-                     TEST(PREFIX_JCC_NOT_TAKEN, instr_get_prefixes(instr))) ? 1 : 0);
-    case OP_jb_short: case OP_jnb_short: case OP_jbe_short: case OP_jnbe_short:
-    case OP_jl_short: case OP_jnl_short: case OP_jle_short: case OP_jnle_short:
-    case OP_jo_short: case OP_jno_short: case OP_jp_short: case OP_jnp_short:
-    case OP_js_short: case OP_jns_short: case OP_jz_short: case OP_jnz_short:
-        return 2 + ((TEST(PREFIX_JCC_TAKEN, instr_get_prefixes(instr)) ||
-                     TEST(PREFIX_JCC_NOT_TAKEN, instr_get_prefixes(instr))) ? 1 : 0);
-        /* alternative names (e.g., OP_jae_short) are equivalent, 
-         * so don't need to list them */
-    case OP_jmp_short: 
-        return 2;
-    case OP_jecxz:
-    case OP_loop:
-    case OP_loope:
-    case OP_loopne: 
-        if (opnd_get_reg(instr_get_src(instr, 1)) != REG_RR1
-            IF_X64(&& !instr_get_x86_mode(instr)))
-            return 3; /* need addr prefix */
-        else
-            return 2;
-    case OP_LABEL:
-        return 0;
-    }
-
-
-    /* else, encode to find length */
-    return private_instr_encode(dcontext, instr, false/*don't need to cache*/);
-#endif
 }
 
 /***********************************************************************/
@@ -2918,11 +2960,6 @@ instr_decode(dcontext_t *dcontext, instr_t *instr)
 {
     if (!instr_operands_valid(instr)) {
         byte *next_pc;
-#ifdef X64
-        bool rip_rel_valid = instr_rip_rel_valid(instr);
-        /* decode() will use the current dcontext mode, but we want the instr mode */
-        bool old_mode = set_x86_mode(dcontext, instr_get_x86_mode(instr));
-#endif
         DEBUG_EXT_DECLARE(int old_len = instr->length;)
         CLIENT_ASSERT(instr_raw_bits_valid(instr), "instr_decode: raw bits are invalid");
         instr_reuse(dcontext, instr);
@@ -2930,13 +2967,6 @@ instr_decode(dcontext_t *dcontext, instr_t *instr)
 #ifndef NOT_DYNAMORIO_CORE_PROPER
         if (expand_should_set_translation(dcontext))
             instr_set_translation(instr, instr_get_raw_bits(instr));
-#endif
-#ifdef X64
-        set_x86_mode(dcontext, old_mode);
-        /* decode sets raw bits which invalidates rip_rel, but
-         * it should still be valid on an up-decode */
-        if (rip_rel_valid)
-            instr_set_rip_rel_pos(instr, instr->rip_rel_pos);
 #endif
         /* ok to be invalid, let caller deal with it */
         CLIENT_ASSERT(next_pc == NULL || (next_pc - instr->bytes == old_len),
@@ -3253,19 +3283,6 @@ bool instr_same(instr_t *inst1,instr_t *inst2)
         if (!opnd_same(instr_get_dst(inst1,a),instr_get_dst(inst2,a)))
             return false;
     }
-
-    /* We encode some prefixes in the operands themselves, such that
-     * we shouldn't consider the whole-instr_t flags when considering
-     * equality of Instrs
-     */
-    if ((instr_get_prefixes(inst1) & PREFIX_SIGNIFICANT) !=
-        (instr_get_prefixes(inst2) & PREFIX_SIGNIFICANT))
-        return false;
-
-#ifdef X64
-    if (instr_get_x86_mode(inst1) != instr_get_x86_mode(inst2))
-        return false;
-#endif
 
     return true;
 }
@@ -3626,7 +3643,7 @@ instr_set_branch_target_pc(instr_t *cti_instr, app_pc pc)
 
 DR_API
 bool
-instr_is_data_execution(int instr_type)
+instr_type_is_data_execution(int instr_type)
 {
     return( instr_type == INSTR_TYPE_DATA_EXECUTION );
 }
@@ -3659,6 +3676,16 @@ instr_is_mov(instr_t *instr)
 {
     int opc = instr_get_opcode(instr);
     return (opc == OP_mov_imm || opc == OP_mov_reg || opc == OP_movt ); 
+}
+
+static bool
+opcode_is_unconditional(int opc)
+{
+   //TODO SJF Insert all uncond instrs here
+   if( opc == OP_bx )
+     return true;
+   else
+     return false;
 }
 
 static bool
@@ -5317,9 +5344,9 @@ instr_create_branch_via_dcontext(instrlist_t* ilist, dcontext_t *dcontext, int o
 {
     opnd_t memopnd = opnd_create_dcontext_field(dcontext, offs);
 
-    instrlist_meta_append(&ilist, INSTR_CREATE_ldr_reg(dcontext, opnd_create_reg(REG_RR7),
+    instrlist_meta_append(ilist, INSTR_CREATE_ldr_reg(dcontext, opnd_create_reg(REG_RR7),
                                                memopnd));
-    instrlist_meta_append(&ilist, INSTR_CREATE_branch_ind(dcontext, opnd_create_reg(REG_RR7)));
+    instrlist_meta_append(ilist, INSTR_CREATE_branch_ind(dcontext, opnd_create_reg(REG_RR7)));
  
     return; 
 }
