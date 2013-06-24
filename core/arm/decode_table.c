@@ -136,7 +136,7 @@ const instr_info_t armv7a_instrs[] = {
     {OP_add_rsr,     dpe, 0x8, "add_rsr",  Ra, xx, Ra,  Ra,  Ra,  0x0,  x, END_LIST}, /*add_rsr()*/
     {OP_add_sp_imm,  dpi, 0x8, "add_sp_imm",  Ra, xx, I12,  xx,  xx,  0x0,  x, END_LIST}, /*add_sp_imm()*/
     {OP_add_sp_reg,  dpe, 0x8, "add_sp_reg",  Ra, xx, Ra,  I5,  xx,  0x0,  x, END_LIST}, /*add_sp_reg()*/
-    {OP_adr,         dpi, 0x8, "adr",  Ra, xx, I12,  xx,  xx,  0x0,  x, END_LIST}, /*adr()*/
+    {OP_adr,         dpi, 0x8, "adr",      Ra, xx, I12,  xx,  xx,  0x0,  x, END_LIST}, /*adr()*/
     {OP_and_imm,     dpi, 0x0, "and_imm",  Ra, xx, Ra,  I12,  xx,  0x0,  x, END_LIST}, /*and_imm()*/
     {OP_and_reg,     dpe, 0x0, "and_reg",  Ra, xx, Ra,  Ra,  I5,  0x0,  x, END_LIST}, /*and_reg()*/
     {OP_and_rsr,     dpe, 0x0, "and_rsr",  Ra, xx, Ra,  Ra,  Ra,  0x0,  x, END_LIST}, /*and_rsr()*/
@@ -149,444 +149,444 @@ const instr_info_t armv7a_instrs[] = {
     {OP_bic_reg,     dpe, 0x1c,"bic_reg",  Ra, xx, Ra,  Ra,  I5,  0x0,  x, END_LIST}, /*bic_reg()*/
     {OP_bic_rsr,     dpe, 0x1c,"bic_rsr",  Ra, xx, Ra,  Ra,  Ra,  0x0,  x, END_LIST}, /*bic_rsr()*/
     {OP_bkpt,        dpe, 0x12,"bkpt",     xx, xx, I12, I4,  xx,  0x0,  x, END_LIST}, /*bkpt()*/
-    {OP_bl,          bra, 0x10,"bl",       xx, xx, I12, xx,  xx,  0x0,  x, END_LIST}, /*bl()*/
-    {OP_blx_imm,     bra, 0x0, "blx_imm",  xx, xx, I12, xx,  xx,  0x0,  x, END_LIST}, /*blx_imm()*/
+    {OP_bl,          bra, 0x10,"bl",       xx, xx, I24, xx,  xx,  0x0,  x, END_LIST}, /*bl()*/
+    {OP_blx_imm,     bra, 0x0, "blx_imm",  xx, xx, I24, xx,  xx,  0x0,  x, END_LIST}, /*blx_imm()*/
     {OP_blx_reg,     dpe, 0x12,"blx_reg",  xx, xx, Ra,  xx,  xx,  0x0,  x, END_LIST}, /*blx_reg()*/
     {OP_bx,          dpe, 0x12,"bx",       xx, xx, Ra,  xx,  xx,  0x0,  x, END_LIST}, /*bx()*/
     {OP_bxj,         dpe, 0x12,"bxj",      xx, xx, Ra,  xx,  xx,  0x0,  x, END_LIST}, /*bxj()*/
-    {OP_cbnz,        0x1, 0x1, "cbnz",     xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*cbnz()*/
-    {op_cbz,         0x1, 0x1, "cbz",      xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*cbz()*/
-    {OP_cdp,         acs, 0x0, "cdp",      xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*cdp()*/
-    {OP_cdp2,        acs, 0x0, "cdp2",     xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*cdp2()*/
+    {OP_cbnz,        0x0, 0x0, "cbnz",     xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*cbnz()*/
+    {op_cbz,         0x0, 0x0, "cbz",      xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*cbz()*/
+    {OP_cdp,         acs, 0x0, "cdp",      xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*cdp()*//* TODO */
+    {OP_cdp2,        acs, 0x0, "cdp2",     xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*cdp2()*//* TODO */
     {OP_clrex,       ls1, 0x17,"clrex",    xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*clrex()*/
-    {OP_clz,         dpe, 0x16,"clz",      xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*clz()*/
-    {OP_cmn_imm,     dpi, 0x17,"cmn_imm",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*cmn_imm()*/
-    {OP_cmn_reg,     dpe, 0x17,"cmn_reg",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*cmn_reg()*/
-    {OP_cmn_rsr,     dpe, 0x17,"cmn_rsr",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*cmn_rsr()*/
-    {OP_cmp_imm,     dpi, 0x15,"cmp_imm",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*cmp_imm()*/
-    {OP_cmp_reg,     dpe, 0x15,"cmp_reg",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*cmp_reg()*/
-    {OP_cmp_rsr,     dpe, 0x15, "cmp_rsr",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*cmp_rsr()*/
-    {OP_cps,         0x1, 0x1, "cps",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*cps()*/
-    {OP_dbg,         dpi, 0x12,"dbg",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*dbg()*/
-    {OP_dmb,         ls1, 0x17,"dmb",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*dmb()*/
-    {OP_dsb,         ls1, 0x17,"dsb",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*dsb()*/
-    {OP_eor_imm,     dpi, 0x2, "eor_imm",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*eor_imm()*/
-    {OP_eor_reg,     dpe, 0x2, "eor_reg",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*eor_reg()*/
-    {OP_eor_rsr,     dpe, 0x2, "eor_rsr",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*eor_rsr()*/
-    {OP_isb,         ls1, 0x17,"isb",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*isb()*/
-    {OP_it,          0x1, 0x1, "it",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*it()*/
-    {OP_ldc_imm,     cdm, 0x0, "ldc_imm",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*ldc_imm()*/
-    {OP_ldc2_imm,    cdm, 0x0, "ldc2_imm",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*ldc2_imm()*/
-    {OP_ldc_lit,     cdm, 0x0, "ldc_lit",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*ldc_lit()*/
-    {OP_ldc2_lit,    cdm, 0x0, "ldc2_lit",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*ldc2_lit()*/
-    {OP_ldm,         lsm, 0x8,"ldm",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*ldm()*/
-    {OP_ldmia,       lsm, 0x8, "ldmia",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*ldmia()*/
-    {OP_ldmfd,       lsm, 0x8, "ldmfd",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*ldmfd()*/
-    {OP_ldmda,       lsm, 0x1, "ldmda",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*ldmda()*/
-    {OP_ldmfa,       lsm, 0x1, "ldmfa",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*ldmfa()*/
-    {OP_ldmdb,       lsm, 0x11,"ldmdb",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*ldmdb()*/
-    {OP_ldmea,       lsm, 0x11,"ldmea",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*ldmea()*/
-    {OP_ldmib,       lsm, 0x19,"ldmib",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*ldmib()*/
-    {OP_ldmed,       lsm, 0x19,"ldmed",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*ldmed()*/
-    {OP_ldr_imm,     ls1, 0x0, "ldr_imm",   Ra, xx, Ra, I12,  xx,  0x0,  x, END_LIST}, /*ldr_imm()*/
-    {OP_ldr_lit,     ls1, 0x0, "ldr_lit",   Ra, xx, I12, xx,  xx,  0x0,  x, END_LIST}, /*ldr_lit()*/
-    {OP_ldr_reg,     ls2, 0x0, "ldr_reg",   Ra, xx, Ma,  xx,  xx,  0x0,  x, END_LIST}, /*ldr_reg()*/
-    {OP_ldrb_imm,    ls1, 0x0, "ldrb_imm",  Ra, xx, Ra,  I12, xx,  0x0,  x, END_LIST}, /*ldrb_imm()*/
-    {OP_ldrb_lit,    ls1, 0x0, "ldrb_lit",  Ra, xx, I12, xx,  xx,  0x0,  x, END_LIST}, /*ldrb_lit()*/
-    {OP_ldrb_reg,    ls2, 0x0, "ldrb_reg",  Ra, xx, Ra,  Ra,  I5,  0x0,  x, END_LIST}, /*ldrb_reg()*/
-    {OP_ldrbt,       ls2, 0x0, "ldrbt",     Ra, xx, Ra,  I12, xx,  0x0,  x, END_LIST}, /*ldrbt()*/
-    {OP_ldrd_imm,    dpe, 0x0, "ldrd_imm",  Ra, xx, Ra,  I4,  I4,  0x0,  x, END_LIST}, /*ldrd_imm()*/
-    {OP_ldrd_lit,    dpe, 0x0, "ldrd_lit",  Ra, xx, I4,  I4,  xx,  0x0,  x, END_LIST}, /*ldrd_lit()*/
-    {OP_ldrd_reg,    dpe, 0x0, "ldrd_reg",  Ra, xx, Ra,  Ra,  xx,  0x0,  x, END_LIST}, /*ldrd_reg()*/
-    {OP_ldrex,       dpe, 0x0, "ldrex",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*ldrex()*/
-    {OP_ldrexb,      dpe, 0x1d,"ldrexb",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*ldrexb()*/
-    {OP_ldrexd,      dpe, 0x1b,"ldrexd",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*ldrexd()*/
-    {OP_ldrexh,      dpe, 0x1f, "ldrexh",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*ldrexh()*/
-    {OP_ldrh_imm,    dpe, 0x0, "ldrh_imm",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*ldrh_imm()*/
-    {OP_ldrh_lit,    dpe, 0x0, "ldrh_lit",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*ldrh_lit()*/
-    {OP_ldrh_reg,    dpe, 0x0, "ldrh_reg",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*ldrh_reg()*/
-    {OP_ldrht,       dpe, 0x0, "ldrht",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*ldrht()*/
-    {OP_ldrsb_imm,   dpe, 0x0, "ldrsb_imm",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*ldrsb_imm()*/
-    {OP_ldrsb_lit,   dpe, 0x0, "ldrsb_lit",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*ldrsb_lit()*/
-    {OP_ldrsb_reg,   dpe, 0x0, "ldrsb_reg",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*ldrsb_reg()*/
-    {OP_ldrsbt,      dpe, 0x0, "ldrsbt",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*ldrsbt()*/
-    {OP_ldrsh_imm,   dpe, 0x0, "ldrsh_imm",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*ldrsh_imm()*/
-    {OP_ldrsh_lit,   dpe, 0x0, "ldrsh_lit",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*ldrsh_lit()*/
-    {OP_ldrsh_reg,   dpe, 0x0, "ldrsh_reg",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*ldrsh_reg()*/
-    {OP_ldrsht,      dpe, 0x0, "ldrsht",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*ldrsht()*/
-    {OP_ldrt,        ls2, 0x0, "ldrt",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*ldrt()*/
-    {OP_lsl_imm,     dpe, 0x1a,"lsl_imm",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*lsl_imm()*/
-    {OP_lsl_reg,     dpe, 0x1a,"lsl_reg",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*lsl_reg()*/
-    {OP_lsr_imm,     dpe, 0x1a,"lsr_imm",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*lsr_imm()*/
-    {OP_lsr_reg,     dpe, 0x1a,"lsr_reg",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*lsr_reg()*/
-    {OP_mcr,         acs, 0x0, "mcr",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*mcr()*/
-    {OP_mcr2,        acs, 0x0, "mcr2",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*mcr2()*/
-    {OP_mcrr,        acs, 0x0, "mcrr",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*mcrr()*/
-    {OP_mcrr2,       acs, 0x0, "mcrr2",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*mcrr2()*/
-    {OP_mla,         dpe, 0x1, "mla",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*mla()*/
-    {OP_mls,         dpe, 0x6, "mls",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*mls()*/
+    {OP_clz,         dpe, 0x16,"clz",      Ra, xx, Ra,  xx,  xx,  0x0,  x, END_LIST}, /*clz()*/
+    {OP_cmn_imm,     dpi, 0x17,"cmn_imm",  Ra, xx, I12, xx,  xx,  0x0,  x, END_LIST}, /*cmn_imm()*/
+    {OP_cmn_reg,     dpe, 0x17,"cmn_reg",  Ra, xx, Ra,  I5,  xx,  0x0,  x, END_LIST}, /*cmn_reg()*/
+    {OP_cmn_rsr,     dpe, 0x17,"cmn_rsr",  Ra, xx, Ra,  Ra,  xx,  0x0,  x, END_LIST}, /*cmn_rsr()*/
+    {OP_cmp_imm,     dpi, 0x15,"cmp_imm",  Ra, xx, I12, xx,  xx,  0x0,  x, END_LIST}, /*cmp_imm()*/
+    {OP_cmp_reg,     dpe, 0x15,"cmp_reg",  Ra, xx, Ra,  I12, xx,  0x0,  x, END_LIST}, /*cmp_reg()*/
+    {OP_cmp_rsr,     dpe, 0x15,"cmp_rsr",  Ra, xx, Ra,  Ra,  xx,  0x0,  x, END_LIST}, /*cmp_rsr()*/
+    {OP_cps,         0x0, 0x0, "cps",      xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*cps()*/
+    {OP_dbg,         dpi, 0x12,"dbg",      xx, xx, I4,  xx,  xx,  0x0,  x, END_LIST}, /*dbg()*/
+    {OP_dmb,         ls1, 0x17,"dmb",      xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*dmb()*/
+    {OP_dsb,         ls1, 0x17,"dsb",      xx, xx, I4,  xx,  xx,  0x0,  x, END_LIST}, /*dsb()*/
+    {OP_eor_imm,     dpi, 0x2, "eor_imm",  Ra, xx, Ra,  I12, xx,  0x0,  x, END_LIST}, /*eor_imm()*/
+    {OP_eor_reg,     dpe, 0x2, "eor_reg",  Ra, xx, Ra,  Ra,  I5,  0x0,  x, END_LIST}, /*eor_reg()*/
+    {OP_eor_rsr,     dpe, 0x2, "eor_rsr",  Ra, xx, Ra,  Ra,  Ra,  0x0,  x, END_LIST}, /*eor_rsr()*/
+    {OP_isb,         ls1, 0x17,"isb",      xx, xx, I4,  xx,  xx,  0x0,  x, END_LIST}, /*isb()*/
+    {OP_it,          0x0, 0x0, "it",       xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*it()*/
+    {OP_ldc_imm,     cdm, 0x0, "ldc_imm",  Ra, xx, Cr,  Co,  I8,  0x0,  x, END_LIST}, /*ldc_imm()*/
+    {OP_ldc2_imm,    cdm, 0x0, "ldc2_imm", Ra, xx, Cr,  Co,  I8,  0x0,  x, END_LIST}, /*ldc2_imm()*/
+    {OP_ldc_lit,     cdm, 0x0, "ldc_lit",  xx, xx, Cr,  Co,  I8,  0x0,  x, END_LIST}, /*ldc_lit()*/
+    {OP_ldc2_lit,    cdm, 0x0, "ldc2_lit", xx, xx, Cr,  Co,  I8,  0x0,  x, END_LIST}, /*ldc2_lit()*/
+    {OP_ldm,         lsm, 0x8, "ldm",      Ra, xx, Rl,  xx,  xx,  0x0,  x, END_LIST}, /*ldm()*/
+    {OP_ldmia,       lsm, 0x8, "ldmia",    Ra, xx, Rl,  xx,  xx,  0x0,  x, END_LIST}, /*ldmia()*/
+    {OP_ldmfd,       lsm, 0x8, "ldmfd",    Ra, xx, Rl,  xx,  xx,  0x0,  x, END_LIST}, /*ldmfd()*/
+    {OP_ldmda,       lsm, 0x1, "ldmda",    Ra, xx, Rl,  xx,  xx,  0x0,  x, END_LIST}, /*ldmda()*/
+    {OP_ldmfa,       lsm, 0x1, "ldmfa",    Ra, xx, Rl,  xx,  xx,  0x0,  x, END_LIST}, /*ldmfa()*/
+    {OP_ldmdb,       lsm, 0x11,"ldmdb",    Ra, xx, Rl,  xx,  xx,  0x0,  x, END_LIST}, /*ldmdb()*/
+    {OP_ldmea,       lsm, 0x11,"ldmea",    Ra, xx, Rl,  xx,  xx,  0x0,  x, END_LIST}, /*ldmea()*/
+    {OP_ldmib,       lsm, 0x19,"ldmib",    Ra, xx, Rl,  xx,  xx,  0x0,  x, END_LIST}, /*ldmib()*/
+    {OP_ldmed,       lsm, 0x19,"ldmed",    Ra, xx, Rl,  xx,  xx,  0x0,  x, END_LIST}, /*ldmed()*/
+    {OP_ldr_imm,     ls1, 0x0, "ldr_imm",  Ra, xx, Ra,  I12, xx,  0x0,  x, END_LIST}, /*ldr_imm()*/
+    {OP_ldr_lit,     ls1, 0x0, "ldr_lit",  Ra, xx, I12, xx,  xx,  0x0,  x, END_LIST}, /*ldr_lit()*/
+    {OP_ldr_reg,     ls2, 0x0, "ldr_reg",  Ra, xx, Ma,  Ra,  I5,  0x0,  x, END_LIST}, /*ldr_reg()*/
+    {OP_ldrb_imm,    ls1, 0x0, "ldrb_imm", Ra, xx, Ra,  I12, xx,  0x0,  x, END_LIST}, /*ldrb_imm()*/
+    {OP_ldrb_lit,    ls1, 0x0, "ldrb_lit", Ra, xx, I12, xx,  xx,  0x0,  x, END_LIST}, /*ldrb_lit()*/
+    {OP_ldrb_reg,    ls2, 0x0, "ldrb_reg", Ra, xx, Ma,  Ra,  I5,  0x0,  x, END_LIST}, /*ldrb_reg()*/
+    {OP_ldrbt,       ls2, 0x0, "ldrbt",    Ra, xx, Ma,  I12, xx,  0x0,  x, END_LIST}, /*ldrbt()*//* TODO */
+    {OP_ldrd_imm,    dpe, 0x0, "ldrd_imm", Ra, xx, Ra,  I4,  I4,  0x0,  x, END_LIST}, /*ldrd_imm()*/
+    {OP_ldrd_lit,    dpe, 0x0, "ldrd_lit", Ra, xx, I4,  I4,  xx,  0x0,  x, END_LIST}, /*ldrd_lit()*/
+    {OP_ldrd_reg,    dpe, 0x0, "ldrd_reg", Ra, xx, Ma,  Ra,  xx,  0x0,  x, END_LIST}, /*ldrd_reg()*/
+    {OP_ldrex,       dpe, 0x0, "ldrex",    Ra, xx, Ma,  xx,  xx,  0x0,  x, END_LIST}, /*ldrex()*/
+    {OP_ldrexb,      dpe, 0x1d,"ldrexb",   Ra, xx, Ma,  xx,  xx,  0x0,  x, END_LIST}, /*ldrexb()*/
+    {OP_ldrexd,      dpe, 0x1b,"ldrexd",   Ra, xx, Ma,  xx,  xx,  0x0,  x, END_LIST}, /*ldrexd()*/
+    {OP_ldrexh,      dpe, 0x1f,"ldrexh",   Ra, xx, Ma,  xx,  xx,  0x0,  x, END_LIST}, /*ldrexh()*/
+    {OP_ldrh_imm,    dpe, 0x0, "ldrh_imm", Ra, xx, Ma,  I4,  I4,  0x0,  x, END_LIST}, /*ldrh_imm()*/
+    {OP_ldrh_lit,    dpe, 0x0, "ldrh_lit", Ra, xx, I4,  I4,  xx,  0x0,  x, END_LIST}, /*ldrh_lit()*/
+    {OP_ldrh_reg,    dpe, 0x0, "ldrh_reg", Ra, xx, Ma,  Ra,  xx,  0x0,  x, END_LIST}, /*ldrh_reg()*/
+    {OP_ldrht,       dpe, 0x0, "ldrht",    Ra, xx, Ma,  Ra,  Ra,  0x0,  x, END_LIST}, /*ldrht()*/
+    {OP_ldrsb_imm,   dpe, 0x0, "ldrsb_imm",Ra, xx, Ma,  I4,  I4,  0x0,  x, END_LIST}, /*ldrsb_imm()*/
+    {OP_ldrsb_lit,   dpe, 0x0, "ldrsb_lit",Ra, xx, I4,  I4,  xx,  0x0,  x, END_LIST}, /*ldrsb_lit()*/
+    {OP_ldrsb_reg,   dpe, 0x0, "ldrsb_reg",Ra, xx, Ma,  Ra,  xx,  0x0,  x, END_LIST}, /*ldrsb_reg()*/
+    {OP_ldrsbt,      dpe, 0x0, "ldrsbt",   Ra, xx, Ma,  I4,  I4,  0x0,  x, END_LIST}, /*ldrsbt()*/
+    {OP_ldrsh_imm,   dpe, 0x0, "ldrsh_imm",Ra, xx, Ma,  I4,  I4,  0x0,  x, END_LIST}, /*ldrsh_imm()*/
+    {OP_ldrsh_lit,   dpe, 0x0, "ldrsh_lit",Ra, xx, I4,  I4,  xx,  0x0,  x, END_LIST}, /*ldrsh_lit()*/
+    {OP_ldrsh_reg,   dpe, 0x0, "ldrsh_reg",Ra, xx, Ma,  Ra,  xx,  0x0,  x, END_LIST}, /*ldrsh_reg()*/
+    {OP_ldrsht,      dpe, 0x0, "ldrsht",   Ra, xx, Ma,  I4,  I4,  0x0,  x, END_LIST}, /*ldrsht()*/
+    {OP_ldrt,        ls2, 0x0, "ldrt",     Ra, xx, Ma,  I12, xx,  0x0,  x, END_LIST}, /*ldrt()*/
+    {OP_lsl_imm,     dpe, 0x1a,"lsl_imm",  Ra, xx, Ra,  I5,  xx,  0x0,  x, END_LIST}, /*lsl_imm()*/
+    {OP_lsl_reg,     dpe, 0x1a,"lsl_reg",  Ra, xx, Ra,  Ra,  xx,  0x0,  x, END_LIST}, /*lsl_reg()*/
+    {OP_lsr_imm,     dpe, 0x1a,"lsr_imm",  Ra, xx, Ra,  I5,  xx,  0x0,  x, END_LIST}, /*lsr_imm()*/
+    {OP_lsr_reg,     dpe, 0x1a,"lsr_reg",  Ra, xx, Ra,  Ra,  xx,  0x0,  x, END_LIST}, /*lsr_reg()*/
+    {OP_mcr,         acs, 0x0, "mcr",      xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*mcr()*//* TODO */
+    {OP_mcr2,        acs, 0x0, "mcr2",     xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*mcr2()*//* TODO */
+    {OP_mcrr,        acs, 0x0, "mcrr",     xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*mcrr()*//* TODO */
+    {OP_mcrr2,       acs, 0x0, "mcrr2",    xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*mcrr2()*//* TODO */
+    {OP_mla,         dpe, 0x1, "mla",      Ra, xx, Ra,  Ra,  Ra,  0x0,  x, END_LIST}, /*mla()*/
+    {OP_mls,         dpe, 0x6, "mls",      Ra, xx, Ra,  Ra,  Ra,  0x0,  x, END_LIST}, /*mls()*/
     {OP_mov_imm,     dpi, 0x1a,"mov_imm",  Ra, xx, I12, xx,  xx,  0x0,  x, END_LIST}, /*mov_imm()*/
     {OP_mov_reg,     dpe, 0x1a,"mov_reg",  Ra, xx, Ra,  xx,  xx,  0x0,  x, END_LIST}, /*mov_reg()*/
-    {OP_movt,        0x1, 0x1, "movt",  Ra, xx, I4, I12,  xx,  0x0,  x, END_LIST}, /*movt()*/
-    {OP_mrc,   0x1, 0x1, "mrc",   xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*mrc()*/
-    {OP_mrc2,  0x1, 0x1, "mrc2",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*mrc2()*/
-    {OP_mrrc,  0x1, 0x1, "mrrc",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*mrrc()*/
-    {OP_mrrc2, 0x1, 0x1, "mrrc2", xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*mrrc2()*/
-    {OP_mrs,   0x1, 0x1, "mrs",   Ra, xx, Ra,  xx,  xx,  0x0,  x, END_LIST}, /*mrs()*/
-    {OP_msr_imm,  0x1, 0x1, "msr_imm",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*msr_imm()*/
-    {OP_msr_reg,  0x1, 0x1, "msr_reg",  Ra, xx, Ra,  xx,  xx,  0x0,  x, END_LIST}, /*msr_reg()*/
-    {OP_mul,      0x1, 0x1, "mul",      Ra, xx, Ra,  Ra,  xx,  0x0,  x, END_LIST}, /*mul()*/
-    {OP_mvn_imm,  0x1, 0x1, "mvn_imm",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*mvn_imm()*/
-    {OP_mvn_reg,  0x1, 0x1, "mvn_reg",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*mvn_reg()*/
-    {OP_mvn_rsr,  0x1, 0x1, "mvn_rsr",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*mvn_rsr()*/
-    {OP_nop,  0x1, 0x1, "nop",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*nop()*/
-    {OP_orn_imm,  0x1, 0x1, "orn_imm",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*orn_imm()*/
-    {OP_orn_reg,  0x1, 0x1, "orn_reg",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*orn_reg()*/
-    {OP_orr_imm,  0x1, 0x1, "orr_imm",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*orr_imm()*/
-    {OP_orr_reg,  0x1, 0x1, "orr_reg",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*orr_reg()*/
-    {OP_orr_rsr,  0x1, 0x1, "orr_rsr",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*orr_rsr()*/
-    {OP_pkh,  0x1, 0x1, "pkh",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*pkh()*/
-    {OP_pld_imm,  0x1, 0x1, "pld_imm",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*pld_imm()*/
-    {OP_pldw_imm,  0x1, 0x1, "pldw_imm",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*pldw_imm()*/
-    {OP_pld_lit,  0x1, 0x1, "pld_lit",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*pld_lit()*/
-    {OP_pldw_lit,  0x1, 0x1, "pldw_lit",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*pldw_lit()*/
-    {OP_pld_reg,  0x1, 0x1, "pld_reg",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*pld_reg()*/
-    {OP_pldw_reg,  0x1, 0x1, "pldw_reg",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*pldw_reg()*/
-    {OP_pli_imm,  0x1, 0x1, "pli_imm",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*pli_imm()*/
-    {OP_pli_lit,  0x1, 0x1, "pli_lit",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*pli_lit()*/
-    {OP_pli_reg,  0x1, 0x1, "pli_reg",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*pli_reg()*/
-    {OP_pop,  0x1, 0x1, "pop",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*pop()*/
-    {OP_push,  0x1, 0x1, "push",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*push()*/
-    {OP_qadd,  0x1, 0x1, "qadd",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*qadd()*/
-    {OP_qadd16,  0x1, 0x1, "qadd16",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*qadd16()*/
-    {OP_qadd8,  0x1, 0x1, "qadd8",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*qadd8()*/
-    {OP_qasx,  0x1, 0x1, "qasx",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*qasx()*/
-    {OP_qdadd,  0x1, 0x1, "qdadd",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*qdadd()*/
-    {OP_qdsub,  0x1, 0x1, "qdsub",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*qdsub()*/
-    {OP_qsax,  0x1, 0x1, "qsax",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*qsax()*/
-    {OP_qsub,  0x1, 0x1, "qsub",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*qsub()*/
-    {OP_qsub16,  0x1, 0x1, "qsub16",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*qsub16()*/
-    {OP_qsub8,  0x1, 0x1, "qsub8",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*qsub8()*/
-    {OP_rbit,  0x1, 0x1, "rbit",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*rbit()*/
-    {OP_rev,  0x1, 0x1, "rev",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*rev()*/
-    {OP_rev16,  0x1, 0x1, "rev16",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*rev16()*/
-    {OP_revsh,  0x1, 0x1, "revsh",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*revsh()*/
-    {OP_rfe,  0x1, 0x1, "rfe",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*rfe()*/
-    {OP_ror_imm,  0x1, 0x1, "ror_imm",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*ror_imm()*/
-    {OP_ror_reg,  0x1, 0x1, "ror_reg",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*ror_reg()*/
-    {OP_rrx,  0x1, 0x1, "rrx",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*rrx()*/
-    {OP_rsb_imm,  0x1, 0x1, "rsb_imm",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*rsb_imm()*/
-    {OP_rsb_reg,  0x1, 0x1, "rsb_reg",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*rsb_reg()*/
-    {OP_rsb_rsr,  0x1, 0x1, "rsb_rsr",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*rsb_rsr()*/
-    {OP_rsc_imm,  0x1, 0x1, "rsc_imm",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*rsc_imm()*/
-    {OP_rsc_reg,  0x1, 0x1, "rsc_reg",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*rsc_reg()*/
-    {OP_rsc_rsr,  0x1, 0x1, "rsc_rsr",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*rsc_rsr()*/
-    {OP_sadd16,  0x1, 0x1, "sadd16",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*sadd16()*/
-    {OP_sadd8,  0x1, 0x1, "sadd8",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*sadd8()*/
-    {OP_sasx,  0x1, 0x1, "sasx",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*sasx()*/
-    {OP_sbc_imm,  0x1, 0x1, "sbc_imm",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*sbc_imm()*/
-    {OP_sbc_reg,  0x1, 0x1, "sbc_reg",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*sbc_reg()*/
-    {OP_sbc_rsr,  0x1, 0x1, "sbc_rsr",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*sbc_rsr()*/
-    {OP_sbfx,  0x1, 0x1, "sbfx",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*sbfx()*/
-    {OP_sdiv,  0x1, 0x1, "sdiv",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*sdiv()*/
-    {OP_sel,  0x1, 0x1, "sel",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*sel()*/
-    {OP_setend,  0x1, 0x1, "setend",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*setend()*/
-    {OP_sev,  0x1, 0x1, "sev",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*sev()*/
-    {OP_shadd16,  0x1, 0x1, "shadd16",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*shadd16()*/
-    {OP_shadd8,  0x1, 0x1, "shadd8",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*shadd8()*/
-    {OP_shsax,  0x1, 0x1, "shsax",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*shsax()*/
-    {OP_shsub16,  0x1, 0x1, "shsub16",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*shsub16()*/
-    {OP_shsub8,  0x1, 0x1, "shsub8",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*shsub8()*/
-    {OP_smlabb,  0x1, 0x1, "smlabb",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*smlabb()*/
-    {OP_smlabt,  0x1, 0x1, "smlabt",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*smlabt()*/
-    {OP_smlatb,  0x1, 0x1, "smlatb",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*smlatb()*/
-    {OP_smlatt,  0x1, 0x1, "smlatt",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*smlatt()*/
-    {OP_smlad,  0x1, 0x1, "smlad",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*smlad()*/
-    {OP_smlal,  0x1, 0x1, "smlal",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*smlal()*/
-    {OP_smlalbb,  0x1, 0x1, "smlalbb",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*smlalbb()*/
-    {OP_smlalbt,  0x1, 0x1, "smlalbt",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*smlalbt()*/
-    {OP_smlaltb,  0x1, 0x1, "smlaltb",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*smlaltb()*/
-    {OP_smlaltt,  0x1, 0x1, "smlaltt",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*smlaltt()*/
-    {OP_smlald,  0x1, 0x1, "smlald",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*smlald()*/
-    {OP_smlawr,  0x1, 0x1, "smlawr",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*smlawr()*/
-    {OP_smlawt,  0x1, 0x1, "smlawt",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*smlawt()*/
-    {OP_smlsd,  0x1, 0x1, "smlsd",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*smlsd()*/
-    {OP_smlsld,  0x1, 0x1, "smlsld",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*smlsld()*/
-    {OP_smmla,  0x1, 0x1, "smmla",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*smmla()*/
-    {OP_smmls,  0x1, 0x1, "smmls",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*smmls()*/
-    {OP_smmul,  0x1, 0x1, "smmul",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*smmul()*/
-    {OP_smuad,  0x1, 0x1, "smuad",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*smuad()*/
-    {OP_smulbb,  0x1, 0x1, "smulbb",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*smulbb()*/
-    {OP_smulbt,  0x1, 0x1, "smulbt",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*smulbt()*/
-    {OP_smultb,  0x1, 0x1, "smultb",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*smultb()*/
-    {OP_smultt,  0x1, 0x1, "smultt",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*smultt()*/
-    {OP_smull,  0x1, 0x1, "smull",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*smull()*/
-    {OP_smulwb,  0x1, 0x1, "smulwb",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*smulwb()*/
-    {OP_smulwt,  0x1, 0x1, "smulwt",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*smulwt()*/
-    {OP_smusd,  0x1, 0x1, "smusd",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*smusd()*/
-    {OP_srs,  0x1, 0x1, "srs",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*srs()*/
-    {OP_ssat,  0x1, 0x1, "ssat",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*ssat()*/
-    {OP_ssat16,  0x1, 0x1, "ssat16",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*ssat16()*/
-    {OP_ssax,  0x1, 0x1, "ssax",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*ssax()*/
-    {OP_ssub16,  0x1, 0x1, "ssub16",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*ssub16()*/
-    {OP_ssub8,  0x1, 0x1, "ssub8",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*ssub8()*/
-    {OP_stc,  0x1, 0x1, "stc",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*stc()*/
-    {OP_stc2,  0x1, 0x1, "stc2",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*stc2()*/
-    {OP_stm,  0x1, 0x1, "stm",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*stm()*/
-    {OP_stmia,  0x1, 0x1, "stmia",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*stmia()*/
-    {OP_stmea,  0x1, 0x1, "stmea",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*stmea()*/
-    {OP_stmda,  0x1, 0x1, "stmda",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*stmda()*/
-    {OP_stmed,  0x1, 0x1, "stmed",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*stmed()*/
-    {OP_stmdb,  0x1, 0x1, "stmdb",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*stmdb()*/
-    {OP_stmfd,  0x1, 0x1, "stmfd",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*stmfd()*/
-    {OP_stmib,  0x1, 0x1, "stmib",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*stmib()*/
-    {OP_stmfa,  0x1, 0x1, "stmfa",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*stmfa()*/
-    {OP_str_imm,  0x1, 0x1, "str_imm",  Ra, xx, Ra,  I12, xx,  0x0,  x, END_LIST}, /*str_imm()*/
-    {OP_str_reg,  0x1, 0x1, "str_reg",  Ma, xx, Ra,  xx,  xx,  0x0,  x, END_LIST}, /*str_reg()*/
-    {OP_strb_imm,  0x1, 0x1, "strb_imm",  Ra, xx, Ra,  I12,  xx,  0x0,  x, END_LIST}, /*strb_imm()*/
-    {OP_strb_reg,  0x1, 0x1, "strb_reg",  Ra, xx, Ra,  Ra,  I5,  0x0,  x, END_LIST}, /*strb_reg()*/
-    {OP_strbt,  0x1, 0x1, "strbt",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*strbt()*/
-    {OP_strd_imm,  0x1, 0x1, "strd_imm",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*strd_imm()*/
-    {OP_strd_reg,  0x1, 0x1, "strd_reg",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*strd_reg()*/
-    {OP_strex,  0x1, 0x1, "strex",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*strex()*/
-    {OP_strexb,  0x1, 0x1, "strexb",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*strexb()*/
-    {OP_strexd,  0x1, 0x1, "strexd",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*strexd()*/
-    {OP_strexh,  0x1, 0x1, "strexh",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*strexh()*/
-    {OP_strh_imm,  0x1, 0x1, "strh_imm",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*strh_imm()*/
-    {OP_strh_reg,  0x1, 0x1, "strh_reg",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*strh_reg()*/
-    {OP_strht,  0x1, 0x1, "strht",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*strht()*/
-    {OP_strt,  0x1, 0x1, "strt",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*strt()*/
-    {OP_sub_imm,  0x1, 0x1, "sub_imm",  Ra, xx, Ra,  I12, xx,  0x0,  x, END_LIST}, /*sub_imm()*/
-    {OP_sub_reg,  0x1, 0x1, "sub_reg",  Ra, xx, Ra,  Ra,  I5,  0x0,  x, END_LIST}, /*sub_reg()*/
-    {OP_sub_rsr,  0x1, 0x1, "sub_rsr",  Ra, xx, Ra,  Ra,  Ra,  0x0,  x, END_LIST}, /*sub_rsr()*/
-    {OP_sub_sp_imm,  0x1, 0x1, "sub_sp_imm",  Ra, xx, I12, xx,  xx,  0x0,  x, END_LIST}, /*sub_sp_imm()*/
-    {OP_sub_sp_reg,  0x1, 0x1, "sub_sp_reg",  Ra, xx, Ra,  xx,  xx,  0x0,  x, END_LIST}, /*sub_sp_reg()*/
-    {OP_subs,  0x1, 0x1, "subs",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*subs()*/
-    {OP_svc,  0x1, 0x1, "svc",  xx, xx, I24,  xx,  xx,  0x0,  x, END_LIST}, /*svc()*/
-    {OP_swp,  0x1, 0x1, "swp",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*swp()*/
-    {OP_swpb,  0x1, 0x1, "swpb",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*swpb()*/
-    {OP_sxtab,  0x1, 0x1, "sxtab",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*sxtab()*/
-    {OP_sxtab16,  0x1, 0x1, "sxtab16",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*sxtab16()*/
-    {OP_sxth,  0x1, 0x1, "sxth",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*sxth()*/
-    {OP_tbb,  0x1, 0x1, "tbb",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*tbb()*/
-    {OP_tbh,  0x1, 0x1, "tbh",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*tbh()*/
-    {OP_teq_imm,  0x1, 0x1, "teq_imm",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*teq_imm()*/
-    {OP_teq_reg,  0x1, 0x1, "teq_reg",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*teq_reg()*/
-    {OP_teq_rsr,  0x1, 0x1, "teq_rsr",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*teq_rsr()*/
-    {OP_tst_imm,  0x1, 0x1, "tst_imm",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*tst_imm()*/
-    {OP_tst_reg,  0x1, 0x1, "tst_reg",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*tst_reg()*/
-    {OP_tst_rsr,  0x1, 0x1, "tst_rsr",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*tst_rsr()*/
-    {OP_uadd16,  0x1, 0x1, "uadd16",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*uadd16()*/
-    {OP_uadd8,  0x1, 0x1, "uadd8",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*uadd8()*/
-    {OP_uasx,  0x1, 0x1, "uasx",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*uasx()*/
-    {OP_ubfx,  0x1, 0x1, "ubfx",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*ubfx()*/
-    {OP_udiv,  0x1, 0x1, "udiv",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*udiv()*/
-    {OP_uhadd16,  0x1, 0x1, "uhadd16",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*uhadd16()*/
-    {OP_uhadd8,  0x1, 0x1, "uhadd8",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*uhadd8()*/
-    {OP_uhsax,  0x1, 0x1, "uhsax",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*uhsax()*/
-    {OP_uhsub16,  0x1, 0x1, "uhsub16",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*uhsub16()*/
-    {OP_uhsub8,  0x1, 0x1, "uhsub8",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*uhsub8()*/
-    {OP_umaal,  0x1, 0x1, "umaal",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*umaal()*/
-    {OP_umlal,  0x1, 0x1, "umlal",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*umlal()*/
-    {OP_umull,  0x1, 0x1, "umull",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*umull()*/
-    {OP_uqadd16,  0x1, 0x1, "uqadd16",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*uqadd16()*/
-    {OP_uqadd8,  0x1, 0x1, "uqadd8",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*uqadd8()*/
-    {OP_uqasx,  0x1, 0x1, "uqasx",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*uqasx()*/
-    {OP_uqsax,  0x1, 0x1, "uqsax",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*uqsax()*/
-    {OP_usub16,  0x1, 0x1, "usub16",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*usub16()*/
-    {OP_usub8,  0x1, 0x1, "usub8",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*usub8()*/
-    {OP_usad8,  0x1, 0x1, "usad8",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*usad8()*/
-    {OP_usada8,  0x1, 0x1, "usada8",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*usada8()*/
-    {OP_usat,  0x1, 0x1, "usat",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*usat()*/
-    {OP_usat16,  0x1, 0x1, "usat16",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*usat16()*/
-    {OP_usax,  0x1, 0x1, "usax",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*usax()*/
-    {OP_uxtab,  0x1, 0x1, "uxtab",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*uxtab()*/
-    {OP_uxtab16,  0x1, 0x1, "uxtab16",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*uxtab16()*/
-    {OP_uxtah,  0x1, 0x1, "uxtah",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*uxtah()*/
-    {OP_uxtb,  0x1, 0x1, "uxtb",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*uxtb()*/
-    {OP_uxtb16,  0x1, 0x1, "uxtb16",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*uxtb16()*/
-    {OP_uxth,  0x1, 0x1, "uxth",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*uxth()*/
-    {OP_vaba,  0x1, 0x1, "vaba",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vaba()*/
-    {OP_vabal_int,  0x1, 0x1, "vabal_int",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vabal_int()*/
-    {OP_vabd_int,  0x1, 0x1, "vabd_int",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vabd_int()*/
-    {OP_vabd_flt,  0x1, 0x1, "vabd_flt",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vabd_flt()*/
-    {OP_vabs,  0x1, 0x1, "vabs",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vabs()*/
-    {OP_vacge,  0x1, 0x1, "vacge",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vacge()*/
-    {OP_vacgt,  0x1, 0x1, "vacgt",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vacgt()*/
-    {OP_vacle,  0x1, 0x1, "vacle",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vacle()*/
-    {OP_vaclt,  0x1, 0x1, "vaclt",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vaclt()*/
-    {OP_vadd_int,  0x1, 0x1, "vadd_int",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vadd_int()*/
-    {OP_vadd_flt,  0x1, 0x1, "vadd_flt",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vadd_flt()*/
-    {OP_vaddhn,  0x1, 0x1, "vaddhn",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vaddhn()*/
-    {OP_vaddl,  0x1, 0x1, "vaddl",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vaddl()*/
-    {OP_vaddw,  0x1, 0x1, "vaddw",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vaddw()*/
-    {OP_vand_imm,  0x1, 0x1, "vand_imm",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vand_imm()*/
-    {OP_vand_reg,  0x1, 0x1, "vand_reg",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vand_reg()*/
-    {OP_vbic_imm,  0x1, 0x1, "vbic_imm",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vbic_imm()*/
-    {OP_vbic_reg,  0x1, 0x1, "vbic_reg",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vbic_reg()*/
-    {OP_vbif,  0x1, 0x1, "vbif",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vbif()*/
-    {OP_vbsl,  0x1, 0x1, "vbsl",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vbsl()*/
-    {OP_vceq_reg,  0x1, 0x1, "vceq_reg",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vceq_reg()*/
-    {OP_vceq_imm,  0x1, 0x1, "vceq_imm",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vceq_imm()*/
-    {OP_vcge_reg,  0x1, 0x1, "vcge_reg",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vcge_reg()*/
-    {OP_vcge_imm,  0x1, 0x1, "vcge_imm",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vcge_imm()*/
-    {OP_vcgt_reg,  0x1, 0x1, "vcgt_reg",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vcgt_reg()*/
-    {OP_vcgt_imm,  0x1, 0x1, "vcgt_imm",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vcgt_imm()*/
-    {OP_vcle_reg,  0x1, 0x1, "vcle_reg",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vcle_reg()*/
-    {OP_vcle_imm,  0x1, 0x1, "vcle_imm",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vcle_imm()*/
-    {OP_vcls,  0x1, 0x1, "vcls",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vcls()*/
-    {OP_vclt_reg,  0x1, 0x1, "vclt_reg",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vclt_reg()*/
-    {OP_vclt_imm,  0x1, 0x1, "vclt_imm",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vclt_imm()*/
-    {OP_vclz,  0x1, 0x1, "vclz",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vclz()*/
-    {OP_vcmp,  0x1, 0x1, "vcmp",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vcmp()*/
-    {OP_vcmpe,  0x1, 0x1, "vcmpe",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vcmpe()*/
-    {OP_vcnt,  0x1, 0x1, "vcnt",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vcnt()*/
-    {OP_vcvt_flt_int_simd,  0x1, 0x1, "vcvt_flt_int_simd",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vcvt_flt_int_simd()*/
-    {OP_vcvt_flt_int_vfp,  0x1, 0x1, "vcvt_flt_int_vfp",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vcvt_flt_int_vfp()*/
-    {OP_vcvtr_flt_int_vfp,  0x1, 0x1, "vcvtr_flt_int_vfp",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vcvtr_flt_int_vfp()*/
-    {OP_vcvt_flt_fip_simd,  0x1, 0x1, "vcvt_flt_fip_simd",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vcvt_flt_fip_simd()*/
-    {OP_vcvt_dp_sp,  0x1, 0x1, "vcvt_dp_sp",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vcvt_dp_sp()*/
-    {OP_vcvt_hp_sp_simd,  0x1, 0x1, "vcvt_hp_sp_simd",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vcvt_hp_sp_simd()*/
-    {OP_vcvtb_hp_sp_vfp,  0x1, 0x1, "vcvtb_hp_sp_vfp",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vcvtb_hp_sp_vfp()*/
-    {OP_vcvtt_hp_sp_vfp,  0x1, 0x1, "vcvtt_hp_sp_vfp",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vcvtt_hp_sp_vfp()*/
-    {OP_vdiv,  0x1, 0x1, "vdiv",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vdiv()*/
-    {OP_vdup_scl,  0x1, 0x1, "vdup_scl",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vdup_scl()*/
-    {OP_vdup_reg,  0x1, 0x1, "vdup_reg",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vdup_reg()*/
-    {OP_veor,  0x1, 0x1, "veor",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*veor()*/
-    {OP_vext,  0x1, 0x1, "vext",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vext()*/
-    {OP_vhadd,  0x1, 0x1, "vhadd",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vhadd()*/
-    {OP_vhsub,  0x1, 0x1, "vhsub",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vhsub()*/
-    {OP_vld1_mse,  0x1, 0x1, "vld1_mse",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vld1_mse()*/
-    {OP_vld1_se1,  0x1, 0x1, "vld1_se1",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vld1_se1()*/
-    {OP_vld1_sea,  0x1, 0x1, "vld1_sea",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vld1_sea()*/
-    {OP_vld2_m2es,  0x1, 0x1, "vld2_m2es",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vld2_m2es()*/
-    {OP_vld2_s2e1,  0x1, 0x1, "vld2_s2e1",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vld2_s2e1()*/
-    {OP_vld2_s2ea,  0x1, 0x1, "vld2_s2ea",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vld2_s2ea()*/
-    {OP_vld3_m3s,  0x1, 0x1, "vld3_m3s",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vld3_m3s()*/
-    {OP_vld3_se1,  0x1, 0x1, "vld3_se1",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vld3_se1()*/
-    {OP_vld3_sea,  0x1, 0x1, "vld3_sea",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vld3_sea()*/
-    {OP_vld4_m4es,  0x1, 0x1, "vld4_m4es",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vld4_m4es()*/
-    {OP_vld4_se1,  0x1, 0x1, "vld4_se1",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vld4_se1()*/
-    {OP_vld4_s4ea,  0x1, 0x1, "vld4_s4ea",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vld4_s4ea()*/
-    {OP_vldm,  0x1, 0x1, "vldm",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vldm()*/
-    {OP_vldr,  0x1, 0x1, "vldr",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vldr()*/
-    {OP_vmax_int,  0x1, 0x1, "vmax_int",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vmax_int()*/
-    {OP_vmin_int,  0x1, 0x1, "vmin_int",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vmin_int()*/
-    {OP_vmax_flt,  0x1, 0x1, "vmax_flt",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vmax_flt()*/
-    {OP_vmin_flt,  0x1, 0x1, "vmin_flt",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vmin_flt()*/
-    {OP_vmla_int,  0x1, 0x1, "vmla_int",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vmla_int()*/
-    {OP_vmlal_int,  0x1, 0x1, "vmlal_int",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vmlal_int()*/
-    {OP_vmls_int,  0x1, 0x1, "vmls_int",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vmls_int()*/
-    {OP_vmlsl_int,  0x1, 0x1, "vmlsl_int",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vmlsl_int()*/
-    {OP_vmla_flt,  0x1, 0x1, "vmla_flt",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vmla_flt()*/
-    {OP_vmls_flt,  0x1, 0x1, "vmls_flt",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vmls_flt()*/
-    {OP_vmla_scl,  0x1, 0x1, "vmla_scl",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vmla_scl()*/
-    {OP_vmlal_scl,  0x1, 0x1, "vmlal_scl",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vmlal_scl()*/
-    {OP_vmls_scl,  0x1, 0x1, "vmls_scl",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vmls_scl()*/
-    {OP_vmlsl_scl,  0x1, 0x1, "vmlsl_scl",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vmlsl_scl()*/
-    {OP_vmov_imm,  0x1, 0x1, "vmov_imm",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vmov_imm()*/
-    {OP_vmov_reg,  0x1, 0x1, "vmov_reg",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vmov_reg()*/
-    {OP_vmov_reg_scl,  0x1, 0x1, "vmov_reg_scl",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vmov_reg_scl()*/
-    {OP_vmov_scl_reg,  0x1, 0x1, "vmov_scl_reg",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vmov_scl_reg()*/
-    {OP_vmov_reg_sp,  0x1, 0x1, "vmov_reg_sp",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vmov_reg_sp()*/
-    {OP_vmov_2reg_2sp,  0x1, 0x1, "vmov_2reg_2sp",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vmov_2reg_2sp()*/
-    {OP_vmov_2reg_2dp,  0x1, 0x1, "vmov_2reg_2dp",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vmov_2reg_2dp()*/
-    {OP_vmovl,  0x1, 0x1, "vmovl",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vmovl()*/
-    {OP_vmovn,  0x1, 0x1, "vmovn",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vmovn()*/
-    {OP_vmrs,  0x1, 0x1, "vmrs",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vmrs()*/
-    {OP_vmsr,  0x1, 0x1, "vmsr",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vmsr()*/
-    {OP_vmul_int,  0x1, 0x1, "vmul_int",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vmul_int()*/
-    {OP_vmull_int,  0x1, 0x1, "vmull_int",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vmull_int()*/
-    {OP_vmul_flp,  0x1, 0x1, "vmul_flp",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vmul_flp()*/
-    {OP_vmul_scl,  0x1, 0x1, "vmul_scl",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vmul_scl()*/
-    {OP_vmull_scl,  0x1, 0x1, "vmull_scl",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vmull_scl()*/
-    {OP_vmvn_imm,  0x1, 0x1, "vmvn_imm",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vmvn_imm()*/
-    {OP_vmvn_reg,  0x1, 0x1, "vmvn_reg",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vmvn_reg()*/
-    {OP_vneg,  0x1, 0x1, "vneg",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vneg()*/
-    {OP_vnmla,  0x1, 0x1, "vnmla",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vnmla()*/
-    {OP_vnmls,  0x1, 0x1, "vnmls",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vnmls()*/
-    {OP_vnmul,  0x1, 0x1, "vnmul",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vnmul()*/
-    {OP_vorn_imm,  0x1, 0x1, "vorn_imm",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vorn_imm()*/
-    {OP_vorn_reg,  0x1, 0x1, "vorn_reg",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vorn_reg()*/
-    {OP_vorr_imm,  0x1, 0x1, "vorr_imm",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vorr_imm()*/
-    {OP_vorr_reg,  0x1, 0x1, "vorr_reg",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vorr_reg()*/
-    {OP_vpadal,  0x1, 0x1, "vpadal",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vpadal()*/
-    {OP_vpadd_int,  0x1, 0x1, "vpadd_int",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vpadd_int()*/
-    {OP_vpadd_flp,  0x1, 0x1, "vpadd_flp",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vpadd_flp()*/
-    {OP_vpaddl,  0x1, 0x1, "vpaddl",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vpaddl()*/
-    {OP_vpmax_int,  0x1, 0x1, "vpmax_int",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vpmax_int()*/
-    {OP_vpmin_int,  0x1, 0x1, "vpmin_int",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vpmin_int()*/
-    {OP_vpmax_flp,  0x1, 0x1, "vpmax_flp",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vpmax_flp()*/
-    {OP_vpmin_flp,  0x1, 0x1, "vpmin_flp",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vpmin_flp()*/
-    {OP_vpop,  0x1, 0x1, "vpop",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vpop()*/
-    {OP_vpush,  0x1, 0x1, "vpush",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vpush()*/
-    {OP_vqabs,  0x1, 0x1, "vqabs",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vqabs()*/
-    {OP_vqadd,  0x1, 0x1, "vqadd",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vqadd()*/
-    {OP_vqdmlal,  0x1, 0x1, "vqdmlal",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vqdmlal()*/
-    {OP_vqdmlsl,  0x1, 0x1, "vqdmlsl",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vqdmlsl()*/
-    {OP_vqdmulh,  0x1, 0x1, "vqdmulh",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vqdmulh()*/
-    {OP_vqdmull,  0x1, 0x1, "vqdmull",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vqdmull()*/
-    {OP_vqdmovn,  0x1, 0x1, "vqdmovn",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vqdmovn()*/
-    {OP_vqdmovun,  0x1, 0x1, "vqdmovun",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vqdmovun()*/
-    {OP_vqneq,  0x1, 0x1, "vqneq",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vqneq()*/
-    {OP_vqrdmulh,  0x1, 0x1, "vqrdmulh",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vqrdmulh()*/
-    {OP_vqrshl,  0x1, 0x1, "vqrshl",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vqrshl()*/
-    {OP_vqrshrn,  0x1, 0x1, "vqrshrn",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vqrshrn()*/
-    {OP_vqrshrun,  0x1, 0x1, "vqrshrun",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vqrshrun()*/
-    {OP_vqshl_reg,  0x1, 0x1, "vqshl_reg",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vqshl_reg()*/
-    {OP_vqshl_imm,  0x1, 0x1, "vqshl_imm",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vqshl_imm()*/
-    {OP_vqshlu_imm,  0x1, 0x1, "vqshlu_imm",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vqshlu_imm()*/
-    {OP_vqshrn,  0x1, 0x1, "vqshrn",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vqshrn()*/
-    {OP_vqshrun,  0x1, 0x1, "vqshrun",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vqshrun()*/
-    {OP_vqsub,  0x1, 0x1, "vqsub",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vqsub()*/
-    {OP_vqraddhn,  0x1, 0x1, "vqraddhn",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vqraddhn()*/
-    {OP_vqrecpe,  0x1, 0x1, "vqrecpe",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vqrecpe()*/
-    {OP_vqrecps,  0x1, 0x1, "vqrecps",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vqrecps()*/
-    {OP_vrev16,  0x1, 0x1, "vrev16",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vrev16()*/
-    {OP_vrev32,  0x1, 0x1, "vrev32",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vrev32()*/
-    {OP_vrev64,  0x1, 0x1, "vrev64",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vrev64()*/
-    {OP_vrhadd,  0x1, 0x1, "vrhadd",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vrhadd()*/
-    {OP_vrshl,  0x1, 0x1, "vrshl",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vrshl()*/
-    {OP_vrshr,  0x1, 0x1, "vrshr",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vrshr()*/
-    {OP_vrshrn,  0x1, 0x1, "vrshrn",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vrshrn()*/
-    {OP_vrsqrte,  0x1, 0x1, "vrsqrte",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vrsqrte()*/
-    {OP_vrsqrts,  0x1, 0x1, "vrsqrts",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vrsqrts()*/
-    {OP_vrsra,  0x1, 0x1, "vrsra",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vrsra()*/
-    {OP_vrsubhn,  0x1, 0x1, "vrsubhn",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vrsubhn()*/
-    {OP_vshl_imm,  0x1, 0x1, "vshl_imm",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vshl_imm()*/
-    {OP_vshl_reg,  0x1, 0x1, "vshl_reg",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vshl_reg()*/
-    {OP_vshll,  0x1, 0x1, "vshll",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vshll()*/
-    {OP_vshr,  0x1, 0x1, "vshr",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vshr()*/
-    {OP_vshrn,  0x1, 0x1, "vshrn",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vshrn()*/
-    {OP_vsli,  0x1, 0x1, "vsli",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vsli()*/
-    {OP_vsqrt,  0x1, 0x1, "vsqrt",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vsqrt()*/
-    {OP_vsra,  0x1, 0x1, "vsra",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vsra()*/
-    {OP_vsri,  0x1, 0x1, "vsri",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vsri()*/
-    {OP_vst1_mse,  0x1, 0x1, "vst1_mse",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vst1_mse()*/
-    {OP_vst1_se1,  0x1, 0x1, "vst1_se1",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vst1_se1()*/
-    {OP_vst2_m2e,  0x1, 0x1, "vst2_m2e",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vst2_m2e()*/
-    {OP_vst2_s2e1,  0x1, 0x1, "vst2_s2e1",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vst2_s2e1()*/
-    {OP_vst3_m3es,  0x1, 0x1, "vst3_m3es",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vst3_m3es()*/
-    {OP_vst3_s3e1,  0x1, 0x1, "vst3_s3e1",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vst3_s3e1()*/
-    {OP_vst4_m4es,  0x1, 0x1, "vst4_m4es",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vst4_m4es()*/
-    {OP_vst4_s4e1,  0x1, 0x1, "vst4_s4e1",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vst4_s4e1()*/
-    {OP_vstm,  0x1, 0x1, "vstm",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vstm()*/
-    {OP_vstr,  0x1, 0x1, "vstr",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vstr()*/
-    {OP_vsub_int,  0x1, 0x1, "vsub_int",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vsub_int()*/
-    {OP_vsub_flp,  0x1, 0x1, "vsub_flp",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vsub_flp()*/
-    {OP_vsubhn,  0x1, 0x1, "vsubhn",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vsubhn()*/
-    {OP_vsubl,  0x1, 0x1, "vsubl",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vsubl()*/
-    {OP_vsubw,  0x1, 0x1, "vsubw",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vsubw()*/
-    {OP_vswp,  0x1, 0x1, "vswp",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vswp()*/
-    {OP_vtbl,  0x1, 0x1, "vtbl",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vtbl()*/
-    {OP_vtbx,  0x1, 0x1, "vtbx",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vtbx()*/
-    {OP_vtrn,  0x1, 0x1, "vtrn",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vtrn()*/
-    {OP_vtst,  0x1, 0x1, "vtst",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vtst()*/
-    {OP_vuzp,  0x1, 0x1, "vuzp",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vuzp()*/
-    {OP_vzip,  0x1, 0x1, "vzip",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vzip()*/
-    {OP_wfe,  0x1, 0x1, "wfe",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*wfe()*/
-    {OP_wfi,  0x1, 0x1, "wfi",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*wfi()*/
-    {OP_yield,  0x1, 0x1, "yield",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*yield()*/
+    {OP_movt,        dpi, 0x14,"movt",     Ra, xx, I4, I12,  xx,  0x0,  x, END_LIST}, /*movt()*/
+    {OP_mrc,         acs, 0x1, "mrc",      xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*mrc()*//* TODO */
+    {OP_mrc2,        acs, 0x1, "mrc2",     xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*mrc2()*//* TODO */
+    {OP_mrrc,        cdm, 0x5, "mrrc",     xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*mrrc()*//*TODO */
+    {OP_mrrc2,       cdm, 0x5, "mrrc2",    xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*mrrc2()*//* TODO */
+    {OP_mrs,         dpe, 0x10,"mrs",      Ra, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*mrs()*//* TODO */
+    {OP_msr_imm,     dpi, 0x12,"msr_imm",  xx, xx, I12, xx,  xx,  0x0,  x, END_LIST}, /*msr_imm()*/
+    {OP_msr_reg,     dpe, 0x12,"msr_reg",  Ra, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*msr_reg()*/
+    {OP_mul,         dpe, 0x0, "mul",      Ra, xx, Ra,  Ra,  xx,  0x0,  x, END_LIST}, /*mul()*/
+    {OP_mvn_imm,     dpi, 0x1e,"mvn_imm",  Ra, xx, I12, xx,  xx,  0x0,  x, END_LIST}, /*mvn_imm()*/
+    {OP_mvn_reg,     dpe, 0x1e,"mvn_reg",  Ra, xx, Ra,  I5,  xx,  0x0,  x, END_LIST}, /*mvn_reg()*/
+    {OP_mvn_rsr,     dpe, 0x1e,"mvn_rsr",  Ra, xx, Ra,  Ra,  xx,  0x0,  x, END_LIST}, /*mvn_rsr()*/
+    {OP_nop,         dpi, 0x12,"nop",      xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*nop()*/
+    {OP_orn_imm,     0x0, 0x0, "orn_imm",  Ra, xx, Ra,  I8,  I3,  0x0,  x, END_LIST}, /*orn_imm()*/
+    {OP_orn_reg,     0x0, 0x0, "orn_reg",  Ra, xx, Ra,  Ra,  I5,  0x0,  x, END_LIST}, /*orn_reg()*//* TODO */
+    {OP_orr_imm,     dpi, 0x18,"orr_imm",  Ra, xx, Ra,  I12, xx,  0x0,  x, END_LIST}, /*orr_imm()*/
+    {OP_orr_reg,     dpe, 0x18,"orr_reg",  Ra, xx, Ra,  Ra,  I5,  0x0,  x, END_LIST}, /*orr_reg()*/
+    {OP_orr_rsr,     dpe, 0x18,"orr_rsr",  Ra, xx, Ra,  Ra,  Ra,  0x0,  x, END_LIST}, /*orr_rsr()*/
+    {OP_pkh,         ls2, 0x8, "pkh",      Ra, xx, Ra,  Ra,  I5,  0x0,  x, END_LIST}, /*pkh()*/
+    {OP_pld_imm,     ls1, 0x15,"pld_imm",  Ra, xx, I12, xx,  xx,  0x0,  x, END_LIST}, /*pld_imm()*/
+    {OP_pldw_imm,    ls2, 0x15,"pldw_imm", xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*pldw_imm()*/
+    {OP_pld_lit,     0x0, 0x0, "pld_lit",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*pld_lit()*/
+    {OP_pldw_lit,    0x0, 0x0, "pldw_lit", xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*pldw_lit()*/
+    {OP_pld_reg,     ls2, 0x15,"pld_reg",  Ra, xx, Ra,  I5,  xx,  0x0,  x, END_LIST}, /*pld_reg()*/
+    {OP_pldw_reg,    0x0, 0x0, "pldw_reg", xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*pldw_reg()*/
+    {OP_pli_imm,     ls1, 0x5, "pli_imm",  Ra, xx, I12, xx,  xx,  0x0,  x, END_LIST}, /*pli_imm()*/
+    {OP_pli_lit,     ls1, 0x5, "pli_lit",  Ra, xx, I12, xx,  xx,  0x0,  x, END_LIST}, /*pli_lit()*/
+    {OP_pli_reg,     ls2, 0x5, "pli_reg",  Ra, xx, Ra,  I5,  xx,  0x0,  x, END_LIST}, /*pli_reg()*/
+    {OP_pop,         lsm, 0xb, "pop",      xx, xx, Rl,  xx,  xx,  0x0,  x, END_LIST}, /*pop()*/
+    {OP_push,        lsm, 0x12,"push",     xx, xx, Rl,  xx,  xx,  0x0,  x, END_LIST}, /*push()*/
+    {OP_qadd,        dpe, 0x10,"qadd",     Ra, xx, Ra,  Ra,  xx,  0x0,  x, END_LIST}, /*qadd()*/
+    {OP_qadd16,      ls2, 0x2, "qadd16",   Ra, xx, Ra,  Ra,  xx,  0x0,  x, END_LIST}, /*qadd16()*/
+    {OP_qadd8,       ls2, 0x2, "qadd8",    Ra, xx, Ra,  Ra,  xx,  0x0,  x, END_LIST}, /*qadd8()*/
+    {OP_qasx,        ls2, 0x2, "qasx",     Ra, xx, Ra,  Ra,  xx,  0x0,  x, END_LIST}, /*qasx()*/
+    {OP_qdadd,       dpe, 0x14,"qdadd",    Ra, xx, Ra,  Ra,  xx,  0x0,  x, END_LIST}, /*qdadd()*/
+    {OP_qdsub,       dpe, 0x16,"qdsub",    Ra, xx, Ra,  Ra,  xx,  0x0,  x, END_LIST}, /*qdsub()*/
+    {OP_qsax,        ls2, 0x2, "qsax",     Ra, xx, Ra,  Ra,  xx,  0x0,  x, END_LIST}, /*qsax()*/
+    {OP_qsub,        dpe, 0x14,"qsub",     Ra, xx, Ra,  Ra,  xx,  0x0,  x, END_LIST}, /*qsub()*/
+    {OP_qsub16,      ls2, 0x2, "qsub16",   Ra, xx, Ra,  Ra,  xx,  0x0,  x, END_LIST}, /*qsub16()*/
+    {OP_qsub8,       ls2, 0x2, "qsub8",    Ra, xx, Ra,  Ra,  xx,  0x0,  x, END_LIST}, /*qsub8()*/
+    {OP_rbit,        ls2, 0xf, "rbit",     Ra, xx, Ra,  xx,  xx,  0x0,  x, END_LIST}, /*rbit()*/
+    {OP_rev,         ls2, 0xb, "rev",      Ra, xx, Ra,  xx,  xx,  0x0,  x, END_LIST}, /*rev()*/
+    {OP_rev16,       ls2, 0xb, "rev16",    Ra, xx, Ra,  xx,  xx,  0x0,  x, END_LIST}, /*rev16()*/
+    {OP_revsh,       ls2, 0xf, "revsh",    Ra, xx, Ra,  xx,  xx,  0x0,  x, END_LIST}, /*revsh()*/
+    {OP_rfe,         0x0, 0x0, "rfe",      xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*rfe()*/
+    {OP_ror_imm,     dpe, 0x1a,"ror_imm",  Ra, xx, Ra,  I5,  xx,  0x0,  x, END_LIST}, /*ror_imm()*/
+    {OP_ror_reg,     dpe, 0x1a,"ror_reg",  Ra, xx, Ra,  Ra,  xx,  0x0,  x, END_LIST}, /*ror_reg()*/
+    {OP_rrx,         dpe, 0x1a,"rrx",      Ra, xx, Ra,  xx,  xx,  0x0,  x, END_LIST}, /*rrx()*/
+    {OP_rsb_imm,     dpi, 0x6, "rsb_imm",  Ra, xx, Ra,  I12, xx,  0x0,  x, END_LIST}, /*rsb_imm()*/
+    {OP_rsb_reg,     dpe, 0x6, "rsb_reg",  Ra, xx, Ra,  Ra,  I5,  0x0,  x, END_LIST}, /*rsb_reg()*/
+    {OP_rsb_rsr,     dpe, 0x6, "rsb_rsr",  Ra, xx, Ra,  Ra,  Ra,  0x0,  x, END_LIST}, /*rsb_rsr()*/
+    {OP_rsc_imm,     dpi, 0xe, "rsc_imm",  Ra, xx, Ra,  I12, xx,  0x0,  x, END_LIST}, /*rsc_imm()*/
+    {OP_rsc_reg,     dpe, 0xe, "rsc_reg",  Ra, xx, Ra,  Ra,  I5,  0x0,  x, END_LIST}, /*rsc_reg()*/
+    {OP_rsc_rsr,     dpe, 0xe, "rsc_rsr",  Ra, xx, Ra,  Ra,  Ra,  0x0,  x, END_LIST}, /*rsc_rsr()*/
+    {OP_sadd16,      ls2, 0x1, "sadd16",   Ra, xx, Ra,  Ra,  xx,  0x0,  x, END_LIST}, /*sadd16()*/
+    {OP_sadd8,       ls2, 0x1, "sadd8",    Ra, xx, Ra,  Ra,  xx,  0x0,  x, END_LIST}, /*sadd8()*/
+    {OP_sasx,        ls2, 0x1, "sasx",     Ra, xx, Ra,  Ra,  xx,  0x0,  x, END_LIST}, /*sasx()*/
+    {OP_sbc_imm,     dpi, 0xc, "sbc_imm",  Ra, xx, Ra,  I12, xx,  0x0,  x, END_LIST}, /*sbc_imm()*/
+    {OP_sbc_reg,     dpe, 0xc, "sbc_reg",  Ra, xx, Ra,  Ra,  I5,  0x0,  x, END_LIST}, /*sbc_reg()*/
+    {OP_sbc_rsr,     dpe, 0xc, "sbc_rsr",  Ra, xx, Ra,  Ra,  Ra,  0x0,  x, END_LIST}, /*sbc_rsr()*/
+    {OP_sbfx,        ls2, 0x1a,"sbfx",     xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*sbfx()*//*TODO*/
+    {OP_sdiv,        0x0, 0x0, "sdiv",     xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*sdiv()*/
+    {OP_sel,         ls2, 0x8, "sel",      Ra, xx, Ra,  Ra,  xx,  0x0,  x, END_LIST}, /*sel()*/
+    {OP_setend,      dpe, 0x16,"setend",   xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*setend()*/
+    {OP_sev,         dpi, 0x12,"sev",      xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*sev()*/
+    {OP_shadd16,     ls2, 0x3, "shadd16",  Ra, xx, Ra,  Ra,  xx,  0x0,  x, END_LIST}, /*shadd16()*/
+    {OP_shadd8,      ls2, 0x3, "shadd8",   Ra, xx, Ra,  Ra,  xx,  0x0,  x, END_LIST}, /*shadd8()*/
+    {OP_shsax,       ls2, 0x3, "shsax",    Ra, xx, Ra,  Ra,  xx,  0x0,  x, END_LIST}, /*shsax()*/
+    {OP_shsub16,     ls2, 0x3, "shsub16",  Ra, xx, Ra,  Ra,  xx,  0x0,  x, END_LIST}, /*shsub16()*/
+    {OP_shsub8,      ls2, 0x3, "shsub8",   Ra, xx, Ra,  Ra,  xx,  0x0,  x, END_LIST}, /*shsub8()*/
+    {OP_smlabb,      dpe, 0x16,"smlabb",   Ra, xx, Ra,  Ra,  Ra,  0x0,  x, END_LIST}, /*smlabb()*/
+    {OP_smlabt,      dpe, 0x16,"smlabt",   Ra, xx, Ra,  Ra,  Ra,  0x0,  x, END_LIST}, /*smlabt()*/
+    {OP_smlatb,      dpe, 0x16,"smlatb",   Ra, xx, Ra,  Ra,  Ra,  0x0,  x, END_LIST}, /*smlatb()*/
+    {OP_smlatt,      dpe, 0x16,"smlatt",   Ra, xx, Ra,  Ra,  Ra,  0x0,  x, END_LIST}, /*smlatt()*/
+    {OP_smlad,       ls2, 0x16,"smlad",    Ra, xx, Ra,  Ra,  Ra,  0x0,  x, END_LIST}, /*smlad()*/
+    {OP_smlal,       dpe, 0xe, "smlal",    Ra, Ra, Ra,  Ra,  xx,  0x0,  x, END_LIST}, /*smlal()*/
+    {OP_smlalbb,     dpe, 0x14,"smlalbb",  Ra, Ra, Ra,  Ra,  xx,  0x0,  x, END_LIST}, /*smlalbb()*/
+    {OP_smlalbt,     dpe, 0x14,"smlalbt",  Ra, Ra, Ra,  Ra,  xx,  0x0,  x, END_LIST}, /*smlalbt()*/
+    {OP_smlaltb,     dpe, 0x14,"smlaltb",  Ra, Ra, Ra,  Ra,  xx,  0x0,  x, END_LIST}, /*smlaltb()*/
+    {OP_smlaltt,     dpe, 0x14,"smlaltt",  Ra, Ra, Ra,  Ra,  xx,  0x0,  x, END_LIST}, /*smlaltt()*/
+    {OP_smlald,      ls2, 0x14,"smlald",   Ra, Ra, Ra,  Ra,  xx,  0x0,  x, END_LIST}, /*smlald()*/
+    {OP_smlawb,      dpe, 0x12,"smlawb",   Ra, xx, Ra,  Ra,  Ra,  0x0,  x, END_LIST}, /*smlawr()*/
+    {OP_smlawt,      dpe, 0x12,"smlawt",   Ra, xx, Ra,  Ra,  Ra,  0x0,  x, END_LIST}, /*smlawt()*/
+    {OP_smlsd,       ls2, 0x16,"smlsd",    Ra, xx, Ra,  Ra,  Ra,  0x0,  x, END_LIST}, /*smlsd()*/
+    {OP_smlsld,      ls2, 0x14,"smlsld",   Ra, Ra, Ra,  Ra,  xx,  0x0,  x, END_LIST}, /*smlsld()*/
+    {OP_smmla,       ls2, 0x15,"smmla",    Ra, xx, Ra,  Ra,  Ra,  0x0,  x, END_LIST}, /*smmla()*/
+    {OP_smmls,       ls2, 0x15,"smmls",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*smmls()*/
+    {OP_smmul,       ls2, 0x15,"smmul",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*smmul()*/
+    {OP_smuad,       ls2, 0x16,"smuad",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*smuad()*/
+    {OP_smulbb,      dpe, 0x16,"smulbb",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*smulbb()*/
+    {OP_smulbt,      dpe, 0x16,"smulbt",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*smulbt()*/
+    {OP_smultb,      dpe, 0x16,"smultb",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*smultb()*/
+    {OP_smultt,      dpe, 0x16,"smultt",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*smultt()*/
+    {OP_smull,       dpe, 0xc, "smull",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*smull()*/
+    {OP_smulwb,      dpe, 0x12,"smulwb",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*smulwb()*/
+    {OP_smulwt,      dpe, 0x12,"smulwt",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*smulwt()*/
+    {OP_smusd,       ls2, 0x16,"smusd",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*smusd()*/
+    {OP_srs,         0x0, 0x0, "srs",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*srs()*/
+    {OP_ssat,        ls2, 0xa, "ssat",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*ssat()*/
+    {OP_ssat16,      ls2, 0xa, "ssat16",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*ssat16()*/
+    {OP_ssax,        ls2, 0x1, "ssax",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*ssax()*/
+    {OP_ssub16,      ls2, 0x1, "ssub16",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*ssub16()*/
+    {OP_ssub8,       ls2, 0x1, "ssub8",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*ssub8()*/
+    {OP_stc,         cdm, 0x0, "stc",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*stc()*/
+    {OP_stc2,        cdm, 0x0, "stc2",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*stc2()*/
+    {OP_stm,         lsm, 0x8, "stm",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*stm()*/
+    {OP_stmia,       lsm, 0x8, "stmia",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*stmia()*/
+    {OP_stmea,       lsm, 0x8, "stmea",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*stmea()*/
+    {OP_stmda,       lsm, 0x0, "stmda",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*stmda()*/
+    {OP_stmed,       lsm, 0x0, "stmed",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*stmed()*/
+    {OP_stmdb,       lsm, 0x16,"stmdb",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*stmdb()*/
+    {OP_stmfd,       lsm, 0x16,"stmfd",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*stmfd()*/
+    {OP_stmib,       lsm, 0x18,"stmib",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*stmib()*/
+    {OP_stmfa,       lsm, 0x18,"stmfa",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*stmfa()*/
+    {OP_str_imm,     ls1, 0x0, "str_imm",  Ra, xx, Ra,  I12, xx,  0x0,  x, END_LIST}, /*str_imm()*/
+    {OP_str_reg,     ls2, 0x0, "str_reg",  Ma, xx, Ra,  xx,  xx,  0x0,  x, END_LIST}, /*str_reg()*/
+    {OP_strb_imm,    ls1, 0x4, "strb_imm",  Ra, xx, Ra,  I12,  xx,  0x0,  x, END_LIST}, /*strb_imm()*/
+    {OP_strb_reg,    ls2, 0x4, "strb_reg",  Ra, xx, Ra,  Ra,  I5,  0x0,  x, END_LIST}, /*strb_reg()*/
+    {OP_strbt,       ls1, 0x6, "strbt",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*strbt()*/
+    {OP_strd_imm,    dpe, 0x4, "strd_imm",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*strd_imm()*/
+    {OP_strd_reg,    dpe, 0x0, "strd_reg",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*strd_reg()*/
+    {OP_strex,       dpe, 0x18,"strex",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*strex()*/
+    {OP_strexb,      dpe, 0x18,"strexb",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*strexb()*/
+    {OP_strexd,      dpe, 0x1a,"strexd",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*strexd()*/
+    {OP_strexh,      dpe, 0x1e,"strexh",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*strexh()*/
+    {OP_strh_imm,    dpe, 0x4, "strh_imm",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*strh_imm()*/
+    {OP_strh_reg,    dpe, 0x0, "strh_reg",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*strh_reg()*/
+    {OP_strht,       dpe, 0x6, "strht",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*strht()*/
+    {OP_strt,        ls1, 0x4, "strt",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*strt()*/
+    {OP_sub_imm,     dpi, 0x4, "sub_imm",  Ra, xx, Ra,  I12, xx,  0x0,  x, END_LIST}, /*sub_imm()*/
+    {OP_sub_reg,     dpe, 0x4, "sub_reg",  Ra, xx, Ra,  Ra,  I5,  0x0,  x, END_LIST}, /*sub_reg()*/
+    {OP_sub_rsr,     dpe, 0x4, "sub_rsr",  Ra, xx, Ra,  Ra,  Ra,  0x0,  x, END_LIST}, /*sub_rsr()*/
+    {OP_sub_sp_imm,  dpi, 0x4, "sub_sp_imm",  Ra, xx, I12, xx,  xx,  0x0,  x, END_LIST}, /*sub_sp_imm()*/
+    {OP_sub_sp_reg,  dpe, 0x4, "sub_sp_reg",  Ra, xx, Ra,  xx,  xx,  0x0,  x, END_LIST}, /*sub_sp_reg()*/
+    {OP_subs,        0x0, 0x0, "subs",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*subs()*/
+    {OP_svc,         acs, 0x16,"svc",  xx, xx, I24,  xx,  xx,  0x0,  x, END_LIST}, /*svc()*/
+    {OP_swp,         dpe, 0x16,"swp",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*swp()*/
+    {OP_swpb,        dpe, 0x16,"swpb",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*swpb()*/
+    {OP_sxtab,       ls2, 0xa, "sxtab",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*sxtab()*/
+    {OP_sxtab16,     ls2, 0x8, "sxtab16",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*sxtab16()*/
+    {OP_sxtah,       ls2, 0xb, "sxth",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*sxth()*/
+    {OP_tbb,         0x0, 0x0, "tbb",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*tbb()*/
+    {OP_tbh,         0x0, 0x0, "tbh",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*tbh()*/
+    {OP_teq_imm,     dpi, 0x13,"teq_imm",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*teq_imm()*/
+    {OP_teq_reg,     dpe, 0x13,"teq_reg",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*teq_reg()*/
+    {OP_teq_rsr,     dpe, 0x13,"teq_rsr",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*teq_rsr()*/
+    {OP_tst_imm,     dpi, 0x11,"tst_imm",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*tst_imm()*/
+    {OP_tst_reg,     dpe, 0x11,"tst_reg",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*tst_reg()*/
+    {OP_tst_rsr,     dpe, 0x11,"tst_rsr",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*tst_rsr()*/
+    {OP_uadd16,      ls2, 0x5, "uadd16",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*uadd16()*/
+    {OP_uadd8,       ls2, 0x5, "uadd8",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*uadd8()*/
+    {OP_uasx,        ls2, 0x5, "uasx",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*uasx()*/
+    {OP_ubfx,        ls2, 0x1e,"ubfx",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*ubfx()*/
+    {OP_udiv,        0x0, 0x0, "udiv",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*udiv()*/
+    {OP_uhadd16,     ls2, 0x7, "uhadd16",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*uhadd16()*/
+    {OP_uhadd8,      ls2, 0x7, "uhadd8",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*uhadd8()*/
+    {OP_uhsax,       ls2, 0x7, "uhsax",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*uhsax()*/
+    {OP_uhsub16,     ls2, 0x7, "uhsub16",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*uhsub16()*/
+    {OP_uhsub8,      ls2, 0x7, "uhsub8",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*uhsub8()*/
+    {OP_umaal,       dpe, 0x4, "umaal",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*umaal()*/
+    {OP_umlal,       dpe, 0xa, "umlal",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*umlal()*/
+    {OP_umull,       dpe, 0x8, "umull",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*umull()*/
+    {OP_uqadd16,     ls2, 0x6, "uqadd16",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*uqadd16()*/
+    {OP_uqadd8,      ls2, 0x6, "uqadd8",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*uqadd8()*/
+    {OP_uqasx,       ls2, 0x6, "uqasx",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*uqasx()*/
+    {OP_uqsax,       ls2, 0x6, "uqsax",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*uqsax()*/
+    {OP_usub16,      ls2, 0x6, "usub16",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*usub16()*/
+    {OP_usub8,       ls2, 0x6, "usub8",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*usub8()*/
+    {OP_usad8,       ls2, 0x18,"usad8",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*usad8()*/
+    {OP_usada8,      ls2, 0x18,"usada8",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*usada8()*/
+    {OP_usat,        ls2, 0xe, "usat",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*usat()*/
+    {OP_usat16,      ls2, 0xe, "usat16",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*usat16()*/
+    {OP_usax,        ls2, 0x5, "usax",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*usax()*/
+    {OP_uxtab,       ls2, 0xe, "uxtab",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*uxtab()*/
+    {OP_uxtab16,     ls2, 0xc, "uxtab16",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*uxtab16()*/
+    {OP_uxtah,       ls2, 0xf, "uxtah",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*uxtah()*/
+    {OP_uxtb,        ls2, 0xe, "uxtb",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*uxtb()*/
+    {OP_uxtb16,      ls2, 0xc, "uxtb16",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*uxtb16()*/
+    {OP_uxth,        ls2, 0xf, "uxth",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*uxth()*/
+    {OP_vaba,        dpi, 0x8, "vaba",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vaba()*/
+    {OP_vabal_int,   dpi, 0x0, "vabal_int",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vabal_int()*/
+    {OP_vabd_int,    dpi, 0x0, "vabd_int",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vabd_int()*/
+    {OP_vabd_flt,    dpi, 0x12,"vabd_flt",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vabd_flt()*/
+    {OP_vabs,        dpi, 0x1b,"vabs",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vabs()*/
+    {OP_vacge,       dpi, 0x10,"vacge",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vacge()*/
+    {OP_vacgt,       dpi, 0x10,"vacgt",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vacgt()*/
+    {OP_vacle,       dpi, 0x10,"vacle",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vacle()*/
+    {OP_vaclt,       dpi, 0x10,"vaclt",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vaclt()*/
+    {OP_vadd_int,    dpi, 0x0, "vadd_int",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vadd_int()*/
+    {OP_vadd_flt,    dpi, 0x0, "vadd_flt",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vadd_flt()*/
+    {OP_vaddhn,      dpi, 0x8, "vaddhn",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vaddhn()*/
+    {OP_vaddl,       dpi, 0x8, "vaddl",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vaddl()*/
+    {OP_vaddw,       dpi, 0x8, "vaddw",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vaddw()*/
+    {OP_vand_imm,    0x0, 0x0, "vand_imm",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vand_imm()*/
+    {OP_vand_reg,    dpi, 0x0, "vand_reg",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vand_reg()*/
+    {OP_vbic_imm,    dpi, 0x8, "vbic_imm",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vbic_imm()*/
+    {OP_vbic_reg,    dpi, 0x1, "vbic_reg",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vbic_reg()*/
+    {OP_vbif,        dpi, 0x10,"vbif",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vbif()*/
+    {OP_vbsl,        dpi, 0x10,"vbsl",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vbsl()*/
+    {OP_vceq_reg,    dpi, 0x10,"vceq_reg",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vceq_reg()*/
+    {OP_vceq_imm,    dpi, 0x1b,"vceq_imm",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vceq_imm()*/
+    {OP_vcge_reg,    dpi, 0x0, "vcge_reg",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vcge_reg()*/
+    {OP_vcge_imm,    dpi, 0x1b,"vcge_imm",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vcge_imm()*/
+    {OP_vcgt_reg,    dpi, 0x0, "vcgt_reg",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vcgt_reg()*/
+    {OP_vcgt_imm,    dpi, 0x1b,"vcgt_imm",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vcgt_imm()*/
+    {OP_vcle_reg,    0x0, 0x0, "vcle_reg",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vcle_reg()*/
+    {OP_vcle_imm,    dpi, 0x1b,"vcle_imm",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vcle_imm()*/
+    {OP_vcls,        dpi, 0x1b,"vcls",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vcls()*/
+    {OP_vclt_reg,    0x0, 0x0, "vclt_reg",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vclt_reg()*/
+    {OP_vclt_imm,    dpi, 0x1b,"vclt_imm",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vclt_imm()*/
+    {OP_vclz,        dpi, 0x1b,"vclz",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vclz()*/
+    {OP_vcmp,        acs, 0xb, "vcmp",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vcmp()*/
+    {OP_vcmpe,       acs, 0xb, "vcmpe",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vcmpe()*/
+    {OP_vcnt,        dpi, 0x1b,"vcnt",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vcnt()*/
+    {OP_vcvt_flt_int_simd,  dpi, 0x1b, "vcvt_flt_int_simd",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vcvt_flt_int_simd()*/
+    {OP_vcvt_flt_int_vfp,  acs, 0xb, "vcvt_flt_int_vfp",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vcvt_flt_int_vfp()*/
+    {OP_vcvtr_flt_int_vfp,  acs, 0xb, "vcvtr_flt_int_vfp",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vcvtr_flt_int_vfp()*/
+    {OP_vcvt_flt_fip_simd,  dpi, 0x8, "vcvt_flt_fip_simd",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vcvt_flt_fip_simd()*/
+    {OP_vcvt_dp_sp,  acs, 0xb, "vcvt_dp_sp",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vcvt_dp_sp()*/
+    {OP_vcvt_hp_sp_simd,  0x0, 0x0, "vcvt_hp_sp_simd",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vcvt_hp_sp_simd()*/
+    {OP_vcvtb_hp_sp_vfp,  0x0, 0x0, "vcvtb_hp_sp_vfp",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vcvtb_hp_sp_vfp()*/
+    {OP_vcvtt_hp_sp_vfp,  0x0, 0x0, "vcvtt_hp_sp_vfp",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vcvtt_hp_sp_vfp()*/
+    {OP_vdiv,      acs, 0x8, "vdiv",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vdiv()*/
+    {OP_vdup_scl,  dpi, 0x1b,"vdup_scl",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vdup_scl()*/
+    {OP_vdup_reg,  acs, 0x8, "vdup_reg",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vdup_reg()*/
+    {OP_veor,      dpi, 0x10,"veor",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*veor()*/
+    {OP_vext,      dpi, 0xb, "vext",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vext()*/
+    {OP_vhadd,     dpi, 0x0, "vhadd",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vhadd()*/
+    {OP_vhsub,     dpi, 0x0, "vhsub",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vhsub()*/
+    {OP_vld1_mse,  ls1, 0x2, "vld1_mse",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vld1_mse()*/
+    {OP_vld1_se1,  ls1, 0xa, "vld1_se1",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vld1_se1()*/
+    {OP_vld1_sea,  ls1, 0xa, "vld1_sea",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vld1_sea()*/
+    {OP_vld2_m2es,  ls1, 0x2, "vld2_m2es",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vld2_m2es()*/
+    {OP_vld2_s2e1,  ls1, 0xa, "vld2_s2e1",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vld2_s2e1()*/
+    {OP_vld2_s2ea,  ls1, 0xa, "vld2_s2ea",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vld2_s2ea()*/
+    {OP_vld3_m3s,   ls1, 0x2, "vld3_m3s",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vld3_m3s()*/
+    {OP_vld3_se1,   ls1, 0xa, "vld3_se1",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vld3_se1()*/
+    {OP_vld3_sea,   ls1, 0xa, "vld3_sea",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vld3_sea()*/
+    {OP_vld4_m4es,  ls1, 0x2, "vld4_m4es",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vld4_m4es()*/
+    {OP_vld4_se1,   ls1, 0xa, "vld4_se1",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vld4_se1()*/
+    {OP_vld4_s4ea,  ls1, 0xa, "vld4_s4ea",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vld4_s4ea()*/
+    {OP_vldm,       cdm, 0x1, "vldm",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vldm()*/
+    {OP_vldr,       cdm, 0x11,"vldr",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vldr()*/
+    {OP_vmax_int,   dpi, 0x0, "vmax_int",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vmax_int()*/
+    {OP_vmin_int,   dpi, 0x0, "vmin_int",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vmin_int()*/
+    {OP_vmax_flt,   dpi, 0x0, "vmax_flt",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vmax_flt()*/
+    {OP_vmin_flt,   dpi, 0x0, "vmin_flt",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vmin_flt()*/
+    {OP_vmla_int,   dpi, 0x8, "vmla_int",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vmla_int()*/
+    {OP_vmlal_int,  dpi, 0x8, "vmlal_int",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vmlal_int()*/
+    {OP_vmls_int,   dpi, 0x8, "vmls_int",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vmls_int()*/
+    {OP_vmlsl_int,  dpi, 0x8, "vmlsl_int",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vmlsl_int()*/
+    {OP_vmla_flt,   dpi, 0x0, "vmla_flt",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vmla_flt()*/
+    {OP_vmls_flt,   dpi, 0x0, "vmls_flt",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vmls_flt()*/
+    {OP_vmla_scl,   dpi, 0x8, "vmla_scl",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vmla_scl()*/
+    {OP_vmlal_scl,  dpi, 0x8, "vmlal_scl",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vmlal_scl()*/
+    {OP_vmls_scl,   dpi, 0x8, "vmls_scl",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vmls_scl()*/
+    {OP_vmlsl_scl,  dpi, 0x8, "vmlsl_scl",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vmlsl_scl()*/
+    {OP_vmov_imm,   dpi, 0x8, "vmov_imm",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vmov_imm()*/
+    {OP_vmov_reg,   dpi, 0x2, "vmov_reg",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vmov_reg()*/
+    {OP_vmov_reg_scl,  acs, 0x0, "vmov_reg_scl",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vmov_reg_scl()*/
+    {OP_vmov_scl_reg,  acs, 0x1, "vmov_scl_reg",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vmov_scl_reg()*/
+    {OP_vmov_reg_sp,   acs, 0x0, "vmov_reg_sp",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vmov_reg_sp()*/
+    {OP_vmov_2reg_2sp,  cdm, 0x4, "vmov_2reg_2sp",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vmov_2reg_2sp()*/
+    {OP_vmov_2reg_2dp,  cdm, 0x4, "vmov_2reg_2dp",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vmov_2reg_2dp()*/
+    {OP_vmovl,          dpi, 0x8, "vmovl",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vmovl()*/
+    {OP_vmovn,          dpi, 0x1b,"vmovn",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vmovn()*/
+    {OP_vmrs,           acs, 0xf, "vmrs",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vmrs()*/
+    {OP_vmsr,           acs, 0xe, "vmsr",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vmsr()*/
+    {OP_vmul_int,       dpi, 0x8, "vmul_int",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vmul_int()*/
+    {OP_vmull_int,      dpi, 0x8, "vmull_int",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vmull_int()*/
+    {OP_vmul_flp,       dpi, 0x10,"vmul_flp",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vmul_flp()*/
+    {OP_vmul_scl,       dpi, 0x8, "vmul_scl",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vmul_scl()*/
+    {OP_vmull_scl,      dpi, 0x8, "vmull_scl",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vmull_scl()*/
+    {OP_vmvn_imm,       dpi, 0x8, "vmvn_imm",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vmvn_imm()*/
+    {OP_vmvn_reg,       dpi, 0x1b,"vmvn_reg",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vmvn_reg()*/
+    {OP_vneg,           dpi, 0x1b,"vneg",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vneg()*/
+    {OP_vnmla,          acs, 0x1, "vnmla",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vnmla()*/
+    {OP_vnmls,          acs, 0x1, "vnmls",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vnmls()*/
+    {OP_vnmul,          acs, 0x1, "vnmul",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vnmul()*/
+    {OP_vorn_imm,       0x0, 0x0, "vorn_imm",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vorn_imm()*/
+    {OP_vorn_reg,       dpi, 0x3, "vorn_reg",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vorn_reg()*/
+    {OP_vorr_imm,       dpi, 0x8, "vorr_imm",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vorr_imm()*/
+    {OP_vorr_reg,       dpi, 0x2, "vorr_reg",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vorr_reg()*/
+    {OP_vpadal,         dpi, 0x1b,"vpadal",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vpadal()*/
+    {OP_vpadd_int,      dpi, 0x0, "vpadd_int",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vpadd_int()*/
+    {OP_vpadd_flp,      dpi, 0x10,"vpadd_flp",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vpadd_flp()*/
+    {OP_vpaddl,         dpi, 0x1b,"vpaddl",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vpaddl()*/
+    {OP_vpmax_int,      dpi, 0x0, "vpmax_int",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vpmax_int()*/
+    {OP_vpmin_int,      dpi, 0x0, "vpmin_int",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vpmin_int()*/
+    {OP_vpmax_flp,      dpi, 0x10,"vpmax_flp",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vpmax_flp()*/
+    {OP_vpmin_flp,      dpi, 0x10,"vpmin_flp",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vpmin_flp()*/
+    {OP_vpop,           cdm, 0xb, "vpop",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vpop()*/
+    {OP_vpush,          cdm, 0x13,"vpush",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vpush()*/
+    {OP_vqabs,          dpi, 0x1b,"vqabs",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vqabs()*/
+    {OP_vqadd,          dpi, 0x0, "vqadd",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vqadd()*/
+    {OP_vqdmlal,        dpi, 0x8, "vqdmlal",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vqdmlal()*/
+    {OP_vqdmlsl,        dpi, 0x8, "vqdmlsl",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vqdmlsl()*/
+    {OP_vqdmulh,        dpi, 0x0, "vqdmulh",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vqdmulh()*/
+    {OP_vqdmull,        dpi, 0x8, "vqdmull",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vqdmull()*/
+    {OP_vqdmovn,        dpi, 0x1b,"vqdmovn",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vqdmovn()*/
+    {OP_vqdmovun,       dpi, 0x1b,"vqdmovun",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vqdmovun()*/
+    {OP_vqneq,          dpi, 0x1b,"vqneq",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vqneq()*/
+    {OP_vqrdmulh,       dpi, 0x10,"vqrdmulh",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vqrdmulh()*/
+    {OP_vqrshl,         dpi, 0x0, "vqrshl",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vqrshl()*/
+    {OP_vqrshrn,        dpi, 0x8, "vqrshrn",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vqrshrn()*/
+    {OP_vqrshrun,       dpi, 0x8, "vqrshrun",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vqrshrun()*/
+    {OP_vqshl_reg,      dpi, 0x0, "vqshl_reg",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vqshl_reg()*/
+    {OP_vqshl_imm,      dpi, 0x8, "vqshl_imm",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vqshl_imm()*/
+    {OP_vqshlu_imm,     dpi, 0x8, "vqshlu_imm",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vqshlu_imm()*/
+    {OP_vqshrn,         dpi, 0x8, "vqshrn",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vqshrn()*/
+    {OP_vqshrun,        dpi, 0x8, "vqshrun",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vqshrun()*/
+    {OP_vqsub,          dpi, 0x0, "vqsub",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vqsub()*/
+    {OP_vqraddhn,       dpi, 0x18,"vqraddhn",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vqraddhn()*/
+    {OP_vqrecpe,        dpi, 0x1b,"vqrecpe",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vqrecpe()*/
+    {OP_vqrecps,        dpi, 0x0, "vqrecps",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vqrecps()*/
+    {OP_vrev16,         dpi, 0x1b,"vrev16",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vrev16()*/
+    {OP_vrev32,         dpi, 0x1b,"vrev32",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vrev32()*/
+    {OP_vrev64,         dpi, 0x1b,"vrev64",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vrev64()*/
+    {OP_vrhadd,         dpi, 0x0, "vrhadd",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vrhadd()*/
+    {OP_vrshl,          dpi, 0x0, "vrshl",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vrshl()*/
+    {OP_vrshr,          dpi, 0x8, "vrshr",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vrshr()*/
+    {OP_vrshrn,         dpi, 0x8, "vrshrn",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vrshrn()*/
+    {OP_vrsqrte,        dpi, 0x1b,"vrsqrte",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vrsqrte()*/
+    {OP_vrsqrts,        dpi, 0x2, "vrsqrts",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vrsqrts()*/
+    {OP_vrsra,          dpi, 0x8, "vrsra",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vrsra()*/
+    {OP_vrsubhn,        dpi, 0x18,"vrsubhn",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vrsubhn()*/
+    {OP_vshl_imm,       dpi, 0x8, "vshl_imm",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vshl_imm()*/
+    {OP_vshl_reg,       dpi, 0x0, "vshl_reg",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vshl_reg()*/
+    {OP_vshll,          dpi, 0x8, "vshll",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vshll()*/
+    {OP_vshr,           dpi, 0x8, "vshr",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vshr()*/
+    {OP_vshrn,          dpi, 0x8, "vshrn",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vshrn()*/
+    {OP_vsli,           dpi, 0x18,"vsli",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vsli()*/
+    {OP_vsqrt,          acs, 0xb, "vsqrt",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vsqrt()*/
+    {OP_vsra,           dpi, 0x8, "vsra",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vsra()*/
+    {OP_vsri,           dpi, 0x18,"vsri",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vsri()*/
+    {OP_vst1_mse,       ls1, 0x0, "vst1_mse",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vst1_mse()*/
+    {OP_vst1_se1,       ls1, 0x8, "vst1_se1",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vst1_se1()*/
+    {OP_vst2_m2e,       ls1, 0x0, "vst2_m2e",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vst2_m2e()*/
+    {OP_vst2_s2e1,      ls1, 0x8, "vst2_s2e1",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vst2_s2e1()*/
+    {OP_vst3_m3es,      ls1, 0x0, "vst3_m3es",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vst3_m3es()*/
+    {OP_vst3_s3e1,      ls1, 0x8, "vst3_s3e1",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vst3_s3e1()*/
+    {OP_vst4_m4es,      ls1, 0x0, "vst4_m4es",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vst4_m4es()*/
+    {OP_vst4_s4e1,      ls1, 0x8, "vst4_s4e1",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vst4_s4e1()*/
+    {OP_vstm,           cdm, 0x0, "vstm",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vstm()*/
+    {OP_vstr,           cdm, 0x10,"vstr",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vstr()*/
+    {OP_vsub_int,       dpi, 0x10,"vsub_int",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vsub_int()*/
+    {OP_vsub_flp,       dpi, 0x2, "vsub_flp",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vsub_flp()*/
+    {OP_vsubhn,         dpi, 0x8, "vsubhn",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vsubhn()*/
+    {OP_vsubl,          dpi, 0x8, "vsubl",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vsubl()*/
+    {OP_vsubw,          dpi, 0x8, "vsubw",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vsubw()*/
+    {OP_vswp,           dpi, 0x1b,"vswp",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vswp()*/
+    {OP_vtbl,           dpi, 0x1b,"vtbl",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vtbl()*/
+    {OP_vtbx,           dpi, 0x1b, "vtbx",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vtbx()*/
+    {OP_vtrn,           dpi, 0x1b,"vtrn",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vtrn()*/
+    {OP_vtst,           dpi, 0x0, "vtst",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vtst()*/
+    {OP_vuzp,           dpi, 0x1b,"vuzp",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vuzp()*/
+    {OP_vzip,           dpi, 0x1b,"vzip",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vzip()*/
+    {OP_wfe,            dpi, 0x12,"wfe",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*wfe()*/
+    {OP_wfi,            dpi, 0x12,"wfi",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*wfi()*/
+    {OP_yield,          dpi, 0x12,"yield",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*yield()*/
 };
 
 /* SJF TODO 
@@ -788,7 +788,7 @@ const instr_info_t * const op_instr[] =
     /* OP_smlaltb */    &armv7a_instrs[177],
     /* OP_smlaltt */    &armv7a_instrs[178],
     /* OP_smlald */    &armv7a_instrs[179],
-    /* OP_smlawr */    &armv7a_instrs[180],
+    /* OP_smlawb */    &armv7a_instrs[180],
     /* OP_smlawt */    &armv7a_instrs[181],
     /* OP_smlsd */    &armv7a_instrs[182],
     /* OP_smlsld */    &armv7a_instrs[183],
@@ -847,7 +847,7 @@ const instr_info_t * const op_instr[] =
     /* OP_swpb */    &armv7a_instrs[236],
     /* OP_sxtab */    &armv7a_instrs[237],
     /* OP_sxtab16 */    &armv7a_instrs[238],
-    /* OP_sxth */    &armv7a_instrs[239],
+    /* OP_sxtah */   &armv7a_instrs[239],
     /* OP_tbb */    &armv7a_instrs[240],
     /* OP_tbh */    &armv7a_instrs[241],
     /* OP_teq_imm */    &armv7a_instrs[242],

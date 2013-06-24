@@ -3643,10 +3643,21 @@ instr_set_branch_target_pc(instr_t *cti_instr, app_pc pc)
 
 DR_API
 bool
-instr_type_is_data_execution(int instr_type)
+instr_type_is_branch(int instr_type)
 {
-    return( instr_type == INSTR_TYPE_DATA_EXECUTION );
+    return( instr_type == INSTR_TYPE_BRANCH );
 }
+
+static bool
+opcode_is_unconditional(int opc)
+{
+   //TODO SJF Insert all uncond instrs here
+   if( opc == OP_bx )
+     return true;
+   else
+     return false;
+}
+
 
 /* An exit CTI is a control-transfer instruction whose target
  * is a pc (and not an instr_t pointer).  This routine assumes
@@ -3664,28 +3675,26 @@ instr_is_exit_cti(instr_t *instr)
         return false;
     /* XXX: avoid conditional decode in instr_get_opcode() for speed. */
     instr_type = instr->instr_type;
-    if (instr_type_is_data_execution(instr_type) ) {
+    if (instr_type_is_branch(instr_type) ) {
         /* far pc should only happen for mangle's call to here */
         return opnd_is_pc(instr_get_target(instr));
     }
     return false;
 }
 
+bool
+instr_is_unconditional(instr_t *instr)
+{
+    int opc = instr_get_opcode(instr);
+    return opcode_is_unconditional(opc);
+}
+
+
 bool 
 instr_is_mov(instr_t *instr)
 {
     int opc = instr_get_opcode(instr);
     return (opc == OP_mov_imm || opc == OP_mov_reg || opc == OP_movt ); 
-}
-
-static bool
-opcode_is_unconditional(int opc)
-{
-   //TODO SJF Insert all uncond instrs here
-   if( opc == OP_bx )
-     return true;
-   else
-     return false;
 }
 
 static bool

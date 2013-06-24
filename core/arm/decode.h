@@ -303,6 +303,16 @@ typedef struct decode_info_t {
     byte instr_type;
     byte opcode;
 
+    /* SJF: All possible falgs are here. encode/decode functions
+            will set/check as appropriate */
+    bool p_flag; // Post indexed?
+    bool u_flag; // plus/minus offset?
+    bool s_flag; // set cpsr flags?
+    bool w_flag; // write back?
+    bool l_flag; //load/store
+    bool b_flag; //word or byte?
+    //n flag/a flag???
+
     /* immed info */
     opnd_size_t size_immed;
     opnd_size_t size_immed2;

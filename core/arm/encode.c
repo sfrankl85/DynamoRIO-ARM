@@ -1105,28 +1105,30 @@ copy_and_re_relativize_raw_instr(dcontext_t *dcontext, instr_t *instr,
     return orig_dst_pc + instr->length;
 }
 
-/* SJF ARM Specific encoding instructions */
-void
-encode_data_processing_1(dcontext_t* di, instr_t* instr)
+/******************************************************************************
+ 
+                SJF: ARM Specific encoding instructions                        *
+
+******************************************************************************/
+int
+encode_data_processing_1(decode_info_t* di, instr_t* instr, byte* pc)
 {
-    byte* start_pc = di->start_pc; 
-    byte* final_pc = di->final_pc;
-    byte[4] word = {0};  //Instr encoding in byte array
+    byte word[4] = {0};  //Instr encoding in byte array
     uint        opc;
     byte        b;
     uint        opc_bits;
     opnd_t      opnd;
-    byte*       pc = di->start_pc;
+    instr_info_t* info;
 
     opc = instr_get_opcode(instr);
 
     /* 
        Instruction encoded as 31-0
-       |cond|instr_type|opcode|operands|
+       |cond|instr_type|opcode|operands/flags|
      */
     
     //Encode cond
-    if( opcode_is_unconditional( opc ) )
+    if( instr_is_unconditional( instr ) )
     {
         //Encode unconditional
         b = 0xf0;
@@ -1161,14 +1163,14 @@ encode_data_processing_1(dcontext_t* di, instr_t* instr)
 
     //Reg 1
     
-    if( TEST_OPND(di, info->dst1_type, info->dst1_size, 1, instr->num_dsts, instr_get_dst(instr, 0)))
+    //if( TEST_OPND(di, info->dst1_type, info->dst1_size, 1, instr->num_dsts, instr_get_dst(instr, 0)))
     {
         opnd = instr_get_dst(instr, 0);      
  
         switch( opnd.kind )
         {
           case REG_kind:
-            b = opnd.reg;
+            b = opnd.value.reg;
 
             b--; //To get actual reg number
             word[1] |= b;
@@ -1180,14 +1182,14 @@ encode_data_processing_1(dcontext_t* di, instr_t* instr)
         }    
     }
 
-    if( TEST_OPND(di, info->src1_type, info->src1_size, 1, instr->num_srcs, instr_get_src(instr, 0)))
+    //if( TEST_OPND(di, info->src1_type, info->src1_size, 1, instr->num_srcs, instr_get_src(instr, 0)))
     {
         opnd = instr_get_src(instr, 0);
 
         switch( opnd.kind )
         {
           case REG_kind:
-            b = opnd.reg;
+            b = opnd.value.reg;
 
             b--; //To get actual reg number
             word[2] |= (b << 4);
@@ -1200,19 +1202,19 @@ encode_data_processing_1(dcontext_t* di, instr_t* instr)
         }
     }
 
-    if( TEST_OPND(di, info->src2_type, info->src2_size, 2, instr->num_srcs, instr_get_src(instr, 1)))
+    //if( TEST_OPND(di, info->src2_type, info->src2_size, 2, instr->num_srcs, instr_get_src(instr, 1)))
     {
         opnd = instr_get_src(instr, 1);
 
         switch( opnd.kind )
         {
           case IMMED_INTEGER_kind:
-            b = opnd.immed_int;
+            b = opnd.value.immed_int;
 
             b &= 0x1e; //To get 4 imm bits
             word[2] |= (b >> 1);
 
-            b = opnd.immed_int;
+            b = opnd.value.immed_int;
             b &= 0x1; //To get last bit
 
             word[3] |= (b << 7);
@@ -1229,14 +1231,14 @@ encode_data_processing_1(dcontext_t* di, instr_t* instr)
     //bit[4] already 0
 
 
-    if( TEST_OPND(di, info->src3_type, info->src3_size, 3, instr->num_srcs, instr_get_src(instr, 2)))
+    //if( TEST_OPND(di, info->src3_type, info->src3_size, 3, instr->num_srcs, instr_get_src(instr, 2)))
     {
         opnd = instr_get_src(instr, 2);
 
         switch( opnd.kind )
         {
           case REG_kind:
-            b = opnd.reg;
+            b = opnd.value.reg;
             b--;
 
             b &= 0xf;
@@ -1261,10 +1263,107 @@ encode_data_processing_1(dcontext_t* di, instr_t* instr)
    pc++;
    *((byte *)pc) = word[3];
    pc++;
+
+   return pc;
 }
 
 void
-encode_data_processing_and_els(dcontext_t* di, instr_t* instr)
+encode_multiply(decode_info_t* di, instr_t* instr)
+{
+}
+
+void
+encode_extra_load_store(decode_info_t* di, instr_t* instr)
+{
+}
+
+void
+encode_synchro_primitives(decode_info_t* di, instr_t* instr)
+{
+}
+
+void
+encode_misc1(decode_info_t* di, instr_t* instr)
+{
+}
+
+void
+encode_data_processing_imm(decode_info_t* di, instr_t* instr)
+{
+}
+
+void
+encode_extras(decode_info_t* di, instr_t* instr)
+{
+}
+
+void
+encode_misc2(decode_info_t* di, instr_t* instr)
+{
+}
+
+void
+encode_load_store_1(decode_info_t* di, instr_t* instr)
+{
+}
+
+void
+encode_misc3(decode_info_t* di, instr_t* instr)
+{
+}
+
+void
+encode_media(decode_info_t* di, instr_t* instr)
+{
+}
+
+void
+encode_parallel_arith(decode_info_t* di, instr_t* instr)
+{
+}
+
+void
+encode_packing_unpacking(decode_info_t* di, instr_t* instr)
+{
+}
+
+void
+encode_signed_multiply(decode_info_t* di, instr_t* instr)
+{
+}
+
+void
+encode_misc4(decode_info_t* di, instr_t* instr)
+{
+}
+
+void
+encode_load_store_multiple(decode_info_t* di, instr_t* instr)
+{
+}
+
+void
+encode_uncond(decode_info_t* di, instr_t* instr)
+{
+}
+
+void
+encode_branch(decode_info_t* di, instr_t* instr)
+{
+}
+
+void
+encode_coprocessor_data_movement(decode_info_t* di, instr_t* instr)
+{
+}
+
+void
+encode_advanced_coprocessor(decode_info_t* di, instr_t* instr)
+{
+}
+
+void
+encode_data_processing_and_els(decode_info_t* di, instr_t* instr, byte* pc)
 {
     uint opc;
 
@@ -1316,7 +1415,8 @@ encode_data_processing_and_els(dcontext_t* di, instr_t* instr)
         case OP_ror_reg:
         case OP_bic_rsr:
         case OP_mvn_rsr:
-          encode_data_processing_1(di, instr);
+          encode_data_processing_1(di, instr, pc);
+          break;
           //Multiply instrs
         case OP_mul:
         case OP_mla:
@@ -1346,6 +1446,8 @@ encode_data_processing_and_els(dcontext_t* di, instr_t* instr)
         case OP_smulbt:
         case OP_smultb:
         case OP_smultt:
+          encode_multiply(di, instr);
+          break;
           //Extra load/store
         case OP_strh_reg:
         case OP_ldrh_reg:
@@ -1353,7 +1455,6 @@ encode_data_processing_and_els(dcontext_t* di, instr_t* instr)
         case OP_ldrh_imm:
         case OP_ldrh_lit:
         case OP_ldrd_reg:
-        case OP_ldrsb_imm:
         case OP_ldrd_imm:
         case OP_ldrd_lit:
         case OP_ldrsb_imm:
@@ -1367,6 +1468,8 @@ encode_data_processing_and_els(dcontext_t* di, instr_t* instr)
         case OP_ldrht:
         case OP_ldrsbt:
         case OP_ldrsht:
+          encode_extra_load_store(di, instr);
+          break;
           //Synchro primitves
         case OP_swp:
         case OP_swpb:
@@ -1378,20 +1481,22 @@ encode_data_processing_and_els(dcontext_t* di, instr_t* instr)
         case OP_ldrexb:
         case OP_strexh:
         case OP_ldrexh:
+          encode_synchro_primitives(di, instr);
+          break;
         //misc
         case OP_cps:
         case OP_setend:
           //Add encode func 
+          encode_misc1(di, instr);
           break;
         default:
-            CLIENT_ASSERT(false, "instr_encode error: invalid opcode %d for instr_type",
-                                 opcode );
+            CLIENT_ASSERT(false, "instr_encode error: invalid opcode for instr_type" );
             break;
     }
 }
 
 void
-encode_data_processing_imm(dcontext_t* di, instr_t* instr)
+encode_data_processing_imm(dcontext_t* dcontext, decode_info_t* di, instr_t* instr)
 {
     uint opc;
 
@@ -1405,7 +1510,6 @@ encode_data_processing_imm(dcontext_t* di, instr_t* instr)
         case OP_adr:
         case OP_rsb_imm:
         case OP_add_imm:
-        case OP_adr_imm:
         case OP_adc_imm:
         case OP_sbc_imm:
         case OP_rsc_imm:
@@ -1417,6 +1521,8 @@ encode_data_processing_imm(dcontext_t* di, instr_t* instr)
         case OP_mov_imm:
         case OP_bic_imm:
         case OP_mvn_imm:
+          encode_data_processing_imm(di, instr);
+          break;
         //Extar instrs
         case OP_nop:
         case OP_yield:
@@ -1425,25 +1531,28 @@ encode_data_processing_imm(dcontext_t* di, instr_t* instr)
         case OP_sev:
         case OP_dbg:
         case OP_msr_imm:
+          encode_extras(di, instr);
+          break;
         //Misc
         case OP_mrs:
         case OP_msr_reg:
         case OP_bx:
         case OP_clz:
         case OP_bxj:
-        case OP_blx:
+        case OP_blx_imm:
+        case OP_blx_reg:
         case OP_bkpt:
-        case OP_smc:
+        //case OP_smc:
+          encode_misc2(di, instr);
         default:
-            CLIENT_ASSERT(false, "instr_encode error: invalid opcode %d for instr_type",
-                                 opcode );
+            CLIENT_ASSERT(false, "instr_encode error: invalid opcode for instr_type" );
             break;
     }
 
 }
 
 void
-encode_load_store_1(dcontext_t* di, instr_t* instr)
+encode_load_store_1(dcontext_t* dcontext, decode_info_t* di, instr_t* instr)
 {
     uint opc;
 
@@ -1456,7 +1565,7 @@ encode_load_store_1(dcontext_t* di, instr_t* instr)
         case OP_strt:
         case OP_ldr_imm:
         case OP_ldr_lit:
-        case OP_ldr_ref:
+        case OP_ldr_reg:
         case OP_ldrt:
         case OP_strb_imm:
         case OP_strb_reg:
@@ -1465,8 +1574,12 @@ encode_load_store_1(dcontext_t* di, instr_t* instr)
         case OP_ldrb_lit:
         case OP_ldrb_reg:       
         case OP_ldrbt:
+          encode_load_store_1(di, instr);
+          break;
         //misc
-        case OP_pli:
+        case OP_pli_imm:
+        case OP_pli_lit:
+        case OP_pli_reg:
         case OP_pld_imm:
         case OP_pldw_imm:
         case OP_pld_lit:
@@ -1474,16 +1587,16 @@ encode_load_store_1(dcontext_t* di, instr_t* instr)
         case OP_dsb:
         case OP_dmb:
         case OP_isb:
+          encode_misc3(di, instr);
           break;
         default:
-            CLIENT_ASSERT(false, "instr_encode error: invalid opcode %d for instr_type",
-                                 opcode );
+            CLIENT_ASSERT(false, "instr_encode error: invalid opcode for instr_type" );
             break;
     }
 }
 
 void
-encode_load_store_2_and_media(dcontext_t* di, instr_t* instr)
+encode_load_store_2_and_media(dcontext_t* dcontext, decode_info_t* di, instr_t* instr)
 {
     uint opc;
 
@@ -1499,6 +1612,8 @@ encode_load_store_2_and_media(dcontext_t* di, instr_t* instr)
         case OP_bfc:
         case OP_bfi:
         case OP_ubfx:
+          encode_media(di, instr);
+          break;
         // Parallel arith
         case OP_sadd16:
         case OP_sasx:
@@ -1509,10 +1624,10 @@ encode_load_store_2_and_media(dcontext_t* di, instr_t* instr)
         case OP_qasx:
         case OP_qsax:
         case OP_qsub16:
-        case OP_add8:
-        case OP_sub8:
+        //case OP_add8:
+        //case OP_sub8:
         case OP_shadd16:
-        case OP_shasx:
+        //case OP_shasx:
         case OP_shsax:
         case OP_shsub16:
         case OP_shadd8:
@@ -1526,28 +1641,30 @@ encode_load_store_2_and_media(dcontext_t* di, instr_t* instr)
         case OP_uqadd16:
         case OP_uqasx:
         case OP_uqsax:
-        case OP_uqsub16:
+        //case OP_uqsub16:
         case OP_uqadd8:
-        case OP_uqsub8:
+        //case OP_uqsub8:
         case OP_uhadd16:
-        case OP_uhasx:
+        //case OP_uhasx:
         case OP_uhsax:
         case OP_uhsub16:
         case OP_uhadd8:
         case OP_uhsub8:
+          encode_parallel_arith(di, instr);
+          break;
         //Packing/Unpacking saturation and reversal
         case OP_pkh:
         case OP_ssat:
         case OP_usat:
         case OP_sxtab16:
-        case OP_sxtb16:
+        //case OP_sxtb16:
         case OP_sel:
         case OP_ssat16:
         case OP_sxtab:
-        case OP_sxtb:
+        //case OP_sxtb:
         case OP_rev:
         case OP_sxtah:
-        case OP_sxth:
+        //case OP_sxth:
         case OP_rev16:
         case OP_uxtab16:
         case OP_uxtb16:
@@ -1558,31 +1675,35 @@ encode_load_store_2_and_media(dcontext_t* di, instr_t* instr)
         case OP_uxtah:
         case OP_uxth:
         case OP_revsh:
+          encode_packing_unpacking(di, instr);
+          break;
         //Signed Multiple
         case OP_smlad:
         case OP_smuad:
         case OP_smlsd:
         case OP_smusd:
         case OP_smlald:
-        case OP_mlsld:
+        case OP_smlsld:
         case OP_smmla:
         case OP_smmul:
         case OP_smmls:
+          encode_signed_multiply(di, instr);
+          break;
         //misc
         case OP_pli_reg:
         case OP_pld_reg:
         case OP_pldw_reg:
+          encode_misc4(di, instr);
           break;
         default:
-            CLIENT_ASSERT(false, "instr_encode error: invalid opcode %d for instr_type",
-                                 opcode );
+            CLIENT_ASSERT(false, "instr_encode error: invalid opcode for instr_type" );
             break;
     }
 
 }
 
 void
-encode_load_store_multiple(dcontext_t* di, instr_t* instr)
+encode_load_store_multiple(dcontext_t* dcontext, decode_info_t* di, instr_t* instr)
 {
     uint opc;
 
@@ -1605,21 +1726,20 @@ encode_load_store_multiple(dcontext_t* di, instr_t* instr)
         case OP_stmfd:
         case OP_ldmib:
         case OP_ldmed:
-        case OP_stm:
-        case OP_ldm:
+          encode_load_store_multiple(di, instr);
         //Uncond instrs
         case OP_srs:
         case OP_rfe:
+          encode_uncond(di, instr);
           break;
         default:
-            CLIENT_ASSERT(false, "instr_encode error: invalid opcode %d for instr_type",
-                                 opcode );
+            CLIENT_ASSERT(false, "instr_encode error: invalid opcode for instr_type" );
             break;
     }
 }
 
 void
-encode_branch(dcontext_t* di, instr_t* instr)
+encode_branch(dcontext_t* dcontext, decode_info_t* di, instr_t* instr)
 {
     uint opc;
 
@@ -1629,17 +1749,18 @@ encode_branch(dcontext_t* di, instr_t* instr)
     {
         case OP_b:
         case OP_bl:
-        case OP_blx:
+        case OP_blx_imm:
+        case OP_blx_reg:
+          encode_branch(di, instr);
           break;
         default:
-            CLIENT_ASSERT(false, "instr_encode error: invalid opcode %d for instr_type",
-                                 opcode );
+            CLIENT_ASSERT(false, "instr_encode error: invalid opcode for instr_type" );
             break;
     }
 }
 
 void
-encode_coprocessor_data_movement(dcontext_t* di, instr_t* instr)
+encode_coprocessor_data_movement(dcontext_t* dcontext, decode_info_t* di, instr_t* instr)
 {
     uint opc;
 
@@ -1657,17 +1778,17 @@ encode_coprocessor_data_movement(dcontext_t* di, instr_t* instr)
         case OP_mcrr2:
         case OP_mrrc:
         case OP_mrrc2:
-        //Uncond instrs
+          encode_coprocessor_data_movement(di, instr);
+          break;
 
         default:
-            CLIENT_ASSERT(false, "instr_encode error: invalid opcode %d for instr_type",
-                                 opcode );
+            CLIENT_ASSERT(false, "instr_encode error: invalid opcode for instr_type" );
             break;
     }
 }
 
 void
-encode_advanced_coprocessor_and_syscall(dcontext_t* di, instr_t* instr)
+encode_advanced_coprocessor_and_syscall(dcontext_t* dcontext, decode_info_t* di, instr_t* instr)
 {
     uint opc;
 
@@ -1681,10 +1802,10 @@ encode_advanced_coprocessor_and_syscall(dcontext_t* di, instr_t* instr)
         case OP_mcr2:
         case OP_mrc:
         case OP_mrc2:
+          encode_advanced_coprocessor(di, instr);
           break;
         default:
-            CLIENT_ASSERT(false, "instr_encode error: invalid opcode %d for instr_type",
-                                 opcode );
+            CLIENT_ASSERT(false, "instr_encode error: invalid opcode for instr_type" );
             break;
     }
 }
@@ -1742,32 +1863,32 @@ instr_encode_common(dcontext_t *dcontext, instr_t *instr, byte *copy_pc, byte *f
 
     switch( instr_type )
     {
-        case INSTR_TYPE_UNKNOWN:
+        case INSTR_TYPE_UNDECODED:
           //Check for label here
           break;
         case INSTR_TYPE_DATA_PROCESSING_AND_ELS:
-          encode_data_processing_and_els(di, instr); 
+          encode_data_processing_and_els(&di, instr, field_ptr); 
           break;
         case INSTR_TYPE_DATA_PROCESSING_IMM:
-          encode_data_processing_imm(di, instr); 
+          encode_data_processing_imm(dcontext, &di, instr); 
           break;
         case INSTR_TYPE_LOAD_STORE1:
-          encode_load_store_1(di, instr); 
+          encode_load_store_1(dcontext, &di, instr); 
           break;
         case INSTR_TYPE_LOAD_STORE2_AND_MEDIA:
-          encode_load_store_2_and_media(di, instr); 
+          encode_load_store_2_and_media(dcontext, &di, instr); 
           break;
         case INSTR_TYPE_LOAD_STORE_MULTIPLE:
-          encode_load_store_multiple(di, instr); 
+          encode_load_store_multiple(dcontext, &di, instr); 
           break;
         case INSTR_TYPE_BRANCH:
-          encode_branch(di, instr); 
+          encode_branch(dcontext, &di, instr); 
           break;
         case INSTR_TYPE_COPROCESSOR_DATA_MOVEMENT:
-          encode_coprocessor_data_movement(di, instr); 
+          encode_coprocessor_data_movement(dcontext, &di, instr); 
           break;
         case INSTR_TYPE_ADVANCED_COPROCESSOR_AND_SYSCALL: 
-          encode_advanced_coprocessor_and_syscall(di, instr); 
+          encode_advanced_coprocessor_and_syscall(dcontext, &di, instr); 
           break;
         default:
             CLIENT_ASSERT(false, "instr_encode error: invalid instr_type");

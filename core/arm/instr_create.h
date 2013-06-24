@@ -620,8 +620,8 @@
     instr_create_0dst_0src((dc), OP_smlaltt)
 #define INSTR_CREATE_smlald(dc) \
     instr_create_0dst_0src((dc), OP_smlald)
-#define INSTR_CREATE_smlawr(dc) \
-    instr_create_0dst_0src((dc), OP_smlawr)
+#define INSTR_CREATE_smlawb(dc) \
+    instr_create_0dst_0src((dc), OP_smlawb)
 #define INSTR_CREATE_smlawt(dc) \
     instr_create_0dst_0src((dc), OP_smlawt)
 #define INSTR_CREATE_smlsd(dc) \
@@ -738,8 +738,8 @@
     instr_create_0dst_0src((dc), OP_sxtab)
 #define INSTR_CREATE_sxtab16(dc) \
     instr_create_0dst_0src((dc), OP_sxtab16)
-#define INSTR_CREATE_sxth(dc) \
-    instr_create_0dst_0src((dc), OP_sxth)
+#define INSTR_CREATE_sxtah(dc) \
+    instr_create_0dst_0src((dc), OP_sxtah)
 #define INSTR_CREATE_tbb(dc) \
     instr_create_0dst_0src((dc), OP_tbb)
 #define INSTR_CREATE_tbh(dc) \
