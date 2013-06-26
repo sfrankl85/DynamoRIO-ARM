@@ -311,6 +311,11 @@ typedef struct decode_info_t {
     bool w_flag; // write back?
     bool l_flag; //load/store
     bool b_flag; //word or byte?
+    bool d_flag; //???
+    bool h_flag; //???
+   
+    //What type of shift is it if there is one
+    byte shift_type;
     //n flag/a flag???
 
     /* immed info */
@@ -367,6 +372,16 @@ enum {
     /* when adding new types, update type_names[] in encode.c */
 };
 
+// Enum to store shift value for decoded instr
+enum {
+  LOGICAL_LEFT = 0,  //00
+  LOGICAL_RIGHT,     //01
+  ARITH_RIGHT,       //10
+  ROTATE_RIGHT,      //11
+
+  UNKNOWN_SHIFT
+};
+ 
 
 /* PR 225845: Our IR does not try to specify the format of the operands or the
  * addressing mode in opnd_t.size: only the size.  Our decode table uses the

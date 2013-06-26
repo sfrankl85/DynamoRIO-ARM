@@ -126,6 +126,27 @@ enum
   INSTR_TYPE_INVALID
 }; 
 
+enum
+{
+  COND_EQUAL = 0,
+  COND_NOT_EQUAL,
+  COND_CARRY_SET,
+  COND_CARRY_CLEAR,
+  COND_MINUS,
+  COND_PLUS,
+  COND_OVERFLOW,
+  COND_NO_OVERFLOW,
+  COND_HIGHER,
+  COND_LOWER_OR_SAME,
+  COND_SIGNED_GREATER_THAN_OR_EQUAL,
+  COND_SIGNED_LESS_THAN,
+  COND_SIGNED_GREATER_THAN,
+  COND_SIGNED_LESS_THAN_OR_EQUAL,
+  COND_ALWAYS,
+
+  COND_INVALID
+};
+
 #ifdef AVOID_API_EXPORT
 /* We encode this enum plus the OPSZ_ extensions in bytes, so we can have
  * at most 256 total DR_REG_ plus OPSZ_ values.  Currently there are 165-odd.
@@ -3139,8 +3160,7 @@ remangle_short_rewrite(dcontext_t *dcontext, instr_t *instr, byte *pc, app_pc ta
 
 DR_API
 /**
- * Returns true iff \p instr is a conditional branch: OP_jcc, OP_jcc_short,
- * OP_loop*, or OP_jecxz.
+ * Returns true iff \p instr is a conditional branch
  */
 bool 
 instr_is_cbr(instr_t *instr);

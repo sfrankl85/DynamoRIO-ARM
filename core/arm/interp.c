@@ -2819,7 +2819,7 @@ static void
 build_bb_ilist(dcontext_t *dcontext, build_bb_t *bb)
 {
 #ifdef NO
-//TODO SJF
+//TODO Do this after decoder and encoder finished 
     /* Design decision: we will not try to identify branches that target
      * instructions in this basic block, when we take those branches we will
      * just make a new basic block and duplicate part of this one
@@ -3259,10 +3259,8 @@ build_bb_ilist(dcontext_t *dcontext, build_bb_t *bb)
                 break;
             }
         }
-        else if (instr_is_mbr(bb->instr) || /* including indirect calls */
+        else if (instr_is_mbr(bb->instr) ){ /* including indirect calls */
                  /* far direct is treated as indirect (i#823) */
-                 instr_get_opcode(bb->instr) == OP_jmp_far ||
-                 instr_get_opcode(bb->instr) == OP_call_far) {
 
             /* Manage the case where we don't need to perform 'normal'
              * indirect branch processing.
@@ -3308,12 +3306,6 @@ build_bb_ilist(dcontext_t *dcontext, build_bb_t *bb)
                 }
                 else
                     ibl_branch_type = IBL_INDCALL;
-            } else if (instr_get_opcode(bb->instr) == OP_jmp_far) {
-                 /* far direct is treated as indirect (i#823) */
-                ibl_branch_type = IBL_INDJMP;
-            } else if (instr_get_opcode(bb->instr) == OP_call_far) {
-                 /* far direct is treated as indirect (i#823) */
-                ibl_branch_type = IBL_INDCALL;
             } else {
                 /* indirect jump */
                 /* was prev instr a direct call? if so, this is a PLT-style ind call */
@@ -3375,7 +3367,7 @@ build_bb_ilist(dcontext_t *dcontext, build_bb_t *bb)
             if (!bb_process_syscall(dcontext, bb))
                 break;
         } /* end syscall */
-        else if (instr_get_opcode(bb->instr) == OP_int) { /* non-syscall int */
+        else if (instr_get_opcode(bb->instr) == OP_svc) { /* non-syscall int */
             if (!bb_process_interrupt(dcontext, bb))
                 break;
         }
@@ -3383,12 +3375,6 @@ build_bb_ilist(dcontext_t *dcontext, build_bb_t *bb)
         else if (instr_is_sse_or_sse2(bb->instr)) {
             FATAL_USAGE_ERROR(CHECK_RETURNS_SSE2_XMM_USED, 2, 
                               get_application_name(), get_application_pid());
-        }
-#endif
-#if defined(LINUX) && !defined(DGC_DIAGNOSTICS)
-        else if (instr_get_opcode(bb->instr) == OP_mov_seg) {
-            if (!bb_process_mov_seg(dcontext, bb))
-                break;
         }
 #endif
 
@@ -3591,7 +3577,7 @@ build_bb_ilist(dcontext_t *dcontext, build_bb_t *bb)
             (int) (bb->exit_target - bb->start_pc) <= SHRT_MAX &&
             (int) (bb->exit_target - bb->start_pc) >= SHRT_MIN &&
             /* rule out jecxz, etc. */
-            !instr_is_cti_loop(bb->instr))
+            !instr_is_cbr(bb->instr))
             bb->flags |= FRAG_CBR_FALLTHROUGH_SHORT;
     }
     /* we share all basic blocks except selfmod (since want no-synch quick deletion)
@@ -3793,7 +3779,7 @@ build_bb_ilist(dcontext_t *dcontext, build_bb_t *bb)
         build_bb_ilist(dcontext, bb);
         return;
     }
-#endif
+#endif //NO
 }
 
 /* Call when about to throw exception or other drastic action in the

@@ -56,9 +56,12 @@
 
 /* from ARM document. Couldnt find a table. Is there one? */
 #define Ra  TYPE_REG,    OPSZ_4  /* 32 bit value contained in reg */
+#define Rl  TYPE_REG,    OPSZ_4_16 /* TODO 16 bit array of regs */
+#define Rh  TYPE_REG,    OPSZ_4 /* TODO 16 bit array of regs */
 #define Ma  TYPE_M,      OPSZ_4  /* Memory address contained in reg */
 #define Oa  TYPE_P,      OPSZ_4  /* Memory address contained in reg */
 #define Cr  TYPE_CO_REG, OPSZ_4
+#define Co  TYPE_CO_REG, OPSZ_4_5
 #define I3  TYPE_I,      OPSZ_4_3  /* Immediate value contained in instr */
 #define I4  TYPE_I,      OPSZ_4_4  /* " */
 #define I5  TYPE_I,      OPSZ_4_5  /* " */
@@ -179,15 +182,15 @@ const instr_info_t armv7a_instrs[] = {
     {OP_ldc2_imm,    cdm, 0x0, "ldc2_imm", Ra, xx, Cr,  Co,  I8,  0x0,  x, END_LIST}, /*ldc2_imm()*/
     {OP_ldc_lit,     cdm, 0x0, "ldc_lit",  xx, xx, Cr,  Co,  I8,  0x0,  x, END_LIST}, /*ldc_lit()*/
     {OP_ldc2_lit,    cdm, 0x0, "ldc2_lit", xx, xx, Cr,  Co,  I8,  0x0,  x, END_LIST}, /*ldc2_lit()*/
-    {OP_ldm,         lsm, 0x8, "ldm",      Ra, xx, Rl,  xx,  xx,  0x0,  x, END_LIST}, /*ldm()*/
-    {OP_ldmia,       lsm, 0x8, "ldmia",    Ra, xx, Rl,  xx,  xx,  0x0,  x, END_LIST}, /*ldmia()*/
-    {OP_ldmfd,       lsm, 0x8, "ldmfd",    Ra, xx, Rl,  xx,  xx,  0x0,  x, END_LIST}, /*ldmfd()*/
-    {OP_ldmda,       lsm, 0x1, "ldmda",    Ra, xx, Rl,  xx,  xx,  0x0,  x, END_LIST}, /*ldmda()*/
-    {OP_ldmfa,       lsm, 0x1, "ldmfa",    Ra, xx, Rl,  xx,  xx,  0x0,  x, END_LIST}, /*ldmfa()*/
-    {OP_ldmdb,       lsm, 0x11,"ldmdb",    Ra, xx, Rl,  xx,  xx,  0x0,  x, END_LIST}, /*ldmdb()*/
-    {OP_ldmea,       lsm, 0x11,"ldmea",    Ra, xx, Rl,  xx,  xx,  0x0,  x, END_LIST}, /*ldmea()*/
-    {OP_ldmib,       lsm, 0x19,"ldmib",    Ra, xx, Rl,  xx,  xx,  0x0,  x, END_LIST}, /*ldmib()*/
-    {OP_ldmed,       lsm, 0x19,"ldmed",    Ra, xx, Rl,  xx,  xx,  0x0,  x, END_LIST}, /*ldmed()*/
+    {OP_ldm,         lsm, 0x8, "ldm",      Ma, xx, Rl,  xx,  xx,  0x0,  x, END_LIST}, /*ldm()*/
+    {OP_ldmia,       lsm, 0x8, "ldmia",    Ma, xx, Rl,  xx,  xx,  0x0,  x, END_LIST}, /*ldmia()*/
+    {OP_ldmfd,       lsm, 0x8, "ldmfd",    Ma, xx, Rl,  xx,  xx,  0x0,  x, END_LIST}, /*ldmfd()*/
+    {OP_ldmda,       lsm, 0x1, "ldmda",    Ma, xx, Rl,  xx,  xx,  0x0,  x, END_LIST}, /*ldmda()*/
+    {OP_ldmfa,       lsm, 0x1, "ldmfa",    Ma, xx, Rl,  xx,  xx,  0x0,  x, END_LIST}, /*ldmfa()*/
+    {OP_ldmdb,       lsm, 0x11,"ldmdb",    Ma, xx, Rl,  xx,  xx,  0x0,  x, END_LIST}, /*ldmdb()*/
+    {OP_ldmea,       lsm, 0x11,"ldmea",    Ma, xx, Rl,  xx,  xx,  0x0,  x, END_LIST}, /*ldmea()*/
+    {OP_ldmib,       lsm, 0x19,"ldmib",    Ma, xx, Rl,  xx,  xx,  0x0,  x, END_LIST}, /*ldmib()*/
+    {OP_ldmed,       lsm, 0x19,"ldmed",    Ma, xx, Rl,  xx,  xx,  0x0,  x, END_LIST}, /*ldmed()*/
     {OP_ldr_imm,     ls1, 0x0, "ldr_imm",  Ra, xx, Ra,  I12, xx,  0x0,  x, END_LIST}, /*ldr_imm()*/
     {OP_ldr_lit,     ls1, 0x0, "ldr_lit",  Ra, xx, I12, xx,  xx,  0x0,  x, END_LIST}, /*ldr_lit()*/
     {OP_ldr_reg,     ls2, 0x0, "ldr_reg",  Ra, xx, Ma,  Ra,  I5,  0x0,  x, END_LIST}, /*ldr_reg()*/
@@ -313,99 +316,99 @@ const instr_info_t armv7a_instrs[] = {
     {OP_smlsd,       ls2, 0x16,"smlsd",    Ra, xx, Ra,  Ra,  Ra,  0x0,  x, END_LIST}, /*smlsd()*/
     {OP_smlsld,      ls2, 0x14,"smlsld",   Ra, Ra, Ra,  Ra,  xx,  0x0,  x, END_LIST}, /*smlsld()*/
     {OP_smmla,       ls2, 0x15,"smmla",    Ra, xx, Ra,  Ra,  Ra,  0x0,  x, END_LIST}, /*smmla()*/
-    {OP_smmls,       ls2, 0x15,"smmls",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*smmls()*/
-    {OP_smmul,       ls2, 0x15,"smmul",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*smmul()*/
-    {OP_smuad,       ls2, 0x16,"smuad",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*smuad()*/
-    {OP_smulbb,      dpe, 0x16,"smulbb",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*smulbb()*/
-    {OP_smulbt,      dpe, 0x16,"smulbt",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*smulbt()*/
-    {OP_smultb,      dpe, 0x16,"smultb",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*smultb()*/
-    {OP_smultt,      dpe, 0x16,"smultt",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*smultt()*/
-    {OP_smull,       dpe, 0xc, "smull",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*smull()*/
-    {OP_smulwb,      dpe, 0x12,"smulwb",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*smulwb()*/
-    {OP_smulwt,      dpe, 0x12,"smulwt",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*smulwt()*/
-    {OP_smusd,       ls2, 0x16,"smusd",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*smusd()*/
-    {OP_srs,         0x0, 0x0, "srs",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*srs()*/
-    {OP_ssat,        ls2, 0xa, "ssat",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*ssat()*/
-    {OP_ssat16,      ls2, 0xa, "ssat16",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*ssat16()*/
-    {OP_ssax,        ls2, 0x1, "ssax",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*ssax()*/
-    {OP_ssub16,      ls2, 0x1, "ssub16",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*ssub16()*/
-    {OP_ssub8,       ls2, 0x1, "ssub8",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*ssub8()*/
-    {OP_stc,         cdm, 0x0, "stc",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*stc()*/
-    {OP_stc2,        cdm, 0x0, "stc2",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*stc2()*/
-    {OP_stm,         lsm, 0x8, "stm",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*stm()*/
-    {OP_stmia,       lsm, 0x8, "stmia",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*stmia()*/
-    {OP_stmea,       lsm, 0x8, "stmea",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*stmea()*/
-    {OP_stmda,       lsm, 0x0, "stmda",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*stmda()*/
-    {OP_stmed,       lsm, 0x0, "stmed",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*stmed()*/
-    {OP_stmdb,       lsm, 0x16,"stmdb",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*stmdb()*/
-    {OP_stmfd,       lsm, 0x16,"stmfd",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*stmfd()*/
-    {OP_stmib,       lsm, 0x18,"stmib",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*stmib()*/
-    {OP_stmfa,       lsm, 0x18,"stmfa",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*stmfa()*/
-    {OP_str_imm,     ls1, 0x0, "str_imm",  Ra, xx, Ra,  I12, xx,  0x0,  x, END_LIST}, /*str_imm()*/
-    {OP_str_reg,     ls2, 0x0, "str_reg",  Ma, xx, Ra,  xx,  xx,  0x0,  x, END_LIST}, /*str_reg()*/
-    {OP_strb_imm,    ls1, 0x4, "strb_imm",  Ra, xx, Ra,  I12,  xx,  0x0,  x, END_LIST}, /*strb_imm()*/
-    {OP_strb_reg,    ls2, 0x4, "strb_reg",  Ra, xx, Ra,  Ra,  I5,  0x0,  x, END_LIST}, /*strb_reg()*/
-    {OP_strbt,       ls1, 0x6, "strbt",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*strbt()*/
-    {OP_strd_imm,    dpe, 0x4, "strd_imm",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*strd_imm()*/
-    {OP_strd_reg,    dpe, 0x0, "strd_reg",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*strd_reg()*/
-    {OP_strex,       dpe, 0x18,"strex",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*strex()*/
-    {OP_strexb,      dpe, 0x18,"strexb",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*strexb()*/
-    {OP_strexd,      dpe, 0x1a,"strexd",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*strexd()*/
-    {OP_strexh,      dpe, 0x1e,"strexh",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*strexh()*/
-    {OP_strh_imm,    dpe, 0x4, "strh_imm",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*strh_imm()*/
-    {OP_strh_reg,    dpe, 0x0, "strh_reg",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*strh_reg()*/
-    {OP_strht,       dpe, 0x6, "strht",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*strht()*/
-    {OP_strt,        ls1, 0x4, "strt",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*strt()*/
+    {OP_smmls,       ls2, 0x15,"smmls",    Ra, xx, Ra,  Ra,  Ra,  0x0,  x, END_LIST}, /*smmls()*/
+    {OP_smmul,       ls2, 0x15,"smmul",    Ra, xx, Ra,  Ra,  xx,  0x0,  x, END_LIST}, /*smmul()*/
+    {OP_smuad,       ls2, 0x16,"smuad",    Ra, xx, Ra,  Ra,  xx,  0x0,  x, END_LIST}, /*smuad()*/
+    {OP_smulbb,      dpe, 0x16,"smulbb",   Ra, xx, Ra,  Ra,  xx,  0x0,  x, END_LIST}, /*smulbb()*/
+    {OP_smulbt,      dpe, 0x16,"smulbt",   Ra, xx, Ra,  Ra,  xx,  0x0,  x, END_LIST}, /*smulbt()*/
+    {OP_smultb,      dpe, 0x16,"smultb",   Ra, xx, Ra,  Ra,  xx,  0x0,  x, END_LIST}, /*smultb()*/
+    {OP_smultt,      dpe, 0x16,"smultt",   Ra, xx, Ra,  Ra,  xx,  0x0,  x, END_LIST}, /*smultt()*/
+    {OP_smull,       dpe, 0xc, "smull",    Rh, Rl, Ra,  Ra,  xx,  0x0,  x, END_LIST}, /*smull()*/
+    {OP_smulwb,      dpe, 0x12,"smulwb",   Ra, xx, Ra,  Ra,  xx,  0x0,  x, END_LIST}, /*smulwb()*/
+    {OP_smulwt,      dpe, 0x12,"smulwt",   Ra, xx, Ra,  Ra,  xx,  0x0,  x, END_LIST}, /*smulwt()*/
+    {OP_smusd,       ls2, 0x16,"smusd",    Ra, xx, Ra,  Ra,  xx,  0x0,  x, END_LIST}, /*smusd()*/
+    {OP_srs,         0x0, 0x0, "srs",      xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*srs()*/
+    {OP_ssat,        ls2, 0xa, "ssat",     Ra, xx, Ra,  I5,  I5,  0x0,  x, END_LIST}, /*ssat()*/
+    {OP_ssat16,      ls2, 0xa, "ssat16",   Ra, xx, Ra,  I5,  xx,  0x0,  x, END_LIST}, /*ssat16()*/
+    {OP_ssax,        ls2, 0x1, "ssax",     Ra, xx, Ra,  Ra,  xx,  0x0,  x, END_LIST}, /*ssax()*/
+    {OP_ssub16,      ls2, 0x1, "ssub16",   Ra, xx, Ra,  Ra,  xx,  0x0,  x, END_LIST}, /*ssub16()*/
+    {OP_ssub8,       ls2, 0x1, "ssub8",    Ra, xx, Ra,  Ra,  xx,  0x0,  x, END_LIST}, /*ssub8()*/
+    {OP_stc,         cdm, 0x0, "stc",      Ra, xx, Cr,  Co,  I8,  0x0,  x, END_LIST}, /*stc()*/
+    {OP_stc2,        cdm, 0x0, "stc2",     Ra, xx, Cr,  Co,  I8,  0x0,  x, END_LIST}, /*stc2()*/
+    {OP_stm,         lsm, 0x8, "stm",      Ma, xx, Rl,  xx,  xx,  0x0,  x, END_LIST}, /*stm()*/
+    {OP_stmia,       lsm, 0x8, "stmia",    Ma, xx, Rl,  xx,  xx,  0x0,  x, END_LIST}, /*stmia()*/
+    {OP_stmea,       lsm, 0x8, "stmea",    Ma, xx, Rl,  xx,  xx,  0x0,  x, END_LIST}, /*stmea()*/
+    {OP_stmda,       lsm, 0x0, "stmda",    Ma, xx, Rl,  xx,  xx,  0x0,  x, END_LIST}, /*stmda()*/
+    {OP_stmed,       lsm, 0x0, "stmed",    Ma, xx, Rl,  xx,  xx,  0x0,  x, END_LIST}, /*stmed()*/
+    {OP_stmdb,       lsm, 0x16,"stmdb",    Ma, xx, Rl,  xx,  xx,  0x0,  x, END_LIST}, /*stmdb()*/
+    {OP_stmfd,       lsm, 0x16,"stmfd",    Ma, xx, Rl,  xx,  xx,  0x0,  x, END_LIST}, /*stmfd()*/
+    {OP_stmib,       lsm, 0x18,"stmib",    Ma, xx, Rl,  xx,  xx,  0x0,  x, END_LIST}, /*stmib()*/
+    {OP_stmfa,       lsm, 0x18,"stmfa",    Ma, xx, Rl,  xx,  xx,  0x0,  x, END_LIST}, /*stmfa()*/
+    {OP_str_imm,     ls1, 0x0, "str_imm",  Ra, xx, Ma,  I12, xx,  0x0,  x, END_LIST}, /*str_imm()*/
+    {OP_str_reg,     ls2, 0x0, "str_reg",  Ra, xx, Ma,  Ra,  I5,  0x0,  x, END_LIST}, /*str_reg()*/
+    {OP_strb_imm,    ls1, 0x4, "strb_imm", Ra, xx, Ma,  I12,  xx,  0x0,  x, END_LIST}, /*strb_imm()*/
+    {OP_strb_reg,    ls2, 0x4, "strb_reg", Ra, xx, Ma,  Ra,  I5,  0x0,  x, END_LIST}, /*strb_reg()*/
+    {OP_strbt,       ls1, 0x6, "strbt",    Ra, xx, Ma,  I12, xx,  0x0,  x, END_LIST}, /*strbt()*/
+    {OP_strd_imm,    dpe, 0x4, "strd_imm", Ra, xx, Ma,  I4,  I4,  0x0,  x, END_LIST}, /*strd_imm()*/
+    {OP_strd_reg,    dpe, 0x0, "strd_reg", Ra, xx, Ma,  Ra,  xx,  0x0,  x, END_LIST}, /*strd_reg()*/
+    {OP_strex,       dpe, 0x18,"strex",    Ra, xx, Ma,  Ra,  xx,  0x0,  x, END_LIST}, /*strex()*/
+    {OP_strexb,      dpe, 0x18,"strexb",   Ra, xx, Ma,  Ra,  xx,  0x0,  x, END_LIST}, /*strexb()*/
+    {OP_strexd,      dpe, 0x1a,"strexd",   Ra, xx, Ma,  Ra,  xx,  0x0,  x, END_LIST}, /*strexd()*/
+    {OP_strexh,      dpe, 0x1e,"strexh",   Ra, xx, Ma,  Ra,  xx,  0x0,  x, END_LIST}, /*strexh()*/
+    {OP_strh_imm,    dpe, 0x4, "strh_imm", Ra, xx, Ma,  I4,  I4,  0x0,  x, END_LIST}, /*strh_imm()*/
+    {OP_strh_reg,    dpe, 0x0, "strh_reg", Ra, xx, Ma,  Ra,  xx,  0x0,  x, END_LIST}, /*strh_reg()*/
+    {OP_strht,       dpe, 0x6, "strht",    Ra, xx, Ma,  I4,  I4,  0x0,  x, END_LIST}, /*strht()*/
+    {OP_strt,        ls1, 0x4, "strt",     Ra, xx, Ma,  I12, xx,  0x0,  x, END_LIST}, /*strt()*/
     {OP_sub_imm,     dpi, 0x4, "sub_imm",  Ra, xx, Ra,  I12, xx,  0x0,  x, END_LIST}, /*sub_imm()*/
     {OP_sub_reg,     dpe, 0x4, "sub_reg",  Ra, xx, Ra,  Ra,  I5,  0x0,  x, END_LIST}, /*sub_reg()*/
     {OP_sub_rsr,     dpe, 0x4, "sub_rsr",  Ra, xx, Ra,  Ra,  Ra,  0x0,  x, END_LIST}, /*sub_rsr()*/
-    {OP_sub_sp_imm,  dpi, 0x4, "sub_sp_imm",  Ra, xx, I12, xx,  xx,  0x0,  x, END_LIST}, /*sub_sp_imm()*/
-    {OP_sub_sp_reg,  dpe, 0x4, "sub_sp_reg",  Ra, xx, Ra,  xx,  xx,  0x0,  x, END_LIST}, /*sub_sp_reg()*/
-    {OP_subs,        0x0, 0x0, "subs",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*subs()*/
-    {OP_svc,         acs, 0x16,"svc",  xx, xx, I24,  xx,  xx,  0x0,  x, END_LIST}, /*svc()*/
-    {OP_swp,         dpe, 0x16,"swp",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*swp()*/
-    {OP_swpb,        dpe, 0x16,"swpb",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*swpb()*/
-    {OP_sxtab,       ls2, 0xa, "sxtab",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*sxtab()*/
-    {OP_sxtab16,     ls2, 0x8, "sxtab16",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*sxtab16()*/
-    {OP_sxtah,       ls2, 0xb, "sxth",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*sxth()*/
-    {OP_tbb,         0x0, 0x0, "tbb",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*tbb()*/
-    {OP_tbh,         0x0, 0x0, "tbh",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*tbh()*/
-    {OP_teq_imm,     dpi, 0x13,"teq_imm",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*teq_imm()*/
-    {OP_teq_reg,     dpe, 0x13,"teq_reg",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*teq_reg()*/
-    {OP_teq_rsr,     dpe, 0x13,"teq_rsr",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*teq_rsr()*/
-    {OP_tst_imm,     dpi, 0x11,"tst_imm",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*tst_imm()*/
-    {OP_tst_reg,     dpe, 0x11,"tst_reg",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*tst_reg()*/
-    {OP_tst_rsr,     dpe, 0x11,"tst_rsr",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*tst_rsr()*/
-    {OP_uadd16,      ls2, 0x5, "uadd16",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*uadd16()*/
-    {OP_uadd8,       ls2, 0x5, "uadd8",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*uadd8()*/
-    {OP_uasx,        ls2, 0x5, "uasx",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*uasx()*/
-    {OP_ubfx,        ls2, 0x1e,"ubfx",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*ubfx()*/
-    {OP_udiv,        0x0, 0x0, "udiv",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*udiv()*/
-    {OP_uhadd16,     ls2, 0x7, "uhadd16",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*uhadd16()*/
-    {OP_uhadd8,      ls2, 0x7, "uhadd8",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*uhadd8()*/
-    {OP_uhsax,       ls2, 0x7, "uhsax",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*uhsax()*/
-    {OP_uhsub16,     ls2, 0x7, "uhsub16",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*uhsub16()*/
-    {OP_uhsub8,      ls2, 0x7, "uhsub8",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*uhsub8()*/
-    {OP_umaal,       dpe, 0x4, "umaal",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*umaal()*/
-    {OP_umlal,       dpe, 0xa, "umlal",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*umlal()*/
-    {OP_umull,       dpe, 0x8, "umull",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*umull()*/
-    {OP_uqadd16,     ls2, 0x6, "uqadd16",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*uqadd16()*/
-    {OP_uqadd8,      ls2, 0x6, "uqadd8",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*uqadd8()*/
-    {OP_uqasx,       ls2, 0x6, "uqasx",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*uqasx()*/
-    {OP_uqsax,       ls2, 0x6, "uqsax",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*uqsax()*/
-    {OP_usub16,      ls2, 0x6, "usub16",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*usub16()*/
-    {OP_usub8,       ls2, 0x6, "usub8",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*usub8()*/
-    {OP_usad8,       ls2, 0x18,"usad8",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*usad8()*/
-    {OP_usada8,      ls2, 0x18,"usada8",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*usada8()*/
-    {OP_usat,        ls2, 0xe, "usat",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*usat()*/
-    {OP_usat16,      ls2, 0xe, "usat16",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*usat16()*/
-    {OP_usax,        ls2, 0x5, "usax",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*usax()*/
-    {OP_uxtab,       ls2, 0xe, "uxtab",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*uxtab()*/
-    {OP_uxtab16,     ls2, 0xc, "uxtab16",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*uxtab16()*/
-    {OP_uxtah,       ls2, 0xf, "uxtah",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*uxtah()*/
-    {OP_uxtb,        ls2, 0xe, "uxtb",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*uxtb()*/
-    {OP_uxtb16,      ls2, 0xc, "uxtb16",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*uxtb16()*/
-    {OP_uxth,        ls2, 0xf, "uxth",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*uxth()*/
+    {OP_sub_sp_imm,  dpi, 0x4, "sub_sp_imm",Ra, xx, I12, xx,  xx,  0x0,  x, END_LIST}, /*sub_sp_imm()*/
+    {OP_sub_sp_reg,  dpe, 0x4, "sub_sp_reg",Ra, xx, Ra,  I5,  xx,  0x0,  x, END_LIST}, /*sub_sp_reg()*/
+    {OP_subs,        0x0, 0x0, "subs",     xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*subs()*/
+    {OP_svc,         acs, 0x16,"svc",      xx, xx, I24, xx,  xx,  0x0,  x, END_LIST}, /*svc()*/
+    {OP_swp,         dpe, 0x16,"swp",      Ma, xx, Ra,  Ra,  xx,  0x0,  x, END_LIST}, /*swp()*/
+    {OP_swpb,        dpe, 0x16,"swpb",     Ma, xx, Ra,  Ra,  xx,  0x0,  x, END_LIST}, /*swpb()*/
+    {OP_sxtab,       ls2, 0xa, "sxtab",    Ra, xx, Ra,  Ra,  xx,  0x0,  x, END_LIST}, /*sxtab()*/
+    {OP_sxtab16,     ls2, 0x8, "sxtab16",  Ra, xx, Ra,  Ra,  xx,  0x0,  x, END_LIST}, /*sxtab16()*/
+    {OP_sxtah,       ls2, 0xb, "sxth",     Ra, xx, Ra,  xx,  xx,  0x0,  x, END_LIST}, /*sxth()*/
+    {OP_tbb,         0x0, 0x0, "tbb",      xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*tbb()*/
+    {OP_tbh,         0x0, 0x0, "tbh",      xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*tbh()*/
+    {OP_teq_imm,     dpi, 0x13,"teq_imm",  Ra, xx, I12, xx,  xx,  0x0,  x, END_LIST}, /*teq_imm()*/
+    {OP_teq_reg,     dpe, 0x13,"teq_reg",  Ra, xx, Ra,  I5,  xx,  0x0,  x, END_LIST}, /*teq_reg()*/
+    {OP_teq_rsr,     dpe, 0x13,"teq_rsr",  Ra, xx, Ra,  Ra,  xx,  0x0,  x, END_LIST}, /*teq_rsr()*/
+    {OP_tst_imm,     dpi, 0x11,"tst_imm",  Ra, xx, I12, xx,  xx,  0x0,  x, END_LIST}, /*tst_imm()*/
+    {OP_tst_reg,     dpe, 0x11,"tst_reg",  Ra, xx, Ra,  I5,  xx,  0x0,  x, END_LIST}, /*tst_reg()*/
+    {OP_tst_rsr,     dpe, 0x11,"tst_rsr",  Ra, xx, Ra,  Ra,  xx,  0x0,  x, END_LIST}, /*tst_rsr()*/
+    {OP_uadd16,      ls2, 0x5, "uadd16",   Ra, xx, Ra,  Ra,  xx,  0x0,  x, END_LIST}, /*uadd16()*/
+    {OP_uadd8,       ls2, 0x5, "uadd8",    Ra, xx, Ra,  Ra,  xx,  0x0,  x, END_LIST}, /*uadd8()*/
+    {OP_uasx,        ls2, 0x5, "uasx",     Ra, xx, Ra,  Ra,  xx,  0x0,  x, END_LIST}, /*uasx()*/
+    {OP_ubfx,        ls2, 0x1e,"ubfx",     Ra, xx, Ra,  I4,  I4,  0x0,  x, END_LIST}, /*ubfx()*/
+    {OP_udiv,        0x0, 0x0, "udiv",     xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*udiv()*/
+    {OP_uhadd16,     ls2, 0x7, "uhadd16",  Ra, xx, Ra,  Ra,  xx,  0x0,  x, END_LIST}, /*uhadd16()*/
+    {OP_uhadd8,      ls2, 0x7, "uhadd8",   Ra, xx, Ra,  Ra,  xx,  0x0,  x, END_LIST}, /*uhadd8()*/
+    {OP_uhsax,       ls2, 0x7, "uhsax",    Ra, xx, Ra,  Ra,  xx,  0x0,  x, END_LIST}, /*uhsax()*/
+    {OP_uhsub16,     ls2, 0x7, "uhsub16",  Ra, xx, Ra,  Ra,  xx,  0x0,  x, END_LIST}, /*uhsub16()*/
+    {OP_uhsub8,      ls2, 0x7, "uhsub8",   Ra, xx, Ra,  Ra,  xx,  0x0,  x, END_LIST}, /*uhsub8()*/
+    {OP_umaal,       dpe, 0x4, "umaal",    Rh, Rl, Ra,  Ra,  xx,  0x0,  x, END_LIST}, /*umaal()*/
+    {OP_umlal,       dpe, 0xa, "umlal",    Rh, Rl, Ra,  Ra,  xx,  0x0,  x, END_LIST}, /*umlal()*/
+    {OP_umull,       dpe, 0x8, "umull",    Rh, Rl, Ra,  Ra,  xx,  0x0,  x, END_LIST}, /*umull()*/
+    {OP_uqadd16,     ls2, 0x6, "uqadd16",  Ra, xx, Ra,  Ra,  xx,  0x0,  x, END_LIST}, /*uqadd16()*/
+    {OP_uqadd8,      ls2, 0x6, "uqadd8",   Ra, xx, Ra,  Ra,  xx,  0x0,  x, END_LIST}, /*uqadd8()*/
+    {OP_uqasx,       ls2, 0x6, "uqasx",    Ra, xx, Ra,  Ra,  xx,  0x0,  x, END_LIST}, /*uqasx()*/
+    {OP_uqsax,       ls2, 0x6, "uqsax",    Ra, xx, Ra,  Ra,  xx,  0x0,  x, END_LIST}, /*uqsax()*/
+    {OP_usub16,      ls2, 0x6, "usub16",   Ra, xx, Ra,  Ra,  xx,  0x0,  x, END_LIST}, /*usub16()*/
+    {OP_usub8,       ls2, 0x6, "usub8",    Ra, xx, Ra,  Ra,  xx,  0x0,  x, END_LIST}, /*usub8()*/
+    {OP_usad8,       ls2, 0x18,"usad8",    Ra, xx, Ra,  Ra,  xx,  0x0,  x, END_LIST}, /*usad8()*/
+    {OP_usada8,      ls2, 0x18,"usada8",   Ra, xx, Ra,  Ra,  Ra,  0x0,  x, END_LIST}, /*usada8()*/
+    {OP_usat,        ls2, 0xe, "usat",     Ra, xx, Ra,  I5,  I5,  0x0,  x, END_LIST}, /*usat()*/
+    {OP_usat16,      ls2, 0xe, "usat16",   Ra, xx, Ra,  I5,  xx,  0x0,  x, END_LIST}, /*usat16()*/
+    {OP_usax,        ls2, 0x5, "usax",     Ra, xx, Ra,  Ra,  xx,  0x0,  x, END_LIST}, /*usax()*/
+    {OP_uxtab,       ls2, 0xe, "uxtab",    Ra, xx, Ra,  Ra,  xx,  0x0,  x, END_LIST}, /*uxtab()*/
+    {OP_uxtab16,     ls2, 0xc, "uxtab16",  Ra, xx, Ra,  Ra,  xx,  0x0,  x, END_LIST}, /*uxtab16()*/
+    {OP_uxtah,       ls2, 0xf, "uxtah",    Ra, xx, Ra,  Ra,  xx,  0x0,  x, END_LIST}, /*uxtah()*/
+    {OP_uxtb,        ls2, 0xe, "uxtb",     Ra, xx, Ra,  xx,  xx,  0x0,  x, END_LIST}, /*uxtb()*/
+    {OP_uxtb16,      ls2, 0xc, "uxtb16",   Ra, xx, Ra,  xx,  xx,  0x0,  x, END_LIST}, /*uxtb16()*/
+    {OP_uxth,        ls2, 0xf, "uxth",     Ra, xx, Ra,  xx,  xx,  0x0,  x, END_LIST}, /*uxth()*/
     {OP_vaba,        dpi, 0x8, "vaba",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vaba()*/
     {OP_vabal_int,   dpi, 0x0, "vabal_int",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vabal_int()*/
     {OP_vabd_int,    dpi, 0x0, "vabd_int",  xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*vabd_int()*/
@@ -1067,6 +1070,4 @@ const instr_info_t * const op_instr[] =
     /* OP_wfe */    &armv7a_instrs[456],
     /* OP_wfi */    &armv7a_instrs[457],
     /* OP_yield */    &armv7a_instrs[458],
-
-
 };

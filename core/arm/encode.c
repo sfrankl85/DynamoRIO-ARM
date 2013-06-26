@@ -1111,14 +1111,17 @@ copy_and_re_relativize_raw_instr(dcontext_t *dcontext, instr_t *instr,
 
 ******************************************************************************/
 int
-encode_data_processing_1(decode_info_t* di, instr_t* instr, byte* pc)
+encode_1dst_reg_2src_reg_1src_imm(decode_info_t* di, instr_t* instr, byte* pc)
 {
+    // | cond | 0000010S | Rn | Rd | imm5 | type | 0 | Rm |
+
     byte word[4] = {0};  //Instr encoding in byte array
     uint        opc;
-    byte        b;
+    byte        b, t;
     uint        opc_bits;
     opnd_t      opnd;
     instr_info_t* info;
+    uint  instr_type;
 
     opc = instr_get_opcode(instr);
 
@@ -1142,9 +1145,13 @@ encode_data_processing_1(decode_info_t* di, instr_t* instr, byte* pc)
     }
 
     //encode instr_type 
-    b = 0;
-    word[0] |= b; 
-    
+    //encode instr_type
+    instr_type = instr_get_instr_type( instr );
+
+    b = instr_get_instr_type_value( instr_type );
+
+    word[0] |= (b << 1);
+
     info = instr_get_instr_info(instr);
 
     //get first bit of opcode
@@ -1155,37 +1162,22 @@ encode_data_processing_1(decode_info_t* di, instr_t* instr, byte* pc)
     //get last 4 bits of opcode
     b = 15; //0000 1111 
     b &= (byte) info->opcode;
+
+    //Add s bit if necessary
+    if( instr_has_s_bit( instr ))
+    {
+      t = di->s_flag ? 0x4 : 0 ;
+      b |= t; 
+    }
+
     word[1] |= (b << 4);
 
-    //TODO Need to set bit[20] S based on set cpsr flags option
+    /************** Encode operands here *****************/
 
-    //Encode operands here  
-
-    //Reg 1
-    
-    //if( TEST_OPND(di, info->dst1_type, info->dst1_size, 1, instr->num_dsts, instr_get_dst(instr, 0)))
+    // DST 1
     {
         opnd = instr_get_dst(instr, 0);      
  
-        switch( opnd.kind )
-        {
-          case REG_kind:
-            b = opnd.value.reg;
-
-            b--; //To get actual reg number
-            word[1] |= b;
-            
-          default:
-            CLIENT_ASSERT(false, "instr_encode error: invalid opnd type" );
-            break;
-            
-        }    
-    }
-
-    //if( TEST_OPND(di, info->src1_type, info->src1_size, 1, instr->num_srcs, instr_get_src(instr, 0)))
-    {
-        opnd = instr_get_src(instr, 0);
-
         switch( opnd.kind )
         {
           case REG_kind:
@@ -1198,52 +1190,22 @@ encode_data_processing_1(decode_info_t* di, instr_t* instr, byte* pc)
           default:
             CLIENT_ASSERT(false, "instr_encode error: invalid opnd type" );
             break;
-
-        }
+            
+        }    
     }
 
-    //if( TEST_OPND(di, info->src2_type, info->src2_size, 2, instr->num_srcs, instr_get_src(instr, 1)))
+    // SRC 1
     {
-        opnd = instr_get_src(instr, 1);
-
-        switch( opnd.kind )
-        {
-          case IMMED_INTEGER_kind:
-            b = opnd.value.immed_int;
-
-            b &= 0x1e; //To get 4 imm bits
-            word[2] |= (b >> 1);
-
-            b = opnd.value.immed_int;
-            b &= 0x1; //To get last bit
-
-            word[3] |= (b << 7);
-            break;
-
-          default:
-            CLIENT_ASSERT(false, "instr_encode error: invalid opnd type" );
-            break;
-
-        }
-    }
-
-    //Also need to set immediate shift type based on shift type in instr
-    //bit[4] already 0
-
-
-    //if( TEST_OPND(di, info->src3_type, info->src3_size, 3, instr->num_srcs, instr_get_src(instr, 2)))
-    {
-        opnd = instr_get_src(instr, 2);
+        opnd = instr_get_src(instr, 0);
 
         switch( opnd.kind )
         {
           case REG_kind:
             b = opnd.value.reg;
-            b--;
+            
+            b &= 16;
 
-            b &= 0xf;
-
-            word[3] |= (b);
+            word[3] |= b;
             break;
 
           default:
@@ -1251,6 +1213,221 @@ encode_data_processing_1(decode_info_t* di, instr_t* instr, byte* pc)
             break;
 
         }
+    }
+
+    // SRC 2
+    {
+        opnd = instr_get_src(instr, 1);
+
+        switch( opnd.kind )
+        {
+          case REG_kind:
+            b = opnd.value.reg;
+
+            b--; //To get actual reg number
+            word[1] |= b;
+            break;
+
+          default:
+            CLIENT_ASSERT(false, "instr_encode error: invalid opnd type" );
+            break;
+
+        }
+    }
+
+    //SRC 3
+    {
+        opnd = instr_get_src(instr, 2);
+
+        switch( opnd.kind )
+        {
+          //For _reg opcodes
+          case IMMED_INTEGER_kind:
+            b = opnd.value.immed_int;
+
+            word[2] |= (b >> 1);
+
+            b = (opnd.value.immed_int >> 4);
+
+            word[3] |= (b << 7 );
+            break;
+
+          default:
+            CLIENT_ASSERT(false, "instr_encode error: invalid opnd type" );
+            break;
+        }
+    }
+        
+
+    //Set bits[6,5] to indicate shift
+    if( instr_is_shift_type( instr ))
+    {
+      switch( di->shift_type )
+      {
+        case LOGICAL_LEFT:
+        case LOGICAL_RIGHT:
+        case ARITH_RIGHT:
+        case ROTATE_RIGHT: 
+          word[3] |= (di->shift_type << 5);
+          break;
+
+        default:
+          break;
+      }
+    }
+
+   //Word should now be an instruction. MSB encoding
+   *((byte *)pc) = word[0];
+   pc++;
+   *((byte *)pc) = word[1];
+   pc++;
+   *((byte *)pc) = word[2];
+   pc++;
+   *((byte *)pc) = word[3];
+   pc++;
+
+   return pc;
+}
+
+void
+encode_1dst_reg_2src_reg_0src_imm(decode_info_t* di, instr_t* instr, byte* pc)
+{
+    byte word[4] = {0};  //Instr encoding in byte array
+    uint        opc;
+    byte        b, t;
+    uint        opc_bits;
+    opnd_t      opnd;
+    instr_info_t* info;
+    uint  instr_type;
+
+    opc = instr_get_opcode(instr);
+
+    /* 
+       Instruction encoded as 31-0
+       |cond|instr_type|opcode|operands/flags|
+     */
+    
+    //Encode cond
+    if( instr_is_unconditional( instr ) )
+    {
+        //Encode unconditional
+        b = 0xf0;
+        word[0] |= b; 
+    }
+    else
+    {
+        b = 0;
+        b &= instr->cond;
+        word[0] |= (b << 4); 
+    }
+
+    //encode instr_type 
+    //encode instr_type
+    instr_type = instr_get_instr_type( instr );
+
+    b = instr_get_instr_type_value( instr_type );
+
+    word[0] |= (b << 1);
+
+    info = instr_get_instr_info(instr);
+
+    //get first bit of opcode
+    b = 16; //0001 0000
+    b &= (byte) info->opcode;
+    word[0] |= (b >> 4); 
+
+    //get last 4 bits of opcode
+    b = 15; //0000 1111 
+    b &= (byte) info->opcode;
+
+    //Add s bit if necessary
+    if( instr_has_s_bit( instr ))
+    {
+      t = di->s_flag ? 0x4 : 0 ;
+      b |= t; 
+    }
+
+    word[1] |= (b << 4);
+
+    /************** Encode operands here *****************/
+
+    // DST 1
+    {
+        opnd = instr_get_dst(instr, 0);      
+ 
+        switch( opnd.kind )
+        {
+          case REG_kind:
+            b = opnd.value.reg;
+
+            b--; //To get actual reg number
+            word[2] |= (b << 4);
+            break;
+            
+          default:
+            CLIENT_ASSERT(false, "instr_encode error: invalid opnd type" );
+            break;
+            
+        }    
+    }
+
+    // SRC 1
+    {
+        opnd = instr_get_src(instr, 0);
+
+        switch( opnd.kind )
+        {
+          case REG_kind:
+            b = opnd.value.reg;
+            
+            b &= 16;
+
+            word[2] |= b;
+            break;
+
+          default:
+            CLIENT_ASSERT(false, "instr_encode error: invalid opnd type" );
+            break;
+
+        }
+    }
+
+    // SRC 2
+    {
+        opnd = instr_get_src(instr, 1);
+
+        switch( opnd.kind )
+        {
+          case REG_kind:
+            b = opnd.value.reg;
+            
+            b &= 16;
+
+            word[2] |= b;
+            break;
+
+          default:
+            CLIENT_ASSERT(false, "instr_encode error: invalid opnd type" );
+            break;
+
+        }
+    }
+
+    //Set bits[6,5] to indicate shift
+    if( instr_is_shift_type( instr ))
+    {
+      switch( di->shift_type )
+      {
+        case LOGICAL_LEFT:
+        case LOGICAL_RIGHT:
+        case ARITH_RIGHT:
+        case ROTATE_RIGHT: 
+          word[3] |= (di->shift_type << 5);
+          break;
+
+        default:
+          break;
+      }
     }
 
 
@@ -1268,98 +1445,906 @@ encode_data_processing_1(decode_info_t* di, instr_t* instr, byte* pc)
 }
 
 void
-encode_multiply(decode_info_t* di, instr_t* instr)
+encode_1dst_reg_1src_reg_1src_imm(decode_info_t* di, instr_t* instr, byte* pc)
 {
+    // | cond | 0001101S | 0000 | Rd | imm5 | 010 | Rm |
+    byte word[4] = {0};  //Instr encoding in byte array
+    uint        opc;
+    byte        b, t;
+    uint        opc_bits;
+    opnd_t      opnd;
+    instr_info_t* info;
+    uint  instr_type;
+
+    opc = instr_get_opcode(instr);
+
+    /* 
+       Instruction encoded as 31-0
+       |cond|instr_type|opcode|operands/flags|
+     */
+    
+    //Encode cond
+    if( instr_is_unconditional( instr ) )
+    {
+        //Encode unconditional
+        b = 0xf0;
+        word[0] |= b; 
+    }
+    else
+    {
+        b = 0;
+        b &= instr->cond;
+        word[0] |= (b << 4); 
+    }
+
+    //encode instr_type 
+    //encode instr_type
+    instr_type = instr_get_instr_type( instr );
+
+    b = instr_get_instr_type_value( instr_type );
+
+    word[0] |= (b << 1);
+
+    info = instr_get_instr_info(instr);
+
+    //get first bit of opcode
+    b = 16; //0001 0000
+    b &= (byte) info->opcode;
+    word[0] |= (b >> 4); 
+
+    //get last 4 bits of opcode
+    b = 15; //0000 1111 
+    b &= (byte) info->opcode;
+
+    //Add s bit if necessary
+    if( instr_has_s_bit( instr ))
+    {
+      t = di->s_flag ? 0x4 : 0 ;
+      b |= t; 
+    }
+
+    word[1] |= (b << 4);
+
+    /************** Encode operands here *****************/
+
+    // DST 1
+    {
+        opnd = instr_get_dst(instr, 0);      
+ 
+        switch( opnd.kind )
+        {
+          case REG_kind:
+            b = opnd.value.reg;
+
+            b--; //To get actual reg number
+            word[2] |= (b << 4);
+            break;
+            
+          default:
+            CLIENT_ASSERT(false, "instr_encode error: invalid opnd type" );
+            break;
+            
+        }
+    }
+
+    // SRC 1
+    {
+        opnd = instr_get_src(instr, 0);
+
+        switch( opnd.kind )
+        {
+          case REG_kind:
+            b = opnd.value.reg;
+            
+            b &= 16;
+
+            word[3] |= b;
+            break;
+
+          default:
+            CLIENT_ASSERT(false, "instr_encode error: invalid opnd type" );
+            break;
+
+        }
+    }
+
+    // SRC 2
+    {
+        opnd = instr_get_src(instr, 1);
+
+        switch( opnd.kind )
+        {
+          case IMMED_INTEGER_kind:
+            b = (opnd.value.immed_int>>2);
+            
+            word[2] |= b;
+
+            b = (opnd.value.immed_int);
+            b &= 0x3;
+
+            word[3] = (b << 7);
+            break;
+
+          default:
+            CLIENT_ASSERT(false, "instr_encode error: invalid opnd type" );
+            break;
+        }
+    }
+
+    //Set bits[6,5] to indicate shift
+    if( instr_is_shift_type( instr ))
+    {
+      switch( di->shift_type )
+      {
+        case LOGICAL_LEFT:
+        case LOGICAL_RIGHT:
+        case ARITH_RIGHT:
+        case ROTATE_RIGHT: 
+          word[3] |= (di->shift_type << 5);
+          break;
+
+        default:
+          break;
+      }
+    }
+
+
+   //Word should now be an instruction. MSB encoding
+   *((byte *)pc) = word[0];
+   pc++;
+   *((byte *)pc) = word[1];
+   pc++;
+   *((byte *)pc) = word[2];
+   pc++;
+   *((byte *)pc) = word[3];
+   pc++;
+
+   return pc;
 }
 
-void
-encode_extra_load_store(decode_info_t* di, instr_t* instr)
-{
-}
 
 void
-encode_synchro_primitives(decode_info_t* di, instr_t* instr)
+encode_1dst_reg_1src_reg_1src_imm_2(decode_info_t* di, instr_t* instr, byte* pc)
 {
+    // | cond | 0010000S | Rn | Rd | I12 |
+
+    byte word[4] = {0};  //Instr encoding in byte array
+    uint        opc;
+    byte        b, t;
+    uint        opc_bits;
+    opnd_t      opnd;
+    instr_info_t* info;
+    uint  instr_type;
+
+    opc = instr_get_opcode(instr);
+
+    /* 
+       Instruction encoded as 31-0
+       |cond|instr_type|opcode|operands/flags|
+     */
+    
+    //Encode cond
+    if( instr_is_unconditional( instr ) )
+    {
+        //Encode unconditional
+        b = 0xf0;
+        word[0] |= b; 
+    }
+    else
+    {
+        b = 0;
+        b &= instr->cond;
+        word[0] |= (b << 4); 
+    }
+
+    //encode instr_type 
+    //encode instr_type
+    instr_type = instr_get_instr_type( instr );
+
+    b = instr_get_instr_type_value( instr_type );
+
+    word[0] |= (b << 1);
+
+    
+    info = instr_get_instr_info(instr);
+
+    //get first bit of opcode
+    b = 16; //0001 0000
+    b &= (byte) info->opcode;
+    word[0] |= (b >> 4); 
+
+    //get last 4 bits of opcode
+    b = 15; //0000 1111 
+    b &= (byte) info->opcode;
+
+    //Add s bit if necessary
+    if( instr_has_s_bit( instr ))
+    {
+      t = di->s_flag ? 0x4 : 0 ;
+      b |= t; 
+    }
+
+    word[1] |= (b << 4);
+
+    /************** Encode operands here *****************/
+
+    // DST 1
+    {
+        opnd = instr_get_dst(instr, 0);      
+ 
+        switch( opnd.kind )
+        {
+          case REG_kind:
+            b = opnd.value.reg;
+
+            b--; //To get actual reg number
+            word[2] |= (b << 4);
+            break;
+            
+          default:
+            CLIENT_ASSERT(false, "instr_encode error: invalid opnd type" );
+            break;
+            
+        }
+    }
+
+    // SRC 1
+    {
+        opnd = instr_get_src(instr, 0);
+
+        switch( opnd.kind )
+        {
+          case REG_kind:
+            b = opnd.value.reg;
+            
+            b &= 16;
+
+            word[1] |= b;
+            break;
+
+          default:
+            CLIENT_ASSERT(false, "instr_encode error: invalid opnd type" );
+            break;
+
+        }
+    }
+
+    // SRC 2
+    {
+        opnd = instr_get_src(instr, 1);
+
+        switch( opnd.kind )
+        {
+          case IMMED_INTEGER_kind:
+            b = (opnd.value.immed_int>>9);
+            
+            word[2] |= b;
+
+            b = (opnd.value.immed_int);
+            b &= 0xff;
+
+            word[3] = b;
+            break;
+
+          default:
+            CLIENT_ASSERT(false, "instr_encode error: invalid opnd type" );
+            break;
+        }
+    }
+
+    //Set bits[6,5] to indicate shift
+    if( instr_is_shift_type( instr ))
+    {
+      switch( di->shift_type )
+      {
+        case LOGICAL_LEFT:
+        case LOGICAL_RIGHT:
+        case ARITH_RIGHT:
+        case ROTATE_RIGHT: 
+          word[3] |= (di->shift_type << 5);
+          break;
+
+        default:
+          break;
+      }
+    }
+
+
+   //Word should now be an instruction. MSB encoding
+   *((byte *)pc) = word[0];
+   pc++;
+   *((byte *)pc) = word[1];
+   pc++;
+   *((byte *)pc) = word[2];
+   pc++;
+   *((byte *)pc) = word[3];
+   pc++;
+
+   return pc;
 }
 
-void
-encode_misc1(decode_info_t* di, instr_t* instr)
-{
-}
 
 void
-encode_data_processing_imm(decode_info_t* di, instr_t* instr)
+encode_1dst_reg_2src_reg_0src_imm_2(decode_info_t* di, instr_t* instr, byte* pc)
 {
+    // | cond | 0000000S | Rd | 0000 | Rm | 1001 | Rn |
+
+    byte word[4] = {0};  //Instr encoding in byte array
+    uint        opc;
+    byte        b, t;
+    uint        opc_bits;
+    opnd_t      opnd;
+    instr_info_t* info;
+    uint  instr_type;
+
+    opc = instr_get_opcode(instr);
+
+    /* 
+       Instruction encoded as 31-0
+       |cond|instr_type|opcode|operands/flags|
+     */
+    
+    //Encode cond
+    if( instr_is_unconditional( instr ) )
+    {
+        //Encode unconditional
+        b = 0xf0;
+        word[0] |= b; 
+    }
+    else
+    {
+        b = 0;
+        b &= instr->cond;
+        word[0] |= (b << 4); 
+    }
+
+    //encode instr_type 
+    //encode instr_type
+    instr_type = instr_get_instr_type( instr );
+
+    b = instr_get_instr_type_value( instr_type );
+
+    word[0] |= (b << 1);
+
+    info = instr_get_instr_info(instr);
+
+    //get first bit of opcode
+    b = 16; //0001 0000
+    b &= (byte) info->opcode;
+    word[0] |= (b >> 4); 
+
+    //get last 4 bits of opcode
+    b = 15; //0000 1111 
+    b &= (byte) info->opcode;
+
+    //Add s bit if necessary
+    if( instr_has_s_bit( instr ))
+    {
+      t = di->s_flag ? 0x4 : 0 ;
+      b |= t; 
+    }
+
+    word[1] |= (b << 4);
+
+    /************** Encode operands here *****************/
+
+    // DST 1
+    {
+        opnd = instr_get_dst(instr, 0);      
+ 
+        switch( opnd.kind )
+        {
+          case REG_kind:
+            b = opnd.value.reg;
+
+            b--; //To get actual reg number
+            word[1] |= b;
+            break;
+            
+          default:
+            CLIENT_ASSERT(false, "instr_encode error: invalid opnd type" );
+            break;
+            
+        }    
+    }
+
+    // SRC 1
+    {
+        opnd = instr_get_src(instr, 0);
+
+        switch( opnd.kind )
+        {
+          case REG_kind:
+            b = opnd.value.reg;
+            
+            b &= 16;
+
+            word[2] |= b;
+            break;
+
+          default:
+            CLIENT_ASSERT(false, "instr_encode error: invalid opnd type" );
+            break;
+
+        }
+    }
+
+    // SRC 2
+    {
+        opnd = instr_get_src(instr, 1);
+
+        switch( opnd.kind )
+        {
+          case REG_kind:
+            b = opnd.value.reg;
+            
+            b &= 16;
+
+            word[3] |= b;
+            break;
+
+          default:
+            CLIENT_ASSERT(false, "instr_encode error: invalid opnd type" );
+            break;
+
+        }
+    }
+
+    //TODO Need to write to bits[7,4] if mul(1001)
+
+    //Set bits[6,5] to indicate shift
+    if( instr_is_shift_type( instr ))
+    {
+      switch( di->shift_type )
+      {
+        case LOGICAL_LEFT:
+        case LOGICAL_RIGHT:
+        case ARITH_RIGHT:
+        case ROTATE_RIGHT: 
+          word[3] |= (di->shift_type << 5);
+          break;
+
+        default:
+          break;
+      }
+    }
+
+
+   //Word should now be an instruction. MSB encoding
+   *((byte *)pc) = word[0];
+   pc++;
+   *((byte *)pc) = word[1];
+   pc++;
+   *((byte *)pc) = word[2];
+   pc++;
+   *((byte *)pc) = word[3];
+   pc++;
+
+   return pc;
 }
 
-void
-encode_extras(decode_info_t* di, instr_t* instr)
+void 
+encode_1dst_reg_3src_reg_0src_imm(decode_info_t* di, instr_t* instr, byte* pc)
 {
+    // | cond | 0000001S | Rd | Ra | Rm | 1001 | Rn |
+
+    byte word[4] = {0};  //Instr encoding in byte array
+    uint        opc;
+    byte        b, t;
+    uint        opc_bits;
+    opnd_t      opnd;
+    instr_info_t* info;
+    uint  instr_type;
+
+    opc = instr_get_opcode(instr);
+
+    /*
+       Instruction encoded as 31-0
+       |cond|instr_type|opcode|operands/flags|
+     */
+
+    //Encode cond
+    if( instr_is_unconditional( instr ) )
+    {
+        //Encode unconditional
+        b = 0xf0;
+        word[0] |= b;
+    }
+    else
+    {
+        b = 0;
+        b &= instr->cond;
+        word[0] |= (b << 4);
+    }
+
+    //encode instr_type
+    instr_type = instr_get_instr_type( instr );
+
+    b = instr_get_instr_type_value( instr_type );
+
+    word[0] |= (b << 1);
+
+    info = instr_get_instr_info(instr);
+
+    //get first bit of opcode
+    b = 16; //0001 0000
+    b &= (byte) info->opcode;
+    word[0] |= (b >> 4);
+
+    //get last 4 bits of opcode
+    b = 15; //0000 1111
+    b &= (byte) info->opcode;
+
+    //Add s bit if necessary
+    if( instr_has_s_bit( instr ))
+    {
+      t = di->s_flag ? 0x4 : 0 ;
+      b |= t;
+    }
+
+    word[1] |= (b << 4);
+
+    /************* Encode operands *************/
+
+    // DST 1
+    {
+        opnd = instr_get_dst(instr, 1);
+
+        switch( opnd.kind )
+        {
+          case REG_kind:
+            b = opnd.value.reg;
+            b--;
+
+            b &= 0xf;//0000 1111
+
+            word[2] |= (b << 4);
+            break;
+
+          default:
+            CLIENT_ASSERT(false, "instr_encode error: invalid opnd type" );
+            break;
+        }
+
+    }
+
+    // SRC 1
+    {
+        opnd = instr_get_src(instr, 1);
+
+        switch( opnd.kind )
+        {
+          case REG_kind:
+            b = opnd.value.reg;
+            b--;
+
+            b &= 0xf;//0000 1111
+
+            word[3] |= (b);
+            break;
+
+          default:
+            CLIENT_ASSERT(false, "instr_encode error: invalid opnd type" );
+            break;
+        }
+
+    }
+
+    // SRC 2 
+    {
+        opnd = instr_get_src(instr, 2);
+
+        switch( opnd.kind )
+        {
+          case REG_kind:
+            b = opnd.value.reg;
+            b--;
+
+            b &= 0xf;//0000 1111
+
+            word[1] |= b;
+            break;
+
+          default:
+            CLIENT_ASSERT(false, "instr_encode error: invalid opnd type" );
+            break;
+        }
+
+    }
+
+    // SRC 3
+    {
+        opnd = instr_get_src(instr, 3);
+
+        switch( opnd.kind )
+        {
+          case REG_kind:
+            b = opnd.value.reg;
+            b--;
+
+            b &= 0xf;//0000 1111
+
+            word[2] |= b;
+            break;
+
+          default:
+            CLIENT_ASSERT(false, "instr_encode error: invalid opnd type" );
+            break;
+        }
+
+    }
+
+
+   //Word should now be an instruction. MSB encoding
+   *((byte *)pc) = word[0];
+   pc++;
+   *((byte *)pc) = word[1];
+   pc++;
+   *((byte *)pc) = word[2];
+   pc++;
+   *((byte *)pc) = word[3];
+   pc++;
+
+   return pc;
 }
 
-void
-encode_misc2(decode_info_t* di, instr_t* instr)
+void 
+encode_1dst_reg_1src_reglist(decode_info_t* di, instr_t* instr, byte* pc)
 {
+    // | cond | 100010W1 | Rn | Rl |
+
+    byte word[4] = {0};  //Instr encoding in byte array
+    uint        opc;
+    byte        b, t;
+    uint        opc_bits;
+    opnd_t      opnd;
+    instr_info_t* info;
+    uint  instr_type;
+
+    opc = instr_get_opcode(instr);
+
+    /*
+       Instruction encoded as 31-0
+       |cond|instr_type|opcode|operands/flags|
+     */
+
+    /*********** Encode condition code. TODO Move to decode_info_t *********/
+
+    if( instr_is_unconditional( instr ) )
+    {
+        //Encode unconditional
+        b = 0xf0;
+        word[0] |= b;
+    }
+    else
+    {
+        b = 0;
+        b &= instr->cond;
+        word[0] |= (b << 4);
+    }
+
+    /*********** Encode instr_type and opcode ***********/
+
+    //encode instr_type
+    instr_type = instr_get_instr_type( instr );
+
+    b = instr_get_instr_type_value( instr_type );
+
+    word[0] |= (b << 1);
+
+    info = instr_get_instr_info(instr);
+
+    //get first bit of opcode
+    b = 16; //0001 0000
+    b &= (byte) info->opcode;
+    word[0] |= (b >> 4);
+
+    //get last 4 bits of opcode
+    b = 15; //0000 1111
+    b &= (byte) info->opcode;
+
+    word[1] |= (b<<4);
+
+    /******Write all the optional flags here if necessary******/
+
+    //Add s bit if necessary
+    if( instr_has_s_bit( instr ))
+    {
+      t = di->s_flag ? 0xf : 0 ;//Set bit[5] in byte
+      word[1] |= t;
+    }
+
+    //Add w bit if necessary
+    if( instr_has_w_bit( instr ))
+    {
+      t = di->w_flag ? 0x20 : 0 ;
+      word[1] |= t;
+    }
+
+    //Add d bit if necessary
+    if( instr_has_d_bit( instr ))
+    {
+      t = di->d_flag ? 0x40 : 0 ;
+      word[1] |= t;
+    }
+
+    //Add u bit if necessary
+    if( instr_has_u_bit( instr ))
+    {
+      t = di->u_flag ? 0x80 : 0 ;
+      word[1] |= t;
+    }
+
+    //Add p bit if necessary
+    if( instr_has_p_bit( instr ))
+    {
+      t = di->p_flag ? 0x1 : 0 ;
+      word[0] |= t;
+    }
+
+    /************* Encode operands *************/
+
+    // DST 1
+    {
+        opnd = instr_get_dst(instr, 1);
+
+        switch( opnd.kind )
+        {
+          case REG_kind:
+            b = opnd.value.reg;
+            b--;
+
+            b &= 0xf;//0000 1111
+
+            word[1] |= b;
+            break;
+
+          default:
+            CLIENT_ASSERT(false, "instr_encode error: invalid opnd type" );
+            break;
+        }
+
+    }
+
+    // SRC 1
+    {
+        opnd = instr_get_src(instr, 1);
+
+        switch( opnd.kind )
+        {
+          case REG_kind:
+            b = opnd.value.reg;
+
+            /* Last byte is all the reg list */
+            word[3] |= b;
+            break;
+
+          default:
+            CLIENT_ASSERT(false, "instr_encode error: invalid opnd type" );
+            break;
+        }
+
+    }
+
+   //Word should now be an instruction. MSB encoding
+   *((byte *)pc) = word[0];
+   pc++;
+   *((byte *)pc) = word[1];
+   pc++;
+   *((byte *)pc) = word[2];
+   pc++;
+   *((byte *)pc) = word[3];
+   pc++;
+
+   return pc;
 }
 
-void
-encode_load_store_1(decode_info_t* di, instr_t* instr)
+void 
+encode_branch_instrs(decode_info_t* di, instr_t* instr, byte* pc)
 {
-}
+    byte word[4] = {0};  //Instr encoding in byte array
+    uint        opc;
+    byte        b, t;
+    uint        opc_bits;
+    opnd_t      opnd;
+    instr_info_t* info;
+    uint  instr_type;
 
-void
-encode_misc3(decode_info_t* di, instr_t* instr)
-{
-}
+    opc = instr_get_opcode(instr);
 
-void
-encode_media(decode_info_t* di, instr_t* instr)
-{
-}
+    /*
+       Instruction encoded as 31-0
+       |cond|1010|imm24|
+     */
 
-void
-encode_parallel_arith(decode_info_t* di, instr_t* instr)
-{
-}
+    /*********** Encode condition code. TODO Move to decode_info_t *********/
 
-void
-encode_packing_unpacking(decode_info_t* di, instr_t* instr)
-{
-}
+    if( instr_is_unconditional( instr ) )
+    {
+        //Encode unconditional
+        b = 0xf0;
+        word[0] |= b;
+    }
+    else
+    {
+        b = 0;
+        b &= instr->cond;
+        word[0] |= (b << 4);
+    }
 
-void
-encode_signed_multiply(decode_info_t* di, instr_t* instr)
-{
-}
 
-void
-encode_misc4(decode_info_t* di, instr_t* instr)
-{
-}
+    switch( opc )
+    {
+        case OP_b:
+          word[0] |= 0xa;
+          break;
+        case OP_bl:
+          word[0] |= 0xb;
+          break;
+        case OP_blx_imm:
+          word[0] |= 0xa;
+          /* TODO Set H flag */
+          break;
+          
+        case OP_blx_reg:
+          word[0] |= 0x1;
+          word[1] = 0x2f;
+          word[2] = 0xff;
 
-void
-encode_load_store_multiple(decode_info_t* di, instr_t* instr)
-{
-}
+          word[3] |= (0x3 << 4);
 
-void
-encode_uncond(decode_info_t* di, instr_t* instr)
-{
-}
+          opnd = instr_get_src(instr, 1);
 
-void
-encode_branch(decode_info_t* di, instr_t* instr)
-{
-}
+          switch( opnd.kind )
+          {
+            case REG_kind:
+              b = opnd.value.reg;
+              b--;
 
-void
-encode_coprocessor_data_movement(decode_info_t* di, instr_t* instr)
-{
-}
+              b &= 0xf;//0000 1111
 
-void
-encode_advanced_coprocessor(decode_info_t* di, instr_t* instr)
-{
+              word[3] |= b;
+              break;
+
+            default:
+              CLIENT_ASSERT(false, "instr_encode error: invalid opnd type" );
+              break;
+          }
+          
+          break;
+    }
+
+    // If not blx_reg then encodes address as 24 bit immed
+    if( opc != OP_blx_reg )
+    {
+          opnd = instr_get_src(instr, 1);
+
+          switch( opnd.kind )
+          {
+            case IMMED_INTEGER_kind:
+              /* TODO Calc offset */
+
+              b = (opnd.value.immed_int >> 16);
+              word[1] = b;
+
+              b = (opnd.value.immed_int >> 8);
+              word[2] = b;
+
+              b = opnd.value.immed_int;
+              b &= 0xff;
+
+              word[3] = b;
+              break;
+
+            default:
+              CLIENT_ASSERT(false, "instr_encode error: invalid opnd type" );
+              break;
+          }
+
+    }
+
+  // Have a separate function for branch instrs to calc correct address
+  // Branch instrs are pretty simple anyway
 }
 
 void
@@ -1389,15 +2374,22 @@ encode_data_processing_and_els(decode_info_t* di, instr_t* instr, byte* pc)
         case OP_cmn_reg:
         case OP_orr_reg:
         case OP_mov_reg:
+        case OP_bic_reg:
+        case OP_mvn_reg:
+        case OP_lsl_reg:
+        case OP_lsr_reg:
+        case OP_asr_reg:
+        case OP_ror_reg:
+          encode_1dst_reg_2src_reg_1src_imm(di, instr, pc);
+          break;
         case OP_lsl_imm:
         case OP_lsr_imm:
         case OP_asr_imm:
         case OP_rrx:
         case OP_ror_imm: 
-        case OP_bic_reg:
-        case OP_mvn_reg:
+          encode_1dst_reg_1src_reg_1src_imm(di, instr, pc);
+          break;
         case OP_and_rsr:
-        case OP_eor_rsr:
         case OP_sub_rsr:
         case OP_rsb_rsr:
         case OP_add_rsr:
@@ -1409,19 +2401,22 @@ encode_data_processing_and_els(decode_info_t* di, instr_t* instr, byte* pc)
         case OP_cmp_rsr:
         case OP_cmn_rsr:
         case OP_orr_rsr:
-        case OP_lsl_reg:
-        case OP_lsr_reg:
-        case OP_asr_reg:
-        case OP_ror_reg:
         case OP_bic_rsr:
+        case OP_eor_rsr:
+          encode_1dst_reg_3src_reg_0src_imm(di, instr, pc);
+          break;
         case OP_mvn_rsr:
-          encode_data_processing_1(di, instr, pc);
+          encode_1dst_reg_2src_reg_0src_imm(di, instr, pc);
           break;
           //Multiply instrs
         case OP_mul:
+          encode_1dst_reg_2src_reg_0src_imm_2(di, instr, pc);
+          break;
         case OP_mla:
-        case OP_umaal:
         case OP_mls:
+          encode_1dst_reg_3src_reg_0src_imm;
+          break;
+        case OP_umaal:
         case OP_umull:
         case OP_umlal:
         case OP_smull:
@@ -1446,7 +2441,6 @@ encode_data_processing_and_els(decode_info_t* di, instr_t* instr, byte* pc)
         case OP_smulbt:
         case OP_smultb:
         case OP_smultt:
-          encode_multiply(di, instr);
           break;
           //Extra load/store
         case OP_strh_reg:
@@ -1468,7 +2462,6 @@ encode_data_processing_and_els(decode_info_t* di, instr_t* instr, byte* pc)
         case OP_ldrht:
         case OP_ldrsbt:
         case OP_ldrsht:
-          encode_extra_load_store(di, instr);
           break;
           //Synchro primitves
         case OP_swp:
@@ -1481,13 +2474,11 @@ encode_data_processing_and_els(decode_info_t* di, instr_t* instr, byte* pc)
         case OP_ldrexb:
         case OP_strexh:
         case OP_ldrexh:
-          encode_synchro_primitives(di, instr);
           break;
         //misc
         case OP_cps:
         case OP_setend:
           //Add encode func 
-          encode_misc1(di, instr);
           break;
         default:
             CLIENT_ASSERT(false, "instr_encode error: invalid opcode for instr_type" );
@@ -1496,7 +2487,7 @@ encode_data_processing_and_els(decode_info_t* di, instr_t* instr, byte* pc)
 }
 
 void
-encode_data_processing_imm(dcontext_t* dcontext, decode_info_t* di, instr_t* instr)
+encode_data_processing_imm_and_misc(decode_info_t* di, instr_t* instr, byte* pc)
 {
     uint opc;
 
@@ -1521,7 +2512,7 @@ encode_data_processing_imm(dcontext_t* dcontext, decode_info_t* di, instr_t* ins
         case OP_mov_imm:
         case OP_bic_imm:
         case OP_mvn_imm:
-          encode_data_processing_imm(di, instr);
+          encode_1dst_reg_1src_reg_1src_imm_2(di, instr, pc);
           break;
         //Extar instrs
         case OP_nop:
@@ -1531,7 +2522,6 @@ encode_data_processing_imm(dcontext_t* dcontext, decode_info_t* di, instr_t* ins
         case OP_sev:
         case OP_dbg:
         case OP_msr_imm:
-          encode_extras(di, instr);
           break;
         //Misc
         case OP_mrs:
@@ -1542,8 +2532,8 @@ encode_data_processing_imm(dcontext_t* dcontext, decode_info_t* di, instr_t* ins
         case OP_blx_imm:
         case OP_blx_reg:
         case OP_bkpt:
+          break;
         //case OP_smc:
-          encode_misc2(di, instr);
         default:
             CLIENT_ASSERT(false, "instr_encode error: invalid opcode for instr_type" );
             break;
@@ -1552,7 +2542,7 @@ encode_data_processing_imm(dcontext_t* dcontext, decode_info_t* di, instr_t* ins
 }
 
 void
-encode_load_store_1(dcontext_t* dcontext, decode_info_t* di, instr_t* instr)
+encode_load_store_1_and_misc(decode_info_t* di, instr_t* instr, byte* pc)
 {
     uint opc;
 
@@ -1561,20 +2551,24 @@ encode_load_store_1(dcontext_t* dcontext, decode_info_t* di, instr_t* instr)
     switch( opc )
     {
         case OP_str_imm:
-        case OP_str_reg:
-        case OP_strt:
-        case OP_ldr_imm:
-        case OP_ldr_lit:
-        case OP_ldr_reg:
-        case OP_ldrt:
         case OP_strb_imm:
-        case OP_strb_reg:
-        case OP_strbt:
+        case OP_ldr_imm:
         case OP_ldrb_imm:
-        case OP_ldrb_lit:
-        case OP_ldrb_reg:       
+          encode_1dst_reg_1src_reg_1src_imm_2(di, instr, pc);
+          break;
+        case OP_strt:
+        case OP_ldrt:
+        case OP_strbt:
         case OP_ldrbt:
-          encode_load_store_1(di, instr);
+          encode_1dst_reg_1src_reg_1src_imm_2(di, instr, pc);
+          break;
+        case OP_strb_reg:
+        case OP_ldr_reg:
+        case OP_str_reg:
+        case OP_ldrb_reg:       
+        case OP_ldr_lit:
+        case OP_ldrb_lit:
+          encode_1dst_reg_2src_reg_1src_imm(di, instr, pc);
           break;
         //misc
         case OP_pli_imm:
@@ -1587,7 +2581,6 @@ encode_load_store_1(dcontext_t* dcontext, decode_info_t* di, instr_t* instr)
         case OP_dsb:
         case OP_dmb:
         case OP_isb:
-          encode_misc3(di, instr);
           break;
         default:
             CLIENT_ASSERT(false, "instr_encode error: invalid opcode for instr_type" );
@@ -1596,7 +2589,7 @@ encode_load_store_1(dcontext_t* dcontext, decode_info_t* di, instr_t* instr)
 }
 
 void
-encode_load_store_2_and_media(dcontext_t* dcontext, decode_info_t* di, instr_t* instr)
+encode_load_store_2_and_media(decode_info_t* di, instr_t* instr, byte* pc)
 {
     uint opc;
 
@@ -1612,7 +2605,6 @@ encode_load_store_2_and_media(dcontext_t* dcontext, decode_info_t* di, instr_t* 
         case OP_bfc:
         case OP_bfi:
         case OP_ubfx:
-          encode_media(di, instr);
           break;
         // Parallel arith
         case OP_sadd16:
@@ -1650,7 +2642,6 @@ encode_load_store_2_and_media(dcontext_t* dcontext, decode_info_t* di, instr_t* 
         case OP_uhsub16:
         case OP_uhadd8:
         case OP_uhsub8:
-          encode_parallel_arith(di, instr);
           break;
         //Packing/Unpacking saturation and reversal
         case OP_pkh:
@@ -1675,7 +2666,6 @@ encode_load_store_2_and_media(dcontext_t* dcontext, decode_info_t* di, instr_t* 
         case OP_uxtah:
         case OP_uxth:
         case OP_revsh:
-          encode_packing_unpacking(di, instr);
           break;
         //Signed Multiple
         case OP_smlad:
@@ -1687,13 +2677,11 @@ encode_load_store_2_and_media(dcontext_t* dcontext, decode_info_t* di, instr_t* 
         case OP_smmla:
         case OP_smmul:
         case OP_smmls:
-          encode_signed_multiply(di, instr);
           break;
         //misc
         case OP_pli_reg:
         case OP_pld_reg:
         case OP_pldw_reg:
-          encode_misc4(di, instr);
           break;
         default:
             CLIENT_ASSERT(false, "instr_encode error: invalid opcode for instr_type" );
@@ -1703,7 +2691,7 @@ encode_load_store_2_and_media(dcontext_t* dcontext, decode_info_t* di, instr_t* 
 }
 
 void
-encode_load_store_multiple(dcontext_t* dcontext, decode_info_t* di, instr_t* instr)
+encode_load_store_multiple(decode_info_t* di, instr_t* instr, byte* pc)
 {
     uint opc;
 
@@ -1712,25 +2700,25 @@ encode_load_store_multiple(dcontext_t* dcontext, decode_info_t* di, instr_t* ins
     switch( opc )
     {
         //Store/load multiple
-        case OP_stmda:
-        case OP_stmed:
-        case OP_ldmda:
-        case OP_ldmfa:
         case OP_stm:
         case OP_stmia:
         case OP_stmea:
-        case OP_ldm:
-        case OP_ldmia:
-        case OP_ldmfd:
+        case OP_stmda:
+        case OP_stmed:
         case OP_stmdb:
         case OP_stmfd:
+        case OP_ldm:
+        case OP_ldmda:
+        case OP_ldmfa:
+        case OP_ldmia:
+        case OP_ldmfd:
         case OP_ldmib:
         case OP_ldmed:
-          encode_load_store_multiple(di, instr);
+          encode_1dst_reg_1src_reglist(di, instr, pc);
+          break;
         //Uncond instrs
         case OP_srs:
         case OP_rfe:
-          encode_uncond(di, instr);
           break;
         default:
             CLIENT_ASSERT(false, "instr_encode error: invalid opcode for instr_type" );
@@ -1739,7 +2727,7 @@ encode_load_store_multiple(dcontext_t* dcontext, decode_info_t* di, instr_t* ins
 }
 
 void
-encode_branch(dcontext_t* dcontext, decode_info_t* di, instr_t* instr)
+encode_branch(decode_info_t* di, instr_t* instr, byte* pc)
 {
     uint opc;
 
@@ -1751,7 +2739,7 @@ encode_branch(dcontext_t* dcontext, decode_info_t* di, instr_t* instr)
         case OP_bl:
         case OP_blx_imm:
         case OP_blx_reg:
-          encode_branch(di, instr);
+          encode_branch_instrs(di, instr, pc);
           break;
         default:
             CLIENT_ASSERT(false, "instr_encode error: invalid opcode for instr_type" );
@@ -1760,7 +2748,7 @@ encode_branch(dcontext_t* dcontext, decode_info_t* di, instr_t* instr)
 }
 
 void
-encode_coprocessor_data_movement(dcontext_t* dcontext, decode_info_t* di, instr_t* instr)
+encode_coprocessor_data_movement(decode_info_t* di, instr_t* instr, byte* pc)
 {
     uint opc;
 
@@ -1778,7 +2766,6 @@ encode_coprocessor_data_movement(dcontext_t* dcontext, decode_info_t* di, instr_
         case OP_mcrr2:
         case OP_mrrc:
         case OP_mrrc2:
-          encode_coprocessor_data_movement(di, instr);
           break;
 
         default:
@@ -1788,7 +2775,7 @@ encode_coprocessor_data_movement(dcontext_t* dcontext, decode_info_t* di, instr_
 }
 
 void
-encode_advanced_coprocessor_and_syscall(dcontext_t* dcontext, decode_info_t* di, instr_t* instr)
+encode_advanced_coprocessor_and_syscall(decode_info_t* di, instr_t* instr, byte* pc)
 {
     uint opc;
 
@@ -1802,7 +2789,6 @@ encode_advanced_coprocessor_and_syscall(dcontext_t* dcontext, decode_info_t* di,
         case OP_mcr2:
         case OP_mrc:
         case OP_mrc2:
-          encode_advanced_coprocessor(di, instr);
           break;
         default:
             CLIENT_ASSERT(false, "instr_encode error: invalid opcode for instr_type" );
@@ -1870,25 +2856,25 @@ instr_encode_common(dcontext_t *dcontext, instr_t *instr, byte *copy_pc, byte *f
           encode_data_processing_and_els(&di, instr, field_ptr); 
           break;
         case INSTR_TYPE_DATA_PROCESSING_IMM:
-          encode_data_processing_imm(dcontext, &di, instr); 
+          encode_data_processing_imm_and_misc(&di, instr, field_ptr); 
           break;
         case INSTR_TYPE_LOAD_STORE1:
-          encode_load_store_1(dcontext, &di, instr); 
+          encode_load_store_1_and_misc(&di, instr, field_ptr); 
           break;
         case INSTR_TYPE_LOAD_STORE2_AND_MEDIA:
-          encode_load_store_2_and_media(dcontext, &di, instr); 
+          encode_load_store_2_and_media(&di, instr, field_ptr); 
           break;
         case INSTR_TYPE_LOAD_STORE_MULTIPLE:
-          encode_load_store_multiple(dcontext, &di, instr); 
+          encode_load_store_multiple(&di, instr, field_ptr); 
           break;
         case INSTR_TYPE_BRANCH:
-          encode_branch(dcontext, &di, instr); 
+          encode_branch(&di, instr, field_ptr); 
           break;
         case INSTR_TYPE_COPROCESSOR_DATA_MOVEMENT:
-          encode_coprocessor_data_movement(dcontext, &di, instr); 
+          encode_coprocessor_data_movement(&di, instr, field_ptr); 
           break;
         case INSTR_TYPE_ADVANCED_COPROCESSOR_AND_SYSCALL: 
-          encode_advanced_coprocessor_and_syscall(dcontext, &di, instr); 
+          encode_advanced_coprocessor_and_syscall(&di, instr, field_ptr); 
           break;
         default:
             CLIENT_ASSERT(false, "instr_encode error: invalid instr_type");
