@@ -1076,6 +1076,9 @@ transfer_coarse_fragment(dcontext_t *dcontext, coarse_freeze_info_t *freeze_info
     DODEBUG({ freeze_info->app_code_size += sz; });
 
     /* Ensure we get proper target for short cti sequence */
+#ifdef ARM
+    //TODO For ARM ???
+#else 
     if (instr_is_cti_short_rewrite(instr, pc)) {
         next_pc = remangle_short_rewrite(dcontext, instr, pc, 0/*same target*/);
         DODEBUG({
@@ -1084,6 +1087,7 @@ transfer_coarse_fragment(dcontext_t *dcontext, coarse_freeze_info_t *freeze_info
             freeze_info->added_jecxz_mangle += 7; 
         });
     }
+#endif
     tgt = opnd_get_pc(instr_get_target(instr));
     if (tgt == next_pc) {
         ASSERT(instr_is_ubr(instr));
@@ -1134,9 +1138,13 @@ transfer_coarse_fragment(dcontext_t *dcontext, coarse_freeze_info_t *freeze_info
         if (instr_is_cbr(instr)) {
             uint cbr_len;
             /* push cbr target on todo-stack */
+#ifdef ARM
+          //TODO ARM ???
+#else 
             if (instr_is_cti_short_rewrite(instr, pc))
                 cbr_len = CBR_SHORT_REWRITE_LENGTH;
             else
+#endif
                 cbr_len = CBR_LONG_LENGTH;
             push_pending_freeze(dcontext, freeze_info, tgt, cbr_len, pc, body);
             ASSERT(pc + cbr_len == next_pc);
@@ -1207,8 +1215,11 @@ coarse_unit_shift_jmps_internal(dcontext_t *dcontext, coarse_info_t *info,
          * b/c we want to shift them by the same amount (xref i#665).
          */
         if (instr_opcode_valid(instr) && instr_is_cti(instr)) {
+#ifdef ARM
+#else
             if (instr_is_cti_short_rewrite(instr, pc))
                 next_pc = remangle_short_rewrite(dcontext, instr, pc, 0/*same target*/);
+#endif
             tgt = opnd_get_pc(instr_get_target(instr));
             if (tgt < bounds_start || tgt >= bounds_end) {
                 ssize_t shift;
@@ -1444,8 +1455,11 @@ coarse_merge_update_jmps(dcontext_t *dcontext, coarse_freeze_info_t *freeze_info
          */
         if (instr_opcode_valid(instr) && instr_is_cti(instr)) {
             /* Ensure we get proper target for short cti sequence */
+#ifdef ARM
+#else
             if (instr_is_cti_short_rewrite(instr, pc))
                 next_pc = remangle_short_rewrite(dcontext, instr, pc, 0/*same target*/);
+#endif
             tgt = opnd_get_pc(instr_get_target(instr));
             if (in_coarse_stub_prefixes(tgt)) {
                 /* We should not encounter prefix targets other than indirect while
@@ -1471,9 +1485,12 @@ coarse_merge_update_jmps(dcontext_t *dcontext, coarse_freeze_info_t *freeze_info
                        tgt < freeze_info->src_info->stubs_end_pc);
                 if (instr_is_cbr(instr)) {
                     uint cbr_len;
+#ifdef ARM
+#else
                     if (instr_is_cti_short_rewrite(instr, pc))
                         cbr_len = CBR_SHORT_REWRITE_LENGTH;
                     else
+#endif
                         cbr_len = CBR_LONG_LENGTH;
                     ASSERT(pc + cbr_len == next_pc);
                     coarse_merge_process_stub(dcontext, freeze_info, tgt, cbr_len,
@@ -1708,6 +1725,8 @@ coarse_merge_without_dups(dcontext_t *dcontext, coarse_freeze_info_t *freeze_inf
         } else {
             ASSERT(instr_opcode_valid(instr) && instr_is_cti(instr));
             /* Ensure we get proper target for short cti sequence, and copy full cti */
+#ifdef ARM
+#else
             if (instr_is_cti_short_rewrite(instr, pc)) {
                 app_pc old_next_pc = next_pc;
                 next_pc = remangle_short_rewrite(dcontext, instr, pc, 0/*same target*/);
@@ -1717,6 +1736,7 @@ coarse_merge_without_dups(dcontext_t *dcontext, coarse_freeze_info_t *freeze_inf
                     freeze_info->cache_cur_pc += (next_pc - old_next_pc);
                 }
             }
+#endif
             tgt = opnd_get_pc(instr_get_target(instr));
             if (in_coarse_stub_prefixes(tgt)) {
                 /* We should not encounter prefix targets other than indirect while
@@ -1745,9 +1765,12 @@ coarse_merge_without_dups(dcontext_t *dcontext, coarse_freeze_info_t *freeze_inf
                            tgt < freeze_info->src_info->stubs_end_pc);
                     if (instr_is_cbr(instr)) {
                         uint cbr_len;
+#ifdef ARM
+#else
                         if (instr_is_cti_short_rewrite(instr, pc))
                             cbr_len = CBR_SHORT_REWRITE_LENGTH;
                         else
+#endif
                             cbr_len = CBR_LONG_LENGTH;
                         ASSERT(pc + cbr_len == next_pc);
                         coarse_merge_process_stub(dcontext, freeze_info, tgt, cbr_len,

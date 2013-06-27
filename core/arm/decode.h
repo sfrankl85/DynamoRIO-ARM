@@ -361,6 +361,7 @@ enum {
     TYPE_M, /* Memory address */
     TYPE_O, /* immediate that is memory offset */
     TYPE_P, /* register that is memory offset */
+    TYPE_S, /* Mask opnd. Used for msr/mrs cpsr writes */
     TYPE_1,
     TYPE_FLOATCONST,
     TYPE_FLOATMEM,
@@ -439,6 +440,7 @@ enum {
     /* These operands are instrsize_opndsize in bits.
        So an immediate with 5 bits of storage in a 4 byte instruction(all ARM instrs)
        then it has a OPSZ_4_5 type. */
+    OPSZ_4_2,
     OPSZ_4_3,
     OPSZ_4_4,
     OPSZ_4_5,

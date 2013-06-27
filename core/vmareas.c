@@ -4664,7 +4664,11 @@ check_trampoline_displaced_code(dcontext_t *dcontext, app_pc addr, bool on_stack
          in = instr_get_next(in)) {
         /* build_app_bb_ilist should fully decode everything */
         ASSERT(instr_opcode_valid(in));
+#ifdef ARM
+        if (instr_is_cti(in) || instr_is_syscall(in))
+#else
         if (instr_is_cti(in) || instr_is_syscall(in) || instr_is_interrupt(in))
+#endif
             break;
         size += instr_length(dcontext, in);
         if (instr_get_next(in) == last) {

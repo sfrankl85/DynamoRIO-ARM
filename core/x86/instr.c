@@ -2991,11 +2991,6 @@ instr_decode(dcontext_t *dcontext, instr_t *instr)
 {
     if (!instr_operands_valid(instr)) {
         byte *next_pc;
-#ifdef X64
-        bool rip_rel_valid = instr_rip_rel_valid(instr);
-        /* decode() will use the current dcontext mode, but we want the instr mode */
-        bool old_mode = set_x86_mode(dcontext, instr_get_x86_mode(instr));
-#endif
         DEBUG_EXT_DECLARE(int old_len = instr->length;)
         CLIENT_ASSERT(instr_raw_bits_valid(instr), "instr_decode: raw bits are invalid");
         instr_reuse(dcontext, instr);
@@ -3003,13 +2998,6 @@ instr_decode(dcontext_t *dcontext, instr_t *instr)
 #ifndef NOT_DYNAMORIO_CORE_PROPER
         if (expand_should_set_translation(dcontext))
             instr_set_translation(instr, instr_get_raw_bits(instr));
-#endif
-#ifdef X64
-        set_x86_mode(dcontext, old_mode);
-        /* decode sets raw bits which invalidates rip_rel, but
-         * it should still be valid on an up-decode */
-        if (rip_rel_valid)
-            instr_set_rip_rel_pos(instr, instr->rip_rel_pos);
 #endif
         /* ok to be invalid, let caller deal with it */
         CLIENT_ASSERT(next_pc == NULL || (next_pc - instr->bytes == old_len),

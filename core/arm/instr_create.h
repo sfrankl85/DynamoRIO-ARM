@@ -390,8 +390,8 @@
     instr_create_1dst_1src((dc), OP_ldr_imm, (d), (s))
 #define INSTR_CREATE_ldr_lit(dc, d, s, i) \
     instr_create_1dst_2src((dc), OP_ldr_lit, (d), (s), (i))
-#define INSTR_CREATE_ldr_reg(dc, d, s) \
-    instr_create_1dst_1src((dc), OP_ldr_reg, (d), (s))
+#define INSTR_CREATE_ldr_reg(dc, d, s1, s2, i) \
+    instr_create_1dst_3src((dc), OP_ldr_reg, (d), (s1), (s2), (i))
 #define INSTR_CREATE_ldrb_imm(dc) \
     instr_create_0dst_0src((dc), OP_ldrb_imm)
 #define INSTR_CREATE_ldrb_lit(dc) \
@@ -474,12 +474,12 @@
     instr_create_0dst_0src((dc), OP_mrrc)
 #define INSTR_CREATE_mrrc2(dc) \
     instr_create_0dst_0src((dc), OP_mrrc2)
-#define INSTR_CREATE_mrs(dc, d, s) \
-    instr_create_1dst_1src((dc), OP_mrs, (d), (s))
-#define INSTR_CREATE_msr_imm(dc, d) \
-    instr_create_0dst_1src((dc), OP_msr_imm, (d))
-#define INSTR_CREATE_msr_reg(dc, d, s) \
-    instr_create_1dst_1src((dc), OP_msr_reg, (d), (s))
+#define INSTR_CREATE_mrs(dc, s) \
+    instr_create_0dst_1src((dc), OP_mrs, (s))
+#define INSTR_CREATE_msr_imm(dc, d, s) \
+    instr_create_1dst_1src((dc), OP_msr_imm, (d), (s))
+#define INSTR_CREATE_msr_reg(dc, s1, s2) \
+    instr_create_0dst_2src((dc), OP_msr_reg, (s1), (s2))
 #define INSTR_CREATE_mul(dc) \
     instr_create_0dst_0src((dc), OP_mul)
 #define INSTR_CREATE_mvn_imm(dc) \
@@ -688,8 +688,8 @@
     instr_create_0dst_0src((dc), OP_stmfa)
 #define INSTR_CREATE_str_imm(dc, d, s) \
     instr_create_1dst_1src((dc), OP_str_imm, (d), (s))
-#define INSTR_CREATE_str_reg(dc, d, s) \
-    instr_create_1dst_1src((dc), OP_str_reg, (d), (s))
+#define INSTR_CREATE_str_reg(dc, d, s1, s2, i) \
+    instr_create_1dst_3src((dc), OP_str_reg, (d), (s1), (s2), (i))
 #define INSTR_CREATE_strb_imm(dc, d, s, i) \
     instr_create_1dst_2src((dc), OP_strb_imm, (d))
 #define INSTR_CREATE_strb_reg(dc, d, s, i) \
@@ -1225,7 +1225,7 @@ INSTR_CREATE_msr_cpsr(dcontext_t *dcontext, reg_id_t reg)
 {
    /* Move the value held in the reg passed into pc. This performs an
       indirect branch in combination with the address being put into reg */
-   return INSTR_CREATE_msr_reg(dcontext, opnd_create_reg(DR_REG_CPSR), opnd_create_reg(reg));
+   return INSTR_CREATE_msr_reg(dcontext, opnd_create_reg(reg), opnd_create_mask(MASK_WRITE_ALL));
 }
 
 static inline instr_t* 
@@ -1233,7 +1233,7 @@ INSTR_CREATE_mrs_cpsr(dcontext_t *dcontext, reg_id_t reg)
 {
    /* Move the value held in the reg passed into pc. This performs an
       indirect branch in combination with the address being put into reg */
-   return INSTR_CREATE_mrs(dcontext, opnd_create_reg(DR_REG_CPSR), opnd_create_reg(reg));
+   return INSTR_CREATE_mrs(dcontext, opnd_create_reg(reg));
 }
 
 

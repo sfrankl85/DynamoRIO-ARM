@@ -467,7 +467,6 @@ remangle_short_rewrite(dcontext_t *dcontext,
                        instr_t *instr, byte *pc, app_pc target)
 {
     uint mangled_sz = CTI_SHORT_REWRITE_LENGTH;
-    ASSERT(instr_is_cti_short_rewrite(instr, pc));
     if (*pc == ADDR_PREFIX_OPCODE)
         mangled_sz++;
 
@@ -4110,10 +4109,6 @@ mangle(dcontext_t *dcontext, instrlist_t *ilist, uint flags,
                 mangle_syscall(dcontext, ilist, flags, instr, next_instr);
             continue;
         }
-        else if (instr_is_interrupt(instr)) { /* non-syscall interrupt */
-            mangle_interrupt(dcontext, ilist, instr, next_instr);
-            continue;
-        }
 #ifdef FOOL_CPUID
         else if (instr_get_opcode(instr) == OP_cpuid) {
             mangle_cpuid(dcontext, ilist, instr, next_instr);
@@ -4164,8 +4159,6 @@ mangle(dcontext_t *dcontext, instrlist_t *ilist, uint flags,
              * it passes us the updated next instr */
             next_instr = mangle_direct_call(dcontext, ilist, instr, next_instr,
                                             mangle_calls, flags);
-        } else if (instr_is_call_indirect(instr)) {
-            mangle_indirect_call(dcontext, ilist, instr, next_instr, mangle_calls, flags);
         } else if (instr_is_return(instr)) {
             mangle_return(dcontext, ilist, instr, next_instr, flags);
         } else if (instr_is_mbr(instr)) {
@@ -4304,8 +4297,6 @@ sandbox_rep_instr(dcontext_t *dcontext, instrlist_t *ilist, instr_t *instr, inst
     bool use_tls = IF_X64_ELSE(true, false);
     instr_t *next_app = next;
     DOLOG(3, LOG_INTERP, { loginst(dcontext, 3, instr, "writes memory"); });
-
-    ASSERT(!instr_is_call_indirect(instr)); /* FIXME: can you have REP on on CALL's */
 
     /* skip meta instrs to find next app instr (xref PR 472190) */
     while (next_app != NULL && !instr_ok_to_mangle(next_app))
@@ -4942,29 +4933,6 @@ insert_selfmod_sandbox(dcontext_t *dcontext, instrlist_t *ilist, uint flags,
                 op = instr_get_dst(instr, i);
                 if (opnd_is_memory_reference(op)) {
                     /* ignore CALL* since last anyways */
-                    if (instr_is_call_indirect(instr)) {
-                        ASSERT(next != NULL && !instr_raw_bits_valid(next));
-                        /* FIXME case 8165: why do we ever care about the last
-                         * instruction modifying anything? 
-                         */
-                        /* conversion of IAT calls (but not elision)
-                         * transforms this into a direct CALL,
-                         * in that case 'next' is a direct jmp
-                         * fall through, so has no exit flags
-                         */
-                        ASSERT(EXIT_IS_CALL(instr_exit_branch_type(next)) || 
-                               (DYNAMO_OPTION(IAT_convert) && 
-                                TEST(INSTR_IND_CALL_DIRECT, instr->flags)));
-
-                        
-                        LOG(THREAD, LOG_INTERP, 3, " ignoring CALL* at end of fragment\n");
-                        /* This test could be done outside of this loop on
-                         * destinations, but since it is rare it is faster
-                         * to do it here.  Using continue instead of break in case
-                         * it gets moved out.
-                         */
-                        continue;
-                    }
                     if (opnd_is_abs_addr(op) IF_X64(|| opnd_is_rel_addr(op))) {
                         app_pc abs_addr = opnd_get_addr(op);
                         uint size = opnd_size_in_bytes(opnd_get_size(op));

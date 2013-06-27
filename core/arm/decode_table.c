@@ -62,6 +62,7 @@
 #define Oa  TYPE_P,      OPSZ_4  /* Memory address contained in reg */
 #define Cr  TYPE_CO_REG, OPSZ_4
 #define Co  TYPE_CO_REG, OPSZ_4_5
+#define M2  TYPE_S,      OPSZ_4_2  /* Immediate value contained in instr */
 #define I3  TYPE_I,      OPSZ_4_3  /* Immediate value contained in instr */
 #define I4  TYPE_I,      OPSZ_4_4  /* " */
 #define I5  TYPE_I,      OPSZ_4_5  /* " */
@@ -194,11 +195,11 @@ const instr_info_t armv7a_instrs[] = {
     {OP_ldr_imm,     ls1, 0x0, "ldr_imm",  Ra, xx, Ra,  I12, xx,  0x0,  x, END_LIST}, /*ldr_imm()*/
     {OP_ldr_lit,     ls1, 0x0, "ldr_lit",  Ra, xx, I12, xx,  xx,  0x0,  x, END_LIST}, /*ldr_lit()*/
     {OP_ldr_reg,     ls2, 0x0, "ldr_reg",  Ra, xx, Ma,  Ra,  I5,  0x0,  x, END_LIST}, /*ldr_reg()*/
-    {OP_ldrb_imm,    ls1, 0x0, "ldrb_imm", Ra, xx, Ra,  I12, xx,  0x0,  x, END_LIST}, /*ldrb_imm()*/
+    {OP_ldrb_imm,    ls1, 0x0, "ldrb_imm", Ra, xx, Ma,  I12, xx,  0x0,  x, END_LIST}, /*ldrb_imm()*/
     {OP_ldrb_lit,    ls1, 0x0, "ldrb_lit", Ra, xx, I12, xx,  xx,  0x0,  x, END_LIST}, /*ldrb_lit()*/
     {OP_ldrb_reg,    ls2, 0x0, "ldrb_reg", Ra, xx, Ma,  Ra,  I5,  0x0,  x, END_LIST}, /*ldrb_reg()*/
     {OP_ldrbt,       ls2, 0x0, "ldrbt",    Ra, xx, Ma,  I12, xx,  0x0,  x, END_LIST}, /*ldrbt()*//* TODO */
-    {OP_ldrd_imm,    dpe, 0x0, "ldrd_imm", Ra, xx, Ra,  I4,  I4,  0x0,  x, END_LIST}, /*ldrd_imm()*/
+    {OP_ldrd_imm,    dpe, 0x0, "ldrd_imm", Ra, xx, Ma,  I4,  I4,  0x0,  x, END_LIST}, /*ldrd_imm()*/
     {OP_ldrd_lit,    dpe, 0x0, "ldrd_lit", Ra, xx, I4,  I4,  xx,  0x0,  x, END_LIST}, /*ldrd_lit()*/
     {OP_ldrd_reg,    dpe, 0x0, "ldrd_reg", Ra, xx, Ma,  Ra,  xx,  0x0,  x, END_LIST}, /*ldrd_reg()*/
     {OP_ldrex,       dpe, 0x0, "ldrex",    Ra, xx, Ma,  xx,  xx,  0x0,  x, END_LIST}, /*ldrex()*/
@@ -235,9 +236,9 @@ const instr_info_t armv7a_instrs[] = {
     {OP_mrc2,        acs, 0x1, "mrc2",     xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*mrc2()*//* TODO */
     {OP_mrrc,        cdm, 0x5, "mrrc",     xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*mrrc()*//*TODO */
     {OP_mrrc2,       cdm, 0x5, "mrrc2",    xx, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*mrrc2()*//* TODO */
-    {OP_mrs,         dpe, 0x10,"mrs",      Ra, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*mrs()*//* TODO */
+    {OP_mrs,         dpe, 0x10,"mrs",      xx, xx, Ra,  xx,  xx,  0x0,  x, END_LIST}, /*mrs()*//* TODO */
     {OP_msr_imm,     dpi, 0x12,"msr_imm",  xx, xx, I12, xx,  xx,  0x0,  x, END_LIST}, /*msr_imm()*/
-    {OP_msr_reg,     dpe, 0x12,"msr_reg",  Ra, xx, xx,  xx,  xx,  0x0,  x, END_LIST}, /*msr_reg()*/
+    {OP_msr_reg,     dpe, 0x12,"msr_reg",  xx, xx, Ra,  M2,  xx,  0x0,  x, END_LIST}, /*msr_reg()*/
     {OP_mul,         dpe, 0x0, "mul",      Ra, xx, Ra,  Ra,  xx,  0x0,  x, END_LIST}, /*mul()*/
     {OP_mvn_imm,     dpi, 0x1e,"mvn_imm",  Ra, xx, I12, xx,  xx,  0x0,  x, END_LIST}, /*mvn_imm()*/
     {OP_mvn_reg,     dpe, 0x1e,"mvn_reg",  Ra, xx, Ra,  I5,  xx,  0x0,  x, END_LIST}, /*mvn_reg()*/

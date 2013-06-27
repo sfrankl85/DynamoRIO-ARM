@@ -1025,7 +1025,7 @@ internal_instr_disassemble(char *buf, size_t bufsz, size_t *sofar INOUT,
                     }
                 }
             }
-            if (resize && opsz != OPSZ_NA && !instr_is_interrupt(instr))
+            if (resize && opsz != OPSZ_NA)
                 opnd_set_size(&src, opsz);
         }
 

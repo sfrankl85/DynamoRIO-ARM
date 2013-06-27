@@ -1104,7 +1104,6 @@ bb_verify_sysenter_pattern(dcontext_t *dcontext, build_bb_t *bb)
     /* Did we find a "call (%xdx) or "call %xdx" that's already marked
      * for ind->direct call conversion? */
     if (!(instr != NULL && TEST(INSTR_IND_CALL_DIRECT, instr->flags) &&
-          instr_is_call_indirect(instr) &&
           /* The 2nd src operand should always be %xsp. */
           opnd_is_reg(instr_get_src(instr, 1)) &&
           opnd_get_reg(instr_get_src(instr, 1)) == REG_RR13 &&
@@ -2427,11 +2426,7 @@ instr_will_be_exit_cti(instr_t *inst)
 {
     /* can't use instr_is_exit_cti() on pre-mangled instrs */
     return (instr_ok_to_mangle(inst) &&
-            instr_is_cti(inst) &&
-            (!instr_is_near_call_direct(inst) ||
-             !must_not_be_inlined(instr_get_branch_target_pc(inst)))
-            /* PR 239470: ignore wow64 syscall, which is an ind call */
-            IF_WINDOWS(&& !instr_is_wow64_syscall(inst)));
+            instr_is_cti(inst) );
 }
 
 #ifdef CLIENT_INTERFACE
@@ -2646,7 +2641,7 @@ client_process_bb(dcontext_t *dcontext, build_bb_t *bb)
                 found_exit_cti = true;
                 bb->instr = inst;
 
-                if (instr_is_near_ubr(inst) || instr_is_near_call_direct(inst)) {
+                if (instr_is_near_ubr(inst)) {
                     CLIENT_ASSERT(instr_is_near_ubr(inst) ||
                                   inst == instrlist_last(bb->ilist) ||
                                   /* for elision we assume calls are followed
@@ -2689,10 +2684,6 @@ client_process_bb(dcontext_t *dcontext, build_bb_t *bb)
                         bb->flags &= ~FRAG_COARSE_GRAIN;
                         STATS_INC(coarse_prevent_client);
                     }
-                    /* decode_fragment can't handle code beyond ctis */
-                    if (!instr_is_near_call_direct(inst) ||
-                        DYNAMO_OPTION(max_elide_call) == 0)
-                        bb->flags |= FRAG_CANNOT_BE_TRACE;
                 }
 
             }
@@ -2704,16 +2695,6 @@ client_process_bb(dcontext_t *dcontext, build_bb_t *bb)
              * reasons as well.
              */
             else {
-                CLIENT_ASSERT(instr_is_near_ubr(inst) ||
-                              (instr_is_near_call_direct(inst) &&
-                               /* for elision we assume calls are followed
-                                * by their callee target code
-                                */
-                               DYNAMO_OPTION(max_elide_call) > 0),
-                              "a second exit cti must be a ubr");
-                if (!instr_is_near_call_direct(inst) ||
-                    DYNAMO_OPTION(max_elide_call) == 0)
-                    bb->flags |= FRAG_CANNOT_BE_TRACE;
                 /* our cti check above should have already turned off coarse */
                 ASSERT(!TEST(FRAG_COARSE_GRAIN, bb->flags));
             }
@@ -3235,31 +3216,8 @@ build_bb_ilist(dcontext_t *dcontext, build_bb_t *bb)
         }
 #endif /* RETURN_AFTER_CALL */
 
-#ifdef X64
-        /* must be prior to mbr check since mbr location could be rip-rel */
-        if (DYNAMO_OPTION(coarse_split_riprel) && DYNAMO_OPTION(coarse_units) && 
-            TEST(FRAG_COARSE_GRAIN, bb->flags) &&
-            instr_has_rel_addr_reference(bb->instr)) {
-            if (instrlist_first(bb->ilist) != bb->instr) {
-                /* have ref be in its own bb */
-                bb_stop_prior_to_instr(dcontext, bb, true/*appended already*/);
-                break; /* stop bb */
-            } else {
-                /* single-instr fine-grained bb */
-                bb->flags &= ~FRAG_COARSE_GRAIN;
-                STATS_INC(coarse_prevent_riprel);
-            }
-        }
-#endif
-
-        if (instr_is_near_call_direct(bb->instr)) {
-            if (!bb_process_call_direct(dcontext, bb)) {
-                if (bb->instr != NULL)
-                    bb->exit_type |= instr_branch_type(bb->instr);
-                break;
-            }
-        }
-        else if (instr_is_mbr(bb->instr) ){ /* including indirect calls */
+        //Removed if and changed else if to if
+        if (instr_is_mbr(bb->instr) ){ /* including indirect calls */
                  /* far direct is treated as indirect (i#823) */
 
             /* Manage the case where we don't need to perform 'normal'
@@ -3414,7 +3372,7 @@ build_bb_ilist(dcontext_t *dcontext, build_bb_t *bb)
         DYNAMO_OPTION(native_exec_callcall) &&        
         !vmvector_empty(native_exec_areas) &&
         bb->app_interp && bb->instr != NULL && 
-        (instr_is_near_ubr(bb->instr) || instr_is_near_call_direct(bb->instr)) &&
+        (instr_is_near_ubr(bb->instr)) &&
         instrlist_first(bb->ilist) == instrlist_last(bb->ilist)) {
         /* Case 4564/3558: handle .NET COM method table where a call* targets
          * a call to a native_exec dll -- we need to put the gateway at the
@@ -6234,7 +6192,7 @@ mangle_trace(dcontext_t *dcontext, instrlist_t *ilist, monitor_data_t *md)
          * really correspond to app cbr?): then can handle code past exit ubr.
          */
         if (instr_will_be_exit_cti(inst) &&
-            ((!instr_is_ubr(inst) && !instr_is_near_call_direct(inst)) ||
+            ((!instr_is_ubr(inst) ) ||
              (inst == instrlist_last(ilist) ||
               (blk+1 < md->num_blks &&
                /* client is disallowed from changing bb exits and sequencing in trace
@@ -6766,17 +6724,6 @@ decode_fragment(dcontext_t *dcontext, fragment_t *f, byte *buf, /*IN/OUT*/uint *
                             separate_cti = true;
 #endif
                         intra_target = false;
-                    } else if (instr_is_cti_short_rewrite(instr, prev_pc)) {
-                        /* Cti-short should only occur as exit ctis, which are
-                         * separated out unless we're decoding a fake fragment.  We
-                         * include this case for future use, as otherwise we'll
-                         * decode just the short cti and think it is an
-                         * intra-fragment cti.
-                         */
-                        ASSERT_NOT_REACHED();
-                        separate_cti = true;
-                        re_relativize = true;
-                        intra_target = false;
                     } else if (opnd_get_pc(instr_get_target(instr)) < start_pc ||
                                opnd_get_pc(instr_get_target(instr)) > start_pc+f->size) {
                         separate_cti = true;
@@ -6963,9 +6910,7 @@ decode_fragment(dcontext_t *dcontext, fragment_t *f, byte *buf, /*IN/OUT*/uint *
         /* replace fcache target with target_tag and add to fragment */
         if (l == NULL) {
             app_pc instr_tgt;
-            /* Ensure we get proper target for short cti sequence */
-            if (instr_is_cti_short_rewrite(instr, stop_pc))
-                remangle_short_rewrite(dcontext, instr, stop_pc, 0/*same target*/);
+
             instr_tgt = opnd_get_pc(instr_get_target(instr));
             ASSERT(TEST(FRAG_COARSE_GRAIN, f->flags));
             if (cti == NULL && coarse_is_entrance_stub(instr_tgt)) {
@@ -7011,9 +6956,8 @@ decode_fragment(dcontext_t *dcontext, fragment_t *f, byte *buf, /*IN/OUT*/uint *
         else
             num_indir++;
         ASSERT(target_tag != NULL);
-        if (instr_is_cti_short_rewrite(instr, stop_pc)) {
-            raw_start_pc = remangle_short_rewrite(dcontext, instr, stop_pc, target_tag);
-        } else {
+        //SJF Removed if statement
+        {
             app_pc new_target = target_tag;
             /* don't point to fcache bits */
             instr_set_raw_bits_valid(instr, false);
@@ -7057,12 +7001,6 @@ decode_fragment(dcontext_t *dcontext, fragment_t *f, byte *buf, /*IN/OUT*/uint *
 
             instr_set_target(instr, opnd_create_pc(new_target));
 
-            if (instr_is_cti_short(instr)) {
-                /* make sure non-mangled short ctis, which are generated by
-                 * us and never left there from apps, are not marked as exit ctis
-                 */
-                instr_set_ok_to_mangle(instr, false);
-            }
         }
         instrlist_append(ilist, instr);
 #ifdef CUSTOM_EXIT_STUBS
@@ -7218,15 +7156,7 @@ copy_fragment(dcontext_t *dcontext, fragment_t *f, bool replace)
          * an indirect branch, the target_tag is zero. */
         target_tag = EXIT_TARGET_TAG(dcontext, f, l);
         ASSERT(target_tag);
-        if (instr_is_cti_short_rewrite(instr, EXIT_CTI_PC(f, l))) {
-            p = remangle_short_rewrite(dcontext, instr,
-                                       EXIT_CTI_PC(f, l),
-                                       target_tag);
-        } else {
-            /* no short ctis that aren't mangled should be exit ctis */
-            ASSERT(!instr_is_cti_short(instr));
-            instr_set_target(instr, opnd_create_pc(target_tag));
-        }
+        instr_set_target(instr, opnd_create_pc(target_tag));
         instrlist_append(trace, instr);
         start_pc += (p - (byte *)EXIT_CTI_PC(f, l));
     }

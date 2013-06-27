@@ -128,6 +128,17 @@ enum
 
 enum
 {
+  MASK_UNDEFINED = 0,
+
+  MASK_WRITE_NSCVQ_FLAGS,
+  MASK_WRITE_G_FLAG,
+  MASK_WRITE_ALL,
+ 
+  MASK_INVALID
+};
+
+enum
+{
   COND_EQUAL = 0,
   COND_NOT_EQUAL,
   COND_CARRY_SET,
@@ -621,6 +632,7 @@ struct _opnd_t {
             byte/*bool*/ disp_short_addr : 1; /* 16-bit (32 in x64) addr (disp-only) */
         } base_disp;            /* BASE_DISP_kind */
         void *addr;             /* REL_ADDR_kind and ABS_ADDR_kind */
+        uint mask;              /* MASK_kind */
     } value;
 };
 #endif /* DR_FAST_IR */
@@ -651,6 +663,7 @@ enum {
     FAR_PC_kind,    /* a segment is specified as a selector value */
     FAR_INSTR_kind, /* a segment is specified as a selector value */
     MEM_INSTR_kind,
+    MASK_kind,
     LAST_kind,      /* sentinal; not a valid opnd kind */
 };
 #endif /* DR_FAST_IR */
@@ -663,6 +676,13 @@ INSTR_INLINE
 /** Returns an empty operand. */
 opnd_t 
 opnd_create_null(void);
+
+DR_API
+INSTR_INLINE
+/* Creates a mask operand */
+opnd_t
+opnd_create_mask(uint mask);
+
 
 DR_API
 INSTR_INLINE
@@ -3093,16 +3113,6 @@ DR_API
 /** Returns true iff \p instr's opcode is OP_call or OP_call_far. */
 bool 
 instr_is_call_direct(instr_t *instr);
-
-DR_API
-/** Returns true iff \p instr's opcode is OP_call. */
-bool 
-instr_is_near_call_direct(instr_t *instr);
-
-DR_API
-/** Returns true iff \p instr's opcode is OP_call_ind or OP_call_far_ind. */
-bool 
-instr_is_call_indirect(instr_t *instr);
 
 DR_API
 /** Returns true iff \p instr's opcode is OP_ret, OP_ret_far, or OP_iret. */

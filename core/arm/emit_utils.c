@@ -2001,11 +2001,6 @@ coarse_cti_is_intra_fragment(dcontext_t *dcontext, coarse_info_t *info,
     cache_pc tgt = opnd_get_pc(instr_get_target(inst));
     if (tgt < start_pc ||
         tgt >= start_pc + MAX_FRAGMENT_SIZE ||
-        /* don't treat short jmps inside short-rewrite as intra.
-         * note that we cannot pass NULL as 2nd arg b/c that assumes
-         * it was not decoded separately.
-         */
-        instr_is_cti_short_rewrite(inst, instr_get_raw_bits(inst)) ||
         /* if tgt is an entry, then it's a linked exit cti
          * XXX: this may acquire info->lock if it's never been called before
          */
@@ -3103,9 +3098,9 @@ preinsert_swap_peb(dcontext_t *dcontext, instrlist_t *ilist, instr_t *next,
     PRE(ilist, next, INSTR_CREATE_mov_imm
         (dcontext, opnd_create_reg(reg_scratch), OPND_CREATE_IMM12((ptr_int_t)tgt_peb)));
     PRE(ilist, next, INSTR_CREATE_ldr_reg
-        (dcontext, opnd_create_far_base_disp
+        (dcontext, opnd_create_reg(reg_scratch), opnd_create_far_base_disp
          (SEG_TLS, REG_NULL, REG_NULL, 0, PEB_TIB_OFFSET, OPSZ_PTR),
-         opnd_create_reg(reg_scratch)));
+         opnd_create_reg(REG_NULL), OPND_CREATE_IMM5(0) ));
 
     /* Preserve app's TEB->LastErrorValue.  We used to do this separately b/c
      * DR at one point long ago made some win32 API calls: now we only have to
@@ -3116,48 +3111,18 @@ preinsert_swap_peb(dcontext_t *dcontext, instrlist_t *ilist, instr_t *next,
         /* yes errno is 32 bits even on x64 */
         PRE(ilist, next, INSTR_CREATE_ldr_reg
             (dcontext, opnd_create_reg(scratch32), opnd_create_far_base_disp
-             (SEG_TLS, REG_NULL, REG_NULL, 0, ERRNO_TIB_OFFSET, OPSZ_4)));
+             (SEG_TLS, REG_NULL, REG_NULL, 0, ERRNO_TIB_OFFSET, OPSZ_4)
+         opnd_create_reg(REG_NULL), OPND_CREATE_IMM5(0) ));
         PRE(ilist, next, SAVE_TO_DC_VIA_REG
             (absolute, dcontext, reg_dr, scratch32, APP_ERRNO_OFFSET));
     } else {
         PRE(ilist, next, RESTORE_FROM_DC_VIA_REG
             (absolute, dcontext, reg_dr, scratch32, APP_ERRNO_OFFSET));
         PRE(ilist, next, INSTR_CREATE_ldr_reg
-            (dcontext, opnd_create_far_base_disp
+            (dcontext, opnd_create_reg(scratch32), opnd_create_far_base_disp
              (SEG_TLS, REG_NULL, REG_NULL, 0, ERRNO_TIB_OFFSET, OPSZ_4),
-             opnd_create_reg(scratch32)));
+               opnd_create_reg(REG_NULL), OPND_CREATE_IMM5(0) ));
     }
-
-#ifdef X64
-    /* We have to swap TEB->StackLimit (i#1102).  For now I'm only doing this
-     * on X64, though it seems possible for 32-bit stacks to be up high too?
-     * We have never seen that.
-     */
-    if (to_priv) {
-        PRE(ilist, next, INSTR_CREATE_mov_reg
-            (dcontext, opnd_create_reg(reg_scratch), opnd_create_far_base_disp
-             (SEG_TLS, REG_NULL, REG_NULL, 0, BASE_STACK_TIB_OFFSET, OPSZ_PTR)));
-        PRE(ilist, next, SAVE_TO_DC_VIA_REG
-            (absolute, dcontext, reg_dr, reg_scratch, APP_STACK_LIMIT_OFFSET));
-        PRE(ilist, next, RESTORE_FROM_DC_VIA_REG
-            (absolute, dcontext, reg_dr, reg_scratch, DSTACK_OFFSET));
-        PRE(ilist, next, INSTR_CREATE_lea
-            (dcontext, opnd_create_reg(reg_scratch),
-             opnd_create_base_disp(reg_scratch, REG_NULL, 0,
-                                   -(int)DYNAMORIO_STACK_SIZE, OPSZ_lea)));
-        PRE(ilist, next, INSTR_CREATE_mov_reg
-            (dcontext, opnd_create_far_base_disp
-             (SEG_TLS, REG_NULL, REG_NULL, 0, BASE_STACK_TIB_OFFSET, OPSZ_PTR),
-             opnd_create_reg(reg_scratch)));
-    } else {
-        PRE(ilist, next, RESTORE_FROM_DC_VIA_REG
-            (absolute, dcontext, reg_dr, reg_scratch, APP_STACK_LIMIT_OFFSET));
-        PRE(ilist, next, INSTR_CREATE_mov_reg
-            (dcontext, opnd_create_far_base_disp
-             (SEG_TLS, REG_NULL, REG_NULL, 0, BASE_STACK_TIB_OFFSET, OPSZ_PTR),
-             opnd_create_reg(reg_scratch)));
-    }
-#endif
 
     /* We also swap TEB->NlsCache.  Unlike TEB->ProcessEnvironmentBlock, which is
      * constant, and TEB->LastErrorCode, which is not peristent, we have to maintain
@@ -3165,7 +3130,8 @@ preinsert_swap_peb(dcontext_t *dcontext, instrlist_t *ilist, instr_t *next,
      */
     PRE(ilist, next, INSTR_CREATE_ldr_reg
         (dcontext, opnd_create_reg(reg_scratch), opnd_create_far_base_disp
-         (SEG_TLS, REG_NULL, REG_NULL, 0, NLS_CACHE_TIB_OFFSET, OPSZ_PTR)));
+         (SEG_TLS, REG_NULL, REG_NULL, 0, NLS_CACHE_TIB_OFFSET, OPSZ_PTR),
+               opnd_create_reg(REG_NULL), OPND_CREATE_IMM5(0) ));
     PRE(ilist, next, SAVE_TO_DC_VIA_REG
         (absolute, dcontext, reg_dr, reg_scratch,
          to_priv ? APP_NLS_CACHE_OFFSET : PRIV_NLS_CACHE_OFFSET));
@@ -3173,16 +3139,17 @@ preinsert_swap_peb(dcontext_t *dcontext, instrlist_t *ilist, instr_t *next,
         (absolute, dcontext, reg_dr, reg_scratch,
          to_priv ? PRIV_NLS_CACHE_OFFSET : APP_NLS_CACHE_OFFSET));
     PRE(ilist, next, INSTR_CREATE_ldr_reg
-        (dcontext, opnd_create_far_base_disp
-         (SEG_TLS, REG_NULL, REG_NULL, 0, NLS_CACHE_TIB_OFFSET, OPSZ_PTR),
-         opnd_create_reg(reg_scratch)));
+        (dcontext, opnd_create_reg(reg_scratch), opnd_create_far_base_disp
+         (SEG_TLS, REG_NULL, REG_NULL, 0, NLS_CACHE_TIB_OFFSET, OPSZ_PTR), 
+               opnd_create_reg(REG_NULL), OPND_CREATE_IMM5(0) ));
     /* We also swap TEB->FlsData.  Unlike TEB->ProcessEnvironmentBlock, which is
      * constant, and TEB->LastErrorCode, which is not peristent, we have to maintain
      * both values and swap between them which is expensive.
      */
     PRE(ilist, next, INSTR_CREATE_ldr_reg
         (dcontext, opnd_create_reg(reg_scratch), opnd_create_far_base_disp
-         (SEG_TLS, REG_NULL, REG_NULL, 0, FLS_DATA_TIB_OFFSET, OPSZ_PTR)));
+         (SEG_TLS, REG_NULL, REG_NULL, 0, FLS_DATA_TIB_OFFSET, OPSZ_PTR),
+               opnd_create_reg(REG_NULL), OPND_CREATE_IMM5(0) ));
     PRE(ilist, next, SAVE_TO_DC_VIA_REG
         (absolute, dcontext, reg_dr, reg_scratch,
          to_priv ? APP_FLS_OFFSET : PRIV_FLS_OFFSET));
@@ -3190,15 +3157,16 @@ preinsert_swap_peb(dcontext_t *dcontext, instrlist_t *ilist, instr_t *next,
         (absolute, dcontext, reg_dr, reg_scratch,
          to_priv ? PRIV_FLS_OFFSET : APP_FLS_OFFSET));
     PRE(ilist, next, INSTR_CREATE_ldr_reg
-        (dcontext, opnd_create_far_base_disp
+        (dcontext, opnd_create_reg(reg_scratch), opnd_create_far_base_disp
          (SEG_TLS, REG_NULL, REG_NULL, 0, FLS_DATA_TIB_OFFSET, OPSZ_PTR),
-         opnd_create_reg(reg_scratch)));
+               opnd_create_reg(REG_NULL), OPND_CREATE_IMM5(0) ));
     /* We swap TEB->ReservedForNtRpc as well.  Hopefully there won't be many
      * more we'll have to swap.
      */
     PRE(ilist, next, INSTR_CREATE_ldr_reg
         (dcontext, opnd_create_reg(reg_scratch), opnd_create_far_base_disp
-         (SEG_TLS, REG_NULL, REG_NULL, 0, NT_RPC_TIB_OFFSET, OPSZ_PTR)));
+         (SEG_TLS, REG_NULL, REG_NULL, 0, NT_RPC_TIB_OFFSET, OPSZ_PTR),
+               opnd_create_reg(REG_NULL), OPND_CREATE_IMM5(0) ));
     PRE(ilist, next, SAVE_TO_DC_VIA_REG
         (absolute, dcontext, reg_dr, reg_scratch,
          to_priv ? APP_RPC_OFFSET : PRIV_RPC_OFFSET));
@@ -3206,9 +3174,9 @@ preinsert_swap_peb(dcontext_t *dcontext, instrlist_t *ilist, instr_t *next,
         (absolute, dcontext, reg_dr, reg_scratch,
          to_priv ? PRIV_RPC_OFFSET : APP_RPC_OFFSET));
     PRE(ilist, next, INSTR_CREATE_ldr_reg
-        (dcontext, opnd_create_far_base_disp
+        (dcontext, opnd_create_reg(reg_scratch), opnd_create_far_base_disp
          (SEG_TLS, REG_NULL, REG_NULL, 0, NT_RPC_TIB_OFFSET, OPSZ_PTR),
-         opnd_create_reg(reg_scratch)));
+               opnd_create_reg(REG_NULL), OPND_CREATE_IMM5(0) ));
 }
 # endif /* CLIENT_INTERFACE */
 
@@ -3387,7 +3355,8 @@ emit_fcache_enter_common(dcontext_t *dcontext, generated_code_t *code, byte *pc,
 
     if (!absolute) {
         /* grab gen routine's parameter dcontext and put it into R7 */
-        APP(&ilist, INSTR_CREATE_ldr_reg(dcontext, opnd_create_reg(REG_RR7), OPND_ARG1));
+        APP(&ilist, INSTR_CREATE_ldr_reg(dcontext, opnd_create_reg(REG_RR7), OPND_ARG1,
+                                         opnd_create_reg(REG_NULL), OPND_CREATE_IMM5(0) ));
         if (TEST(SELFPROT_DCONTEXT, dynamo_options.protect_mask))
             APP(&ilist, RESTORE_FROM_DC(dcontext, REG_RR6, PROT_OFFS));
     }
@@ -3465,7 +3434,8 @@ emit_fcache_enter_common(dcontext_t *dcontext, generated_code_t *code, byte *pc,
             /* next_tag placed into tls slot earlier in this routine */
             /* SJF How to do indirect branches on ARM. Hop it uses branch_via_dc above */
             APP(&ilist, INSTR_CREATE_ldr_reg(dcontext, opnd_create_reg(REG_RR7), 
-                                             OPND_TLS_FIELD(FCACHE_ENTER_TARGET_SLOT)));
+                                             OPND_TLS_FIELD(FCACHE_ENTER_TARGET_SLOT),
+                                             opnd_create_reg(REG_NULL), OPND_CREATE_IMM5(0) ));
             APP(&ilist, INSTR_CREATE_branch_ind(dcontext, opnd_create_reg(REG_RR7)));
         } else {
             /* no special scratch slot! */
@@ -4271,7 +4241,8 @@ append_increment_counter(dcontext_t *dcontext, instrlist_t *ilist,
         /* XDI now has dcontext */
         APP(ilist, INSTR_CREATE_ldr_reg(dcontext, opnd_create_reg(REG_RR7),
                                        OPND_DC_FIELD(absolute, dcontext, OPSZ_PTR, 
-                                                     FRAGMENT_FIELD_OFFSET)));
+                                                     FRAGMENT_FIELD_OFFSET),
+                                             opnd_create_reg(REG_NULL), OPND_CREATE_IMM5(0) ));
 
         /* XDI now has per_thread_t structure */
         /* an extra step here: find the unprot_stats field in the fragment_table_t
@@ -4282,7 +4253,8 @@ append_increment_counter(dcontext_t *dcontext, instrlist_t *ilist,
             APP(ilist, INSTR_CREATE_ldr_reg
                 (dcontext, opnd_create_reg(REG_RR7),
                  OPND_CREATE_MEMPTR(REG_RR7,
-                                    ibl_code->entry_stats_to_lookup_table_offset)));
+                                    ibl_code->entry_stats_to_lookup_table_offset),
+                                    opnd_create_reg(REG_NULL), OPND_CREATE_IMM5(0) ));
             /* XDI should now have (entry_stats - lookup_table) value,
              * so we need [xdi+xcx] to get an entry reference
              */
@@ -4291,7 +4263,8 @@ append_increment_counter(dcontext_t *dcontext, instrlist_t *ilist,
         } else {
             APP(ilist, INSTR_CREATE_ldr_reg
                 (dcontext, opnd_create_reg(REG_RR7),
-                 OPND_CREATE_MEMPTR(REG_RR7, ibl_code->unprot_stats_offset)));
+                 OPND_CREATE_MEMPTR(REG_RR7, ibl_code->unprot_stats_offset),
+                 opnd_create_reg(REG_NULL), OPND_CREATE_IMM5(0) ));
             /* XDI now has unprot_stats structure */
             counter_opnd = OPND_CREATE_MEM32(REG_RR7, counter_offset);
         }
@@ -4482,7 +4455,8 @@ append_ibl_found(dcontext_t *dcontext, instrlist_t *ilist,
          *     jmp*     <xbx slot>
          */
         APP(ilist, INSTR_CREATE_ldr_reg(dcontext, opnd_create_reg(REG_RR1),
-                                       OPND_CREATE_MEMPTR(REG_RR1, start_pc_offset)));
+                                       OPND_CREATE_MEMPTR(REG_RR1, start_pc_offset),
+                                       opnd_create_reg(REG_NULL), OPND_CREATE_IMM5(0) ));
         if (absolute) {
             APP(ilist, SAVE_TO_DC(dcontext, REG_RR1, R3_OFFSET));
             if (IF_X64_ELSE(x86_to_x64, false))
@@ -4706,7 +4680,7 @@ append_ibl_head(dcontext_t *dcontext, instrlist_t *ilist,
     /* make a copy of the tag for hashing
      * keep original in xbx, hash will be in xcx
      *>>>    mov     %xcx,%xbx                                       */
-    APP(ilist, INSTR_CREATE_ldr_reg(dcontext, opnd_create_reg(REG_RR3),
+    APP(ilist, INSTR_CREATE_mov_reg(dcontext, opnd_create_reg(REG_RR3),
                                    opnd_create_reg(REG_RR1)));
 
     if (only_spill_state_in_tls) {
@@ -4717,7 +4691,8 @@ append_ibl_head(dcontext_t *dcontext, instrlist_t *ilist,
         */
         APP(ilist, INSTR_CREATE_ldr_reg(dcontext, opnd_create_reg(REG_RR7),
                                        OPND_DC_FIELD(absolute, dcontext, OPSZ_PTR, 
-                                                     FRAGMENT_FIELD_OFFSET)));
+                                                     FRAGMENT_FIELD_OFFSET),
+                                       opnd_create_reg(REG_NULL), OPND_CREATE_IMM5(0) ));
         /* TODO: should have a flag that SAVE_TO_DC can ASSERT(valid_DC_in_reg) */
     }
     /* hash function = (tag & mask) */
@@ -4778,7 +4753,8 @@ append_ibl_head(dcontext_t *dcontext, instrlist_t *ilist,
                                                       GET_IB_FTABLE(ibl_code,
                                                                     target_trace_table,
                                                                     table),
-                                                      OPSZ_PTR));
+                                                      OPSZ_PTR),
+                                 opnd_create_reg(REG_NULL), OPND_CREATE_IMM5(0) );
         /* lookuptable can still be reloaded from XDI later at sentinel_check */
         APP(ilist, table_in_xdi);
     }

@@ -1886,7 +1886,7 @@ do_forward_check_eflags(instr_t *inst, uint eflags, uint eflags_valid, uint efla
                 return false;
             }
         }
-        if ((inst == NULL) || instr_is_interrupt(inst) || instr_is_call(inst)) {
+        if ((inst == NULL) || instr_is_call(inst)) {
             LOG(THREAD, LOG_OPTS, 3, "forward eflags check failed (2)\n");
             return false;
         }

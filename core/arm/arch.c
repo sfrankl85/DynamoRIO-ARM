@@ -1823,8 +1823,6 @@ get_ibl_branch_type(instr_t *instr)
 
     if (instr_is_return(instr))
         return IBL_RETURN;
-    else if (instr_is_call_indirect(instr))
-        return IBL_INDCALL;
     else
         return IBL_INDJMP;
 }

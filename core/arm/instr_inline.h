@@ -80,6 +80,7 @@
 #define OPND_IS_FAR_PC(op)      ((op).kind == FAR_PC_kind)
 #define OPND_IS_FAR_INSTR(op)   ((op).kind == FAR_INSTR_kind)
 #define OPND_IS_MEM_INSTR(op)   ((op).kind == MEM_INSTR_kind)
+#define OPND_IS_MASK(op)        ((op).kind == MASK_kind)
 #define OPND_IS_VALID(op)       ((op).kind < LAST_kind)
 
 #define opnd_is_null            OPND_IS_NULL
