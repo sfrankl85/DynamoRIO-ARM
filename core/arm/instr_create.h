@@ -294,8 +294,8 @@
     instr_create_1dst_2src((dc), OP_asr_imm, (d), (s), (i))
 #define INSTR_CREATE_asr_reg(dc, d, s, i) \
     instr_create_1dst_2src((dc), OP_asr_reg, (d), (s), (i))
-#define INSTR_CREATE_b(dc, d) \
-    instr_create_0dst_1src((dc), OP_b, (d))
+#define INSTR_CREATE_b(dc, s) \
+    instr_create_0dst_1src((dc), OP_b, (s))
 #define INSTR_CREATE_bfc(dc) \
     instr_create_0dst_0src((dc), OP_bfc)
 #define INSTR_CREATE_bfi(dc) \

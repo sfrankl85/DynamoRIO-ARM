@@ -212,6 +212,8 @@ typedef struct instr_info_t {
     /* ARM opcodes are split across multiple bits. Soemtimes the second
        one isnt even used. It is used for regs or imms or whatever. */ 
 
+    unsigned int opcode2;  //SJF Optional second opcode at bits[7,4];
+
     byte flags; /* flags and possible opcode2 */
     byte cpsr; /* CPSR flags  */
     ptr_int_t code; /* for PREFIX: one of the PREFIX_ constants, or SEG_ constant

@@ -1148,7 +1148,7 @@ encode_bits_31_to_20(decode_info_t* di, instr_t* instr, instr_info_t* info, byte
 }
 
 
-int
+byte*
 encode_1dst_reg_2src_reg_1src_imm(decode_info_t* di, instr_t* instr, byte* pc)
 {
     // | cond | 0000010S | Rn | Rd | imm5 | type | 0 | Rm |
@@ -1300,7 +1300,7 @@ encode_1dst_reg_2src_reg_1src_imm(decode_info_t* di, instr_t* instr, byte* pc)
    return pc;
 }
 
-void
+byte*
 encode_1dst_reg_1src_reg_0src_imm_2(decode_info_t* di, instr_t* instr, byte* pc)
 {
     // | cond | xxxxxxxS | Rn | Rt | xxxx | xxxx | xxxx 
@@ -1370,9 +1370,20 @@ encode_1dst_reg_1src_reg_0src_imm_2(decode_info_t* di, instr_t* instr, byte* pc)
         }
     }
 
+   //Word should now be an instruction. MSB encoding
+   *((byte *)pc) = word[0];
+   pc++;
+   *((byte *)pc) = word[1];
+   pc++;
+   *((byte *)pc) = word[2];
+   pc++;
+   *((byte *)pc) = word[3];
+   pc++;
+
+   return pc;
 }
 
-void
+byte*
 encode_1dst_reg_1src_reg_0src_imm(decode_info_t* di, instr_t* instr, byte* pc)
 {
     // | cond | xxxxxxxS | xxxx | Rd | xxxx | xxxx | Rm
@@ -1442,9 +1453,20 @@ encode_1dst_reg_1src_reg_0src_imm(decode_info_t* di, instr_t* instr, byte* pc)
         }
     }
 
+   //Word should now be an instruction. MSB encoding
+   *((byte *)pc) = word[0];
+   pc++;
+   *((byte *)pc) = word[1];
+   pc++;
+   *((byte *)pc) = word[2];
+   pc++;
+   *((byte *)pc) = word[3];
+   pc++;
+
+   return pc;
 }
 
-void
+byte*
 encode_1dst_reg_2src_reg_0src_imm(decode_info_t* di, instr_t* instr, byte* pc)
 {
     // | cond | xxxxxxxS | xxxx | Rd | Rs | xxxx | Rm
@@ -1560,7 +1582,6 @@ encode_1dst_reg_2src_reg_0src_imm(decode_info_t* di, instr_t* instr, byte* pc)
       }
     }
 
-
    //Word should now be an instruction. MSB encoding
    *((byte *)pc) = word[0];
    pc++;
@@ -1574,7 +1595,7 @@ encode_1dst_reg_2src_reg_0src_imm(decode_info_t* di, instr_t* instr, byte* pc)
    return pc;
 }
 
-void
+byte*
 encode_1dst_reg_1src_reg_1src_imm_3(decode_info_t* di, instr_t* instr, byte* pc)
 {
     // | cond | 0001101S | Rn | 0000 | imm5 | 010 | Rm |
@@ -1697,7 +1718,7 @@ encode_1dst_reg_1src_reg_1src_imm_3(decode_info_t* di, instr_t* instr, byte* pc)
    return pc;
 }
 
-void
+byte*
 encode_1dst_reg_1src_reg_1src_imm(decode_info_t* di, instr_t* instr, byte* pc)
 {
     // | cond | 0001101S | 0000 | Rd | imm5 | 010 | Rm |
@@ -1820,7 +1841,7 @@ encode_1dst_reg_1src_reg_1src_imm(decode_info_t* di, instr_t* instr, byte* pc)
    return pc;
 }
 
-void
+byte*
 encode_1dst_reg_0src_reg_1src_imm_3(decode_info_t* di, instr_t* instr, byte* pc)
 {
     // | cond | 0010000S | 0000 | Rt | I4Hi | xxxx | I4Lo |
@@ -1925,7 +1946,7 @@ encode_1dst_reg_0src_reg_1src_imm_3(decode_info_t* di, instr_t* instr, byte* pc)
 }
 
 
-void
+byte*
 encode_1dst_reg_0src_reg_1src_imm_2(decode_info_t* di, instr_t* instr, byte* pc)
 {
     // | cond | 0010000S | 0000 | Rt | I12 |
@@ -2029,7 +2050,7 @@ encode_1dst_reg_0src_reg_1src_imm_2(decode_info_t* di, instr_t* instr, byte* pc)
    return pc;
 }
 
-void
+byte*
 encode_1dst_reg_0src_reg_1src_imm(decode_info_t* di, instr_t* instr, byte* pc)
 {
     // | cond | 0010000S | Rn | 0000 | I12 |
@@ -2133,7 +2154,7 @@ encode_1dst_reg_0src_reg_1src_imm(decode_info_t* di, instr_t* instr, byte* pc)
    return pc;
 }
 
-void
+byte*
 encode_1dst_reg_1src_reg_1src_imm_4(decode_info_t* di, instr_t* instr, byte* pc)
 {
     // | cond | 0010000S | Rn | Rd | I4Hi | xxxx | I4Lo
@@ -2258,7 +2279,7 @@ encode_1dst_reg_1src_reg_1src_imm_4(decode_info_t* di, instr_t* instr, byte* pc)
    return pc;
 }
 
-void
+byte*
 encode_1dst_reg_1src_reg_1src_imm_2(decode_info_t* di, instr_t* instr, byte* pc)
 {
     // | cond | 0010000S | Rn | Rd | I12 |
@@ -2322,6 +2343,17 @@ encode_1dst_reg_1src_reg_1src_imm_2(decode_info_t* di, instr_t* instr, byte* pc)
             word[1] |= b;
             break;
 
+          //For reg values that store mem address
+          //TODO Recalcualte mem address??
+          case BASE_DISP_kind:
+            b = opnd.value.base_disp.base_reg;
+            
+            b &= 16;
+
+            word[1] |= b;
+            break;
+            
+
           default:
             CLIENT_ASSERT(false, "instr_encode error: invalid opnd type" );
             break;
@@ -2383,7 +2415,7 @@ encode_1dst_reg_1src_reg_1src_imm_2(decode_info_t* di, instr_t* instr, byte* pc)
    return pc;
 }
 
-void
+byte*
 encode_0dst_reg_1src_imm_1src_mask(decode_info_t* di, instr_t* instr, byte* pc)
 {
     // | cond | 00010100 | mask | 00 | 1111 | I12 |
@@ -2418,7 +2450,7 @@ encode_0dst_reg_1src_imm_1src_mask(decode_info_t* di, instr_t* instr, byte* pc)
  
         switch( opnd.kind )
         {
-          case IMMED_INTERGER_kind:
+          case IMMED_INTEGER_kind:
             b = (opnd.value.immed_int>>8);
 
             word[2] |= b;
@@ -2489,7 +2521,7 @@ encode_0dst_reg_1src_imm_1src_mask(decode_info_t* di, instr_t* instr, byte* pc)
    return pc;
 }
 
-void
+byte*
 encode_0dst_reg_1src_reg_1src_mask(decode_info_t* di, instr_t* instr, byte* pc)
 {
     // | cond | 00010100 | mask | 00 | 1111 | 0000 | 0000 | Rn |
@@ -2591,8 +2623,8 @@ encode_0dst_reg_1src_reg_1src_mask(decode_info_t* di, instr_t* instr, byte* pc)
    return pc;
 }
 
-void
-encode_1dst_reg_0src_reg_0src_imm(decode_info_t* di, instr_t* instr, byte* pc)
+byte*
+encode_0dst_reg_1src_reg_0src_imm(decode_info_t* di, instr_t* instr, byte* pc)
 {
     // | cond | 00010000 | 1111 | Rd | 0000 | 0000 | 0000 |
 
@@ -2620,9 +2652,9 @@ encode_1dst_reg_0src_reg_0src_imm(decode_info_t* di, instr_t* instr, byte* pc)
 
     /************** Encode operands here *****************/
 
-    // DST 1
+    // SRC 1
     {
-        opnd = instr_get_dst(instr, 0);      
+        opnd = instr_get_src(instr, 0);      
  
         switch( opnd.kind )
         {
@@ -2674,7 +2706,7 @@ encode_1dst_reg_0src_reg_0src_imm(decode_info_t* di, instr_t* instr, byte* pc)
 }
 
 
-void
+byte*
 encode_1dst_reg_2src_reg_0src_imm_2(decode_info_t* di, instr_t* instr, byte* pc)
 {
     // | cond | 0000000S | Rd | 0000 | Rm | 1001 | Rn |
@@ -2798,7 +2830,7 @@ encode_1dst_reg_2src_reg_0src_imm_2(decode_info_t* di, instr_t* instr, byte* pc)
    return pc;
 }
 
-void 
+byte*
 encode_1dst_reg_2src_reg_0src_imm_5(decode_info_t* di, instr_t* instr, byte* pc)
 {
     // | cond | 0000001x | Rn | Rt | xxxx | 1001 | Rm |
@@ -2906,7 +2938,7 @@ encode_1dst_reg_2src_reg_0src_imm_5(decode_info_t* di, instr_t* instr, byte* pc)
    return pc;
 }
 
-void 
+byte*
 encode_1dst_reg_2src_reg_0src_imm_4(decode_info_t* di, instr_t* instr, byte* pc)
 {
     // | cond | 0000001x | 0000 | Rn | Rt | 1001 | Rm |
@@ -3014,7 +3046,7 @@ encode_1dst_reg_2src_reg_0src_imm_4(decode_info_t* di, instr_t* instr, byte* pc)
    return pc;
 }
 
-void 
+byte*
 encode_1dst_reg_2src_reg_0src_imm_3(decode_info_t* di, instr_t* instr, byte* pc)
 {
     // | cond | 0000001x | Rn | 0000 | Rs | 1001 | Rm |
@@ -3122,7 +3154,7 @@ encode_1dst_reg_2src_reg_0src_imm_3(decode_info_t* di, instr_t* instr, byte* pc)
    return pc;
 }
 
-void 
+byte*
 encode_1dst_reg_3src_reg_0src_imm(decode_info_t* di, instr_t* instr, byte* pc)
 {
     // | cond | 0000001S | Rd | Ra | Rm | 1001 | Rn |
@@ -3253,7 +3285,7 @@ encode_1dst_reg_3src_reg_0src_imm(decode_info_t* di, instr_t* instr, byte* pc)
    return pc;
 }
 
-void 
+byte* 
 encode_0dst_reg_1src_reglist(decode_info_t* di, instr_t* instr, byte* pc)
 {
     // | cond | 100010W1 | xxxx | Rl |
@@ -3316,7 +3348,8 @@ encode_0dst_reg_1src_reglist(decode_info_t* di, instr_t* instr, byte* pc)
 
    return pc;
 }
-void 
+
+byte* 
 encode_1dst_reg_1src_reglist(decode_info_t* di, instr_t* instr, byte* pc)
 {
     // | cond | 100010W1 | Rn | Rl |
@@ -3402,7 +3435,7 @@ encode_1dst_reg_1src_reglist(decode_info_t* di, instr_t* instr, byte* pc)
    return pc;
 }
 
-void 
+byte*
 encode_branch_instrs(decode_info_t* di, instr_t* instr, byte* pc)
 {
     byte word[4] = {0};  //Instr encoding in byte array
@@ -3506,17 +3539,28 @@ encode_branch_instrs(decode_info_t* di, instr_t* instr, byte* pc)
 
     }
 
-  // Have a separate function for branch instrs to calc correct address
-  // Branch instrs are pretty simple anyway
+   //Word should now be an instruction. MSB encoding
+   *((byte *)pc) = word[0];
+   pc++;
+   *((byte *)pc) = word[1];
+   pc++;
+   *((byte *)pc) = word[2];
+   pc++;
+   *((byte *)pc) = word[3];
+   pc++;
+
+   // Have a separate function for branch instrs to calc correct address
+   // Branch instrs are pretty simple anyway
+   return pc;
 }
 
-void
+byte*
 encode_data_processing_and_els(decode_info_t* di, instr_t* instr, byte* pc)
 {
     uint opc;
+    byte* nxt_pc = pc;
 
     opc = instr_get_opcode(instr);
-
 
     switch( opc )
     {
@@ -3526,13 +3570,13 @@ encode_data_processing_and_els(decode_info_t* di, instr_t* instr, byte* pc)
         case OP_and_reg: //C
         case OP_adc_reg: //C
         case OP_add_reg: //C
-          encode_1dst_reg_2src_reg_1src_imm(di, instr, pc);
+          nxt_pc = encode_1dst_reg_2src_reg_1src_imm(di, instr, pc);
           break;
         case OP_cmp_reg: //C
         case OP_cmn_reg: //C
         case OP_teq_reg: //C
         case OP_tst_reg: //C
-          encode_1dst_reg_1src_reg_1src_imm_3(di, instr, pc);
+          nxt_pc = encode_1dst_reg_1src_reg_1src_imm_3(di, instr, pc);
           break;
         case OP_sub_reg: //C
         case OP_sbc_reg: //C
@@ -3541,44 +3585,44 @@ encode_data_processing_and_els(decode_info_t* di, instr_t* instr, byte* pc)
         case OP_orr_reg: //C
         case OP_eor_reg: //C
         case OP_bic_reg: //C
-          encode_1dst_reg_2src_reg_1src_imm(di, instr, pc);
+          nxt_pc = encode_1dst_reg_2src_reg_1src_imm(di, instr, pc);
           break;
         case OP_mvn_reg: //C
-          encode_1dst_reg_1src_reg_1src_imm(di, instr, pc);
+          nxt_pc = encode_1dst_reg_1src_reg_1src_imm(di, instr, pc);
           break;
         case OP_mov_reg: //C
-          encode_1dst_reg_1src_reg_0src_imm(di, instr, pc);
+          nxt_pc = encode_1dst_reg_1src_reg_0src_imm(di, instr, pc);
           break;
         case OP_lsl_reg: //C
         case OP_lsr_reg: //C
         case OP_asr_reg: //C
         case OP_ror_reg: //C
-          encode_1dst_reg_2src_reg_0src_imm(di, instr, pc);
+          nxt_pc = encode_1dst_reg_2src_reg_0src_imm(di, instr, pc);
           break;
         case OP_rrx:
-          encode_1dst_reg_1src_reg_0src_imm(di, instr, pc);
+          nxt_pc = encode_1dst_reg_1src_reg_0src_imm(di, instr, pc);
           break;
         case OP_lsl_imm: //C
         case OP_lsr_imm: //C
         case OP_asr_imm: //C
         case OP_ror_imm: //C
-          encode_1dst_reg_1src_reg_1src_imm(di, instr, pc);
+          nxt_pc = encode_1dst_reg_1src_reg_1src_imm(di, instr, pc);
           break;
         case OP_add_sp_imm: //C
-          encode_1dst_reg_0src_reg_1src_imm(di, instr, pc);
+          nxt_pc = encode_1dst_reg_0src_reg_1src_imm(di, instr, pc);
           break;
         case OP_add_sp_reg: //C
         case OP_sub_sp_reg: //C
-          encode_1dst_reg_1src_reg_1src_imm(di, instr, pc);
+          nxt_pc = encode_1dst_reg_1src_reg_1src_imm(di, instr, pc);
           break;
         case OP_sub_sp_imm: //C
-          encode_1dst_reg_0src_reg_1src_imm_2(di, instr, pc);
+          nxt_pc = encode_1dst_reg_0src_reg_1src_imm_2(di, instr, pc);
           break;
         case OP_cmn_rsr: //C
         case OP_cmp_rsr: //C
         case OP_teq_rsr: //C
         case OP_tst_rsr: //C
-          encode_1dst_reg_2src_reg_0src_imm_3(di, instr, pc);
+          nxt_pc = encode_1dst_reg_2src_reg_0src_imm_3(di, instr, pc);
           break;
         case OP_sub_rsr: //C
         case OP_rsb_rsr: //C
@@ -3590,14 +3634,14 @@ encode_data_processing_and_els(decode_info_t* di, instr_t* instr, byte* pc)
         case OP_orr_rsr: //C
         case OP_bic_rsr: //C
         case OP_eor_rsr: //C
-          encode_1dst_reg_3src_reg_0src_imm(di, instr, pc);
+          nxt_pc = encode_1dst_reg_3src_reg_0src_imm(di, instr, pc);
           break;
         case OP_mvn_rsr: //C
-          encode_1dst_reg_2src_reg_0src_imm(di, instr, pc);
+          nxt_pc = encode_1dst_reg_2src_reg_0src_imm(di, instr, pc);
           break;
           //Multiply instrs
         case OP_mul: //C
-          encode_1dst_reg_2src_reg_0src_imm_2(di, instr, pc);
+          nxt_pc = encode_1dst_reg_2src_reg_0src_imm_2(di, instr, pc);
           break;
         case OP_mls: //C
         case OP_mla: //C
@@ -3605,7 +3649,7 @@ encode_data_processing_and_els(decode_info_t* di, instr_t* instr, byte* pc)
         case OP_smlabt: //C
         case OP_smlatb: //C
         case OP_smlatt: //C
-          encode_1dst_reg_3src_reg_0src_imm(di, instr, pc);
+          nxt_pc = encode_1dst_reg_3src_reg_0src_imm(di, instr, pc);
           break;
         case OP_umaal:
         case OP_umull:
@@ -3617,7 +3661,7 @@ encode_data_processing_and_els(decode_info_t* di, instr_t* instr, byte* pc)
         case OP_qadd8: //C
         case OP_qdadd: //C
         case OP_qsub:  //C
-          encode_1dst_reg_2src_reg_0src_imm_5(di, instr, pc);
+          nxt_pc = encode_1dst_reg_2src_reg_0src_imm_5(di, instr, pc);
           break;
         case OP_qdsub:
         case OP_smlawb:
@@ -3640,50 +3684,50 @@ encode_data_processing_and_els(decode_info_t* di, instr_t* instr, byte* pc)
         case OP_ldrsbt: //C
         case OP_ldrsh_reg: //C
         case OP_strd_reg: //C
-          encode_1dst_reg_2src_reg_0src_imm_5(di, instr, pc);
+          nxt_pc = encode_1dst_reg_2src_reg_0src_imm_5(di, instr, pc);
           break;
         case OP_strh_imm: //C
-          encode_1dst_reg_1src_reg_1src_imm_4(di ,instr, pc);
+          nxt_pc = encode_1dst_reg_1src_reg_1src_imm_4(di ,instr, pc);
           break;
         case OP_ldrd_reg: //C
-          encode_1dst_reg_2src_reg_0src_imm_4(di, instr, pc);
+          nxt_pc = encode_1dst_reg_2src_reg_0src_imm_4(di, instr, pc);
           break;
         case OP_ldrd_imm: //C
         case OP_ldrh_imm: //C
         case OP_ldrsb_imm: //C
-          encode_1dst_reg_1src_reg_1src_imm_4(di, instr, pc);
+          nxt_pc = encode_1dst_reg_1src_reg_1src_imm_4(di, instr, pc);
           break;
         case OP_ldrd_lit: //C
         case OP_ldrh_lit: //C
         case OP_ldrsb_lit: //C
         case OP_ldrsh_lit:
-          encode_1dst_reg_0src_reg_1src_imm_3(di, instr, pc);
+          nxt_pc = encode_1dst_reg_0src_reg_1src_imm_3(di, instr, pc);
           break;
         case OP_strd_imm: //C
         case OP_strht: //C
-          encode_1dst_reg_1src_reg_1src_imm_4(di, instr, pc);
+          nxt_pc = encode_1dst_reg_1src_reg_1src_imm_4(di, instr, pc);
           break;
         case OP_ldrsh_imm:
           break;
         case OP_ldrsht: //C
-          encode_1dst_reg_2src_reg_0src_imm_5(di, instr, pc);
+          nxt_pc = encode_1dst_reg_2src_reg_0src_imm_5(di, instr, pc);
           break;
           //Synchro primitves
         case OP_swp:
         case OP_swpb:
-          encode_1dst_reg_2src_reg_0src_imm_5(di, instr, pc);
+          nxt_pc = encode_1dst_reg_2src_reg_0src_imm_5(di, instr, pc);
           break;
         case OP_strex:  //C
         case OP_strexb: //C
         case OP_strexd: //C
         case OP_strexh: //C
-          encode_1dst_reg_2src_reg_0src_imm_5(di, instr, pc);
+          nxt_pc = encode_1dst_reg_2src_reg_0src_imm_5(di, instr, pc);
           break;
         case OP_ldrex: //C
         case OP_ldrexb: //C
         case OP_ldrexd: //C
         case OP_ldrexh: //C
-          encode_1dst_reg_1src_reg_0src_imm(di, instr, pc);
+          nxt_pc = encode_1dst_reg_1src_reg_0src_imm(di, instr, pc);
           break;
         //misc
         case OP_cps:
@@ -3691,24 +3735,27 @@ encode_data_processing_and_els(decode_info_t* di, instr_t* instr, byte* pc)
           //Add encode func 
           break;
         case OP_msr_imm: //C
-          encode_0dst_reg_1src_imm_1src_mask(di, instr, pc);
+          nxt_pc = encode_0dst_reg_1src_imm_1src_mask(di, instr, pc);
           break;
         case OP_msr_reg: //C
-          encode_0dst_reg_1src_reg_1src_mask(di, instr, pc);
+          nxt_pc = encode_0dst_reg_1src_reg_1src_mask(di, instr, pc);
           break;
         case OP_mrs: //C
-          encode_1dst_reg_0src_reg_0src_imm(di, instr, pc);
+          nxt_pc = encode_0dst_reg_1src_reg_0src_imm(di, instr, pc);
           break;
         default:
             CLIENT_ASSERT(false, "instr_encode error: invalid opcode for instr_type" );
             break;
     }
+
+    return nxt_pc;
 }
 
-void
+byte*
 encode_data_processing_imm_and_misc(decode_info_t* di, instr_t* instr, byte* pc)
 {
     uint opc;
+    byte* nxt_pc = pc;
 
     opc = instr_get_opcode(instr);
 
@@ -3719,10 +3766,11 @@ encode_data_processing_imm_and_misc(decode_info_t* di, instr_t* instr, byte* pc)
         case OP_cmp_imm: //C
         case OP_teq_imm: //C
         case OP_tst_imm: //C
-          encode_1dst_reg_0src_reg_1src_imm(di, instr, pc);
+          nxt_pc = encode_1dst_reg_0src_reg_1src_imm(di, instr, pc);
           break;
-        case OP_mvn_imm:
-          encode_1dst_reg_0src_reg_1src_imm_2(di, instr, pc);
+        case OP_mvn_imm: //C
+        case OP_mov_imm: //C
+          nxt_pc = encode_1dst_reg_0src_reg_1src_imm_2(di, instr, pc);
           break;
         case OP_sub_imm: //C
         case OP_sbc_imm: //C
@@ -3734,8 +3782,7 @@ encode_data_processing_imm_and_misc(decode_info_t* di, instr_t* instr, byte* pc)
         case OP_and_imm: //C
         case OP_add_imm: //C
         case OP_adc_imm: //C < Flag to indicate checked 
-        case OP_mov_imm: //C
-          encode_1dst_reg_1src_reg_1src_imm_2(di, instr, pc);
+          nxt_pc = encode_1dst_reg_1src_reg_1src_imm_2(di, instr, pc);
           break;
         //Extar instrs
         case OP_nop:
@@ -3759,12 +3806,14 @@ encode_data_processing_imm_and_misc(decode_info_t* di, instr_t* instr, byte* pc)
             break;
     }
 
+    return nxt_pc;
 }
 
-void
+byte*
 encode_load_store_1_and_misc(decode_info_t* di, instr_t* instr, byte* pc)
 {
     uint opc;
+    byte* nxt_pc = pc;
 
     opc = instr_get_opcode(instr);
 
@@ -3775,18 +3824,18 @@ encode_load_store_1_and_misc(decode_info_t* di, instr_t* instr, byte* pc)
         case OP_ldrb_imm: //C
         case OP_strb_imm: //C
         case OP_strt: //C
-          encode_1dst_reg_1src_reg_1src_imm_2(di, instr, pc);
+          nxt_pc = encode_1dst_reg_1src_reg_1src_imm_2(di, instr, pc);
           break;
         case OP_ldrt: //C
-          encode_1dst_reg_2src_reg_1src_imm(di, instr, pc);
+          nxt_pc = encode_1dst_reg_2src_reg_1src_imm(di, instr, pc);
           break;
         case OP_strbt: //C
         case OP_ldrbt: //C
-          encode_1dst_reg_1src_reg_1src_imm_2(di, instr, pc);
+          nxt_pc = encode_1dst_reg_1src_reg_1src_imm_2(di, instr, pc);
           break;
         case OP_ldr_lit:
         case OP_ldrb_lit:
-          encode_1dst_reg_0src_reg_1src_imm_2(di, instr, pc);
+          nxt_pc = encode_1dst_reg_0src_reg_1src_imm_2(di, instr, pc);
           break;
         //misc
         case OP_pli_imm:
@@ -3804,12 +3853,15 @@ encode_load_store_1_and_misc(decode_info_t* di, instr_t* instr, byte* pc)
             CLIENT_ASSERT(false, "instr_encode error: invalid opcode for instr_type" );
             break;
     }
+
+    return nxt_pc;
 }
 
-void
+byte*
 encode_load_store_2_and_media(decode_info_t* di, instr_t* instr, byte* pc)
 {
     uint opc;
+    byte* nxt_pc = pc;
 
     opc = instr_get_opcode(instr);
 
@@ -3820,7 +3872,7 @@ encode_load_store_2_and_media(decode_info_t* di, instr_t* instr, byte* pc)
         case OP_ldrb_reg: //C
         case OP_str_reg:  //C
         case OP_strb_reg: //C
-          encode_1dst_reg_2src_reg_1src_imm(di, instr, pc);
+          nxt_pc = encode_1dst_reg_2src_reg_1src_imm(di, instr, pc);
           break;
         //Media instrs
         case OP_usad8:
@@ -3845,7 +3897,7 @@ encode_load_store_2_and_media(decode_info_t* di, instr_t* instr, byte* pc)
         case OP_shsax: //C
         case OP_shsub16: //C
         case OP_shsub8: //C
-          encode_1dst_reg_2src_reg_0src_imm_5(di, instr, pc);
+          nxt_pc = encode_1dst_reg_2src_reg_0src_imm_5(di, instr, pc);
           break;
         //case OP_add8:
         //case OP_sub8:
@@ -3891,7 +3943,7 @@ encode_load_store_2_and_media(decode_info_t* di, instr_t* instr, byte* pc)
         case OP_rev: //C
         case OP_rev16: //C
         case OP_revsh: //C
-          encode_1dst_reg_1src_reg_0src_imm(di, instr, pc);
+          nxt_pc = encode_1dst_reg_1src_reg_0src_imm(di, instr, pc);
           break;
         case OP_uxtah:
         case OP_uxth:
@@ -3917,12 +3969,14 @@ encode_load_store_2_and_media(decode_info_t* di, instr_t* instr, byte* pc)
             break;
     }
 
+    return nxt_pc;
 }
 
-void
+uint
 encode_load_store_multiple(decode_info_t* di, instr_t* instr, byte* pc)
 {
     uint opc;
+    byte* nxt_pc = pc;
 
     opc = instr_get_opcode(instr);
 
@@ -3943,7 +3997,7 @@ encode_load_store_multiple(decode_info_t* di, instr_t* instr, byte* pc)
         case OP_ldmfd: //C
         case OP_ldmib: //C
         case OP_ldmed: //C
-          encode_1dst_reg_1src_reglist(di, instr, pc);
+          nxt_pc = encode_1dst_reg_1src_reglist(di, instr, pc);
           break;
         //Uncond instrs
         case OP_srs:
@@ -3951,18 +4005,21 @@ encode_load_store_multiple(decode_info_t* di, instr_t* instr, byte* pc)
           break;
         case OP_pop: //C
         case OP_push://C
-          encode_0dst_reg_1src_reglist(di, instr, pc);
+          nxt_pc = encode_0dst_reg_1src_reglist(di, instr, pc);
           break;
         default:
             CLIENT_ASSERT(false, "instr_encode error: invalid opcode for instr_type" );
             break;
     }
+
+    return nxt_pc;
 }
 
-void
+byte*
 encode_branch(decode_info_t* di, instr_t* instr, byte* pc)
 {
     uint opc;
+    byte* nxt_pc = pc;
 
     opc = instr_get_opcode(instr);
 
@@ -3972,18 +4029,21 @@ encode_branch(decode_info_t* di, instr_t* instr, byte* pc)
         case OP_bl:
         case OP_blx_imm:
         case OP_blx_reg:
-          encode_branch_instrs(di, instr, pc);
+          nxt_pc = encode_branch_instrs(di, instr, pc);
           break;
         default:
             CLIENT_ASSERT(false, "instr_encode error: invalid opcode for instr_type" );
             break;
     }
+
+    return nxt_pc;
 }
 
-void
+byte*
 encode_coprocessor_data_movement(decode_info_t* di, instr_t* instr, byte* pc)
 {
     uint opc;
+    byte* nxt_pc;
 
     opc = instr_get_opcode(instr);
 
@@ -4005,12 +4065,15 @@ encode_coprocessor_data_movement(decode_info_t* di, instr_t* instr, byte* pc)
             CLIENT_ASSERT(false, "instr_encode error: invalid opcode for instr_type" );
             break;
     }
+
+    return nxt_pc;
 }
 
-void
+byte*
 encode_advanced_coprocessor_and_syscall(decode_info_t* di, instr_t* instr, byte* pc)
 {
     uint opc;
+    byte* nxt_pc = pc;
 
     opc = instr_get_opcode(instr);
 
@@ -4027,6 +4090,8 @@ encode_advanced_coprocessor_and_syscall(decode_info_t* di, instr_t* instr, byte*
             CLIENT_ASSERT(false, "instr_encode error: invalid opcode for instr_type" );
             break;
     }
+
+    return nxt_pc;
 }
  
 
@@ -4097,34 +4162,37 @@ instr_encode_common(dcontext_t *dcontext, instr_t *instr, byte *copy_pc, byte *f
           //Check for label here
           break;
         case INSTR_TYPE_DATA_PROCESSING_AND_ELS:
-          encode_data_processing_and_els(&di, instr, field_ptr); 
+          field_ptr = encode_data_processing_and_els(&di, instr, field_ptr); 
           break;
         case INSTR_TYPE_DATA_PROCESSING_IMM:
-          encode_data_processing_imm_and_misc(&di, instr, field_ptr); 
+          field_ptr = encode_data_processing_imm_and_misc(&di, instr, field_ptr); 
           break;
         case INSTR_TYPE_LOAD_STORE1:
-          encode_load_store_1_and_misc(&di, instr, field_ptr); 
+          field_ptr = encode_load_store_1_and_misc(&di, instr, field_ptr); 
           break;
         case INSTR_TYPE_LOAD_STORE2_AND_MEDIA:
-          encode_load_store_2_and_media(&di, instr, field_ptr); 
+          field_ptr = encode_load_store_2_and_media(&di, instr, field_ptr); 
           break;
         case INSTR_TYPE_LOAD_STORE_MULTIPLE:
-          encode_load_store_multiple(&di, instr, field_ptr); 
+          field_ptr = encode_load_store_multiple(&di, instr, field_ptr); 
           break;
         case INSTR_TYPE_BRANCH:
-          encode_branch(&di, instr, field_ptr); 
+          field_ptr = encode_branch(&di, instr, field_ptr); 
           break;
         case INSTR_TYPE_COPROCESSOR_DATA_MOVEMENT:
-          encode_coprocessor_data_movement(&di, instr, field_ptr); 
+          field_ptr = encode_coprocessor_data_movement(&di, instr, field_ptr); 
           break;
         case INSTR_TYPE_ADVANCED_COPROCESSOR_AND_SYSCALL: 
-          encode_advanced_coprocessor_and_syscall(&di, instr, field_ptr); 
+          field_ptr = encode_advanced_coprocessor_and_syscall(&di, instr, field_ptr); 
           break;
         default:
             CLIENT_ASSERT(false, "instr_encode error: invalid instr_type");
             return;
         
     }
+
+    /* instr_t* operand support */
+    di.cur_note = (ptr_int_t) instr->note;
 
 #ifdef NO
 /* TODO SJF Eh? */
@@ -4141,9 +4209,6 @@ instr_encode_common(dcontext_t *dcontext, instr_t *instr, byte *copy_pc, byte *f
                               _IF_DEBUG(assert_reachable));
         }
     } 
-
-    /* instr_t* operand support */
-    di.cur_note = (ptr_int_t) instr->note;
 
     if (di.seg_override != REG_NULL) {
         switch (di.seg_override) {
