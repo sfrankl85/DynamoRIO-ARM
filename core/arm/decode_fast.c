@@ -425,10 +425,8 @@ decode_sizeof(dcontext_t *dcontext, byte *start_pc, int *num_prefixes
     bool found_prefix = true;
     bool rep_prefix = false;
     byte reg_opcode;    /* reg_opcode field of modrm byte */
-#ifdef X64
-    byte *rip_rel_pc = NULL;
-#endif
 
+#ifdef NO
     /* Check for prefix byte(s) */
     while (found_prefix) {
         /* NOTE - rex prefixes must come after all other prefixes (including
@@ -523,14 +521,6 @@ decode_sizeof(dcontext_t *dcontext, byte *start_pc, int *num_prefixes
     if (num_prefixes != NULL)
         *num_prefixes = sz;
     if (word_operands) {
-#ifdef X64
-        /* for x64 Intel, always 64-bit addr ("f64" in Intel table) 
-         * FIXME: what about 2-byte jcc?
-         */
-        if (X64_MODE_DC(dcontext) && proc_get_vendor() == VENDOR_INTEL)
-            sz += immed_adjustment_intel64[opc];
-        else
-#endif
             sz += immed_adjustment[opc]; /* no adjustment for 2-byte escapes */
     }
     if (addr16) {  /* no adjustment for 2-byte escapes */
@@ -539,16 +529,6 @@ decode_sizeof(dcontext_t *dcontext, byte *start_pc, int *num_prefixes
         else /* from 32 bits down to 16 bits */
             sz += disp_adjustment[opc];
     }
-#ifdef X64
-    if (X64_MODE_DC(dcontext)) {
-        int adj64 = x64_adjustment[opc];
-        if (adj64 > 0) /* default size adjustment */
-            sz += adj64;
-        else if (qword_operands)
-            sz += -adj64; /* negative indicates prefix, not default, adjust */
-        /* else, no adjustment */
-    }
-#endif
 
     /* opc now really points to opcode */
     sz += fixed_length[opc];
@@ -586,21 +566,13 @@ decode_sizeof(dcontext_t *dcontext, byte *start_pc, int *num_prefixes
             sz += 4;    /* TEST El,il -- add size of immediate */
     }
 
- decode_sizeof_done:
-#ifdef X64
-    if (rip_rel_pos != NULL) {
-        if (rip_rel_pc != NULL) {
-            CLIENT_ASSERT(X64_MODE_DC(dcontext),
-                          "decode_sizeof: invalid non-x64 rip_rel instr");
-            CLIENT_ASSERT(CHECK_TRUNCATE_TYPE_uint(rip_rel_pc - start_pc),
-                          "decode_sizeof: unknown rip_rel instr type");
-            *rip_rel_pos = (uint) (rip_rel_pc - start_pc);
-        } else
-            *rip_rel_pos = 0;
-    }
-#endif
+#endif //NO
 
+    sz = 4; //SJF ARM all 32 bits
+
+ decode_sizeof_done:
     return sz;
+
 }
 
 static int

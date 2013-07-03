@@ -1368,7 +1368,7 @@ clear_ldt_entry(uint index)
 // TODO SJF ASM
 #define WRITE_DR_SEG(val) \
     ASSERT(sizeof(val) == sizeof(reg_t));                           \
-    asm volatile("mov %0,%%"ASM_XAX"; mov %%"ASM_XAX", %"ASM_SEG";" \
+    asm volatile("mov %0,%%"ASM_R0"; mov %%"ASM_R0", %"ASM_SEG";" \
                  : : "m" ((val)) : ASM_XAX);
 
 #define WRITE_LIB_SEG(val) \
@@ -1606,11 +1606,15 @@ static os_local_state_t *
 get_os_tls(void)
 {
     os_local_state_t *os_tls;
-
+  
+#ifdef HAVE_TLS
     ASSERT(is_segment_register_initialized());
     READ_TLS_SLOT_IMM(TLS_SELF_OFFSET, os_tls);
 
     return os_tls;
+#else
+    return NULL;
+#endif
 }
 
 /* Obtain TLS from dcontext directly, which succeeds in pre-thread-init
@@ -2039,7 +2043,6 @@ os_tls_app_seg_init(os_local_state_t *os_tls, void *segment)
 void
 os_tls_init(void)
 {
-#ifdef NO //SJF Comment out all TLS/LDT/GDT shit for ARM
 #ifdef HAVE_TLS
     /* We create a 1-page segment with an LDT entry for each thread and load its
      * selector into fs/gs.
@@ -2241,7 +2244,6 @@ os_tls_init(void)
     /* store type in global var for convenience: should be same for all threads */
     tls_type = TLS_TYPE_NONE; //SJF Removed HAVE_TLS error 
     ASSERT(is_segment_register_initialized());
-#endif
 }
 
 /* Frees local_state.  If the calling thread is exiting (i.e.,

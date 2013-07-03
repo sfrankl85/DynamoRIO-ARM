@@ -232,7 +232,7 @@
 #    define VMX86_SERVER
 #    define USERLEVEL
      /* PR 361894/388563: only on ESX4.1+ */
-#    define HAVE_TLS
+//#    define HAVE_TLS
 #  else
 #    ifdef MACOS
        /* FIXME NYI */
@@ -241,7 +241,7 @@
        /* Linux */
        /* FIXME: use cmake to discover whether these are available */
 #      define HAVE_PROC_MAPS
-#      define HAVE_TLS
+//#      define HAVE_TLS
 #      define HAVE_SIGALTSTACK
 #    endif
 #  endif

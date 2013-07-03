@@ -330,19 +330,10 @@ typedef struct decode_info_t {
     byte *start_pc;
     byte *final_pc;
     uint len;
-    /* This field is only used when encoding rip-relative data refs.
-     * To save space we could make it a union with disp.
-     */
-    byte *disp_abs;
 
     /* PR 302353: support decoding as though somewhere else */
     byte *orig_pc;
-    /* these 3 prefixes may be part of opcode */
-    bool data_prefix;
-    bool rep_prefix;
-    bool repne_prefix;
-    byte vex_vvvv; /* vvvv bits for extra operand */
-    bool vex_encoded;
+
     /* for instr_t* target encoding */
     ptr_int_t cur_note;
     bool has_instr_opnds;

@@ -227,8 +227,8 @@
  * this instruction will be encoded).
  */
 /* TODO SJF Check + fix */
-#define INSTR_CREATE_branch_short(dc, op, t) \
-  instr_create_0dst_1src((dc), (op), (t))
+#define INSTR_CREATE_branch_short(dc, op, t, c) \
+  instr_create_0dst_1src((dc), (op), (t), (c))
 /**
  * Creates an instr_t for a conditional branch instruction with the given opcode
  * and target operand.
@@ -236,8 +236,8 @@
  * \param t The opnd_t target operand for the instruction, which can be either
  * a pc (opnd_create_pc()) or an instr_t (opnd_create_instr()).
  */
-#define INSTR_CREATE_branch(dc, t) \
-  instr_create_0dst_1src((dc), OP_b, (t))
+#define INSTR_CREATE_branch(dc, t, c) \
+  instr_create_0dst_1src((dc), OP_b, (t), (c))
 
 /**
  * This INSTR_CREATE_xxx macro creates an instr_t with opcode OP_xxx and
@@ -245,10 +245,10 @@
  * \param dc The void * dcontext used to allocate memory for the instr_t.
  * \param s The opnd_t explicit source operand for the instruction.
  */
-#define INSTR_CREATE_push(dc, s) \
+#define INSTR_CREATE_push(dc, s, c) \
   instr_create_2dst_2src((dc), OP_push, opnd_create_reg(DR_REG_R13), \
     opnd_create_base_disp(DR_REG_R13, DR_REG_NULL, 0, -4, OPSZ_VARSTACK), \
-    (s), opnd_create_reg(DR_REG_R13))
+    (s), opnd_create_reg(DR_REG_R13), c)
 
 /* 2 destinations: 1 implicit, 2 sources */
 /**
@@ -257,43 +257,43 @@
  * \param dc The void * dcontext used to allocate memory for the instr_t.
  * \param d The opnd_t explicit destination operand for the instruction.
  */
-#define INSTR_CREATE_pop(dc, d) \
+#define INSTR_CREATE_pop(dc, d, c) \
   instr_create_2dst_2src((dc), OP_pop, (d), opnd_create_reg(DR_REG_R13), \
     opnd_create_reg(DR_REG_R13), \
-    opnd_create_base_disp(DR_REG_R13, DR_REG_NULL, 0, 0, OPSZ_VARSTACK))
+    opnd_create_base_disp(DR_REG_R13, DR_REG_NULL, 0, 0, OPSZ_VARSTACK), c)
 
 
 
 /* SJF Neew instr create macros */
 /* TODO Fill in with the correct calls as needed */
-#define INSTR_CREATE_adc_imm(dc, d, s, i) \
-    instr_create_1dst_2src((dc), OP_adc_imm, (d), (s), (i))
-#define INSTR_CREATE_adc_reg(dc, d, s, i) \
-    instr_create_1dst_2src((dc), OP_adc_reg, (d), (s), (i))
-#define INSTR_CREATE_adc_rsr(dc, d, s, i) \
-    instr_create_1dst_2src((dc), OP_adc_rsr, (d), (s), (i))
-#define INSTR_CREATE_add_imm(dc, d, s, i) \
-    instr_create_1dst_2src((dc), OP_add_imm, (d), (s), (i))
-#define INSTR_CREATE_add_reg(dc, d, s, i1, i2) \
-    instr_create_1dst_3src((dc), OP_add_reg, (d), (s), (i1), (i2))
-#define INSTR_CREATE_add_rsr(dc, d, s, i1, i2) \
-    instr_create_1dst_3src((dc), OP_add_rsr, (d), (s), (i1), (i2))
-#define INSTR_CREATE_add_sp_imm(dc, d, s) \
-    instr_create_1dst_1src((dc), OP_add_sp_imm, (d), (s))
-#define INSTR_CREATE_add_sp_reg(dc, d, s) \
-    instr_create_1dst_1src((dc), OP_add_sp_reg, (d), (s))
-#define INSTR_CREATE_adr(dc, d, s) \
-    instr_create_1dst_1src((dc), OP_adr, (d), (s))
-#define INSTR_CREATE_and_imm(dc, d, s, i) \
-    instr_create_1dst_2src((dc), OP_and_imm, (d), (s), (i))
-#define INSTR_CREATE_and_reg(dc, d, s, i1, i2) \
-    instr_create_1dst_3src((dc), OP_and_reg, (d), (s), (i1), (i2))
-#define INSTR_CREATE_and_rsr(dc, d, s, i1, i2) \
-    instr_create_1dst_3src((dc), OP_and_rsr, d, s, i1, i2)
-#define INSTR_CREATE_asr_imm(dc, d, s, i) \
-    instr_create_1dst_2src((dc), OP_asr_imm, (d), (s), (i))
-#define INSTR_CREATE_asr_reg(dc, d, s, i) \
-    instr_create_1dst_2src((dc), OP_asr_reg, (d), (s), (i))
+#define INSTR_CREATE_adc_imm(dc, d, s, i, c) \
+    instr_create_1dst_2src((dc), OP_adc_imm, (d), (s), (i), (c))
+#define INSTR_CREATE_adc_reg(dc, d, s, i, c) \
+    instr_create_1dst_2src((dc), OP_adc_reg, (d), (s), (i), (c))
+#define INSTR_CREATE_adc_rsr(dc, d, s, i, c) \
+    instr_create_1dst_2src((dc), OP_adc_rsr, (d), (s), (i), (c))
+#define INSTR_CREATE_add_imm(dc, d, s, i, c) \
+    instr_create_1dst_2src((dc), OP_add_imm, (d), (s), (i), (c))
+#define INSTR_CREATE_add_reg(dc, d, s, i1, i2, c) \
+    instr_create_1dst_3src((dc), OP_add_reg, (d), (s), (i1), (i2), (c))
+#define INSTR_CREATE_add_rsr(dc, d, s, i1, i2, c) \
+    instr_create_1dst_3src((dc), OP_add_rsr, (d), (s), (i1), (i2), (c))
+#define INSTR_CREATE_add_sp_imm(dc, d, s, c) \
+    instr_create_1dst_1src((dc), OP_add_sp_imm, (d), (s), (c))
+#define INSTR_CREATE_add_sp_reg(dc, d, s, c) \
+    instr_create_1dst_1src((dc), OP_add_sp_reg, (d), (s), (c))
+#define INSTR_CREATE_adr(dc, d, s, c) \
+    instr_create_1dst_1src((dc), OP_adr, (d), (s), (c))
+#define INSTR_CREATE_and_imm(dc, d, s, i, c) \
+    instr_create_1dst_2src((dc), OP_and_imm, (d), (s), (i), (c))
+#define INSTR_CREATE_and_reg(dc, d, s, i1, i2, c) \
+    instr_create_1dst_3src((dc), OP_and_reg, (d), (s), (i1), (i2), (c))
+#define INSTR_CREATE_and_rsr(dc, d, s, i1, i2, c) \
+    instr_create_1dst_3src((dc), OP_and_rsr, d, s, i1, i2, c)
+#define INSTR_CREATE_asr_imm(dc, d, s, i, c) \
+    instr_create_1dst_2src((dc), OP_asr_imm, (d), (s), (i), (c))
+#define INSTR_CREATE_asr_reg(dc, d, s, i, c) \
+    instr_create_1dst_2src((dc), OP_asr_reg, (d), (s), (i), (c))
 #define INSTR_CREATE_b(dc, s) \
     instr_create_0dst_1src((dc), OP_b, (s))
 #define INSTR_CREATE_bfc(dc) \
@@ -386,12 +386,12 @@
     instr_create_0dst_0src((dc), OP_ldmib)
 #define INSTR_CREATE_ldmed(dc) \
     instr_create_0dst_0src((dc), OP_ldmed)
-#define INSTR_CREATE_ldr_imm(dc, d, s) \
-    instr_create_1dst_1src((dc), OP_ldr_imm, (d), (s))
-#define INSTR_CREATE_ldr_lit(dc, d, s, i) \
-    instr_create_1dst_2src((dc), OP_ldr_lit, (d), (s), (i))
-#define INSTR_CREATE_ldr_reg(dc, d, s1, s2, i) \
-    instr_create_1dst_3src((dc), OP_ldr_reg, (d), (s1), (s2), (i))
+#define INSTR_CREATE_ldr_imm(dc, d, s, c) \
+    instr_create_1dst_1src((dc), OP_ldr_imm, (d), (s), (c))
+#define INSTR_CREATE_ldr_lit(dc, d, s, i, c) \
+    instr_create_1dst_2src((dc), OP_ldr_lit, (d), (s), (i), (c))
+#define INSTR_CREATE_ldr_reg(dc, d, s1, s2, i, c) \
+    instr_create_1dst_3src((dc), OP_ldr_reg, (d), (s1), (s2), (i), (c))
 #define INSTR_CREATE_ldrb_imm(dc) \
     instr_create_0dst_0src((dc), OP_ldrb_imm)
 #define INSTR_CREATE_ldrb_lit(dc) \
@@ -460,12 +460,12 @@
     instr_create_0dst_0src((dc), OP_mla)
 #define INSTR_CREATE_mls(dc) \
     instr_create_0dst_0src((dc), OP_mls)
-#define INSTR_CREATE_mov_imm(dc, d, s) \
-    instr_create_1dst_1src((dc), OP_mov_imm, (d), (s))
-#define INSTR_CREATE_mov_reg(dc, d, s) \
-    instr_create_1dst_1src((dc), OP_mov_reg, (d), (s))
-#define INSTR_CREATE_movt(dc, d, s) \
-    instr_create_1dst_1src((dc), OP_movt, (d), (s))
+#define INSTR_CREATE_mov_imm(dc, d, s, c) \
+    instr_create_1dst_1src((dc), OP_mov_imm, (d), (s), (c))
+#define INSTR_CREATE_mov_reg(dc, d, s, c) \
+    instr_create_1dst_1src((dc), OP_mov_reg, (d), (s), (c))
+#define INSTR_CREATE_movt(dc, d, s, c) \
+    instr_create_1dst_1src((dc), OP_movt, (d), (s), (c))
 #define INSTR_CREATE_mrc(dc) \
     instr_create_0dst_0src((dc), OP_mrc)
 #define INSTR_CREATE_mrc2(dc) \
@@ -474,12 +474,12 @@
     instr_create_0dst_0src((dc), OP_mrrc)
 #define INSTR_CREATE_mrrc2(dc) \
     instr_create_0dst_0src((dc), OP_mrrc2)
-#define INSTR_CREATE_mrs(dc, s) \
-    instr_create_0dst_1src((dc), OP_mrs, (s))
-#define INSTR_CREATE_msr_imm(dc, d, s) \
-    instr_create_1dst_1src((dc), OP_msr_imm, (d), (s))
-#define INSTR_CREATE_msr_reg(dc, s1, s2) \
-    instr_create_0dst_2src((dc), OP_msr_reg, (s1), (s2))
+#define INSTR_CREATE_mrs(dc, s, c) \
+    instr_create_0dst_1src((dc), OP_mrs, (s), (c))
+#define INSTR_CREATE_msr_imm(dc, d, s, c) \
+    instr_create_1dst_1src((dc), OP_msr_imm, (d), (s), (c))
+#define INSTR_CREATE_msr_reg(dc, s1, s2, c) \
+    instr_create_0dst_2src((dc), OP_msr_reg, (s1), (s2), (c))
 #define INSTR_CREATE_mul(dc) \
     instr_create_0dst_0src((dc), OP_mul)
 #define INSTR_CREATE_mvn_imm(dc) \
@@ -492,12 +492,12 @@
     instr_create_0dst_0src((dc), OP_orn_imm)
 #define INSTR_CREATE_orn_reg(dc) \
     instr_create_0dst_0src((dc), OP_orn_reg)
-#define INSTR_CREATE_orr_imm(dc, d, s, i) \
-    instr_create_1dst_2src((dc), OP_orr_imm, (d), (s), (i))
-#define INSTR_CREATE_orr_reg(dc, d, s, i) \
-    instr_create_1dst_2src((dc), OP_orr_reg, (d), (s), (i))
-#define INSTR_CREATE_orr_rsr(dc, d, s, i) \
-    instr_create_1dst_2src((dc), OP_orr_rsr, (d), (s), (i))
+#define INSTR_CREATE_orr_imm(dc, d, s, i, c) \
+    instr_create_1dst_2src((dc), OP_orr_imm, (d), (s), (i), (c))
+#define INSTR_CREATE_orr_reg(dc, d, s, i, c) \
+    instr_create_1dst_2src((dc), OP_orr_reg, (d), (s), (i), (c))
+#define INSTR_CREATE_orr_rsr(dc, d, s, i, c) \
+    instr_create_1dst_2src((dc), OP_orr_rsr, (d), (s), (i), (c))
 #define INSTR_CREATE_pkh(dc) \
     instr_create_0dst_0src((dc), OP_pkh)
 #define INSTR_CREATE_pld_imm(dc) \
@@ -686,20 +686,20 @@
     instr_create_0dst_0src((dc), OP_stmib)
 #define INSTR_CREATE_stmfa(dc) \
     instr_create_0dst_0src((dc), OP_stmfa)
-#define INSTR_CREATE_str_imm(dc, d, s) \
-    instr_create_1dst_1src((dc), OP_str_imm, (d), (s))
-#define INSTR_CREATE_str_reg(dc, d, s1, s2, i) \
-    instr_create_1dst_3src((dc), OP_str_reg, (d), (s1), (s2), (i))
-#define INSTR_CREATE_strb_imm(dc, d, s, i) \
-    instr_create_1dst_2src((dc), OP_strb_imm, (d))
-#define INSTR_CREATE_strb_reg(dc, d, s, i) \
-    instr_create_1dst_2src((dc), OP_strb_reg, (d), (s), (i))
-#define INSTR_CREATE_strbt(dc, d, s, i) \
-    instr_create_1dst_2src((dc), OP_strbt, (d), (s), (i))
-#define INSTR_CREATE_strd_imm(dc, d, s, i) \
-    instr_create_1dst_2src((dc), OP_strd_imm, (d), (s), (i))
-#define INSTR_CREATE_strd_reg(dc, d, s, i) \
-    instr_create_1dst_2src((dc), OP_strd_reg, d, s, i)
+#define INSTR_CREATE_str_imm(dc, d, s, c) \
+    instr_create_1dst_1src((dc), OP_str_imm, (d), (s), (c))
+#define INSTR_CREATE_str_reg(dc, d, s1, s2, i, c) \
+    instr_create_1dst_3src((dc), OP_str_reg, (d), (s1), (s2), (i), (c))
+#define INSTR_CREATE_strb_imm(dc, d, s, i, c) \
+    instr_create_1dst_2src((dc), OP_strb_imm, (d), (s), (i), (c))
+#define INSTR_CREATE_strb_reg(dc, d, s, i, c) \
+    instr_create_1dst_2src((dc), OP_strb_reg, (d), (s), (i), (c))
+#define INSTR_CREATE_strbt(dc, d, s, i, c) \
+    instr_create_1dst_2src((dc), OP_strbt, (d), (s), (i), (c))
+#define INSTR_CREATE_strd_imm(dc, d, s, i, c) \
+    instr_create_1dst_2src((dc), OP_strd_imm, (d), (s), (i), (c))
+#define INSTR_CREATE_strd_reg(dc, d, s, i, c) \
+    instr_create_1dst_2src((dc), OP_strd_reg, d, s, i, c)
 #define INSTR_CREATE_strex(dc) \
     instr_create_0dst_0src((dc), OP_strex)
 #define INSTR_CREATE_strexb(dc) \
@@ -716,22 +716,22 @@
     instr_create_0dst_0src((dc), OP_strht)
 #define INSTR_CREATE_strt(dc) \
     instr_create_0dst_0src((dc), OP_strt)
-#define INSTR_CREATE_sub_imm(dc, d, s) \
-    instr_create_1dst_1src((dc), OP_sub_imm, (d), (s))
-#define INSTR_CREATE_sub_reg(dc, d, s) \
-    instr_create_1dst_1src((dc), OP_sub_regi, (d), (s))
-#define INSTR_CREATE_sub_rsr(dc, d, s, i) \
-    instr_create_1dst_2src((dc), OP_sub_rsr, (d), (s), (i))
-#define INSTR_CREATE_sub_sp_imm(dc, d, s) \
-    instr_create_1dst_1src((dc), OP_sub_sp_imm, (d), (s))
-#define INSTR_CREATE_sub_sp_reg(dc, d, s) \
-    instr_create_1dst_1src((dc), OP_sub_sp_reg, (d), (s))
+#define INSTR_CREATE_sub_imm(dc, d, s, c) \
+    instr_create_1dst_1src((dc), OP_sub_imm, (d), (s), (c))
+#define INSTR_CREATE_sub_reg(dc, d, s, c) \
+    instr_create_1dst_1src((dc), OP_sub_regi, (d), (s), (c))
+#define INSTR_CREATE_sub_rsr(dc, d, s, i, c) \
+    instr_create_1dst_2src((dc), OP_sub_rsr, (d), (s), (i), (c))
+#define INSTR_CREATE_sub_sp_imm(dc, d, s, c) \
+    instr_create_1dst_1src((dc), OP_sub_sp_imm, (d), (s), (c))
+#define INSTR_CREATE_sub_sp_reg(dc, d, s, c) \
+    instr_create_1dst_1src((dc), OP_sub_sp_reg, (d), (s), (c))
 #define INSTR_CREATE_subs(dc) \
     instr_create_0dst_0src((dc), OP_subs)
 #define INSTR_CREATE_svc(dc) \
     instr_create_0dst_0src((dc), OP_svc)
-#define INSTR_CREATE_swp(dc, d, s) \
-    instr_create_1dst_1src((dc), OP_swp, (d), (s))
+#define INSTR_CREATE_swp(dc, d, s, c) \
+    instr_create_1dst_1src((dc), OP_swp, (d), (s), (c))
 #define INSTR_CREATE_swpb(dc) \
     instr_create_0dst_0src((dc), OP_swpb)
 #define INSTR_CREATE_sxtab(dc) \
@@ -1187,7 +1187,7 @@
  * resulting machine code.
  * \param dc The void * dcontext used to allocate memory for the instr_t.
  */
-#define INSTR_CREATE_label(dc)    instr_create_0dst_0src((dc), OP_LABEL)
+#define INSTR_CREATE_label(dc)    instr_create_0dst_0src((dc), OP_LABEL, COND_ALWAYS)
 
 #define INSTR_CREATE_movntps(dc, d, s) \
   instr_create_1dst_1src((dc), OP_mov, (d), (s))
@@ -1195,21 +1195,21 @@
 #define INSTR_CREATE_RAW_nop2byte(dc) INSTR_CREATE_nop2byte_reg(dc, DR_REG_R7)
 #define INSTR_CREATE_RAW_nop3byte(dc) INSTR_CREATE_nop3byte_reg(dc, DR_REG_R7)
 
-#define INSTR_CREATE_RAW_nop1byte(dc) instr_create_0dst_0src((dc), OP_nop)
-#define INSTR_CREATE_nop(dc) instr_create_0dst_0src((dc), OP_nop)
+#define INSTR_CREATE_RAW_nop1byte(dc, c) instr_create_0dst_0src((dc), OP_nop, (c))
+#define INSTR_CREATE_nop(dc, c) instr_create_0dst_0src((dc), OP_nop, (c))
 
 static inline instr_t *
 INSTR_CREATE_nop2byte_reg(dcontext_t *dcontext, reg_id_t reg)
 {
    /* SJF ?? What is going on here */
-   return INSTR_CREATE_mov_imm(dcontext, opnd_create_reg(reg), opnd_create_reg(reg));
+   return INSTR_CREATE_mov_imm(dcontext, opnd_create_reg(reg), opnd_create_reg(reg), COND_ALWAYS);
 }
 
 static inline instr_t *
 INSTR_CREATE_nop3byte_reg(dcontext_t *dcontext, reg_id_t reg)
 {
    /* SJF ?? What is going on here */
-   return INSTR_CREATE_mov_imm(dcontext, opnd_create_reg(reg), opnd_create_reg(reg));
+   return INSTR_CREATE_mov_imm(dcontext, opnd_create_reg(reg), opnd_create_reg(reg), COND_ALWAYS);
 }
 
 static inline instr_t *
@@ -1217,7 +1217,7 @@ INSTR_CREATE_branch_ind(dcontext_t *dcontext, opnd_t opnd)
 {
    /* Move the value held in the reg passed into pc. This performs an
       indirect branch in combination with the address being put into reg */
-   return INSTR_CREATE_mov_reg(dcontext, opnd_create_reg(DR_REG_R15), opnd);
+   return INSTR_CREATE_mov_reg(dcontext, opnd_create_reg(DR_REG_R15), opnd, COND_ALWAYS);
 }
 
 static inline instr_t* 
@@ -1225,7 +1225,7 @@ INSTR_CREATE_msr_cpsr(dcontext_t *dcontext, reg_id_t reg)
 {
    /* Move the value held in the reg passed into pc. This performs an
       indirect branch in combination with the address being put into reg */
-   return INSTR_CREATE_msr_reg(dcontext, opnd_create_reg(reg), opnd_create_mask(MASK_WRITE_ALL));
+   return INSTR_CREATE_msr_reg(dcontext, opnd_create_reg(reg), opnd_create_mask(MASK_WRITE_ALL), COND_ALWAYS);
 }
 
 static inline instr_t* 
@@ -1233,7 +1233,7 @@ INSTR_CREATE_mrs_cpsr(dcontext_t *dcontext, reg_id_t reg)
 {
    /* Move the value held in the reg passed into pc. This performs an
       indirect branch in combination with the address being put into reg */
-   return INSTR_CREATE_mrs(dcontext, opnd_create_reg(reg));
+   return INSTR_CREATE_mrs(dcontext, opnd_create_reg(reg), COND_ALWAYS);
 }
 
 

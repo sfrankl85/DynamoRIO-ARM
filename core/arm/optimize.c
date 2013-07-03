@@ -1180,7 +1180,7 @@ test_i64(dcontext_t *dcontext, app_pc tag, instrlist_t *trace)
         instrlist_preinsert(trace, inst,
                             INSTR_CREATE_mov_imm(dcontext, opnd_create_reg(REG_ECX), OPND_CREATE_INT32(1)));
         instrlist_preinsert(trace, inst,
-                            INSTR_CREATE_mov_reg(dcontext, opnd_create_base_disp(REG_NULL, REG_NULL, 1, (int)&test1, OPSZ_4_short2), opnd_create_reg(REG_ECX)));
+                            INSTR_CREATE_mov_reg(dcontext, opnd_create_base_disp(REG_NULL, REG_NULL, 1, (int)&test1, OPSZ_4_short2), opnd_create_reg(REG_ECX), COND_ALWAYS), COND_ALWAYS);
         
         /* test jmpe */
         instrlist_preinsert(trace, inst,
@@ -1188,13 +1188,13 @@ test_i64(dcontext_t *dcontext, app_pc tag, instrlist_t *trace)
         instrlist_preinsert(trace, inst,
                             INSTR_CREATE_jmpe(dcontext, opnd_create_reg(REG_EBX)));
         instrlist_preinsert(trace, inst,
-                            INSTR_CREATE_mov_reg(dcontext, opnd_create_base_disp(REG_NULL, REG_NULL, 1, (int)&test2, OPSZ_4_short2), opnd_create_reg(REG_ECX)));
+                            INSTR_CREATE_mov_reg(dcontext, opnd_create_base_disp(REG_NULL, REG_NULL, 1, (int)&test2, OPSZ_4_short2), opnd_create_reg(REG_ECX), COND_ALWAYS));
 
         /* test jmpe_abs */
         instrlist_preinsert(trace, inst,
                             INSTR_CREATE_jmpe_abs(dcontext, opnd_create_pc((app_pc)i64_code_start)));
         instrlist_preinsert(trace, inst,
-                            INSTR_CREATE_mov_reg(dcontext, opnd_create_base_disp(REG_NULL, REG_NULL, 1, (int)&test3, OPSZ_4_short2), opnd_create_reg(REG_ECX)));
+                            INSTR_CREATE_mov_reg(dcontext, opnd_create_base_disp(REG_NULL, REG_NULL, 1, (int)&test3, OPSZ_4_short2), opnd_create_reg(REG_ECX), COND_ALWAYS));
 
         /* cleanup */
 #ifdef DEBUG
@@ -1901,36 +1901,36 @@ do_forward_check_eflags(instr_t *inst, uint eflags, uint eflags_valid, uint efla
         if (((opcode == OP_seto) || (opcode == OP_setno)) && ((eflags_valid & EFLAGS_READ_OF) != 0)) {
             if (((eflags & EFLAGS_READ_OF) != 0 && opcode == OP_seto) || 
                 ((eflags & EFLAGS_READ_OF) == 0 && opcode == OP_setno)) {
-                temp = INSTR_CREATE_mov_reg(state->dcontext, instr_get_dst(inst, 0), OPND_CREATE_INT8(1));
+                temp = INSTR_CREATE_mov_imm(state->dcontext, instr_get_dst(inst, 0), OPND_CREATE_INT8(1), COND_ALWAYS);
             } else {
-                temp = INSTR_CREATE_mov_reg(state->dcontext, instr_get_dst(inst, 0), OPND_CREATE_INT8(0));
+                temp = INSTR_CREATE_mov_imm(state->dcontext, instr_get_dst(inst, 0), OPND_CREATE_INT8(0), COND_ALWAYS);
             }
             replace = true;
         }
         if (((opcode == OP_setz) || (opcode == OP_setnz)) && ((eflags_valid & EFLAGS_READ_ZF) != 0)) {
             if (((eflags & EFLAGS_READ_ZF) != 0 && opcode == OP_setz) ||
                 ((eflags & EFLAGS_READ_ZF) == 0 && opcode == OP_setnz)) {
-                temp = INSTR_CREATE_mov_reg(state->dcontext, instr_get_dst(inst, 0), OPND_CREATE_INT8(1));
+                temp = INSTR_CREATE_mov_imm(state->dcontext, instr_get_dst(inst, 0), OPND_CREATE_INT8(1), COND_ALWAYS);
             } else {
-                temp = INSTR_CREATE_mov_reg(state->dcontext, instr_get_dst(inst, 0), OPND_CREATE_INT8(0));
+                temp = INSTR_CREATE_mov_imm(state->dcontext, instr_get_dst(inst, 0), OPND_CREATE_INT8(0), COND_ALWAYS);
             }
             replace = true;
         }
         if (((opcode == OP_setb) || (opcode == OP_setnb)) && ((eflags_valid & EFLAGS_READ_CF) != 0)) {
             if (((eflags & EFLAGS_READ_CF) != 0 && opcode == OP_setb) || 
                 ((eflags & EFLAGS_READ_CF) == 0 && opcode == OP_setnb)) {
-                temp = INSTR_CREATE_mov_reg(state->dcontext, instr_get_dst(inst, 0), OPND_CREATE_INT8(1));
+                temp = INSTR_CREATE_mov_imm(state->dcontext, instr_get_dst(inst, 0), OPND_CREATE_INT8(1), COND_ALWAYS);
             } else {
-                temp = INSTR_CREATE_mov_reg(state->dcontext, instr_get_dst(inst, 0), OPND_CREATE_INT8(0));
+                temp = INSTR_CREATE_mov_imm(state->dcontext, instr_get_dst(inst, 0), OPND_CREATE_INT8(0), COND_ALWAYS);
             }
             replace = true;
         }
         if (((opcode == OP_sets) || (opcode == OP_setns)) && ((eflags_valid & EFLAGS_READ_SF) != 0)) {
             if (((eflags & EFLAGS_READ_SF) != 0 && opcode == OP_sets) || 
                 ((eflags & EFLAGS_READ_SF) == 0 && opcode == OP_setns)) {
-                temp = INSTR_CREATE_mov_reg(state->dcontext, instr_get_dst(inst, 0), OPND_CREATE_INT8(1));
+                temp = INSTR_CREATE_mov_imm(state->dcontext, instr_get_dst(inst, 0), OPND_CREATE_INT8(1), COND_ALWAYS);
             } else {
-                temp = INSTR_CREATE_mov_reg(state->dcontext, instr_get_dst(inst, 0), OPND_CREATE_INT8(0));
+                temp = INSTR_CREATE_mov_imm(state->dcontext, instr_get_dst(inst, 0), OPND_CREATE_INT8(0), COND_ALWAYS);
             }
             replace = true;
         }
@@ -1984,7 +1984,7 @@ do_forward_check_eflags(instr_t *inst, uint eflags, uint eflags_valid, uint efla
 static instr_t *
 make_imm_store(prop_state_t *state, instr_t *inst, int value)
 {
-    return INSTR_CREATE_mov_reg(state->dcontext, instr_get_dst(inst, 0),  OPND_CREATE_INT32(value));
+    return INSTR_CREATE_mov_reg(state->dcontext, instr_get_dst(inst, 0),  OPND_CREATE_INT32(value), COND_ALWAYS);
 }
 
 /* replaces inst with a mov imm of value to the same dst */
@@ -2013,7 +2013,7 @@ make_to_imm_store(instr_t *inst, int value, prop_state_t *state)
     }
 
     /* is always creating the right sized imm? */
-    replacement = INSTR_CREATE_mov_reg(state->dcontext, dst,  opnd_create_immed_int(value, opnd_get_size(dst)));
+    replacement = INSTR_CREATE_mov_reg(state->dcontext, dst,  opnd_create_immed_int(value, opnd_get_size(dst)), COND_ALWAYS);
     /* handle prefixes, imm->reg (data) imm->mem (data & addr) */
     if (instr_get_prefix_flag(inst, PREFIX_DATA)) {
         instr_set_prefix_flag(replacement, PREFIX_DATA); 
@@ -2035,7 +2035,7 @@ make_to_nop(prop_state_t *state, instr_t *inst, const char *pre,
     instr_t *backup;
 
     loginst(state->dcontext, 3, inst, pre);
-    backup = INSTR_CREATE_nop(state->dcontext);
+    backup = INSTR_CREATE_nop(state->dcontext, COND_ALWAYS);
     replace_inst(state->dcontext, state->trace, inst, backup);
     loginst(state->dcontext, 3, backup, post);
     return backup;

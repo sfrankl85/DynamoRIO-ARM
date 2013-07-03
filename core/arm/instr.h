@@ -519,12 +519,6 @@ extern const reg_id_t dr_reg_fixer[];
 # define REG_STOP_DR         DR_REG_STOP_DR
 # define REG_START_CR        DR_REG_START_CR
 # define REG_STOP_CR         DR_REG_STOP_CR
-# define SEG_ES		     DR_SEG_ES
-# define SEG_CS		     DR_SEG_CS
-# define SEG_SS		     DR_SEG_SS
-# define SEG_DS		     DR_SEG_DS
-# define SEG_FS		     DR_SEG_FS
-# define SEG_GS		     DR_SEG_GS
 # define REG_START_QWR       DR_REG_Q0	
 # define REG_STOP_QWR        DR_REG_Q15
 # define REG_START_DWR       DR_REG_D0
@@ -533,6 +527,15 @@ extern const reg_id_t dr_reg_fixer[];
 # define REG_STOP_SWR        DR_REG_S31
 # define REG_LAST_ENUM       DR_REG_LAST_ENUM
 
+/* SJF Change the segments to offsets instead of references to non
+       existent regs for ARM. This allows me to calc the offset from these values
+       and just ref that memory address directly. */
+# define SEG_ES		     0x26 
+# define SEG_CS		     0x2e 
+# define SEG_SS		     0x36 
+# define SEG_DS		     0x3e 
+# define SEG_FS		     0x64 
+# define SEG_GS		     0x65 
 
 
 #endif /* DR_REG_ENUM_COMPATIBILITY */
@@ -3419,7 +3422,7 @@ DR_API
  * thread-local heap with opcode \p opcode and no sources or destinations.
  */
 instr_t *
-instr_create_0dst_0src(dcontext_t *dcontext, int opcode);
+instr_create_0dst_0src(dcontext_t *dcontext, int opcode, int cond);
 
 DR_API
 /**
@@ -3428,7 +3431,7 @@ DR_API
  */
 instr_t *
 instr_create_0dst_1src(dcontext_t *dcontext, int opcode,
-                       opnd_t src);
+                       opnd_t src, int cond);
 
 DR_API
 /**
@@ -3437,7 +3440,7 @@ DR_API
  */
 instr_t *
 instr_create_0dst_2src(dcontext_t *dcontext, int opcode,
-                       opnd_t src1, opnd_t src2);
+                       opnd_t src1, opnd_t src2, int cond);
 
 DR_API
 /**
@@ -3447,7 +3450,7 @@ DR_API
  */
 instr_t * 
 instr_create_0dst_3src(dcontext_t *dcontext, int opcode,
-                       opnd_t src1, opnd_t src2, opnd_t src3);
+                       opnd_t src1, opnd_t src2, opnd_t src3, int cond);
 
 DR_API
 /**
@@ -3456,7 +3459,7 @@ DR_API
  */
 instr_t *
 instr_create_1dst_0src(dcontext_t *dcontext, int opcode,
-                       opnd_t dst);
+                       opnd_t dst, int cond);
 
 DR_API
 /**
@@ -3466,7 +3469,7 @@ DR_API
  */
 instr_t *
 instr_create_1dst_1src(dcontext_t *dcontext, int opcode,
-                       opnd_t dst, opnd_t src);
+                       opnd_t dst, opnd_t src, int cond);
 
 DR_API
 /**
@@ -3476,7 +3479,7 @@ DR_API
  */
 instr_t *
 instr_create_1dst_2src(dcontext_t *dcontext, int opcode,
-                       opnd_t dst, opnd_t src1, opnd_t src2);
+                       opnd_t dst, opnd_t src1, opnd_t src2, int cond);
 
 DR_API
 /**
@@ -3486,7 +3489,7 @@ DR_API
  */
 instr_t *
 instr_create_1dst_3src(dcontext_t *dcontext, int opcode,
-                       opnd_t dst, opnd_t src1, opnd_t src2, opnd_t src3);
+                       opnd_t dst, opnd_t src1, opnd_t src2, opnd_t src3, int cond);
 
 DR_API
 /**
@@ -3497,7 +3500,7 @@ DR_API
 instr_t * 
 instr_create_1dst_5src(dcontext_t *dcontext, int opcode,
                        opnd_t dst, opnd_t src1, opnd_t src2, opnd_t src3,
-                       opnd_t src4, opnd_t src5);
+                       opnd_t src4, opnd_t src5, int cond);
 
 DR_API
 /**
@@ -3507,7 +3510,7 @@ DR_API
  */
 instr_t *
 instr_create_2dst_0src(dcontext_t *dcontext, int opcode,
-                       opnd_t dst1, opnd_t dst2);
+                       opnd_t dst1, opnd_t dst2, int cond);
 
 DR_API
 /**
@@ -3517,7 +3520,7 @@ DR_API
  */
 instr_t *
 instr_create_2dst_1src(dcontext_t *dcontext, int opcode,
-                       opnd_t dst1, opnd_t dst2, opnd_t src);
+                       opnd_t dst1, opnd_t dst2, opnd_t src, int cond);
 
 DR_API
 /**
@@ -3527,7 +3530,7 @@ DR_API
  */
 instr_t *
 instr_create_2dst_2src(dcontext_t *dcontext, int opcode,
-                       opnd_t dst1, opnd_t dst2, opnd_t src1, opnd_t src2);
+                       opnd_t dst1, opnd_t dst2, opnd_t src1, opnd_t src2, int cond);
 
 DR_API
 /**
@@ -3538,7 +3541,7 @@ DR_API
 instr_t *
 instr_create_2dst_3src(dcontext_t *dcontext, int opcode,
                        opnd_t dst1, opnd_t dst2,
-                       opnd_t src1, opnd_t src2, opnd_t src3);
+                       opnd_t src1, opnd_t src2, opnd_t src3, int cond);
 
 DR_API
 /**
@@ -3549,7 +3552,7 @@ DR_API
 instr_t *
 instr_create_2dst_4src(dcontext_t *dcontext, int opcode,
                        opnd_t dst1, opnd_t dst2,
-                       opnd_t src1, opnd_t src2, opnd_t src3, opnd_t src4);
+                       opnd_t src1, opnd_t src2, opnd_t src3, opnd_t src4, int cond);
 
 DR_API
 /**
@@ -3559,7 +3562,7 @@ DR_API
  */
 instr_t *
 instr_create_3dst_0src(dcontext_t *dcontext, int opcode,
-                       opnd_t dst1, opnd_t dst2, opnd_t dst3);
+                       opnd_t dst1, opnd_t dst2, opnd_t dst3, int cond);
 
 DR_API
 /**
@@ -3571,7 +3574,7 @@ DR_API
 instr_t *
 instr_create_3dst_3src(dcontext_t *dcontext, int opcode,
                        opnd_t dst1, opnd_t dst2, opnd_t dst3,
-                       opnd_t src1, opnd_t src2, opnd_t src3);
+                       opnd_t src1, opnd_t src2, opnd_t src3, int cond);
 
 DR_API
 /**
@@ -3583,7 +3586,7 @@ DR_API
 instr_t *
 instr_create_3dst_4src(dcontext_t *dcontext, int opcode,
                        opnd_t dst1, opnd_t dst2, opnd_t dst3,
-                       opnd_t src1, opnd_t src2, opnd_t src3, opnd_t src4);
+                       opnd_t src1, opnd_t src2, opnd_t src3, opnd_t src4, int cond);
 
 DR_API
 /**
@@ -3596,7 +3599,7 @@ instr_t *
 instr_create_3dst_5src(dcontext_t *dcontext, int opcode,
                        opnd_t dst1, opnd_t dst2, opnd_t dst3,
                        opnd_t src1, opnd_t src2, opnd_t src3,
-                       opnd_t src4, opnd_t src5);
+                       opnd_t src4, opnd_t src5, int cond);
 
 DR_API
 /**
@@ -3607,7 +3610,7 @@ DR_API
 instr_t *
 instr_create_4dst_1src(dcontext_t *dcontext, int opcode,
                        opnd_t dst1, opnd_t dst2, opnd_t dst3, opnd_t dst4,
-                       opnd_t src);
+                       opnd_t src, int cond);
 
 DR_API
 /**
@@ -3619,7 +3622,7 @@ DR_API
 instr_t *
 instr_create_4dst_4src(dcontext_t *dcontext, int opcode,
                        opnd_t dst1, opnd_t dst2, opnd_t dst3, opnd_t dst4,
-                       opnd_t src1, opnd_t src2, opnd_t src3, opnd_t src4);
+                       opnd_t src1, opnd_t src2, opnd_t src3, opnd_t src4, int cond);
 
 DR_API
 /** Convenience routine that returns an initialized instr_t for OP_popa. */

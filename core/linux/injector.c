@@ -760,7 +760,7 @@ gen_push_string(void *dc, instrlist_t *ilist, const char *msg)
 /* TODO SJF Check this */
 /* For ARM use a brance instruction to hold the value */
 #ifdef ARM
-    APP(ilist, INSTR_CREATE_branch(dc, opnd_create_instr(after_msg)));
+    APP(ilist, INSTR_CREATE_branch(dc, opnd_create_instr(after_msg), COND_ALWAYS));
 #else
     APP(ilist, INSTR_CREATE_call(dc, opnd_create_instr(after_msg)));
 #endif

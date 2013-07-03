@@ -493,10 +493,10 @@ bb_add_native_direct_xfer(dcontext_t *dcontext, build_bb_t *bb, bool appended)
     ptr_uint_t tgt = (ptr_uint_t) opnd_get_pc(instr_get_target(bb->instr));
     opnd_t tls_slot = opnd_create_sized_tls_slot(os_tls_offset(TLS_XAX_SLOT), OPSZ_4);
     instrlist_meta_append(bb->ilist, INSTR_CREATE_mov_imm
-                          (dcontext, tls_slot, OPND_CREATE_INT32((int)tgt)));
+                          (dcontext, tls_slot, OPND_CREATE_INT32((int)tgt), COND_ALWAYS));
     opnd_set_disp(&tls_slot, opnd_get_disp(tls_slot) + 4);
     instrlist_meta_append(bb->ilist, INSTR_CREATE_mov_imm
-                          (dcontext, tls_slot, OPND_CREATE_INT32((int)(tgt >> 32))));
+                          (dcontext, tls_slot, OPND_CREATE_INT32((int)(tgt >> 32)), COND_ALWAYS));
     if (instr_is_ubr(bb->instr)) {
         instrlist_meta_append(bb->ilist, INSTR_CREATE_branch_ind
                               (dcontext,
@@ -550,7 +550,7 @@ check_for_stopping_point(dcontext_t *dcontext, build_bb_t *bb)
         /* move 0 into xax -- our functions return 0 to indicate success */
         instrlist_append(bb->ilist, /* x64 will zero-extend to rax */
                          INSTR_CREATE_mov_imm(dcontext, opnd_create_reg(REG_EAX),
-                                              OPND_CREATE_INT32(0)));
+                                              OPND_CREATE_INT32(0), COND_ALWAYS));
         /* insert a ret instruction */
         instrlist_append(bb->ilist, INSTR_CREATE_ret(dcontext));
         /* should this be treated as a real return? */
@@ -1413,102 +1413,6 @@ bb_process_fs_ref_opnd(dcontext_t *dcontext, build_bb_t *bb, opnd_t dst,
     return true;
 }
 
-/* While currently only used for Borland SEH exemptions, this analysis could
- * also be helpful for other SEH tasks (xref case 5824). */
-static bool
-bb_process_fs_ref(dcontext_t *dcontext, build_bb_t *bb)
-{
-    ASSERT(DYNAMO_OPTION(process_SEH_push) &&
-           instr_get_prefix_flag(bb->instr, PREFIX_SEG_FS));
-
-    /* If this is the first instruction of a bb for the cache we
-     * want to fully decode it, check if it's pushing an SEH frame
-     * and, if so, pass it to the SEH checking routines (currently
-     * just used for the Borland SEH rct handling).  If this is not
-     * the first instruction of the bb then we want to stop the bb
-     * just before this instruction so that when we do process this
-     * instruction it will be the first in the bb (allowing us to
-     * use the register state). */
-    if (!bb->full_decode) {
-        instr_decode(dcontext, bb->instr);
-        /* is possible this is an invalid instr that made it through the fast
-         * decode, FIXME is there a better way to handle this? */
-        if (!instr_valid(bb->instr)) {
-            ASSERT_NOT_TESTED();
-            if (bb->cur_pc == NULL)
-                bb->cur_pc = bb->instr_start;
-            bb_process_invalid_instr(dcontext, bb);
-            return false; /* stop bb */
-        }
-        ASSERT(instr_get_prefix_flag(bb->instr, PREFIX_SEG_FS));
-    }
-    /* expect to see only simple mov's to fs:[0] for new SEH frames
-     * FIXME - might we see other types we'd want to intercept? 
-     * do we want to proccess pop instructions (usually just for removing
-     * a frame)? */
-    if (instr_get_opcode(bb->instr) == OP_mov_st) {
-        bool is_to_fs0;
-        opnd_t dst = instr_get_dst(bb->instr, 0);
-        if (!bb_process_fs_ref_opnd(dcontext, bb, dst, &is_to_fs0))
-            return false; /* end bb */
-        /* Only process the push if building a new bb for cache, can't check
-         * this any earlier since have to preserve bb building/ending behavior
-         * even when not for cache (for recreation etc.). */
-        if (bb->app_interp) {
-            if (is_to_fs0) {
-                ptr_int_t value = 0;
-                opnd_t src = instr_get_src(bb->instr, 0);
-                if (opnd_is_immed_int(src)) {
-                    value = opnd_get_immed_int(src);
-                } else if (opnd_is_reg(src)) {
-                    value = reg_get_value_priv(opnd_get_reg(src), get_mcontext(dcontext));
-                } else {
-                    ASSERT_NOT_REACHED();
-                }
-                STATS_INC(num_SEH_pushes_processed);
-                LOG(THREAD, LOG_INTERP, 3, "found mov to fs:[0] @ "PFX"\n",
-                    bb->instr_start);
-                bb_process_SEH_push(dcontext, bb, (void *)value);
-            } else {
-                STATS_INC(num_fs_movs_not_SEH);
-            }
-        }
-    }
-# if defined(DEBUG) && defined(INTERNAL)
-    else if (INTERNAL_OPTION(check_for_SEH_push)) {
-        /* Debug build Sanity check that we aren't missing SEH frame pushes */
-        int i;
-        int num_dsts = instr_num_dsts(bb->instr);
-        for (i = 0; i < num_dsts; i++) {
-            bool is_to_fs0;
-            opnd_t dst = instr_get_dst(bb->instr, i);
-            if (!bb_process_fs_ref_opnd(dcontext, bb, dst, &is_to_fs0)) {
-                STATS_INC(num_process_SEH_bb_early_terminate_debug);
-                return false; /* end bb */
-            }
-            /* common case is pop instructions to fs:[0] when popping an
-             * SEH frame stored on tos */
-            if (is_to_fs0) {
-                if (instr_get_opcode(bb->instr) == OP_pop) {
-                    LOG(THREAD, LOG_INTERP, 4,
-                        "found pop to fs:[0] @ "PFX"\n", bb->instr_start);
-                    STATS_INC(num_process_SEH_pop_fs0);
-                } else {
-                    /* an unexpected SEH frame push */
-                    LOG(THREAD, LOG_INTERP, 1,
-                        "found unexpected write to fs:[0] @"PFX"\n",
-                        bb->instr_start);
-                    DOLOG(1, LOG_INTERP, {
-                        loginst(dcontext, 1, bb->instr, "");
-                    }); 
-                    ASSERT_CURIOSITY(!is_to_fs0);
-                }
-            }
-        }
-    }
-# endif
-    return true; /* continue bb */
-}
 #endif /* win32 */
 
 #if defined(LINUX) && !defined(DGC_DIAGNOSTICS)
@@ -3634,7 +3538,7 @@ build_bb_ilist(dcontext_t *dcontext, build_bb_t *bb)
     if (bb->mangle_ilist &&
         (bb->instr == NULL || !instr_opcode_valid(bb->instr) ||
          !instr_is_near_ubr(bb->instr) || !instr_ok_to_mangle(bb->instr))) {
-        instr_t *exit_instr = INSTR_CREATE_branch(dcontext, opnd_create_pc(bb->exit_target));
+        instr_t *exit_instr = INSTR_CREATE_branch(dcontext, opnd_create_pc(bb->exit_target), COND_ALWAYS);
         if (bb->record_translation) {
             app_pc translation = NULL;
             if (bb->instr == NULL || !instr_opcode_valid(bb->instr)) {
@@ -4094,7 +3998,7 @@ build_native_exec_bb(dcontext_t *dcontext, build_bb_t *bb)
         instr_set_ok_to_mangle(in, false);
 
     /* this is a jump for a dummy exit cti */
-    instrlist_append(bb->ilist, INSTR_CREATE_branch(dcontext, opnd_create_pc(bb->start_pc)));
+    instrlist_append(bb->ilist, INSTR_CREATE_branch(dcontext, opnd_create_pc(bb->start_pc, COND_ALWAYS)));
 
     if (DYNAMO_OPTION(shared_bbs))
         bb->flags |= FRAG_SHARED;
@@ -4971,7 +4875,7 @@ insert_increment_stat_counter(dcontext_t *dcontext, instrlist_t *trace, instr_t 
     /* x64: the counter is still 32 bits */
     added_size += tracelist_add(dcontext, trace, next,
                                 INSTR_CREATE_mov_imm(dcontext, opnd_create_reg(REG_ECX),
-                                                    private_branchtype_counter)
+                                                    private_branchtype_counter, COND_ALWAYS)
                                 );
     added_size += tracelist_add(dcontext, trace, next,
                                 INSTR_CREATE_lea(dcontext, opnd_create_reg(REG_ECX),
@@ -4980,7 +4884,7 @@ insert_increment_stat_counter(dcontext_t *dcontext, instrlist_t *trace, instr_t 
     added_size += tracelist_add(dcontext, trace, next,
                                 INSTR_CREATE_mov_reg(dcontext, 
                                                     private_branchtype_counter,
-                                                    opnd_create_reg(REG_ECX)));
+                                                    opnd_create_reg(REG_ECX), COND_ALWAYS));
     return added_size;
 #endif //NO
 }
@@ -4999,13 +4903,13 @@ insert_restore_spilled_xcx(dcontext_t *dcontext, instrlist_t *trace, instr_t *ne
         if (X64_CACHE_MODE_DC(dcontext) && !X64_MODE_DC(dcontext)) {
             added_size += tracelist_add(dcontext, trace, next,
                 INSTR_CREATE_mov_imm(dcontext, opnd_create_reg(REG_RR1),
-                                    opnd_create_reg(REG_RR9)));
+                                    opnd_create_reg(REG_RR9), COND_ALWAYS));
         } else {
             added_size += tracelist_add(dcontext, trace, next,
                 INSTR_CREATE_mov_imm(dcontext,
                                     opnd_create_reg(REG_RR1),
                                     opnd_create_tls_slot
-                                    (os_tls_offset(MANGLE_XCX_SPILL_SLOT))));
+                                    (os_tls_offset(MANGLE_XCX_SPILL_SLOT)), COND_ALWAYS));
         }
     } else {
         /* We need to restore XCX from TLS for shared fragments, but from
@@ -5082,20 +4986,20 @@ mangle_x64_ib_in_trace(dcontext_t *dcontext, instrlist_t *trace,
         added_size += tracelist_add
             (dcontext, trace, targeter, INSTR_CREATE_mov_reg
              (dcontext, opnd_create_tls_slot(os_tls_offset(PREFIX_XAX_SPILL_SLOT)),
-              opnd_create_reg(REG_RR0)));
+              opnd_create_reg(REG_RR0)), COND_ALWAYS);
         added_size += tracelist_add
             (dcontext, trace, targeter, INSTR_CREATE_mov_imm
              (dcontext, opnd_create_reg(REG_RR0),
-              OPND_CREATE_INTPTR((ptr_int_t)next_tag)));
+              OPND_CREATE_INTPTR((ptr_int_t)next_tag)), COND_ALWAYS);
     } else {
         ASSERT(X64_CACHE_MODE_DC(dcontext));
         added_size += tracelist_add
             (dcontext, trace, targeter, INSTR_CREATE_mov_imm
-             (dcontext, opnd_create_reg(REG_RR8), opnd_create_reg(REG_RR0)));
+             (dcontext, opnd_create_reg(REG_RR8), opnd_create_reg(REG_RR0), COND_ALWAYS));
         added_size += tracelist_add
             (dcontext, trace, targeter, INSTR_CREATE_mov_imm
              (dcontext, opnd_create_reg(REG_RR10),
-              OPND_CREATE_INTPTR((ptr_int_t)next_tag)));
+              OPND_CREATE_INTPTR((ptr_int_t)next_tag), COND_ALWAYS));
     }
     /* saving in the trace and restoring in ibl means that
      * -unsafe_ignore_eflags_{trace,ibl} must be equivalent
@@ -5106,7 +5010,7 @@ mangle_x64_ib_in_trace(dcontext_t *dcontext, instrlist_t *trace,
                 (dcontext, trace, targeter, INSTR_CREATE_mov_reg
                  (dcontext, opnd_create_tls_slot
                   (os_tls_offset(INDIRECT_STUB_SPILL_SLOT)),
-                  opnd_create_reg(REG_RR0)));
+                  opnd_create_reg(REG_RR0), COND_ALWAYS));
         }
         /* FIXME: share w/ insert_save_eflags() */
         added_size += tracelist_add
@@ -5444,11 +5348,11 @@ mangle_indirect_branch_in_trace(dcontext_t *dcontext, instrlist_t *trace,
             added_size += tracelist_add
                 (dcontext, trace, next, INSTR_CREATE_mov_imm
                  (dcontext, opnd_create_reg(REG_RR0),
-                  opnd_create_tls_slot(os_tls_offset(PREFIX_XAX_SPILL_SLOT))));
+                  opnd_create_tls_slot(os_tls_offset(PREFIX_XAX_SPILL_SLOT)), COND_ALWAYS));
         } else {
             added_size += tracelist_add
                 (dcontext, trace, next, INSTR_CREATE_mov_imm
-                 (dcontext, opnd_create_reg(REG_RR0), opnd_create_reg(REG_RR8)));
+                 (dcontext, opnd_create_reg(REG_RR0), opnd_create_reg(REG_RR8), COND_ALWAYS));
         }
     }
 #endif
@@ -5758,7 +5662,7 @@ append_trace_speculate_last_ibl(dcontext_t *dcontext, instrlist_t *trace,
                 tracelist_add(dcontext, trace, where, 
                               INSTR_CREATE_mov_reg(dcontext,
                                                   opnd_create_tls_slot(tls_stat_scratch_slot),
-                                                  opnd_create_reg(REG_RR1)));
+                                                  opnd_create_reg(REG_RR1), COND_ALWAYS));
             added_size += 
                 insert_increment_stat_counter(dcontext, trace, where, 
                                               &get_ibl_per_type_statistics(dcontext, 
@@ -5768,7 +5672,7 @@ append_trace_speculate_last_ibl(dcontext_t *dcontext, instrlist_t *trace,
                 tracelist_add(dcontext, trace, where, 
                               INSTR_CREATE_mov_imm(dcontext,
                                                   opnd_create_reg(REG_RR1),
-                                                  opnd_create_tls_slot(tls_stat_scratch_slot)));
+                                                  opnd_create_tls_slot(tls_stat_scratch_slot), COND_ALWAYS));
         }
     });
 #endif
@@ -5812,7 +5716,7 @@ append_trace_speculate_last_ibl(dcontext_t *dcontext, instrlist_t *trace,
                 tracelist_add(dcontext, trace, next, 
                               INSTR_CREATE_mov_imm(dcontext,
                                                   opnd_create_reg(REG_RR1),
-                                                  opnd_create_tls_slot(tls_stat_scratch_slot)));
+                                                  opnd_create_tls_slot(tls_stat_scratch_slot), COND_ALWAYS));
         }
     });        
 #endif
@@ -5854,7 +5758,7 @@ append_trace_speculate_last_ibl(dcontext_t *dcontext, instrlist_t *trace,
 
     /* add a new direct exit stub */
     added_size += tracelist_add(dcontext, trace, next, 
-                                INSTR_CREATE_branch(dcontext, opnd_create_pc(speculate_next_tag)));
+                                INSTR_CREATE_branch(dcontext, opnd_create_pc(speculate_next_tag), COND_ALWAYS));
     LOG(THREAD, LOG_INTERP, 3,
         "append_trace_speculate_last_ibl: added cmp vs. "PFX" for ind br\n",
         speculate_next_tag);
@@ -5904,7 +5808,7 @@ append_ib_trace_last_ibl_exit_stat(dcontext_t *dcontext, instrlist_t *trace,
     added_size += tracelist_add(dcontext, trace, where, 
                                 INSTR_CREATE_mov_reg(dcontext,
                                                     opnd_create_tls_slot(tls_stat_scratch_slot),
-                                                    opnd_create_reg(REG_RR1)));
+                                                    opnd_create_reg(REG_RR1), COND_ALWAYS));
     added_size += 
         insert_increment_stat_counter(dcontext, trace, where, 
                                       &get_ibl_per_type_statistics(dcontext, ibl_type.branch_type)
@@ -5912,7 +5816,7 @@ append_ib_trace_last_ibl_exit_stat(dcontext_t *dcontext, instrlist_t *trace,
     added_size += tracelist_add(dcontext, trace, where, 
                                 INSTR_CREATE_mov_imm(dcontext,
                                                     opnd_create_reg(REG_RR1),
-                                                    opnd_create_tls_slot(tls_stat_scratch_slot)));
+                                                    opnd_create_tls_slot(tls_stat_scratch_slot), COND_ALWAYS));
 
     if (speculate_next_tag != NULL) {
         instr_t *next = instr_get_next(inst);
@@ -5942,7 +5846,7 @@ append_ib_trace_last_ibl_exit_stat(dcontext_t *dcontext, instrlist_t *trace,
         added_size += tracelist_add(dcontext, trace, next, 
                                 INSTR_CREATE_mov_imm(dcontext,
                                                     opnd_create_reg(REG_ECX),
-                                                    opnd_create_tls_slot(tls_stat_scratch_slot)));
+                                                    opnd_create_tls_slot(tls_stat_scratch_slot), COND_ALWAYS));
         /* jmp where */
         added_size += tracelist_add(dcontext, trace, next, 
                                     INSTR_CREATE_branch_short(dcontext, opnd_create_instr(where)));
@@ -6067,7 +5971,7 @@ static instr_t *
 create_exit_jmp(dcontext_t *dcontext, app_pc target, app_pc translation,
                 uint branch_type)
 {
-    instr_t *jmp = INSTR_CREATE_branch(dcontext, opnd_create_pc(target));
+    instr_t *jmp = INSTR_CREATE_branch(dcontext, opnd_create_pc(target), COND_ALWAYS);
     instr_set_translation(jmp, translation);
     if (branch_type == 0)
         instr_exit_branch_set_type(jmp, instr_branch_type(jmp));
@@ -6580,7 +6484,7 @@ decode_fragment(dcontext_t *dcontext, fragment_t *f, byte *buf, /*IN/OUT*/uint *
                     if (stop) {
                         /* Add the ubr ourselves */
                         ASSERT(cti == NULL);
-                        cti = INSTR_CREATE_branch(dcontext, opnd_create_pc(pc));
+                        cti = INSTR_CREATE_branch(dcontext, opnd_create_pc(pc), COND_ALWAYS);
                         /* It's up to the caller to decide whether to mark this
                          * as do-not-emit or not */
                         /* Process as an exit cti */

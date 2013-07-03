@@ -493,10 +493,8 @@ read_instruction(byte *pc, byte *orig_pc,
                  const instr_info_t **ret_info, decode_info_t *di,
                  bool just_opcode _IF_DEBUG(bool report_invalid))
 {
-#ifdef NO
-//TODO SJF
     DEBUG_DECLARE(byte *post_suffix_pc = NULL;)
-    byte instr_byte;
+    byte instr_byte, temp, instr_type;
     const instr_info_t *info;
     bool vex_noprefix = false;
 
@@ -511,309 +509,23 @@ read_instruction(byte *pc, byte *orig_pc,
     di->orig_pc = orig_pc;
     di->size_immed = OPSZ_NA;
     di->size_immed2 = OPSZ_NA;
-    di->seg_override = REG_NULL;
-    di->data_prefix = false;
-    di->rep_prefix = false;
-    di->repne_prefix = false;
-    di->vex_encoded = false;
     /* FIXME: set data and addr sizes to current mode
      * for now I assume always 32-bit mode (or 64 for X64_MODE(di))!
      */
-    di->prefixes = 0;
     
     do {
         instr_byte = *pc;
         pc++;
-        info = &first_byte[instr_byte];
-        if (info->type == X64_EXT) {
-            /* discard old info, get new one */
-            info = &x64_extensions[info->code][X64_MODE(di) ? 1 : 0];
-        } else if (info->type == VEX_PREFIX_EXT) {
-            bool is_vex = false;
-            pc = read_vex(pc, di, instr_byte, &info, &is_vex);
-            /* if read_vex changes info, leave this loop */
-            if (info->type != VEX_PREFIX_EXT)
-                break;
-            else {
-                if (is_vex)
-                    vex_noprefix = true; /* staying in loop, but ensure no prefixes */
-                continue;
-            }
-        }
-        if (info->type == PREFIX) {
-            if (vex_noprefix) {
-                /* VEX prefix must be last */
-                info = &invalid_instr;
-                break;
-            }
-            if (TESTANY(PREFIX_REX_ALL, di->prefixes)) {
-                /* rex.* must come after all other prefixes (including those that are
-                 * part of the opcode, xref PR 271878): so discard them if before
-                 * matching the behavior of decode_sizeof().  This in effect nops
-                 * improperly placed rex prefixes which (xref PR 241563 and Intel Manual
-                 * 2A 2.2.1) is the correct thing to do. NOTE - windbg shows early bytes
-                 * as ??, objdump as their prefix names, separate from the next instr.
-                 */
-                di->prefixes &= ~PREFIX_REX_ALL;
-            }
-            if (info->code == PREFIX_REP) {
-                /* see if used as part of opcode before considering prefix */
-                di->rep_prefix = true;
-            } else if (info->code == PREFIX_REPNE) {
-                /* see if used as part of opcode before considering prefix */
-                di->repne_prefix = true;
-            } else if (REG_START_SEGMENT <= info->code &&
-                       info->code <= REG_STOP_SEGMENT) {
-                CLIENT_ASSERT_TRUNCATE(di->seg_override, byte, info->code,
-                                       "decode error: invalid segment override");
-                di->seg_override = (byte) info->code;
-            } else if (info->code == PREFIX_DATA) {
-                /* see if used as part of opcode before considering prefix */
-                di->data_prefix = true;
-            } else if (TESTANY(PREFIX_REX_ALL | PREFIX_ADDR | PREFIX_LOCK,
-                               info->code)) {
-                di->prefixes |= info->code;
-            }
-        } else
-            break;
-    } while (true);
-
-    if (info->type == ESCAPE) {
-        /* discard first byte, move to second */
-        instr_byte = *pc;
-        pc++;
-        info = &second_byte[instr_byte];
-    }
-    if (info->type == ESCAPE_3BYTE_38 ||
-        info->type == ESCAPE_3BYTE_3a) {
-        /* discard second byte, move to third */
-        instr_byte = *pc;
-        pc++;
-        if (info->type == ESCAPE_3BYTE_38)
-            info = &third_byte_38[third_byte_38_index[instr_byte]];
-        else
-            info = &third_byte_3a[third_byte_3a_index[instr_byte]];
-    }
-
-    if (info->type == FLOAT_EXT) {
-        if (di->modrm <= 0xbf) {
-            int offs = (instr_byte - 0xd8) * 8 + di->reg;
-            info = &float_low_modrm[offs];
-        } else {
-            int offs1 = (instr_byte - 0xd8);
-            int offs2 = di->modrm - 0xc0;
-            info = &float_high_modrm[offs1][offs2];
-        }
-    }
-    else if (info->type == REP_EXT) {
-        /* discard old info, get new one */
-        int code = (int) info->code;
-        int idx = (di->rep_prefix ? 2 : 0);
-        info = &rep_extensions[code][idx];
-        if (di->rep_prefix)
-            di->rep_prefix = false;
-    }
-    else if (info->type == REPNE_EXT) {
-        /* discard old info, get new one */
-        int code = (int) info->code;
-        int idx = (di->rep_prefix? 2 : (di->repne_prefix? 4 :0));
-        info = &repne_extensions[code][idx];
-        di->rep_prefix = false;
-        di->repne_prefix = false;
-    }
-    else if (info->type == EXTENSION) {
-        /* discard old info, get new one */
-        info = &extensions[info->code][di->reg];
-        /* absurd cases of using prefix on top of reg opcode extension
-         * (pslldq, psrldq) => PREFIX_EXT can happen after here,
-         * and MOD_EXT after that
-         */
-    }
-    else if (info->type == SUFFIX_EXT) {
-        /* Discard old info, get new one for complete opcode, which includes
-         * a suffix byte where an immed would be (yes, ugly!).
-         * We should have already read in the modrm (+ sib).
-         */
-        CLIENT_ASSERT(TEST(HAS_MODRM, info->flags), "decode error on 3DNow instr");
-        info = &suffix_extensions[suffix_index[*pc]];
-        pc++;
-        DEBUG_DECLARE(post_suffix_pc = pc;)
-    }
-    else if (info->type == VEX_L_EXT) {
-        /* discard old info, get new one */
-        int code = (int) info->code;
-        int idx = (di->vex_encoded) ?
-            (TEST(PREFIX_VEX_L, di->prefixes) ? 2 : 1) : 0;
-        info = &vex_L_extensions[code][idx];
-    }
-    else if (info->type == VEX_W_EXT) {
-        /* discard old info, get new one */
-        int code = (int) info->code;
-        int idx = (TEST(PREFIX_REX_W, di->prefixes) ? 1 : 0);
-        info = &vex_W_extensions[code][idx];
-    }
-
-    /* can occur AFTER above checks (EXTENSION, in particular */
-    if (info->type == PREFIX_EXT) {
-        /* discard old info, get new one */
-        int code = (int) info->code;
-        int idx = (di->rep_prefix?1 :(di->data_prefix?2 :(di->repne_prefix?3 :0)));
-        if (di->vex_encoded)
-            idx += 4;
-        info = &prefix_extensions[code][idx];
-        if (info->type == INVALID && !DYNAMO_OPTION(decode_strict)) {
-            /* i#1118: some of these seem to not be invalid with
-             * prefixes that land in blank slots in the decode tables.
-             * Though it seems to only be btc, bsf, and bsr (the SSE*
-             * instrs really do seem invalid when given unlisted prefixes),
-             * we'd rather err on the side of treating as valid, which is
-             * after all what gdb and dumpbin list.  Even if these
-             * fault when executed, we know the length, so there's no
-             * downside to listing as valid, for DR anyway.
-             * Users of drdecodelib may want to be more aggressive: hence the
-             * -decode_strict option.
-             */
-            /* Take the base entry w/o prefixes and keep the prefixes */
-            info = &prefix_extensions[code][0 + (di->vex_encoded ? 4 : 0)];
-        } else if (di->rep_prefix)
-            di->rep_prefix = false;
-        else if (di->repne_prefix)
-            di->repne_prefix = false;
-        if (di->data_prefix &&
-            /* Don't remove it if the entry doesn't list 0x66:
-             * e.g., OP_bsr (i#1118).
-             */
-            (info->opcode >> 24) == PREFIX_DATA)
-            di->data_prefix = false;
-        if (info->type == REX_EXT) {
-            /* discard old info, get new one */
-            int code = (int) info->code;
-            /* currently indexed by rex.b only */
-            int idx = (TEST(PREFIX_REX_B, di->prefixes) ? 1 : 0);
-            info = &rex_extensions[code][idx];
-        }
-    }
-    else if (info->type == VEX_EXT) {
-        /* discard old info, get new one */
-        int code = (int) info->code;
-        int idx = (di->vex_encoded ? 1 : 0);
-        info = &vex_extensions[code][idx];
-    }
-
-    /* can occur AFTER above checks (PREFIX_EXT, in particular) */
-    if (info->type == MOD_EXT) {
-        info = &mod_extensions[info->code][(di->mod==3) ? 1 : 0];
-        /* Yes, we have yet another layer, thanks to Intel's poor choice
-         * in opcodes -- why didn't they fill out the PREFIX_EXT space?
-         */
-        if (info->type == RM_EXT) {
-            info = &rm_extensions[info->code][di->rm];
-        }
-    }
-    else if (info->type == VEX_L_EXT) {
-        /* discard old info, get new one */
-        int code = (int) info->code;
-        int idx = (di->vex_encoded) ?
-            (TEST(PREFIX_VEX_L, di->prefixes) ? 2 : 1) : 0;
-        info = &vex_L_extensions[code][idx];
-    }
-
-    if (TEST(REQUIRES_PREFIX, info->flags)) {
-        byte required = (byte)(info->opcode >> 24);
-        bool *prefix_var = NULL;
-        CLIENT_ASSERT(info->opcode > 0xffffff, "decode error in SSSE3/SSE4 instr");
-        if (required == DATA_PREFIX_OPCODE)
-            prefix_var = &di->data_prefix;
-        else if (required == REPNE_PREFIX_OPCODE)
-            prefix_var = &di->repne_prefix;
-        else if (required == REP_PREFIX_OPCODE)
-            prefix_var = &di->rep_prefix;
-        else
-            CLIENT_ASSERT(false, "internal required-prefix error");
-        if (prefix_var == NULL || !*prefix_var) {
-            /* Invalid instr.  TODO: have processor w/ SSE4, confirm that
-             * an exception really is raised.
-             */
-            info = NULL;
-        } else
-            *prefix_var = false;
-    }
-
-    /* we go through regular tables for vex but only some are valid w/ vex */
-    if (info != NULL && di->vex_encoded && !TEST(REQUIRES_VEX, info->flags))
-        info = NULL; /* invalid encoding */
-    else if (info != NULL && !di->vex_encoded && TEST(REQUIRES_VEX, info->flags))
-        info = NULL; /* invalid encoding */
-    /* XXX: not currently marking these cases as invalid instructions:
-     * - if no TYPE_H:
-     *   "Note: In VEX-encoded versions, VEX.vvvv is reserved and must be 1111b otherwise
-     *   instructions will #UD."
-     * - "an attempt to execute VTESTPS with VEX.W=1 will cause #UD."
-     * and similar for VEX.W.
-     */
-
-    /* at this point should be an instruction, so type should be an OP_ constant */
-    if (info == NULL || info == &invalid_instr ||
-        info->type < OP_FIRST || info->type > OP_LAST ||
-        (X64_MODE(di) && TEST(X64_INVALID, info->flags)) ||
-        (!X64_MODE(di) && TEST(X86_INVALID, info->flags))) {
-        /* invalid instruction: up to caller to decide what to do with it */
-        /* FIXME case 10672: provide a runtime option to specify new
-         * instruction formats */
-        DODEBUG({
-            /* don't report when decoding DR addresses, as we sometimes try to
-             * decode backward (e.g., interrupted_inlined_syscall(): PR 605161)
-             * XXX: better to pass in a flag when decoding that we are
-             * being speculative!
-             */
-            if (report_invalid && !is_dynamo_address(di->start_pc)) {
-                SYSLOG_INTERNAL_WARNING_ONCE("Invalid opcode encountered");
-                if (info != NULL && info->type == INVALID) {
-                    LOG(THREAD_GET, LOG_ALL, 1, "Invalid opcode @"PFX": 0x%x\n",
-                        di->start_pc, info->opcode);
-                } else {
-                    int i;
-                    dcontext_t *dcontext = get_thread_private_dcontext();
-                    IF_X64(bool old_mode = set_x86_mode(dcontext, di->x86_mode);)
-                    int sz = decode_sizeof(dcontext, di->start_pc, NULL _IF_X64(NULL));
-                    IF_X64(set_x86_mode(dcontext, old_mode));
-                    LOG(THREAD_GET, LOG_ALL, 1, "Error decoding "PFX" == ", di->start_pc);
-                    for (i=0; i<sz; i++) {
-                        LOG(THREAD_GET, LOG_ALL, 1, "0x%x ", *(di->start_pc+i));
-                    }
-                    LOG(THREAD_GET, LOG_ALL, 1, "\n");
-                }
-            }
-        });
-        *ret_info = &invalid_instr;
-        return NULL;
-    }
+        temp = (instr_byte << 4);  
+        temp = (temp >> 5);
+        instr_type = instr_byte;
         
-#ifdef INTERNAL
-    DODEBUG({ /* rep & repne should have been completely handled by now */
-        /* processor will typically ignore extra prefixes, but we log this internally
-         * in case it's our decode messing up instead of weird app instrs
-         */
-        if (report_invalid &&
-            ((di->rep_prefix &&
-              /* case 6861: AMD64 opt: "rep ret" used if br tgt or after cbr */
-              (pc != di->start_pc+2 || *(di->start_pc+1) != RAW_OPCODE_ret))
-             || di->repne_prefix)) {
-            char bytes[17*3];
-            int i;
-            dcontext_t *dcontext = get_thread_private_dcontext();
-            IF_X64(bool old_mode = set_x86_mode(dcontext, di->x86_mode);)
-            int sz = decode_sizeof(dcontext, di->start_pc, NULL _IF_X64(NULL));
-            IF_X64(set_x86_mode(dcontext, old_mode));
-            CLIENT_ASSERT(sz <= 17, "decode rep/repne error: unsupported opcode?");
-            for (i=0; i<sz; i++)
-                snprintf(&bytes[i*3], 3, "%02x ", *(di->start_pc+i));
-            bytes[sz*3-1] = '\0'; /* -1 to kill trailing space */
-            SYSLOG_INTERNAL_WARNING_ONCE("spurious rep/repne prefix @"PFX" (%s): ",
-                                         di->start_pc, bytes);
+        switch( instr_type )
+        {
         }
-    });
-#endif
+
+
+    } while (true);
 
     /* if just want opcode, stop here!  faster for caller to
      * separately call decode_next_pc than for us to decode immeds!  
@@ -823,45 +535,11 @@ read_instruction(byte *pc, byte *orig_pc,
         return NULL;
     }
 
-    if (di->data_prefix) {
-        /* prefix was not part of opcode, it's a real prefix */
-        /* From Intel manual:
-         *   "For non-byte operations: if a 66H prefix is used with
-         *   prefix (REX.W = 1), 66H is ignored."
-         * That means non-byte-specific operations, for which 66H is
-         * ignored as well, right?
-         * Xref PR 593593.
-         * Note that this means we could assert or remove some of
-         * the "rex.w trumps data prefix" logic elsewhere in this file.
-         */
-        if (TEST(PREFIX_REX_W, di->prefixes)) {
-            LOG(THREAD_GET, LOG_ALL, 3,
-                "Ignoring 0x66 in presence of rex.w @"PFX"\n", di->start_pc);
-        } else {
-            di->prefixes |= PREFIX_DATA;
-        }
-    }
-    
-    /* read any trailing immediate bytes */
-    if (info->dst1_type != TYPE_NONE)
-        pc = read_operand(pc, di, info->dst1_type, info->dst1_size);
-    if (info->dst2_type != TYPE_NONE)
-        pc = read_operand(pc, di, info->dst2_type, info->dst2_size);
-    if (info->src1_type != TYPE_NONE)
-        pc = read_operand(pc, di, info->src1_type, info->src1_size);
-    if (info->src2_type != TYPE_NONE)
-        pc = read_operand(pc, di, info->src2_type, info->src2_size);
-    if (info->src3_type != TYPE_NONE)
-        pc = read_operand(pc, di, info->src3_type, info->src3_size);
-
-    if (info->type == SUFFIX_EXT) {
-        /* Shouldn't be any more bytes (immed bytes) read after the modrm+suffix! */
-        DODEBUG({CLIENT_ASSERT(pc == post_suffix_pc, "decode error on 3DNow instr");});
-    }
+    /************* Decode operands **************/
 
     /* return values */
     *ret_info = info;
-#endif //NO
+
     return pc;
 }
 
@@ -1332,10 +1010,9 @@ check_is_variable_size(opnd_t op)
 #endif
 
 /* Decodes the instruction at address pc into instr, filling in the
- * instruction's opcode, eflags usage, prefixes, and operands.
+ * instruction's opcode, cpsr usage, and operands.
  * This corresponds to a Level 3 decoding.
- * Assumes that instr is already initialized, but uses the x86/x64 mode
- * for the current thread rather than that set in instr.
+ * Assumes that instr is already initialized
  * If caller is re-using same instr struct over multiple decodings,
  * should call instr_reset or instr_reuse.
  * Returns the address of the next byte after the decoded instruction.
@@ -1344,8 +1021,6 @@ check_is_variable_size(opnd_t op)
 static byte *
 decode_common(dcontext_t *dcontext, byte *pc, byte *orig_pc, instr_t *instr)
 {
-#ifdef NO
-//TODO SJF
     const instr_info_t *info;
     decode_info_t di;
     byte *next_pc;
@@ -1356,7 +1031,6 @@ decode_common(dcontext_t *dcontext, byte *pc, byte *orig_pc, instr_t *instr)
     CLIENT_ASSERT(instr->opcode == OP_INVALID || instr->opcode == OP_UNDECODED,
                   "decode: instr is already decoded, may need to call instr_reset()");
 
-    IF_X64(di.x86_mode = get_x86_mode(dcontext));
     next_pc = read_instruction(pc, orig_pc, &info, &di, false /* not just opcode,
                                                                  decode operands too */
                                _IF_DEBUG(!TEST(INSTR_IGNORE_INVALID, instr->flags)));
@@ -1375,60 +1049,7 @@ decode_common(dcontext_t *dcontext, byte *pc, byte *orig_pc, instr_t *instr)
                                   "internal truncation error"));
     di.len = (int) (next_pc - pc);
 
-    instr->prefixes |= di.prefixes;
-
-    /* operands */
-    do {
-        if (info->dst1_type != TYPE_NONE) {
-            if (!decode_operand(&di, info->dst1_type, info->dst1_size,
-                                &(dsts[instr_num_dsts++])))
-                goto decode_invalid;
-            ASSERT(check_is_variable_size(dsts[instr_num_dsts-1]));
-        }
-        if (info->dst2_type != TYPE_NONE) {
-            if (!decode_operand(&di, info->dst2_type, info->dst2_size,
-                                &(dsts[instr_num_dsts++])))
-                goto decode_invalid;
-            ASSERT(check_is_variable_size(dsts[instr_num_dsts-1]));
-        }
-        if (info->src1_type != TYPE_NONE) {
-            if (!decode_operand(&di, info->src1_type, info->src1_size,
-                                &(srcs[instr_num_srcs++])))
-                goto decode_invalid;
-            ASSERT(check_is_variable_size(srcs[instr_num_srcs-1]));
-        }
-        if (info->src2_type != TYPE_NONE) {
-            if (!decode_operand(&di, info->src2_type, info->src2_size,
-                                &(srcs[instr_num_srcs++])))
-                goto decode_invalid;
-            ASSERT(check_is_variable_size(srcs[instr_num_srcs-1]));
-        }
-        if (info->src3_type != TYPE_NONE) {
-            if (!decode_operand(&di, info->src3_type, info->src3_size,
-                                &(srcs[instr_num_srcs++])))
-                goto decode_invalid;
-            ASSERT(check_is_variable_size(srcs[instr_num_srcs-1]));
-        }
-        /* extra operands:
-         * we take advantage of the fact that all instructions that need extra
-         * operands have only one encoding, so the code field points to instr_info_t
-         * structures containing the extra operands
-         */
-        if ((info->flags & HAS_EXTRA_OPERANDS) != 0) {
-            if ((info->flags & EXTRAS_IN_CODE_FIELD) != 0)
-                info = (const instr_info_t *)(info->code);
-            else /* extra operands are in next entry */
-                info = info + 1;
-        } else
-            break;
-    } while (true);
-
-    /* some operands add to di.prefixes so we copy again */
-    instr->prefixes |= di.prefixes;
-    if (di.seg_override == SEG_FS)
-        instr->prefixes |= PREFIX_SEG_FS;
-    if (di.seg_override == SEG_GS)
-        instr->prefixes |= PREFIX_SEG_GS;
+    /*************** Decode operands *****************/
 
     /* now copy operands into their real slots */
     instr_set_num_opnds(dcontext, instr, instr_num_dsts, instr_num_srcs);
@@ -1443,28 +1064,6 @@ decode_common(dcontext_t *dcontext, byte *pc, byte *orig_pc, instr_t *instr)
         }
     }
 
-    /* check for invalid prefixes that depend on operand types */
-    if (TEST(PREFIX_LOCK, di.prefixes)) {
-        /* check for invalid opcode, list on p3-397 of IA-32 vol 2 */
-        switch (instr_get_opcode(instr)) {
-	/* SJF TODO Removed instruction from here. Readd if necessary */
-        case OP_add: case OP_adc: case OP_and: 
-        {
-            /* still illegal unless dest is mem op rather than src */
-            CLIENT_ASSERT(instr->num_dsts > 0, "internal lock prefix check error");
-            if (!opnd_is_memory_reference(instr->dsts[0])) {
-                LOG(THREAD, LOG_INTERP, 3, "decode: invalid lock prefix at "PFX"\n", pc);
-                goto decode_invalid;
-            }
-            break;
-        }
-        default: {
-            LOG(THREAD, LOG_INTERP, 3, "decode: invalid lock prefix at "PFX"\n", pc);
-            goto decode_invalid;
-        }
-        }
-    }
-
     if (orig_pc != pc) {
         /* We do not want to copy when encoding and condone an invalid
          * relative target
@@ -1475,17 +1074,7 @@ decode_common(dcontext_t *dcontext, byte *pc, byte *orig_pc, instr_t *instr)
         /* we set raw bits AFTER setting all srcs and dsts b/c setting
          * a src or dst marks instr as having invalid raw bits
          */
-        IF_X64(ASSERT(CHECK_TRUNCATE_TYPE_uint(next_pc - pc)));
         instr_set_raw_bits(instr, pc, (uint)(next_pc - pc));
-#ifdef X64
-        if (X64_MODE(&di) && TEST(HAS_MODRM, info->flags) && di.mod == 0 && di.rm == 5) {
-            CLIENT_ASSERT(di.disp_abs > di.start_pc, "decode: internal rip-rel error");
-            CLIENT_ASSERT(CHECK_TRUNCATE_TYPE_int(di.disp_abs - di.start_pc),
-                          "decode: internal rip-rel error");
-            /* must do this AFTER setting raw bits to avoid being invalidated */
-            instr_set_rip_rel_pos(instr, (int) (di.disp_abs - di.start_pc));
-        }
-#endif
     }
 
     return next_pc;
@@ -1493,7 +1082,7 @@ decode_common(dcontext_t *dcontext, byte *pc, byte *orig_pc, instr_t *instr)
  decode_invalid:
     instr_set_operands_valid(instr, false);
     instr_set_opcode(instr, OP_INVALID);
-#endif //NO
+
     return NULL;
 }
 

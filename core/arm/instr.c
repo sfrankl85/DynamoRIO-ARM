@@ -2075,6 +2075,19 @@ instr_being_modified(instr_t *instr, bool raw_bits_valid)
 }
 
 void
+instr_set_cond(instr_t *instr, int cond)
+{
+    instr->cond = cond;
+
+    /* if we're modifying opcode, don't use original bits to encode! */
+    instr_being_modified(instr, false/*raw bits invalid*/);
+
+    CLIENT_ASSERT((cond != COND_INVALID) ||
+                  !instr_operands_valid(instr),
+                  "instr_set_cond: cond validity mismatch");
+}
+
+void
 instr_set_opcode(instr_t *instr, int opcode)
 {
     instr->opcode = opcode;
@@ -2100,7 +2113,7 @@ instr_set_instr_type(instr_t *instr, int instr_type)
      */
     CLIENT_ASSERT((instr_type != OP_INVALID && instr_type != OP_UNDECODED) ||
                   !instr_operands_valid(instr),
-                  "instr_set_opcode: operand-opcode validity mismatch");
+                  "instr_set_instr_type: operand-instr_type validity mismatch");
 }
 
 /* Returns true iff instr's opcode is NOT OP_INVALID.
@@ -4073,86 +4086,94 @@ reg_is_fp(reg_id_t reg)
  */
 
 instr_t * 
-instr_create_0dst_0src(dcontext_t *dcontext, int opcode)
+instr_create_0dst_0src(dcontext_t *dcontext, int opcode, int cond)
 {
     instr_t *in = instr_build(dcontext, opcode, 0, 0);
+    instr_set_cond(in, cond);
     return in;
 }
 
 instr_t * 
-instr_create_0dst_1src(dcontext_t *dcontext, int opcode, opnd_t src)
+instr_create_0dst_1src(dcontext_t *dcontext, int opcode, opnd_t src, int cond)
 {
     instr_t *in = instr_build(dcontext, opcode, 0, 1);
     instr_set_src(in, 0, src);
+    instr_set_cond(in, cond);
     return in;
 }
 
 instr_t * 
 instr_create_0dst_2src(dcontext_t *dcontext, int opcode,
-                       opnd_t src1, opnd_t src2)
+                       opnd_t src1, opnd_t src2, int cond)
 {
     instr_t *in = instr_build(dcontext, opcode, 0, 2);
     instr_set_src(in, 0, src1);
     instr_set_src(in, 1, src2);
+    instr_set_cond(in, cond);
     return in;
 }
 
 instr_t * 
 instr_create_0dst_3src(dcontext_t *dcontext, int opcode,
-                       opnd_t src1, opnd_t src2, opnd_t src3)
+                       opnd_t src1, opnd_t src2, opnd_t src3, int cond)
 {
     instr_t *in = instr_build(dcontext, opcode, 0, 3);
     instr_set_src(in, 0, src1);
     instr_set_src(in, 1, src2);
     instr_set_src(in, 2, src3);
+    instr_set_cond(in, cond);
     return in;
 }
 
 instr_t * 
-instr_create_1dst_0src(dcontext_t *dcontext, int opcode, opnd_t dst)
+instr_create_1dst_0src(dcontext_t *dcontext, int opcode, opnd_t dst, int cond)
 {
     instr_t *in = instr_build(dcontext, opcode, 1, 0);
     instr_set_dst(in, 0, dst);
+    instr_set_cond(in, cond);
     return in;
 }
 
 instr_t * 
 instr_create_1dst_1src(dcontext_t *dcontext, int opcode,
-                       opnd_t dst, opnd_t src)
+                       opnd_t dst, opnd_t src, int cond)
 {
     instr_t *in = instr_build(dcontext, opcode, 1, 1);
     instr_set_dst(in, 0, dst);
     instr_set_src(in, 0, src);
+    instr_set_cond(in, cond);
     return in;
 }
 
 instr_t * 
 instr_create_1dst_2src(dcontext_t *dcontext, int opcode,
-                       opnd_t dst, opnd_t src1, opnd_t src2)
+                       opnd_t dst, opnd_t src1, opnd_t src2, int cond)
 {
     instr_t *in = instr_build(dcontext, opcode, 1, 2);
     instr_set_dst(in, 0, dst);
     instr_set_src(in, 0, src1);
     instr_set_src(in, 1, src2);
+    instr_set_cond(in, cond);
     return in;
 }
 
 instr_t * 
 instr_create_1dst_3src(dcontext_t *dcontext, int opcode,
-                       opnd_t dst, opnd_t src1, opnd_t src2, opnd_t src3)
+                       opnd_t dst, opnd_t src1, opnd_t src2, opnd_t src3, int cond)
 {
     instr_t *in = instr_build(dcontext, opcode, 1, 3);
     instr_set_dst(in, 0, dst);
     instr_set_src(in, 0, src1);
     instr_set_src(in, 1, src2);
     instr_set_src(in, 2, src3);
+    instr_set_cond(in, cond);
     return in;
 }
 
 instr_t * 
 instr_create_1dst_5src(dcontext_t *dcontext, int opcode,
                        opnd_t dst, opnd_t src1, opnd_t src2, opnd_t src3,
-                       opnd_t src4, opnd_t src5)
+                       opnd_t src4, opnd_t src5, int cond)
 {
     instr_t *in = instr_build(dcontext, opcode, 1, 5);
     instr_set_dst(in, 0, dst);
@@ -4161,45 +4182,49 @@ instr_create_1dst_5src(dcontext_t *dcontext, int opcode,
     instr_set_src(in, 2, src3);
     instr_set_src(in, 3, src4);
     instr_set_src(in, 4, src5);
+    instr_set_cond(in, cond);
     return in;
 }
 
 instr_t * 
 instr_create_2dst_0src(dcontext_t *dcontext, int opcode,
-                       opnd_t dst1, opnd_t dst2)
+                       opnd_t dst1, opnd_t dst2, int cond)
 {
     instr_t *in = instr_build(dcontext, opcode, 2, 0);
     instr_set_dst(in, 0, dst1);
     instr_set_dst(in, 1, dst2);
+    instr_set_cond(in, cond);
     return in;
 }
 
 instr_t * 
 instr_create_2dst_1src(dcontext_t *dcontext, int opcode,
-                       opnd_t dst1, opnd_t dst2, opnd_t src)
+                       opnd_t dst1, opnd_t dst2, opnd_t src, int cond)
 {
     instr_t *in = instr_build(dcontext, opcode, 2, 1);
     instr_set_dst(in, 0, dst1);
     instr_set_dst(in, 1, dst2);
     instr_set_src(in, 0, src);
+    instr_set_cond(in, cond);
     return in;
 }
 
 instr_t * 
 instr_create_2dst_2src(dcontext_t *dcontext, int opcode,
-                       opnd_t dst1, opnd_t dst2, opnd_t src1, opnd_t src2)
+                       opnd_t dst1, opnd_t dst2, opnd_t src1, opnd_t src2, int cond)
 {
     instr_t *in = instr_build(dcontext, opcode, 2, 2);
     instr_set_dst(in, 0, dst1);
     instr_set_dst(in, 1, dst2);
     instr_set_src(in, 0, src1);
     instr_set_src(in, 1, src2);
+    instr_set_cond(in, cond);
     return in;
 }
 
 instr_t * 
 instr_create_2dst_3src(dcontext_t *dcontext, int opcode,
-                       opnd_t dst1, opnd_t dst2, opnd_t src1, opnd_t src2, opnd_t src3)
+                       opnd_t dst1, opnd_t dst2, opnd_t src1, opnd_t src2, opnd_t src3, int cond)
 {
     instr_t *in = instr_build(dcontext, opcode, 2, 3);
     instr_set_dst(in, 0, dst1);
@@ -4207,13 +4232,14 @@ instr_create_2dst_3src(dcontext_t *dcontext, int opcode,
     instr_set_src(in, 0, src1);
     instr_set_src(in, 1, src2);
     instr_set_src(in, 2, src3);
+    instr_set_cond(in, cond);
     return in;
 }
 
 instr_t * 
 instr_create_2dst_4src(dcontext_t *dcontext, int opcode,
                        opnd_t dst1, opnd_t dst2,
-                       opnd_t src1, opnd_t src2, opnd_t src3, opnd_t src4)
+                       opnd_t src1, opnd_t src2, opnd_t src3, opnd_t src4, int cond)
 {
     instr_t *in = instr_build(dcontext, opcode, 2, 4);
     instr_set_dst(in, 0, dst1);
@@ -4222,24 +4248,26 @@ instr_create_2dst_4src(dcontext_t *dcontext, int opcode,
     instr_set_src(in, 1, src2);
     instr_set_src(in, 2, src3);
     instr_set_src(in, 3, src4);
+    instr_set_cond(in, cond);
     return in;
 }
 
 instr_t * 
 instr_create_3dst_0src(dcontext_t *dcontext, int opcode,
-                       opnd_t dst1, opnd_t dst2, opnd_t dst3)
+                       opnd_t dst1, opnd_t dst2, opnd_t dst3, int cond)
 {
     instr_t *in = instr_build(dcontext, opcode, 3, 0);
     instr_set_dst(in, 0, dst1);
     instr_set_dst(in, 1, dst2);
     instr_set_dst(in, 2, dst3);
+    instr_set_cond(in, cond);
     return in;
 }
 
 instr_t * 
 instr_create_3dst_3src(dcontext_t *dcontext, int opcode,
                        opnd_t dst1, opnd_t dst2, opnd_t dst3,
-                       opnd_t src1, opnd_t src2, opnd_t src3)
+                       opnd_t src1, opnd_t src2, opnd_t src3, int cond)
 {
     instr_t *in = instr_build(dcontext, opcode, 3, 3);
     instr_set_dst(in, 0, dst1);
@@ -4248,13 +4276,14 @@ instr_create_3dst_3src(dcontext_t *dcontext, int opcode,
     instr_set_src(in, 0, src1);
     instr_set_src(in, 1, src2);
     instr_set_src(in, 2, src3);
+    instr_set_cond(in, cond);
     return in;
 }
 
 instr_t * 
 instr_create_3dst_4src(dcontext_t *dcontext, int opcode,
                        opnd_t dst1, opnd_t dst2, opnd_t dst3,
-                       opnd_t src1, opnd_t src2, opnd_t src3, opnd_t src4)
+                       opnd_t src1, opnd_t src2, opnd_t src3, opnd_t src4, int cond)
 {
     instr_t *in = instr_build(dcontext, opcode, 3, 4);
     instr_set_dst(in, 0, dst1);
@@ -4264,6 +4293,7 @@ instr_create_3dst_4src(dcontext_t *dcontext, int opcode,
     instr_set_src(in, 1, src2);
     instr_set_src(in, 2, src3);
     instr_set_src(in, 3, src4);
+    instr_set_cond(in, cond);
     return in;
 }
 
@@ -4271,7 +4301,7 @@ instr_t *
 instr_create_3dst_5src(dcontext_t *dcontext, int opcode,
                        opnd_t dst1, opnd_t dst2, opnd_t dst3,
                        opnd_t src1, opnd_t src2, opnd_t src3,
-                       opnd_t src4, opnd_t src5)
+                       opnd_t src4, opnd_t src5, int cond)
 {
     instr_t *in = instr_build(dcontext, opcode, 3, 5);
     instr_set_dst(in, 0, dst1);
@@ -4282,13 +4312,14 @@ instr_create_3dst_5src(dcontext_t *dcontext, int opcode,
     instr_set_src(in, 2, src3);
     instr_set_src(in, 3, src4);
     instr_set_src(in, 4, src5);
+    instr_set_cond(in, cond);
     return in;
 }
 
 instr_t * 
 instr_create_4dst_1src(dcontext_t *dcontext, int opcode,
                        opnd_t dst1, opnd_t dst2, opnd_t dst3, opnd_t dst4,
-                       opnd_t src)
+                       opnd_t src, int cond)
 {
     instr_t *in = instr_build(dcontext, opcode, 4, 1);
     instr_set_dst(in, 0, dst1);
@@ -4296,13 +4327,14 @@ instr_create_4dst_1src(dcontext_t *dcontext, int opcode,
     instr_set_dst(in, 2, dst3);
     instr_set_dst(in, 3, dst4);
     instr_set_src(in, 0, src);
+    instr_set_cond(in, cond);
     return in;
 }
 
 instr_t * 
 instr_create_4dst_4src(dcontext_t *dcontext, int opcode,
                        opnd_t dst1, opnd_t dst2, opnd_t dst3, opnd_t dst4,
-                       opnd_t src1, opnd_t src2, opnd_t src3, opnd_t src4)
+                       opnd_t src1, opnd_t src2, opnd_t src3, opnd_t src4, int cond)
 {
     instr_t *in = instr_build(dcontext, opcode, 4, 4);
     instr_set_dst(in, 0, dst1);
@@ -4313,6 +4345,7 @@ instr_create_4dst_4src(dcontext_t *dcontext, int opcode,
     instr_set_src(in, 1, src2);
     instr_set_src(in, 2, src3);
     instr_set_src(in, 3, src4);
+    instr_set_cond(in, cond);
     return in;
 }
 
@@ -4470,7 +4503,7 @@ instr_t *
 instr_create_nbyte_nop(dcontext_t *dcontext, uint num_bytes, bool raw)
 {
     CLIENT_ASSERT(num_bytes != 0, "instr_create_nbyte_nop: 0 bytes passed");
-    CLIENT_ASSERT(num_bytes <= 3, "instr_create_nbyte_nop: > 3 bytes not supported");
+    CLIENT_ASSERT(num_bytes <= 1, "instr_create_nbyte_nop: > 4 bytes not supported");
     /* INSTR_CREATE_nop*byte creates nop according to dcontext->x86_mode.
      * In x86_to_x64, we want to create x64 nop, but dcontext may be in x86 mode.
      * As a workaround, we call INSTR_CREATE_RAW_nop*byte here if in x86_to_x64.
@@ -4478,20 +4511,12 @@ instr_create_nbyte_nop(dcontext_t *dcontext, uint num_bytes, bool raw)
     if (raw IF_X64(|| DYNAMO_OPTION(x86_to_x64))) {
         switch(num_bytes) {
         case 1 :
-            return INSTR_CREATE_RAW_nop1byte(dcontext);
-        case 2 :
-            return INSTR_CREATE_RAW_nop2byte(dcontext);
-        case 3 :
-            return INSTR_CREATE_RAW_nop3byte(dcontext);
+            return INSTR_CREATE_RAW_nop1byte(dcontext, COND_ALWAYS);
         }
     } else {
         switch(num_bytes) {
         case 1 :
-            return INSTR_CREATE_RAW_nop1byte(dcontext);
-        case 2:
-            return INSTR_CREATE_RAW_nop2byte(dcontext);
-        case 3:
-            return INSTR_CREATE_RAW_nop3byte(dcontext);
+            return INSTR_CREATE_RAW_nop1byte(dcontext, COND_ALWAYS);
         }
     }
     CLIENT_ASSERT(false, "instr_create_nbyte_nop: invalid parameters");
@@ -4585,7 +4610,7 @@ instr_create_restore_from_dcontext(dcontext_t *dcontext, reg_id_t reg, int offs)
     opnd_t memopnd = opnd_create_dcontext_field(dcontext, offs);
 
     return INSTR_CREATE_ldr_reg(dcontext, opnd_create_reg(reg),
-                                memopnd, opnd_create_reg(REG_NULL), OPND_CREATE_IMM5(0) );
+                                memopnd, opnd_create_reg(REG_NULL), OPND_CREATE_IMM5(0), COND_ALWAYS );
 }
 
 instr_t *
@@ -4596,7 +4621,7 @@ instr_create_save_to_dcontext(dcontext_t *dcontext, reg_id_t reg, int offs)
                   "instr_create_save_to_dcontext: invalid dcontext");
 
     return INSTR_CREATE_str_reg(dcontext, opnd_create_reg(reg), memopnd,
-                                opnd_create_reg(REG_NULL), OPND_CREATE_IMM5(0));
+                                opnd_create_reg(REG_NULL), OPND_CREATE_IMM5(0), COND_ALWAYS);
 }
 
 /* Use basereg==REG_NULL to get default (xdi, or xsi for upcontext) 
@@ -4611,7 +4636,7 @@ instr_create_restore_from_dc_via_reg(dcontext_t *dcontext, reg_id_t basereg,
         (dcontext, basereg, offs, reg_get_size(reg));
 
     return INSTR_CREATE_ldr_reg(dcontext, opnd_create_reg(reg), 
-                                memopnd, opnd_create_reg(REG_NULL), OPND_CREATE_IMM5(0) );
+                                memopnd, opnd_create_reg(REG_NULL), OPND_CREATE_IMM5(0), COND_ALWAYS );
 }
 
 /* Use basereg==REG_NULL to get default (xdi, or xsi for upcontext) 
@@ -4625,7 +4650,7 @@ instr_create_save_to_dc_via_reg(dcontext_t *dcontext, reg_id_t basereg,
     opnd_t memopnd = opnd_create_dcontext_field_via_reg_sz
                         (dcontext, basereg, offs, reg_get_size(reg));
     return INSTR_CREATE_str_reg(dcontext, opnd_create_reg(reg), memopnd,
-                                opnd_create_reg(REG_NULL), OPND_CREATE_IMM5(0));
+                                opnd_create_reg(REG_NULL), OPND_CREATE_IMM5(0), COND_ALWAYS);
 }
 
 instr_t *
@@ -4634,7 +4659,7 @@ instr_create_save_immed_to_dcontext(dcontext_t *dcontext, int immed, int offs)
     opnd_t memopnd = opnd_create_dcontext_field(dcontext, offs);
     /* PR 244737: thread-private scratch space needs to fixed for x64 */
     IF_X64(ASSERT_NOT_IMPLEMENTED(false));
-    return INSTR_CREATE_str_imm(dcontext, memopnd, OPND_CREATE_INT32(immed));
+    return INSTR_CREATE_str_imm(dcontext, memopnd, OPND_CREATE_INT32(immed), COND_ALWAYS);
 }
 
 void
@@ -4643,7 +4668,7 @@ instr_create_branch_via_dcontext(instrlist_t* ilist, dcontext_t *dcontext, int o
     opnd_t memopnd = opnd_create_dcontext_field(dcontext, offs);
 
     instrlist_meta_append(ilist, INSTR_CREATE_ldr_reg(dcontext, opnd_create_reg(REG_RR7),
-                                                      memopnd, opnd_create_reg(REG_NULL), OPND_CREATE_IMM5(0) ));
+                                                      memopnd, opnd_create_reg(REG_NULL), OPND_CREATE_IMM5(0), COND_ALWAYS ));
     instrlist_meta_append(ilist, INSTR_CREATE_branch_ind(dcontext, opnd_create_reg(REG_RR7)));
  
     return; 
@@ -4910,7 +4935,7 @@ instr_t *
 instr_create_save_to_tls(dcontext_t *dcontext, reg_id_t reg, ushort offs)
 {
     return INSTR_CREATE_str_reg(dcontext, opnd_create_reg(reg), opnd_create_tls_slot(os_tls_offset(offs)), 
-                                opnd_create_reg(REG_NULL), OPND_CREATE_IMM5(0));
+                                opnd_create_reg(REG_NULL), OPND_CREATE_IMM5(0), COND_ALWAYS);
 }
 
 instr_t *
@@ -4918,20 +4943,20 @@ instr_create_restore_from_tls(dcontext_t *dcontext, reg_id_t reg, ushort offs)
 {
     return INSTR_CREATE_ldr_reg(dcontext, opnd_create_reg(reg), 
                                opnd_create_tls_slot(os_tls_offset(offs)),
-                                opnd_create_reg(REG_NULL), OPND_CREATE_IMM5(0) );
+                                opnd_create_reg(REG_NULL), OPND_CREATE_IMM5(0), COND_ALWAYS );
 }
 
 /* For -x86_to_x64, we can spill to 64-bit extra registers (xref i#751). */
 instr_t *
 instr_create_save_to_reg(dcontext_t *dcontext, reg_id_t reg1, reg_id_t reg2)
 {
-    return INSTR_CREATE_mov_reg(dcontext, opnd_create_reg(reg2), opnd_create_reg(reg1));
+    return INSTR_CREATE_mov_reg(dcontext, opnd_create_reg(reg2), opnd_create_reg(reg1), COND_ALWAYS);
 }
 
 instr_t *
 instr_create_restore_from_reg(dcontext_t *dcontext, reg_id_t reg1, reg_id_t reg2)
 {
-    return INSTR_CREATE_mov_reg(dcontext, opnd_create_reg(reg1), opnd_create_reg(reg2));
+    return INSTR_CREATE_mov_reg(dcontext, opnd_create_reg(reg1), opnd_create_reg(reg2), COND_ALWAYS);
 }
 
 uint

@@ -3489,7 +3489,7 @@ encode_branch_instrs(decode_info_t* di, instr_t* instr, byte* pc)
 
           word[3] |= (0x3 << 4);
 
-          opnd = instr_get_src(instr, 1);
+          opnd = instr_get_src(instr, 0);
 
           switch( opnd.kind )
           {
@@ -3513,11 +3513,11 @@ encode_branch_instrs(decode_info_t* di, instr_t* instr, byte* pc)
     // If not blx_reg then encodes address as 24 bit immed
     if( opc != OP_blx_reg )
     {
-          opnd = instr_get_src(instr, 1);
+          opnd = instr_get_src(instr, 0);
 
           switch( opnd.kind )
           {
-            case IMMED_INTEGER_kind:
+            case PC_kind:
               /* TODO Calc offset */
 
               b = (opnd.value.immed_int >> 16);

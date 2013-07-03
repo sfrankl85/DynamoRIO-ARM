@@ -64,16 +64,27 @@
  *
  * PR 205276 covers transparently stealing our segment selector.
  */
-#ifdef X64
+
+/* SJF To avoid significantly changing the way DR uses segments just define
+       them as base addresses and then when they are ref'd calc the offset and
+       just pass that into the instruction as ARM has no segments */
+#ifdef ARM
 # define SEG_TLS SEG_GS
-# define ASM_SEG "%gs"
+# define ASM_SEG 0x65
 # define LIB_SEG_TLS SEG_FS /* libc+loader tls */
-# define LIB_ASM_SEG "%fs"
+# define LIB_ASM_SEG 0x64 
 #else
-# define SEG_TLS SEG_FS
-# define ASM_SEG "%fs"
-# define LIB_SEG_TLS SEG_GS /* libc+loader tls */
-# define LIB_ASM_SEG "%gs"
+# ifdef X64
+#  define SEG_TLS SEG_GS
+#  define ASM_SEG "%gs"
+#  define LIB_SEG_TLS SEG_FS /* libc+loader tls */
+#  define LIB_ASM_SEG "%fs"
+# else
+#  define SEG_TLS SEG_FS
+#  define ASM_SEG "%fs"
+#  define LIB_SEG_TLS SEG_GS /* libc+loader tls */
+#  define LIB_ASM_SEG "%gs"
+# endif
 #endif
 
 void *get_tls(ushort tls_offs);

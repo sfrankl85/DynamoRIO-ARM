@@ -251,7 +251,7 @@
 #    define USERLEVEL
 -DUSERLEVEL
      /* PR 361894/388563: only on ESX4.1+ */
-#    define HAVE_TLS
+//#    define HAVE_TLS
 -DHAVE_TLS
 #  else
 #    ifdef MACOS
@@ -263,7 +263,7 @@
        /* FIXME: use cmake to discover whether these are available */
 #      define HAVE_PROC_MAPS
 -DHAVE_PROC_MAPS
-#      define HAVE_TLS
+//#      define HAVE_TLS
 -DHAVE_TLS
 #      define HAVE_SIGALTSTACK
 -DHAVE_SIGALTSTACK
