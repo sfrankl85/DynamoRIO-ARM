@@ -545,6 +545,7 @@ int dynamo_process_exit(void);
 void dynamorio_fork_init(dcontext_t *dcontext);
 #endif
 void dynamorio_take_over_threads(dcontext_t *dcontext);
+
 dr_statistics_t * get_dr_stats(void);
 
 /* functions needed by detach */
@@ -1035,6 +1036,12 @@ dr_app_start_helper(priv_mcontext_t *mc);
 
 DYNAMORIO_EXPORT void
 dynamorio_app_take_over_helper(priv_mcontext_t *mc);
+
+DYNAMORIO_EXPORT void
+master_signal_handler_C(byte *xsp);
+
+DYNAMORIO_EXPORT void
+return_from_native(priv_mcontext_t *mc);
 
 /* SJF TODO Added global doncontext var here to avoid TLS dcontext errors.
             Need to fix the TLS/segment stuff so that I can get 

@@ -2695,8 +2695,6 @@ dcontext_t*
 get_thread_private_dcontext(void)
 {
 #ifdef HAVE_TLS
-#ifdef NO 
-//SJF TODO Comment out all TLS tuff for now 
     dcontext_t *dcontext = NULL;
     /* We have to check this b/c this is called from __errno_location prior
      * to os_tls_init, as well as after os_tls_exit, and early in a new
@@ -2737,7 +2735,7 @@ get_thread_private_dcontext(void)
                pid_cached != get_process_id());
     });
     READ_TLS_SLOT_IMM(TLS_DCONTEXT_OFFSET, dcontext);
-#endif //NO
+
     return global_dcontext;
 #else
     /* Assumption: no lock needed on a read => no race conditions between

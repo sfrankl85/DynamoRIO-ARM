@@ -95,7 +95,7 @@ START_FILE
  */
 #define NUM_QR_SLOTS 16 
 #define PRE_QR_PADDING 16 /* ??? For EFLAGS/CPSR maybe. */
-#define QR_SAVED_REG_SIZE 16 /* for qr. SJF Why is it 16??? Surely 4 ints is 4*32??? */
+#define QR_SAVED_REG_SIZE 32 /* for qr. SJF 8 * 4 ints or 32 * bytes or ... */
 #define QR_SAVED_SIZE ((NUM_QR_SLOTS)*(QR_SAVED_REG_SIZE)) 
 
 #define NUM_DR_SLOTS 32 
@@ -112,21 +112,22 @@ START_FILE
 
 /* SJF Changed */
 #define PUSHGPR \
-        stmda   r13!, {r0-r12} 
+        stmda   r13!, {r4-r12} 
 #define POPGPR  \
-        ldmib   r13!, {r0-r12} 
+        ldmib   r13!, {r4-r12} 
 
-# define PRIV_MCXT_SIZE (10*ARG_SZ + PRE_QR_PADDING + QR_SAVED_SIZE)
+# define PRIV_MCXT_SIZE (18*ARG_SZ + PRE_QR_PADDING + QR_SAVED_SIZE)
 # define dstack_OFFSET     (PRIV_MCXT_SIZE+UPCXT_EXTRA+3*ARG_SZ)
 # define MCONTEXT_PC_OFFS  (9*ARG_SZ)
 
 /* offsetof(dcontext_t, is_exiting) */
 #define is_exiting_OFFSET (dstack_OFFSET+1*ARG_SZ)
-#define PUSHGPR_XSP_OFFS  (3*ARG_SZ)
-#define MCONTEXT_XSP_OFFS (PUSHGPR_XSP_OFFS)
+#define PUSHGPR_R13_OFFS  (3*ARG_SZ)
+#define MCONTEXT_R13_OFFS (PUSHGPR_XSP_OFFS)
 
 /* SJF BEGIN These defines should be the correct value or have been altered */ 
 #define PUSH_PRIV_MCXT_PRE_PC_SHIFT (- QR_SAVED_SIZE - PRE_QR_PADDING)
+# define ARG_SZ 4
 /* SJF END*/
 
 /* This is really the alignment needed by x64 code.  For now, when we bother to
@@ -196,11 +197,6 @@ DECL_EXTERN(syscall_argsz)
 #endif
 
 
-/* TODO SJF Moved extern declaration or master signal handler out here */
-#if defined(LINUX)
-DECL_EXTERN(master_signal_handler_C)
-#endif
-
         
 #if NO
 /*TODO SJF */
@@ -230,23 +226,6 @@ GLOBAL_LABEL(dynamo_auto_start:)
         END_FUNC(dynamo_auto_start)
 #endif
 
-#ifdef LINUX
-/* We avoid performance problems with messing up the RSB by using
- * a separate routine.  The caller needs to use a plain call
- * with _GLOBAL_OFFSET_TABLE_ on the exact return address instruction.
- */
-        DECLARE_FUNC(get_pic_xax)
-GLOBAL_LABEL(get_pic_xax:)
-        mov      REG_XAX, PTRSZ [REG_XSP]
-        ret
-        END_FUNC(get_pic_xax)
-
-        DECLARE_FUNC(get_pic_xdi)
-GLOBAL_LABEL(get_pic_xdi:)
-        mov      REG_XDI, PTRSZ [REG_XSP]
-        ret
-        END_FUNC(get_pic_xdi)
-#endif
 
 /*
  * Calls the specified function 'func' after switching to the stack 'stack'.  If we're
@@ -403,28 +382,6 @@ GLOBAL_LABEL(dr_app_take_over:  )
         END_FUNC(dr_app_take_over)
 #endif
                 
-/*
- * dynamorio_app_take_over - Causes application to run under Dynamo
- * control.  Dynamo never releases control.
- */
-        DECLARE_EXPORTED_FUNC(dynamorio_app_take_over)
-GLOBAL_LABEL(dynamorio_app_take_over:)
-        sub     REG_XSP, FRAME_ALIGNMENT - ARG_SZ  /* Maintain alignment. */
-
-        /* grab exec state and pass as param in a priv_mcontext_t struct */
-        PUSH_PRIV_MCXT([FRAME_ALIGNMENT - ARG_SZ + REG_XSP -
-                        PUSH_PRIV_MCXT_PRE_PC_SHIFT]) /* return address as pc */
-
-        /* do the rest in C */
-        lea      REG_XAX, [REG_XSP] /* stack grew down, so priv_mcontext_t at tos */
-        CALLC1(dynamorio_app_take_over_helper, REG_XAX)
-
-        /* if we come back, then DR is not taking control so 
-         * clean up stack and return */
-        add      REG_XSP, PRIV_MCXT_SIZE + FRAME_ALIGNMENT - ARG_SZ
-        ret
-        END_FUNC(dynamorio_app_take_over)
-        
 /*
  * cleanup_and_terminate(dcontext_t *dcontext,     // 1*ARG_SZ+XBP
  *                       int sysnum,               // 2*ARG_SZ+XBP = syscall #
@@ -1284,7 +1241,7 @@ GLOBAL_LABEL(nt_continue_dynamo_start:)
          * FIXME: this routine should really not assume esp */
 
         /* grab exec state and pass as param in a priv_mcontext_t struct */
-        PUSH_PRIV_MCXT(0 /* for priv_mcontext_t.pc */)
+        PUSH_PRIV_MCXT(0/* for priv_mcontext_t.pc */)
         lea      REG_XAX, [REG_XSP] /* stack grew down, so priv_mcontext_t at tos */
 
         /* Call nt_continue_setup passing the priv_mcontext_t.  It will 
@@ -2390,6 +2347,54 @@ dynamorio_earliest_init_repeatme:
 /* Start of ARM specific routines */
 /* Remove the ones above as I go */
 
+#ifdef LINUX
+/* We avoid performance problems with messing up the RSB by using
+ * a separate routine.  The caller needs to use a plain call
+ * with _GLOBAL_OFFSET_TABLE_ on the exact return address instruction.
+ */
+        DECLARE_FUNC(get_pic_r0)
+GLOBAL_LABEL(get_pic_r0:)
+        mov      REG_R0, REG_R13
+        mov      pc, r14 
+        END_FUNC(get_pic_r0)
+
+        DECLARE_FUNC(get_pic_r7)
+GLOBAL_LABEL(get_pic_r7:)
+        mov      REG_R7, REG_R13
+        mov      pc, r14 
+        END_FUNC(get_pic_r7)
+
+#endif
+/* Pushes a priv_mcontext_t on the stack, with an xsp value equal to the
+ * xsp before the pushing.  Clobbers xax!
+ * Does fill in xmm0-5, if necessary, for PR 264138.
+ * Assumes that DR has been initialized (get_xmm_vals() checks proc feature bits).
+ * Caller should ensure 16-byte stack alignment prior to the push (PR 306421).
+ */
+/* SJF Remove ymm/xmm backup stuff for now */
+/*CALLC1(get_xmm_vals, REG_R0)                    @N@\*/
+#define PUSH_PRIV_MCXT(pcval)                              \
+        add      REG_R13, REG_R13, immediate(PUSH_PRIV_MCXT_PRE_PC_SHIFT)  @N@\
+        push     {pcval}                                     @N@\
+        PUSHGPR                                         @N@\
+        PUSHF                                           @N@\
+        add      REG_R0, REG_R13, immediate(PRIV_MCXT_SIZE)        @N@\
+        str      REG_R0, [REG_R13, immediate(PUSHGPR_R13_OFFS)]
+
+/* Pops the GPRs and flags from a priv_mcontext off the stack.  Does not
+ * restore xmm/ymm regs.
+ */
+#define POP_PRIV_MCXT_GPRS() \
+        POPF                                            @N@\
+        POPGPR                                          @N@\
+        sub      REG_R13, REG_R13, immediate(PUSH_PRIV_MCXT_PRE_PC_SHIFT) @N@\
+        sub      REG_R13, REG_R13, immediate(ARG_SZ)
+
+/* SJF Added macros to allow insertion of a hash symbol into the asm funcs */
+#define hash #
+#define mash(x) x
+#define immediate(a) mash(hash)a
+
 DECLARE_FUNC(dynamorio_syscall)
 GLOBAL_LABEL(dynamorio_syscall:)
         /* Backup regs */
@@ -2529,59 +2534,19 @@ GLOBAL_LABEL(back_from_native:)
          * FIXME: more robust if don't use app's esp -- should use initstack
          */
         /* grab exec state and pass as param in a priv_mcontext_t struct */
-        /*PUSH_PRIV_MCXT(0 *//* for priv_mcontext_t.pc *//*)*/
-        /*mov      REG_R0, [REG_R13]*/ /* stack grew down, so priv_mcontext_t at tos */
+        mov      REG_R4, immediate(0)
+        PUSH_PRIV_MCXT( REG_R4 )/* for priv_mcontext_t.pc */
+        mov      REG_R0, REG_R13 /* stack grew down, so priv_mcontext_t at tos */
 
         /* Call return_from_native passing the priv_mcontext_t.  It will obtain
          * this thread's dcontext pointer and begin execution with the passed-in
          * state.
          */
-        /*CALLC1(return_from_native, REG_R0)*/
+        CALLC1(return_from_native, REG_R0)
         /* should not return */
         b      unexpected_return
 END_FUNC(back_from_native)
 
-/* Pushes a priv_mcontext_t on the stack, with an r13 value equal to the
- * r13 before the pushing.  Clobbers xax!
- * Assumes that DR has been initialized (get_xmm_vals() checks proc feature bits).
- * Caller should ensure 16-byte stack alignment prior to the push (PR 306421).
- */
-/*
-#define PUSH_PRIV_MCXT(pc)                              \
-        mov      REG_R13, [REG_R13 + PUSH_PRIV_MCXT_PRE_PC_SHIFT]  @N@\
-        str      REG_R15, [REG_R13]!                                  @N@\
-        PUSHGPR                                        @N@\
-        PUSHF                                          @N@\
-        mov      REG_R0, REG_R13                    @N@\
-        CALLC1(get_xmm_vals, REG_XAX)                  @N@\
-        mov      REG_R0, PRIV_MCXT_SIZE + REG_R13 @N@\
-        mov      [PUSHGPR_XSP_OFFS + REG_XSP], REG_XAX
-*/
-
-/* Pushes a priv_mcontext_t on the stack, with an xsp value equal to the
- * xsp before the pushing.  Clobbers xax!
- * Does fill in xmm0-5, if necessary, for PR 264138.
- * Assumes that DR has been initialized (get_xmm_vals() checks proc feature bits).
- * Caller should ensure 16-byte stack alignment prior to the push (PR 306421).
- */
-/* TODO SJF Fix This */
-#define PUSH_PRIV_MCXT(pc)                              \
-        /*add      REG_R13, REG_R13, PUSH_PRIV_MCXT_PRE_PC_SHIFT  @N@\
-        push     pc                                    @N@\
-        PUSHGPR                                        @N@\
-        PUSHF                                          @N@\
-        mov      REG_R0, REG_R13                    @N@\
-        CALLC1(get_xmm_vals, REG_R0)                  @N@\
-        add      REG_R0, REG_R13, PRIV_MCXT_SIZE @N@\
-        str      REG_R0, [REG_R13, PUSHGPR_R13_OFFS]*/
-
-/* Pops the GPRs and flags from a priv_mcontext off the stack.  Does not
- * restore xmm/ymm regs.
- */
-#define POP_PRIV_MCXT_GPRS() \
-        POPF                                            @N@\
-        POPGPR                                          @N@\
-        sub      REG_R13, REG_R13, PUSH_PRIV_MCXT_PRE_PC_SHIFT + ARG_SZ/*pc*/
 
 /*
  * For debugging: report an error if the function called by call_switch_stack()
@@ -2694,7 +2659,7 @@ GLOBAL_LABEL(master_signal_handler:)
          * intermediate frame.
          */
         mov      REG_R0, REG_R13
-        /*CALLC1(master_signal_handler_C, REG_R0)*/
+        CALLC1(master_signal_handler_C, REG_R0)
         mov      r15, r14
 END_FUNC(master_signal_handler)
 
@@ -2748,58 +2713,6 @@ GLOBAL_LABEL(dr_longjmp:)
 #endif
 END_FUNC(dr_longjmp)
 
-/*
- * Calls the specified function 'func' after switching to the stack 'stack'.  If we're
- * currently on the initstack 'free_initstack' should be set so we release the
- * initstack lock.  The supplied 'dcontext' will be passed as an argument to 'func'.
- * If 'func' returns then 'return_on_return' is checked. If set we swap back stacks and
- * return to the caller.  If not set then it's assumed that func wasn't supposed to
- * return and we go to an error routine unexpected_return() below.
- *
- * void call_switch_stack(dcontext_t *dcontext,       // 1*ARG_SZ+XAX
- *                        byte *stack,                // 2*ARG_SZ+XAX
- *                        void (*func)(dcontext_t *), // 3*ARG_SZ+XAX
- *                        bool free_initstack,        // 4*ARG_SZ+XAX
- *                        bool return_on_return)      // 5*ARG_SZ+XAX
- */
-        DECLARE_FUNC(call_switch_stack)
-GLOBAL_LABEL(call_switch_stack:)
-#ifdef NO
-        /* get all args with same offset(xax) regardless of plaform */
-        mov      REG_XAX, REG_XSP
-        /* we need a callee-saved reg across our call so save it onto stack */
-        push     REG_XBX
-        push     REG_XDI /* still 16-aligned */
-        mov      REG_XBX, REG_XAX
-        mov      REG_XDI, REG_XSP
-        /* set up for call */
-        mov      REG_XDX, [3*ARG_SZ + REG_XAX] /* func */
-        mov      REG_XCX, [1*ARG_SZ + REG_XAX] /* dcontext */
-        mov      REG_XSP, [2*ARG_SZ + REG_XAX] /* stack */
-        cmp      BYTE [4*ARG_SZ + REG_XAX], 0 /* free_initstack */
-        je       call_dispatch_alt_stack_no_free
-#if !defined(X64) && defined(LINUX)
-        /* PR 212290: avoid text relocations: get PIC base into xax
-         * Can't use CALLC0 since it inserts a nop: we need the exact retaddr.
-         */
-        call     get_pic_xax
-        lea      REG_XAX, [_GLOBAL_OFFSET_TABLE_ + REG_XAX]
-        lea      REG_XAX, VAR_VIA_GOT(REG_XAX, initstack_mutex)
-        mov      DWORD [REG_XAX], 0
-#else
-        mov      DWORD SYMREF(initstack_mutex), 0 /* rip-relative on x64 */
-#endif
-call_dispatch_alt_stack_no_free:
-        CALLC1(REG_XDX, REG_XCX)
-        mov      REG_XSP, REG_XDI
-        mov      REG_XAX, REG_XBX
-        cmp      BYTE [5*ARG_SZ + REG_XAX], 0 /* return_on_return */
-        je       unexpected_return
-        pop      REG_XDI
-        pop      REG_XBX
-        ret
-#endif
-END_FUNC(call_switch_stack)
 
 #ifdef DR_APP_EXPORTS
 DECL_EXTERN(dr_app_start_helper)
@@ -2809,26 +2722,27 @@ DECL_EXTERN(dr_app_start_helper)
  * dynamorio_app_take_over - Causes application to run under Dynamo
  * control.  Dynamo never releases control.
  */
+/* SJF clobbers R4 */
 DECLARE_EXPORTED_FUNC(dynamorio_app_take_over)
 GLOBAL_LABEL(dynamorio_app_take_over:)
-#ifdef NO
-        sub     REG_R13, #FRAME_ALIGNMENT - ARG_SZ  /* Maintain alignment. */
+        sub     REG_R13, REG_R13, immediate(FRAME_ALIGNMENT)  /* Maintain alignment. */
+        sub     REG_R13, REG_R13, immediate(ARG_SZ)  /* Maintain alignment. */
 
         /* grab exec state and pass as param in a priv_mcontext_t struct */
-        PUSH_PRIV_MCXT([FRAME_ALIGNMENT - ARG_SZ + REG_XSP -
-                        PUSH_PRIV_MCXT_PRE_PC_SHIFT]) /* return address as pc */
+        add    REG_R4, REG_R13, immediate(FRAME_ALIGNMENT - ARG_SZ - PUSH_PRIV_MCXT_PRE_PC_SHIFT)
+        PUSH_PRIV_MCXT( REG_R4 ) /* return address as pc */
 
         /* do the rest in C */
-        lea      REG_XAX, [REG_XSP] /* stack grew down, so priv_mcontext_t at tos */
-#endif
+        mov      REG_R0, REG_R13 /* stack grew down, so priv_mcontext_t at tos */
+
         CALLC1(dynamorio_app_take_over_helper, REG_R0)
-#ifdef NO
 
         /* if we come back, then DR is not taking control so 
          * clean up stack and return */
-        add      REG_XSP, PRIV_MCXT_SIZE + FRAME_ALIGNMENT - ARG_SZ
-        ret
-#endif
+        add      REG_R13, REG_R13, immediate(PRIV_MCXT_SIZE)
+        add      REG_R13, REG_R13, immediate(FRAME_ALIGNMENT)
+        sub      REG_R13, REG_R13, immediate(ARG_SZ)
+        mov      pc, r14 
 END_FUNC(dynamorio_app_take_over)
 
 /*
@@ -2909,6 +2823,7 @@ END_FUNC(safe_read_asm)
 /*
  * dr_app_start - Causes application to run under Dynamo control
  */
+/* SJF Clobbers r4 */
 #ifdef DR_APP_EXPORTS
         DECLARE_EXPORTED_FUNC(dr_app_start)
 GLOBAL_LABEL(dr_app_start:)
@@ -2916,8 +2831,8 @@ GLOBAL_LABEL(dr_app_start:)
         sub     REG_R13, REG_R13, #ARG_SZ
 
         /* grab exec state and pass as param in a priv_mcontext_t struct */
-        PUSH_PRIV_MCXT([FRAME_ALIGNMENT - ARG_SZ + REG_R13 -
-                        PUSH_PRIV_MCXT_PRE_PC_SHIFT]) /* return address as pc */
+        add    REG_R4, REG_R13, immediate(FRAME_ALIGNMENT - ARG_SZ - PUSH_PRIV_MCXT_PRE_PC_SHIFT)
+        PUSH_PRIV_MCXT( REG_R4 ) /* return address as pc */
 
         /* do the rest in C */
         mov     REG_R0, REG_R13 /* stack grew down, so priv_mcontext_t at tos */
@@ -2925,11 +2840,10 @@ GLOBAL_LABEL(dr_app_start:)
 
         /* if we come back, then DR is not taking control so
          * clean up stack and return */
-/* TODO SJF Causing "Error: invalid constant (848) after fixup" error 
-        add      REG_R13, REG_R13, #PRIV_MCXT_SIZE 
-        add      REG_R13, REG_R13, #FRAME_ALIGNMENT 
-        sub      REG_R13, REG_R13, #ARG_SZ
-*/
+        add      REG_R13, REG_R13, immediate(PRIV_MCXT_SIZE)
+        add      REG_R13, REG_R13, immediate(FRAME_ALIGNMENT) 
+        sub      REG_R13, REG_R13, immediate(ARG_SZ)
+
         mov      r15, r14 
         END_FUNC(dr_app_start)
 
@@ -3163,6 +3077,56 @@ GLOBAL_LABEL(our_cpuid:)
 #endif //NO
         END_FUNC(our_cpuid)
 
+/*
+ * Calls the specified function 'func' after switching to the stack 'stack'.  If we're
+ * currently on the initstack 'free_initstack' should be set so we release the
+ * initstack lock.  The supplied 'dcontext' will be passed as an argument to 'func'.
+ * If 'func' returns then 'return_on_return' is checked. If set we swap back stacks and
+ * return to the caller.  If not set then it's assumed that func wasn't supposed to
+ * return and we go to an error routine unexpected_return() below.
+ *
+ * void call_switch_stack(dcontext_t *dcontext,       // 1*ARG_SZ+XAX
+ *                        byte *stack,                // 2*ARG_SZ+XAX
+ *                        void (*func)(dcontext_t *), // 3*ARG_SZ+XAX
+ *                        bool free_initstack,        // 4*ARG_SZ+XAX
+ *                        bool return_on_return)      // 5*ARG_SZ+XAX
+ */
+        DECLARE_FUNC(call_switch_stack)
+GLOBAL_LABEL(call_switch_stack:)
+        /* get all args with same offset(xax) regardless of plaform */
+        mov      REG_R0, REG_R13
+        /* we need a callee-saved reg across our call so save it onto stack */
+        push     {REG_R3}
+        push     {REG_R7} /* still 16-aligned */
+        mov      REG_R3, REG_R0
+        mov      REG_R7, REG_R13
+        /* set up for call */
+        add      REG_R2, REG_R0, immediate(3*ARG_SZ) /* func */
+        add      REG_R1, REG_R0, immediate(1*ARG_SZ) /* dcontext */
+        add      REG_R13,REG_R0, immediate(2*ARG_SZ) /* stack */
+        add      REG_R4, REG_R0, immediate(4*ARG_SZ)
+        cmp      REG_R4, immediate(0) /* free_initstack */
+        beq      call_dispatch_alt_stack_no_free
+
+        /* PR 212290: avoid text relocations: get PIC base into xax
+         * Can't use CALLC0 since it inserts a nop: we need the exact retaddr.
+         */
+        bl       get_pic_r0
+        /*add      REG_R0, REG_R0, immediate(_GLOBAL_OFFSET_TABLE_)
+        mov      REG_R0, VAR_VIA_GOT(REG_R0, initstack_mutex) SJF No idea what this does */
+        mov      REG_R0, immediate(0)
+
+call_dispatch_alt_stack_no_free:
+        CALLC1(REG_R2, REG_R1)
+        mov      REG_R13, REG_R7
+        mov      REG_R0,  REG_R3
+        add      REG_R4, REG_R0, immediate(5*ARG_SZ)
+        cmp      REG_R4, immediate(0) /* return_on_return */
+        beq      unexpected_return
+        pop      {REG_R7}
+        pop      {REG_R3}
+        mov      pc, r14 
+END_FUNC(call_switch_stack)
 
 
 END_FILE

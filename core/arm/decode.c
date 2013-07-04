@@ -480,6 +480,63 @@ read_vex(byte *pc, decode_info_t *di, byte instr_byte,
 #endif //NO
 }
 
+void decode_data_processing_and_els(byte* instr_word, instr_info_t* info,
+                                    dcontext_t* di, bool just_opcode)
+{
+}
+
+void decode_data_processing_imm(byte* instr_word, instr_info_t* info,
+                                dcontext_t* di, bool just_opcode)
+{
+}
+
+void decode_load_store1(byte* instr_word, instr_info_t* info,
+                        dcontext_t* di, bool just_opcode)
+{
+}
+
+void decode_load_store2_and_media(byte* instr_word, instr_info_t* info,
+                                  dcontext_t* di, bool just_opcode)
+{
+}
+
+void decode_load_store_multiple(byte* instr_word, instr_info_t* info,
+                                dcontext_t* di, bool just_opcode)
+{
+}
+
+void decode_branch(byte* instr_word, instr_info_t* info,
+                   dcontext_t* di, bool just_opcode)
+{
+    /* OP_b, OP_bl, OP_blx */
+
+    byte bit = word[0] & (1 << 0);
+
+    if( bit == 0 )//OP_b
+    {
+       instr->opcode = OP_b; 
+    }
+    else
+    {
+       instr->opcode = OP_bl; 
+    }
+
+    if( just_opcode )
+      return;
+
+    /* Decode imm here */
+}
+
+void decode_coprocessor_data_movement(byte* instr_word, instr_info_t* info,
+                                      dcontext_t* di, bool just_opcode)
+{
+}
+
+void decode_advanced_coprocessor(byte* instr_word, instr_info_t* info, 
+                                 dcontext_t* di, bool just_opcode)
+{
+}
+
 /* Disassembles the instruction at pc into the data structures ret_info
  * and di.  Does NOT set or read di->len.
  * Returns a pointer to the pc of the next instruction.
@@ -495,8 +552,9 @@ read_instruction(byte *pc, byte *orig_pc,
 {
     DEBUG_DECLARE(byte *post_suffix_pc = NULL;)
     byte instr_byte, temp, instr_type;
-    const instr_info_t *info;
+    const instr_info_t *info = {0};
     bool vex_noprefix = false;
+    byte instr_word[4] = {0};
 
     /* initialize di */
     /* though we only need di->start_pc for full decode rip-rel (and
@@ -513,29 +571,49 @@ read_instruction(byte *pc, byte *orig_pc,
      * for now I assume always 32-bit mode (or 64 for X64_MODE(di))!
      */
     
-    do {
-        instr_byte = *pc;
-        pc++;
-        temp = (instr_byte << 4);  
-        temp = (temp >> 5);
-        instr_type = instr_byte;
-        
-        switch( instr_type )
-        {
-        }
-
-
-    } while (true);
-
-    /* if just want opcode, stop here!  faster for caller to
-     * separately call decode_next_pc than for us to decode immeds!  
-     */
-    if (just_opcode) {
-        *ret_info = info;
-        return NULL;
+    instr_word[0] = *pc;
+    pc++;
+    instr_word[1] = *pc;
+    pc++;
+    instr_word[2] = *pc;
+    pc++;
+    instr_word[3] = *pc;
+    pc++;
+    temp = (instr_word[0] << 4);  
+    temp = (temp >> 5);
+    instr_type = temp;
+    
+    switch( instr_type )
+    {
+        case INSTR_TYPE_DATA_PROCESSING_AND_ELS:
+          decode_data_processing_and_els(instr_word, info, di, just_opcode); 
+          break;
+        case INSTR_TYPE_DATA_PROCESSING_IMM:
+          decode_data_processing_imm(instr_word, info, di, just_opcode); 
+          break;
+        case INSTR_TYPE_LOAD_STORE1:
+          decode_load_store1(instr_word, info, di, just_opcode); 
+          break;
+        case INSTR_TYPE_LOAD_STORE2_AND_MEDIA:
+          decode_load_store2_and_media(instr_word, info, di, just_opcode); 
+          break;
+        case INSTR_TYPE_LOAD_STORE_MULTIPLE:
+          decode_load_store_multiple(instr_word, info, di, just_opcode); 
+          break;
+        case INSTR_TYPE_BRANCH:
+          decode_branch(instr_word, info, di, just_opcode); 
+          break;
+        case INSTR_TYPE_COPROCESSOR_DATA_MOVEMENT:
+          decode_coprocessor_data_movement(instr_word, info, di, just_opcode); 
+          break;
+        case INSTR_TYPE_ADVANCED_COPROCESSOR_AND_SYSCALL:
+          decode_advanced_coprocessor(instr_word, info, di, just_opcode); 
+          break;
+        default:
+          CLIENT_ASSERT(false, "decode_error: unknown instr_type");
+          break;
     }
 
-    /************* Decode operands **************/
 
     /* return values */
     *ret_info = info;
@@ -1048,8 +1126,6 @@ decode_common(dcontext_t *dcontext, byte *pc, byte *orig_pc, instr_t *instr)
     IF_X64(CLIENT_ASSERT_TRUNCATE(di.len, int, next_pc - pc,
                                   "internal truncation error"));
     di.len = (int) (next_pc - pc);
-
-    /*************** Decode operands *****************/
 
     /* now copy operands into their real slots */
     instr_set_num_opnds(dcontext, instr, instr_num_dsts, instr_num_srcs);

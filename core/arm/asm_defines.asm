@@ -145,17 +145,12 @@
 /* Clobbers r0, Make sure to call PUSHGPR FIRST not after like before */
 #  define PUSHF \
           mrs   r0, CPSR           /* Get the CPSR */            @N@\
-          push  r0
+          push  {r0}
 
 #  define POPF   \
-          pop   r0                                                     @N@\
+          pop   {r0}                                                     @N@\
           msr   CPSR, r0           /* Put the CPSR */                 
 
-/* SETARG usage is order-dependent on 32-bit.  we could avoid that
- * by having STACK_PAD allocate the stack space and do a mov here.
- */
-#  define SETARG(argreg, p) \
-        push     p
 
 /* Wipes REG R8 */
 #    define STACK_PAD(tot, gt4) \
