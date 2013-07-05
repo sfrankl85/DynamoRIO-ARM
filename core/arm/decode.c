@@ -480,61 +480,87 @@ read_vex(byte *pc, decode_info_t *di, byte instr_byte,
 #endif //NO
 }
 
-void decode_data_processing_and_els(byte* instr_word, instr_info_t* info,
-                                    dcontext_t* di, bool just_opcode)
+instr_info_t* decode_data_processing_and_els(byte* instr_word, 
+                                            decode_info_t* di, bool just_opcode)
 {
+    instr_info_t *info = NULL;
+
+    return info;
 }
 
-void decode_data_processing_imm(byte* instr_word, instr_info_t* info,
-                                dcontext_t* di, bool just_opcode)
+instr_info_t* decode_data_processing_imm(byte* instr_word, 
+                                          decode_info_t* di, bool just_opcode)
 {
+    instr_info_t *info = NULL;
+
+    return info;
 }
 
-void decode_load_store1(byte* instr_word, instr_info_t* info,
-                        dcontext_t* di, bool just_opcode)
+instr_info_t* decode_load_store1(byte* instr_word, 
+                                 decode_info_t* di, bool just_opcode)
 {
+    instr_info_t *info = NULL;
+
+    return info;
 }
 
-void decode_load_store2_and_media(byte* instr_word, instr_info_t* info,
-                                  dcontext_t* di, bool just_opcode)
+instr_info_t* decode_load_store2_and_media(byte* instr_word, 
+                                           decode_info_t* di, bool just_opcode)
 {
+    instr_info_t *info = NULL;
+
+    return info;
 }
 
-void decode_load_store_multiple(byte* instr_word, instr_info_t* info,
-                                dcontext_t* di, bool just_opcode)
+instr_info_t* decode_load_store_multiple(byte* instr_word, 
+                                        decode_info_t* di, bool just_opcode)
 {
+    instr_info_t *info = NULL;
+
+    return info;
 }
 
-void decode_branch(byte* instr_word, instr_info_t* info,
-                   dcontext_t* di, bool just_opcode)
+instr_info_t* decode_branch(byte* instr_word, 
+                            decode_info_t* di, bool just_opcode)
 {
     /* OP_b, OP_bl, OP_blx */
+    instr_info_t *info = NULL;
 
-    byte bit = word[0] & (1 << 0);
+    byte bit = instr_word[0] & (1 << 0);
 
     if( bit == 0 )//OP_b
     {
-       instr->opcode = OP_b; 
+       di->opcode = OP_b; 
     }
     else
     {
-       instr->opcode = OP_bl; 
+       di->opcode = OP_bl; 
     }
 
+    info = &op_instr[di->opcode];
+
     if( just_opcode )
-      return;
+      return info;
 
     /* Decode imm here */
+
+    return info;
 }
 
-void decode_coprocessor_data_movement(byte* instr_word, instr_info_t* info,
-                                      dcontext_t* di, bool just_opcode)
+instr_info_t* decode_coprocessor_data_movement(byte* instr_word,
+                                               decode_info_t* di, bool just_opcode)
 {
+    instr_info_t *info = NULL;
+
+    return info;
 }
 
-void decode_advanced_coprocessor(byte* instr_word, instr_info_t* info, 
-                                 dcontext_t* di, bool just_opcode)
+instr_info_t* decode_advanced_coprocessor(byte* instr_word,
+                                          decode_info_t* di, bool just_opcode)
 {
+    instr_info_t *info = NULL;
+
+    return info;
 }
 
 /* Disassembles the instruction at pc into the data structures ret_info
@@ -552,7 +578,7 @@ read_instruction(byte *pc, byte *orig_pc,
 {
     DEBUG_DECLARE(byte *post_suffix_pc = NULL;)
     byte instr_byte, temp, instr_type;
-    const instr_info_t *info = {0};
+    instr_info_t* info;
     bool vex_noprefix = false;
     byte instr_word[4] = {0};
 
@@ -586,34 +612,33 @@ read_instruction(byte *pc, byte *orig_pc,
     switch( instr_type )
     {
         case INSTR_TYPE_DATA_PROCESSING_AND_ELS:
-          decode_data_processing_and_els(instr_word, info, di, just_opcode); 
+          info = decode_data_processing_and_els(instr_word, di, just_opcode); 
           break;
         case INSTR_TYPE_DATA_PROCESSING_IMM:
-          decode_data_processing_imm(instr_word, info, di, just_opcode); 
+          info = decode_data_processing_imm(instr_word, di, just_opcode); 
           break;
         case INSTR_TYPE_LOAD_STORE1:
-          decode_load_store1(instr_word, info, di, just_opcode); 
+          info = decode_load_store1(instr_word, di, just_opcode); 
           break;
         case INSTR_TYPE_LOAD_STORE2_AND_MEDIA:
-          decode_load_store2_and_media(instr_word, info, di, just_opcode); 
+          info = decode_load_store2_and_media(instr_word, di, just_opcode); 
           break;
         case INSTR_TYPE_LOAD_STORE_MULTIPLE:
-          decode_load_store_multiple(instr_word, info, di, just_opcode); 
+          info = decode_load_store_multiple(instr_word, di, just_opcode); 
           break;
         case INSTR_TYPE_BRANCH:
-          decode_branch(instr_word, info, di, just_opcode); 
+          info = decode_branch(instr_word, di, just_opcode); 
           break;
         case INSTR_TYPE_COPROCESSOR_DATA_MOVEMENT:
-          decode_coprocessor_data_movement(instr_word, info, di, just_opcode); 
+          info = decode_coprocessor_data_movement(instr_word, di, just_opcode); 
           break;
         case INSTR_TYPE_ADVANCED_COPROCESSOR_AND_SYSCALL:
-          decode_advanced_coprocessor(instr_word, info, di, just_opcode); 
+          info = decode_advanced_coprocessor(instr_word, di, just_opcode); 
           break;
         default:
           CLIENT_ASSERT(false, "decode_error: unknown instr_type");
           break;
     }
-
 
     /* return values */
     *ret_info = info;

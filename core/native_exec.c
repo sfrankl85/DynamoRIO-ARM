@@ -277,8 +277,16 @@ back_from_native_common(dcontext_t *dcontext, priv_mcontext_t *mc, app_pc target
       get_mcontext(dcontext)->pc = 0;
     #endif
 
+
+/* SJF Three calls for ARM */
+#ifdef ARM
+    switch_stack(dcontext->dstack);
+    dispatch(dcontext);
+    restore_stack();
+#else
     call_switch_stack(dcontext, dcontext->dstack, dispatch,
                       false/*not on initstack*/, false/*shouldn't return*/);
+#endif
     ASSERT_NOT_REACHED();
 }
 

@@ -173,8 +173,15 @@ nudge_thread_cleanup(dcontext_t *dcontext, bool exit_process, uint exit_code)
                 dcontext->nudge_terminate_process = true;
                 dcontext->nudge_exit_code = exit_code;
             }
-            call_switch_stack(dcontext, dcontext->dstack, nudge_terminate_on_dstack,
-                              false /* not on initstack */, false /* don't return */);
+            /* SJF 3 calls for ARM */
+            #ifdef ARM
+              switch_stack(dcontext->dstack);
+              dispatch(dcontext);
+              restore_stack();
+            #else
+              call_switch_stack(dcontext, dcontext->dstack, nudge_terminate_on_dstack,
+                                false /* not on initstack */, false /* don't return */);
+            #endif
         } else {
             /* Already on dstack or nudge creator will free app stack. */
             if (exit_process) {

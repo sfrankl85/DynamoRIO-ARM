@@ -264,6 +264,7 @@
 
 
 
+
 /* SJF Neew instr create macros */
 /* TODO Fill in with the correct calls as needed */
 #define INSTR_CREATE_adc_imm(dc, d, s, i, c) \
@@ -1236,9 +1237,15 @@ INSTR_CREATE_mrs_cpsr(dcontext_t *dcontext, reg_id_t reg)
    return INSTR_CREATE_mrs(dcontext, opnd_create_reg(reg), COND_ALWAYS);
 }
 
-
-
-
+/* SJF Add inline function to 'return' from a function. 
+       'mov pc, lr'
+ */
+static inline instr_t*
+INSTR_CREATE_ret(dcontext_t *dcontext)
+{
+   return INSTR_CREATE_mov_reg(dcontext, opnd_create_reg(DR_REG_R15), 
+                               opnd_create_reg(DR_REG_R14), COND_ALWAYS);
+}
 
 
 /* @} */ /* end doxygen group */

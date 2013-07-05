@@ -3726,23 +3726,22 @@ opcode_is_mbr(int opc)
     return (opc == OP_b);
 }
 
+bool 
+opcode_is_call(int opc)
+{
+    return( opc == OP_bl || opc == OP_blx_imm || opc == OP_blx_reg );
+}
 
 // Shell function to stop compile errors.
 // Remove this once other functons converted 
 bool
 instr_is_call(instr_t *instr)
 {
-    return false;
-}
-
-
-DR_API
-bool
-instr_is_mbr(instr_t *instr)      /* multi-way branch */
-{
     int opc = instr_get_opcode(instr);
-    return opcode_is_mbr(opc);
+    return opcode_is_call(opc);
 }
+
+
 
 DR_API
 int
@@ -3755,12 +3754,58 @@ instr_get_cond(instr_t *instr)
 }
 
 
+DR_API
+bool
+instr_is_mbr(instr_t *instr)    /* Multi path??? branch */
+{
+   int opc = instr_get_opcode(instr);
+   opnd_t opnd;
+   bool retval;
+
+   /* Only branch instruction that allows reg as target */
+   if( opc == OP_blx_reg )
+     retval = true;
+   else
+   {
+       if( opc == OP_mov_reg || opc == OP_mov_imm )
+       {
+           //Make sure there are dsts
+           if( instr->dsts != NULL )
+           {
+             opnd = instr->dsts[0];
+ 
+             if( opnd.kind == REG_kind )
+             {
+               if( opnd.value.reg == REG_R15 )
+                 retval = true;
+               else
+                 retval = false;
+             }
+             else
+               retval = false;
+          }
+          else
+            retval = false;
+       }
+       else
+         retval = false;
+        
+   }
+
+   return retval;
+}
+
 
 DR_API
 bool
-instr_is_cbr(instr_t *instr)
+instr_is_cbr(instr_t *instr)    /* Conditional branch */
 {
    int cond = instr_get_cond(instr);
+   int opc = instr_get_opcode(instr);
+
+   if( opc != OP_b && opc != OP_bl && opc != OP_bx &&
+       opc != OP_blx_imm && opc != OP_blx_reg )
+     return false;
 
    return (cond != COND_ALWAYS);
 }
@@ -3769,6 +3814,11 @@ bool
 instr_is_ubr(instr_t *instr)      /* unconditional branch */
 {
    int cond = instr_get_cond(instr);
+   int opc = instr_get_opcode(instr);
+
+   if( opc != OP_b && opc != OP_bl && 
+       opc != OP_blx_imm && opc != OP_blx_reg )
+     return false;
 
    return (cond == COND_ALWAYS);
 }
@@ -3784,19 +3834,45 @@ instr_is_cti(instr_t *instr)      /* any control-transfer instruction */
 }
 
 
+/* SJF If it is a mov instr where it writes to R15 from R14 
+       then it is a return instruction */
 bool
 instr_is_return(instr_t *instr)
 {
     int opc = instr_get_opcode(instr);
-    return (opc == OP_b);
+    bool dst_r15 = false, src_r14 = false;
+    opnd_t opnd;
+
+    if (opc == OP_mov_reg)
+    {
+      if( instr->dsts != NULL )
+      {
+        opnd = instr->dsts[0];
+ 
+        if( opnd.kind == REG_kind )
+        {
+           if( opnd.value.reg == DR_REG_R15 )
+             dst_r15 = true;
+        }
+      }
+
+      opnd = instr->src0;
+
+      if( opnd.kind == REG_kind )
+      {
+         if( opnd.value.reg == DR_REG_R14 )
+           src_r14 = true;
+      }
+    }
+
+    return( dst_r15 && src_r14 );
 }
 
 bool
 instr_is_syscall(instr_t *instr)
 {
     int opc = instr_get_opcode(instr);
-    /* FIXME: Intel processors treat "syscall" as invalid in 32-bit mode;
-     * do we need to treat it specially? */
+
     if (opc == OP_svc)
         return true;
 

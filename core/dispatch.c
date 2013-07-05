@@ -2080,8 +2080,15 @@ transfer_to_dispatch(dcontext_t *dcontext, priv_mcontext_t *mc, bool full_DR_sta
      * what may have been there before, for both new dcontext and reuse dcontext
      * options.
      */
+/* SJF Replace with 3 calls for ARM */
+#ifdef ARM
+    switch_stack(dcontext->dstack);
+    dispatch(dcontext);
+    restore_stack();
+#else
     call_switch_stack(dcontext, dcontext->dstack, dispatch, using_initstack,
                       false/*do not return on error*/);
+#endif
     ASSERT_NOT_REACHED();
 }
 

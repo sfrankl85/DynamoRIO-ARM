@@ -536,8 +536,6 @@ bb_add_native_direct_xfer(dcontext_t *dcontext, build_bb_t *bb, bool appended)
 static inline bool
 check_for_stopping_point(dcontext_t *dcontext, build_bb_t *bb)
 {
-#ifdef NO
-//TODO SJF
 #ifdef DR_APP_EXPORTS
     if (must_escape_from(bb->cur_pc)) {
         BBPRINT(bb, 3, "interp: emergency exit from "PFX"\n", bb->cur_pc);
@@ -547,9 +545,9 @@ check_for_stopping_point(dcontext_t *dcontext, build_bb_t *bb)
          * caller-saved.
          * FIXME: is this ok?
          */
-        /* move 0 into xax -- our functions return 0 to indicate success */
-        instrlist_append(bb->ilist, /* x64 will zero-extend to rax */
-                         INSTR_CREATE_mov_imm(dcontext, opnd_create_reg(REG_EAX),
+        /* move 0 into r0 -- our functions return 0 to indicate success */
+        instrlist_append(bb->ilist,
+                         INSTR_CREATE_mov_imm(dcontext, opnd_create_reg(REG_R0),
                                               OPND_CREATE_INT32(0), COND_ALWAYS));
         /* insert a ret instruction */
         instrlist_append(bb->ilist, INSTR_CREATE_ret(dcontext));
@@ -565,7 +563,6 @@ check_for_stopping_point(dcontext_t *dcontext, build_bb_t *bb)
         SYSLOG_INTERNAL_WARNING("encountered longjmp, which will cause ret mismatch!");
     }
 #endif
-#endif //NO
 
     return is_stopping_point(dcontext, bb->cur_pc);
 }
@@ -2703,8 +2700,6 @@ client_process_bb(dcontext_t *dcontext, build_bb_t *bb)
 static void
 build_bb_ilist(dcontext_t *dcontext, build_bb_t *bb)
 {
-#ifdef NO
-//TODO Do this after decoder and encoder finished 
     /* Design decision: we will not try to identify branches that target
      * instructions in this basic block, when we take those branches we will
      * just make a new basic block and duplicate part of this one
@@ -2768,8 +2763,6 @@ build_bb_ilist(dcontext_t *dcontext, build_bb_t *bb)
          IF_CLIENT_INTERFACE(&& !INTERNAL_OPTION(fast_client_decode))) ||
         !bb->for_cache
         /* to split riprel, need to decode every instr */
-        /* in x86_to_x64, need to translate every x86 instr */
-        IF_X64(|| DYNAMO_OPTION(coarse_split_riprel) || DYNAMO_OPTION(x86_to_x64))
         IF_CLIENT_INTERFACE(|| INTERNAL_OPTION(full_decode)))
         bb->full_decode = true;
     else {
@@ -2916,27 +2909,14 @@ build_bb_ilist(dcontext_t *dcontext, build_bb_t *bb)
              * much and we can use the analysis to detect any bb that reads a flag
              * prior to writing it.
              */
+/*          SJF TODO Change this to cpsr analysis
             if (bb->eflags != EFLAGS_WRITE_6 && bb->eflags != EFLAGS_READ_OF)
                 bb->eflags = eflags_analysis(bb->instr, bb->eflags, &eflags_6);
+*/
 
-            /* stop decoding at an invalid instr (tested above) or a cti
-             *(== opcode valid) or a possible SEH frame push (if
-             * -process_SEH_push). */
-#ifdef WINDOWS
-            if (DYNAMO_OPTION(process_SEH_push) &&
-                instr_get_prefix_flag(bb->instr, PREFIX_SEG_FS)) {
-                STATS_INC(num_bb_build_fs);
-                break;
-            }
-#endif
-
-#ifdef X64
-            if (instr_has_rel_addr_reference(bb->instr)) {
-                /* PR 215397: we need to split these out for re-relativization */
-                break;
-            }
-#endif
 #ifdef LINUX
+#ifdef NO
+            //SJF No prefix or segmetns for ARM
             if (INTERNAL_OPTION(mangle_app_seg) && 
                 instr_get_prefix_flag(bb->instr, PREFIX_SEG_FS | PREFIX_SEG_GS)) {
                 /* These segment prefix flags are not persistent and are 
@@ -2953,6 +2933,7 @@ build_bb_ilist(dcontext_t *dcontext, build_bb_t *bb)
                 instr_get_opcode(bb->instr);
                 break;
             }
+#endif //NO
 #endif
             /* i#107, opcode mov_seg will be set in decode_cti, 
              * so instr_opcode_valid(bb->instr) is true, and terminates the loop.
@@ -3064,27 +3045,8 @@ build_bb_ilist(dcontext_t *dcontext, build_bb_t *bb)
             break;
         }
 
-#ifdef WINDOWS
-        if (DYNAMO_OPTION(process_SEH_push) &&
-            instr_get_prefix_flag(bb->instr, PREFIX_SEG_FS)) {
-            DEBUG_DECLARE(ssize_t dbl_count = bb->cur_pc - bb->instr_start); 
-            if (!bb_process_fs_ref(dcontext, bb)) {
-                DOSTATS({
-                    if (bb->app_interp) {
-                        LOG(THREAD, LOG_INTERP, 3,
-                            "stopping bb at fs-using instr @ "PFX"\n",
-                            bb->instr_start);
-                        STATS_INC(num_process_SEH_bb_early_terminate);
-                        /* don't double count the fs instruction itself
-                         * since we removed it from this bb */
-                        if (!regenerated)
-                            STATS_ADD(app_code_seen, -dbl_count);
-                    }
-                });
-                break;
-            }
-        }
-#else
+#ifdef NO
+//SJF No prefixs for ARM
         if (instr_get_prefix_flag(bb->instr,
                                   (SEG_TLS == SEG_GS) ? PREFIX_SEG_GS : PREFIX_SEG_FS)
             /* __errno_location is interpreted when global, though it's hidden in TOT */
@@ -3097,7 +3059,6 @@ build_bb_ilist(dcontext_t *dcontext, build_bb_t *bb)
             CLIENT_ASSERT(false, "no support yet for application using non-NPTL segment");
             ASSERT_BUG_NUM(205276, false);
         }
-#endif
 
         /* far direct is treated as indirect (i#823) */
         if (instr_is_near_ubr(bb->instr)) {
@@ -3110,6 +3071,7 @@ build_bb_ilist(dcontext_t *dcontext, build_bb_t *bb)
             }
         } else
             instrlist_append(bb->ilist, bb->instr);
+#endif //NO
 
 #ifdef RETURN_AFTER_CALL
         if (bb->app_interp && dynamo_options.ret_after_call) {
@@ -3133,7 +3095,7 @@ build_bb_ilist(dcontext_t *dcontext, build_bb_t *bb)
             if (instr_is_return(bb->instr)) {
                 ibl_branch_type = IBL_RETURN;
                 STATS_INC(num_returns);
-            } else if (instr_is_call_indirect(bb->instr)) {
+            } else {
                 STATS_INC(num_all_calls);
                 STATS_INC(num_indirect_calls);
 
@@ -3168,7 +3130,9 @@ build_bb_ilist(dcontext_t *dcontext, build_bb_t *bb)
                 }
                 else
                     ibl_branch_type = IBL_INDCALL;
-            } else {
+            } 
+#ifdef NO
+            else {
                 /* indirect jump */
                 /* was prev instr a direct call? if so, this is a PLT-style ind call */
                 instr_t *prev = instr_get_prev(bb->instr);
@@ -3196,6 +3160,8 @@ build_bb_ilist(dcontext_t *dcontext, build_bb_t *bb)
                     ibl_branch_type = IBL_INDJMP;
                 STATS_INC(num_indirect_jumps);
             }
+#endif //NO
+
 #ifdef CUSTOM_TRACES_RET_REMOVAL
             if (instr_is_return(bb->instr))
                 my_dcontext->num_rets++;
@@ -3229,16 +3195,12 @@ build_bb_ilist(dcontext_t *dcontext, build_bb_t *bb)
             if (!bb_process_syscall(dcontext, bb))
                 break;
         } /* end syscall */
+#ifdef NO
         else if (instr_get_opcode(bb->instr) == OP_svc) { /* non-syscall int */
             if (!bb_process_interrupt(dcontext, bb))
                 break;
         }
-#ifdef CHECK_RETURNS_SSE2
-        else if (instr_is_sse_or_sse2(bb->instr)) {
-            FATAL_USAGE_ERROR(CHECK_RETURNS_SSE2_XMM_USED, 2, 
-                              get_application_name(), get_application_pid());
-        }
-#endif
+#endif //NO
 
         if (total_instrs > DYNAMO_OPTION(max_bb_instrs)) {
             /* this could be an enormous basic block, or it could
@@ -3276,7 +3238,7 @@ build_bb_ilist(dcontext_t *dcontext, build_bb_t *bb)
         DYNAMO_OPTION(native_exec_callcall) &&        
         !vmvector_empty(native_exec_areas) &&
         bb->app_interp && bb->instr != NULL && 
-        (instr_is_near_ubr(bb->instr)) &&
+        (instr_is_ubr(bb->instr)) &&
         instrlist_first(bb->ilist) == instrlist_last(bb->ilist)) {
         /* Case 4564/3558: handle .NET COM method table where a call* targets
          * a call to a native_exec dll -- we need to put the gateway at the
@@ -3404,6 +3366,8 @@ build_bb_ilist(dcontext_t *dcontext, build_bb_t *bb)
         *bb->unmangled_ilist = instrlist_clone(dcontext, bb->ilist);
 #endif
 
+#ifdef NO
+//SJF No far ctis ???
     if (bb->instr != NULL && instr_opcode_valid(bb->instr) &&
         instr_is_far_cti(bb->instr)) {
         /* Simplify far_ibl (i#823) vs trace_cmp ibl as well as
@@ -3414,6 +3378,7 @@ build_bb_ilist(dcontext_t *dcontext, build_bb_t *bb)
         /* Simplify coarse by not requiring extra prefix stubs */
         bb->flags &= ~FRAG_COARSE_GRAIN;
     }
+#endif //NO
 
     /* create a final instruction that will jump to the exit stub
      * corresponding to the fall-through of the conditional branch or
@@ -3462,23 +3427,6 @@ build_bb_ilist(dcontext_t *dcontext, build_bb_t *bb)
         if (!TEST(FRAG_HAS_SYSCALL, bb->flags) ||
             TESTANY(LINK_NI_SYSCALL_ALL, bb->exit_type))
             bb->flags |= FRAG_SHARED;
-#ifdef WINDOWS
-        /* A fragment can be shared if it contains a syscall that will be
-         * executed via the version of shared syscall that can be targetted by
-         * shared frags.
-         */
-        else if (TEST(FRAG_HAS_SYSCALL, bb->flags) &&
-                 DYNAMO_OPTION(shared_fragment_shared_syscalls) &&
-                 bb->exit_target == shared_syscall_routine(dcontext))
-            bb->flags |= FRAG_SHARED;
-        else {
-            ASSERT((TEST(FRAG_HAS_SYSCALL, bb->flags) &&
-                    (DYNAMO_OPTION(ignore_syscalls) ||
-                     (!DYNAMO_OPTION(shared_fragment_shared_syscalls) &&
-                      bb->exit_target == shared_syscall_routine(dcontext)))) &&
-                   "BB not shared for unknown reason");
-        }
-#endif
     }
 
     if (TEST(FRAG_COARSE_GRAIN, bb->flags) &&
@@ -3496,9 +3444,6 @@ build_bb_ilist(dcontext_t *dcontext, build_bb_t *bb)
          /* FRAG_HAS_DIRECT_CTI: we never elide (assert is below);
           * not-inlined call/jmp: we turn off FRAG_COARSE_GRAIN up above
           */
-#ifdef WINDOWS
-         TEST(LINK_CALLBACK_RETURN, bb->exit_type) ||
-#endif
          TESTANY(LINK_NI_SYSCALL_ALL, bb->exit_type))){
         /* Currently not supported in a coarse unit */
         STATS_INC(num_fine_in_coarse);
@@ -3537,7 +3482,7 @@ build_bb_ilist(dcontext_t *dcontext, build_bb_t *bb)
 
     if (bb->mangle_ilist &&
         (bb->instr == NULL || !instr_opcode_valid(bb->instr) ||
-         !instr_is_near_ubr(bb->instr) || !instr_ok_to_mangle(bb->instr))) {
+         !instr_is_ubr(bb->instr) || !instr_ok_to_mangle(bb->instr))) {
         instr_t *exit_instr = INSTR_CREATE_branch(dcontext, opnd_create_pc(bb->exit_target), COND_ALWAYS);
         if (bb->record_translation) {
             app_pc translation = NULL;
@@ -3549,7 +3494,7 @@ build_bb_ilist(dcontext_t *dcontext, build_bb_t *bb)
                  * address for the translation */
                 translation = bb->instr_start;
             } else if (instr_is_cti(bb->instr)) {
-                /* last instruction is a cti, consider the exit jmp part of 
+                /* last instruction is a cti, consider the exit branch part of 
                  * the mangling of the cti (since we might not know the target 
                  * if, for ex., its indirect) */
                 translation = instr_get_translation(bb->instr);
@@ -3579,6 +3524,9 @@ build_bb_ilist(dcontext_t *dcontext, build_bb_t *bb)
     if (TEST(FRAG_DYNGEN, bb->flags))
         bb->flags |= FRAG_CANNOT_BE_TRACE;
 #endif
+
+#ifdef NO
+//SJF More eflag stuff
     if (!INTERNAL_OPTION(unsafe_ignore_eflags_prefix)
         IF_X64(|| !INTERNAL_OPTION(unsafe_ignore_eflags_trace))) {
         bb->flags |= instr_eflags_to_fragment_eflags(bb->eflags);
@@ -3606,6 +3554,8 @@ build_bb_ilist(dcontext_t *dcontext, build_bb_t *bb)
             });
         }
     }
+#endif //NO
+
 #ifdef RETURN_STACK
     if (bb->exit_target == return_lookup_routine(dcontext))
         bb->flags |= FRAG_ENDS_WITH_RETURN;
@@ -3636,12 +3586,12 @@ build_bb_ilist(dcontext_t *dcontext, build_bb_t *bb)
         return;
     }
 
+    //TODO SJf Does nothing at the moment
     if (!mangle_bb_ilist(dcontext, bb)) {
         /* have to rebuild bb w/ new bb flags set by mangle_bb_ilist */
         build_bb_ilist(dcontext, bb);
         return;
     }
-#endif //NO
 }
 
 /* Call when about to throw exception or other drastic action in the

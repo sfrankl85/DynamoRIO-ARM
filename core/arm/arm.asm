@@ -3021,29 +3021,6 @@ cat_have_lock:
 #endif //NO
         END_FUNC(cleanup_and_terminate)
 
-/* void get_ymm_caller_saved(byte *ymm_caller_saved_buf)
- *   stores the values of ymm0 through ymm5 consecutively into ymm_caller_saved_buf.
- *   ymm_caller_saved_buf need not be 32-byte aligned.
- *   for linux, also saves ymm6-15 (PR 302107).
- *   caller must ensure that the underlying processor supports SSE!
- */
-        DECLARE_FUNC(get_ymm_caller_saved)
-GLOBAL_LABEL(get_ymm_caller_saved:)
-        END_FUNC(get_ymm_caller_saved)
-
-/* void get_xmm_caller_saved(byte *xmm_caller_saved_buf)
- *   stores the values of xmm0 through xmm5 consecutively into xmm_caller_saved_buf.
- *   xmm_caller_saved_buf need not be 16-byte aligned.
- *   for linux, also saves xmm6-15 (PR 302107).
- *   caller must ensure that the underlying processor supports SSE!
- * FIXME PR 266305: AMD optimization guide says to use movlps+movhps for unaligned
- * stores, instead of movups (movups is best for loads): but for
- * simplicity I'm sticking with movups (assumed not perf-critical here).
- */
-        DECLARE_FUNC(get_xmm_caller_saved)
-GLOBAL_LABEL(get_xmm_caller_saved:)
-        END_FUNC(get_xmm_caller_saved)
-
 /* SYS_clone swaps the stack so we need asm support to call it.
  * signature:
  *   thread_id_t dynamorio_clone(uint flags, byte *newsp, void *ptid, void *tls,
@@ -3078,55 +3055,36 @@ GLOBAL_LABEL(our_cpuid:)
         END_FUNC(our_cpuid)
 
 /*
- * Calls the specified function 'func' after switching to the stack 'stack'.  If we're
- * currently on the initstack 'free_initstack' should be set so we release the
- * initstack lock.  The supplied 'dcontext' will be passed as an argument to 'func'.
- * If 'func' returns then 'return_on_return' is checked. If set we swap back stacks and
- * return to the caller.  If not set then it's assumed that func wasn't supposed to
- * return and we go to an error routine unexpected_return() below.
- *
- * void call_switch_stack(dcontext_t *dcontext,       // 1*ARG_SZ+XAX
- *                        byte *stack,                // 2*ARG_SZ+XAX
- *                        void (*func)(dcontext_t *), // 3*ARG_SZ+XAX
- *                        bool free_initstack,        // 4*ARG_SZ+XAX
- *                        bool return_on_return)      // 5*ARG_SZ+XAX
+ * Just switchs the stack. To call a function just do it after this
+ * instead of using the call_switch_stack func
+ * void switch_stack(byte *stack)              REG_R0
  */
-        DECLARE_FUNC(call_switch_stack)
-GLOBAL_LABEL(call_switch_stack:)
-        /* get all args with same offset(xax) regardless of plaform */
-        mov      REG_R0, REG_R13
+        DECLARE_FUNC(switch_stack)
+GLOBAL_LABEL(switch_stack:)
         /* we need a callee-saved reg across our call so save it onto stack */
-        push     {REG_R3}
-        push     {REG_R7} /* still 16-aligned */
-        mov      REG_R3, REG_R0
-        mov      REG_R7, REG_R13
-        /* set up for call */
-        add      REG_R2, REG_R0, immediate(3*ARG_SZ) /* func */
-        add      REG_R1, REG_R0, immediate(1*ARG_SZ) /* dcontext */
-        add      REG_R13,REG_R0, immediate(2*ARG_SZ) /* stack */
-        add      REG_R4, REG_R0, immediate(4*ARG_SZ)
-        cmp      REG_R4, immediate(0) /* free_initstack */
-        beq      call_dispatch_alt_stack_no_free
+        push     {REG_R13} 
 
-        /* PR 212290: avoid text relocations: get PIC base into xax
-         * Can't use CALLC0 since it inserts a nop: we need the exact retaddr.
-         */
-        bl       get_pic_r0
-        /*add      REG_R0, REG_R0, immediate(_GLOBAL_OFFSET_TABLE_)
-        mov      REG_R0, VAR_VIA_GOT(REG_R0, initstack_mutex) SJF No idea what this does */
-        mov      REG_R0, immediate(0)
+        /* Switch stack */
+        mov      REG_R13,REG_R0
 
-call_dispatch_alt_stack_no_free:
-        CALLC1(REG_R2, REG_R1)
-        mov      REG_R13, REG_R7
-        mov      REG_R0,  REG_R3
-        add      REG_R4, REG_R0, immediate(5*ARG_SZ)
-        cmp      REG_R4, immediate(0) /* return_on_return */
-        beq      unexpected_return
-        pop      {REG_R7}
-        pop      {REG_R3}
-        mov      pc, r14 
-END_FUNC(call_switch_stack)
+        mov      pc, r14
+END_FUNC(switch_stack)
+
+/*
+ * Restores the stack pointer from the top value of the stack.
+ * Assume that any funcs called between switch_stack and 
+ * restore_stack do not leave the stack in a different state than before.
+
+ * void restore_stack(void)
+ */
+        DECLARE_FUNC(restore_stack)
+GLOBAL_LABEL(restore_stack:)
+        /* we need a callee-saved reg across our call so save it onto stack */
+        pop     {REG_R13}
+
+        mov      pc, r14
+END_FUNC(restore_stack)
+
 
 
 END_FILE

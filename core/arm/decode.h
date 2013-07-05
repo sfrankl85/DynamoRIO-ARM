@@ -669,29 +669,7 @@ decode_opcode_name(int opcode);
 /* DR_API EXPORT TOFILE dr_ir_opcodes.h */
 
 /* exported tables */
-extern const instr_info_t first_byte[];
-extern const instr_info_t second_byte[];
-extern const instr_info_t extensions[][8];
-extern const instr_info_t prefix_extensions[][8];
-extern const instr_info_t mod_extensions[][2];
-extern const instr_info_t rm_extensions[][8];
-extern const instr_info_t x64_extensions[][2];
-extern const instr_info_t rex_extensions[][2];
-extern const instr_info_t vex_prefix_extensions[][2];
-extern const instr_info_t vex_extensions[][2];
-extern const instr_info_t vex_L_extensions[][3];
-extern const instr_info_t vex_W_extensions[][2];
-extern const byte third_byte_38_index[256];
-extern const byte third_byte_3a_index[256];
-extern const instr_info_t third_byte_38[];
-extern const instr_info_t third_byte_3a[];
-extern const instr_info_t rep_extensions[][4];
-extern const instr_info_t repne_extensions[][6];
-extern const instr_info_t float_low_modrm[];
-extern const instr_info_t float_high_modrm[][64];
-extern const byte suffix_index[256];
-extern const instr_info_t suffix_extensions[];
-extern const instr_info_t extra_operands[];
+extern const instr_info_t armv7a_instrs[];
 /* table that translates opcode enums into pointers into above tables */
 extern const instr_info_t * const op_instr[];
 /* for debugging: printing out types and sizes */

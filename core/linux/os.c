@@ -9498,8 +9498,15 @@ os_thread_take_over(priv_mcontext_t *mc)
     signal_event(event);
 
     /* Start interpreting from the signal context. */
-    call_switch_stack(dcontext, dcontext->dstack, dispatch,
-                      false/*not on initstack*/, false/*shouldn't return*/);
+    /* SJF 3 calls for ARM */
+    #ifdef ARM
+      switch_stack(dcontext->dstack);
+      dispatch(dcontext);
+      restore_stack();
+    #else
+      call_switch_stack(dcontext, dcontext->dstack, dispatch,
+                        false/*not on initstack*/, false/*shouldn't return*/);
+    #endif
     ASSERT_NOT_REACHED();
 }
 
