@@ -71,6 +71,15 @@ START_FILE
 #ifdef LINUX
 # include "../linux/include/syscall.h"
 #endif
+
+/* SJF Added macros to allow insertion of a hash symbol into the asm funcs */
+#define hash #
+#define bang ! 
+#define mash(x) x
+#define immediate(a) mash(hash)a
+#define post_index(a) amash(exclamation)
+#define suffix(name, foo) name##foo
+#define exclamation(x) suffix(x, !)
         
 #define RESTORE_FROM_DCONTEXT_VIA_REG(reg,offs,dest) mov dest, PTRSZ [offs + reg]
 #define SAVE_TO_DCONTEXT_VIA_REG(reg,offs,src) mov PTRSZ [offs + reg], src
@@ -94,8 +103,8 @@ START_FILE
  * and avoid all this duplication!
  */
 #define NUM_QR_SLOTS 16 
-#define PRE_QR_PADDING 16 /* ??? For EFLAGS/CPSR maybe. */
-#define QR_SAVED_REG_SIZE 32 /* for qr. SJF 8 * 4 ints or 32 * bytes or ... */
+#define PRE_QR_PADDING 4 /* To keep it aligned. */
+#define QR_SAVED_REG_SIZE 16 /* for qr. 16 bytes of storage == 4/quad words */
 #define QR_SAVED_SIZE ((NUM_QR_SLOTS)*(QR_SAVED_REG_SIZE)) 
 
 #define NUM_DR_SLOTS 32 
@@ -112,18 +121,25 @@ START_FILE
 
 /* SJF Changed */
 #define PUSHGPR \
-        stmda   r13!, {r4-r12} 
-#define POPGPR  \
-        ldmib   r13!, {r4-r12} 
+        stmdb   r13!, {r0-r12}  @N@\
+        str     r13, [r13]      @N@\
+        sub     r13, r13, immediate(4) @N@\
+        stmdb   r13!, {r14}
 
-# define PRIV_MCXT_SIZE (18*ARG_SZ + PRE_QR_PADDING + QR_SAVED_SIZE)
+#define POPGPR  \
+        ldmia   r13!, {r14}     @N@\
+        ldr     r13,  [r13]                 @N@\
+        add     r13, r13, immediate(4)      @N@\
+        ldmia   !r13, {r0-r12}  
+
+# define PRIV_MCXT_SIZE (17*ARG_SZ + PRE_QR_PADDING + QR_SAVED_SIZE)
 # define dstack_OFFSET     (PRIV_MCXT_SIZE+UPCXT_EXTRA+3*ARG_SZ)
 # define MCONTEXT_PC_OFFS  (9*ARG_SZ)
 
 /* offsetof(dcontext_t, is_exiting) */
 #define is_exiting_OFFSET (dstack_OFFSET+1*ARG_SZ)
-#define PUSHGPR_R13_OFFS  (3*ARG_SZ)
-#define MCONTEXT_R13_OFFS (PUSHGPR_XSP_OFFS)
+#define PUSHGPR_R13_OFFS  (17*ARG_SZ)  /* Num of fields before r13 in priv_mcontext_t */
+#define MCONTEXT_R13_OFFS (PUSHGPR_R13_OFFS)
 
 /* SJF BEGIN These defines should be the correct value or have been altered */ 
 #define PUSH_PRIV_MCXT_PRE_PC_SHIFT (- QR_SAVED_SIZE - PRE_QR_PADDING)
@@ -2365,6 +2381,8 @@ GLOBAL_LABEL(get_pic_r7:)
         END_FUNC(get_pic_r7)
 
 #endif
+
+
 /* Pushes a priv_mcontext_t on the stack, with an xsp value equal to the
  * xsp before the pushing.  Clobbers xax!
  * Does fill in xmm0-5, if necessary, for PR 264138.
@@ -2373,27 +2391,32 @@ GLOBAL_LABEL(get_pic_r7:)
  */
 /* SJF Remove ymm/xmm backup stuff for now */
 /*CALLC1(get_xmm_vals, REG_R0)                    @N@\*/
+/* Stores the stack pointer pointing after the mcontext in the stack pointer
+   element of mcontext stored on the stack */
+/* Push past qr regs */
+/* Write r15 */
+ /* Write cpsr */
+/* write r0-r14 */
+/* Calc stack pointer before mcon */
+/* Store in priv_mcontext */
+
 #define PUSH_PRIV_MCXT(pcval)                              \
         add      REG_R13, REG_R13, immediate(PUSH_PRIV_MCXT_PRE_PC_SHIFT)  @N@\
-        push     {pcval}                                     @N@\
-        PUSHGPR                                         @N@\
-        PUSHF                                           @N@\
-        add      REG_R0, REG_R13, immediate(PRIV_MCXT_SIZE)        @N@\
+        push     {pcval}                                        @N@\
+        PUSHF                                                   @N@\
+        PUSHGPR                                                 @N@\
+        sub      REG_R0, REG_R13, immediate(PRIV_MCXT_SIZE)     @N@\
         str      REG_R0, [REG_R13, immediate(PUSHGPR_R13_OFFS)]
 
 /* Pops the GPRs and flags from a priv_mcontext off the stack.  Does not
  * restore xmm/ymm regs.
  */
 #define POP_PRIV_MCXT_GPRS() \
-        POPF                                            @N@\
         POPGPR                                          @N@\
+        POPF                                            @N@\
         sub      REG_R13, REG_R13, immediate(PUSH_PRIV_MCXT_PRE_PC_SHIFT) @N@\
         sub      REG_R13, REG_R13, immediate(ARG_SZ)
 
-/* SJF Added macros to allow insertion of a hash symbol into the asm funcs */
-#define hash #
-#define mash(x) x
-#define immediate(a) mash(hash)a
 
 DECLARE_FUNC(dynamorio_syscall)
 GLOBAL_LABEL(dynamorio_syscall:)
@@ -2726,10 +2749,10 @@ DECL_EXTERN(dr_app_start_helper)
 DECLARE_EXPORTED_FUNC(dynamorio_app_take_over)
 GLOBAL_LABEL(dynamorio_app_take_over:)
         sub     REG_R13, REG_R13, immediate(FRAME_ALIGNMENT)  /* Maintain alignment. */
-        sub     REG_R13, REG_R13, immediate(ARG_SZ)  /* Maintain alignment. */
+        add     REG_R13, REG_R13, immediate(ARG_SZ)  /* Maintain alignment. */
 
         /* grab exec state and pass as param in a priv_mcontext_t struct */
-        add    REG_R4, REG_R13, immediate(FRAME_ALIGNMENT - ARG_SZ - PUSH_PRIV_MCXT_PRE_PC_SHIFT)
+        add    REG_R4, REG_R13, immediate(PUSH_PRIV_MCXT_PRE_PC_SHIFT)
         PUSH_PRIV_MCXT( REG_R4 ) /* return address as pc */
 
         /* do the rest in C */
@@ -2827,8 +2850,8 @@ END_FUNC(safe_read_asm)
 #ifdef DR_APP_EXPORTS
         DECLARE_EXPORTED_FUNC(dr_app_start)
 GLOBAL_LABEL(dr_app_start:)
-        sub     REG_R13, REG_R13, #FRAME_ALIGNMENT /* Maintain alignment. */
-        sub     REG_R13, REG_R13, #ARG_SZ
+        sub     REG_R13, REG_R13, immediate(FRAME_ALIGNMENT) /* Maintain alignment. */
+        sub     REG_R13, REG_R13, immediate(ARG_SZ)
 
         /* grab exec state and pass as param in a priv_mcontext_t struct */
         add    REG_R4, REG_R13, immediate(FRAME_ALIGNMENT - ARG_SZ - PUSH_PRIV_MCXT_PRE_PC_SHIFT)
@@ -3062,7 +3085,8 @@ GLOBAL_LABEL(our_cpuid:)
         DECLARE_FUNC(switch_stack)
 GLOBAL_LABEL(switch_stack:)
         /* we need a callee-saved reg across our call so save it onto stack */
-        push     {REG_R13} 
+        mov      REG_R1, REG_R13
+        push     {REG_R1} 
 
         /* Switch stack */
         mov      REG_R13,REG_R0
@@ -3080,7 +3104,8 @@ END_FUNC(switch_stack)
         DECLARE_FUNC(restore_stack)
 GLOBAL_LABEL(restore_stack:)
         /* we need a callee-saved reg across our call so save it onto stack */
-        pop     {REG_R13}
+        pop     {REG_R1}
+        mov     REG_R13, REG_R1
 
         mov      pc, r14
 END_FUNC(restore_stack)

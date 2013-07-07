@@ -1437,9 +1437,10 @@ create_new_dynamo_context(bool initial, byte *dstack_in)
     ASSERT(proc_is_cache_aligned(dcontext));
 #ifdef ARM
     /* 264138: ensure xmm/ymm slots are aligned so we can use vmovdqa */
-    ASSERT(ALIGNED(get_mcontext(dcontext)->qr, QR_REG_SIZE));
+    // SJF Dont need it aligned for ARM os just ignore for now
+    // ASSERT(ALIGNED(get_mcontext(dcontext)->qr, QR_REG_SIZE));
     /* also ensure we don't have extra padding beyond x86.asm defines */
-    ASSERT(sizeof(priv_mcontext_t) == 18*sizeof(reg_t) +
+    ASSERT(sizeof(priv_mcontext_t) == 17*sizeof(reg_t) +
            PRE_QR_PADDING + QR_SLOTS_SIZE);
 
 #else

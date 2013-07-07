@@ -123,7 +123,6 @@
 
 #ifdef ARM
     reg_t cpsr; /**< platform-independent name for full cpsr register */
-    reg_t spsr; /**< platform-independent name for full cpsr register */
 
     reg_t r15;  /* Put the pc after all the other general regs info */
 
