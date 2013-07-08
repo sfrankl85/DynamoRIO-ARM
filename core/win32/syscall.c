@@ -50,6 +50,9 @@ int *syscalls = NULL;
 /* this points to one of the os-version-specific wow64 argument conversion arrays */
 int *wow64_index = NULL;
 
+/* SJF TODO Do I need a svc_syscall_address var here??? */
+app_pc svc_syscall_address = NULL;
+
 /* Ref case 5217 - for Sygate compatibility we indirect int 2e system
  * calls through the int_syscall_address (which after syscalls_init()
  * will point to an int 2e, ret 0 in ntdll.dll. This is, for all intents

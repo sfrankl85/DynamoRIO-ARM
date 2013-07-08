@@ -984,17 +984,7 @@ void safe_read_asm_recover(void);
 /* from x86.asm */
 /* Note these have specialized calling conventions and shouldn't be called from
  * C code (see comments in x86.asm). */
-void global_do_syscall_sysenter(void);
-void global_do_syscall_int(void);
-void global_do_syscall_sygate_int(void);
-void global_do_syscall_sygate_sysenter(void);
-# ifdef WINDOWS
-void global_do_syscall_wow64(void);
-void global_do_syscall_wow64_index0(void);
-# endif
-#ifdef X64
-void global_do_syscall_syscall(void);
-#endif
+void global_do_syscall_svc(void);
 
 /* in encode.c */
 byte *instr_encode_ignore_reachability(dcontext_t *dcontext_t, instr_t *instr, byte *pc);

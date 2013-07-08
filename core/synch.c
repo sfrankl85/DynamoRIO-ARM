@@ -206,7 +206,11 @@ is_at_do_syscall(dcontext_t *dcontext, app_pc pc, byte *esp)
 #else
         return is_after_do_syscall_addr(dcontext, pc);
 #endif
+#ifdef ARM
+    } else if (get_syscall_method() == SYSCALL_METHOD_SVC) {
+#else
     } else if (get_syscall_method() == SYSCALL_METHOD_SYSENTER) {
+#endif
 #ifdef WINDOWS
         if (pc == vsyscall_after_syscall) {
             if (DYNAMO_OPTION(sygate_sysenter))
@@ -1654,7 +1658,11 @@ translate_from_synchall_to_dispatch(thread_record_t *tr, thread_synch_state_t sy
             ASSERT(cur_retaddr != NULL);
             /* must be ignore_syscalls (else, at_syscall will be set) */
             IF_WINDOWS(ASSERT(DYNAMO_OPTION(ignore_syscalls)));
-            ASSERT(get_syscall_method() == SYSCALL_METHOD_SYSENTER);
+            #ifdef ARM
+              ASSERT(get_syscall_method() == SYSCALL_METHOD_SVC);
+            #else
+              ASSERT(get_syscall_method() == SYSCALL_METHOD_SYSENTER);
+            #endif
             /* For DYNAMO_OPTION(sygate_sysenter) we need to restore both stack
              * values and fix up esp, but we can't do it here since the kernel
              * will change esp... incompatible w/ -ignore_syscalls anyway

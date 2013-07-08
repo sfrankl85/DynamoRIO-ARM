@@ -2190,8 +2190,8 @@ after_shared_syscall_addr(dcontext_t *dcontext)
 {
     ASSERT(get_syscall_method() != SYSCALL_METHOD_UNINITIALIZED);
     if (DYNAMO_OPTION(sygate_int) &&
-        get_syscall_method() == SYSCALL_METHOD_INT)
-        return (int_syscall_address + INT_LENGTH /* sizeof int 2e */);
+        get_syscall_method() == SYSCALL_METHOD_SVC)
+        return (svc_syscall_address + SVC_LENGTH /* sizeof int 2e */);
     else
         return after_shared_syscall_code(dcontext);
 }
@@ -2218,8 +2218,8 @@ after_do_syscall_addr(dcontext_t *dcontext)
 {
     ASSERT(get_syscall_method() != SYSCALL_METHOD_UNINITIALIZED);
     if (DYNAMO_OPTION(sygate_int) &&
-        get_syscall_method() == SYSCALL_METHOD_INT)
-        return (int_syscall_address + INT_LENGTH /* sizeof int 2e */);
+        get_syscall_method() == SYSCALL_METHOD_SVC)
+        return (svc_syscall_address + SVC_LENGTH /* sizeof int 2e */);
     else
         return after_do_syscall_code(dcontext);
 }
@@ -3258,7 +3258,7 @@ recreate_app_state_internal(dcontext_t *tdcontext, priv_mcontext_t *mcontext,
         }
     }
 #else
-    if (get_syscall_method() == SYSCALL_METHOD_SYSENTER && 
+    if (get_syscall_method() == SYSCALL_METHOD_SVC && 
         /* Even when the main syscall method is sysenter, we also have a
          * do_int_syscall and do_clone_syscall that use int, so check only
          * the main syscall routine.
@@ -3267,6 +3267,7 @@ recreate_app_state_internal(dcontext_t *tdcontext, priv_mcontext_t *mcontext,
          * distinguish those: but for now if a sysenter instruction is used it
          * has to be do_syscall since DR's own syscalls are ints.
          */
+        /* SJF TODO Change for SVC */
         (mcontext->r15 == vsyscall_sysenter_return_pc ||
          is_after_main_do_syscall_addr(tdcontext, mcontext->r15))) {
         LOG(THREAD_GET, LOG_INTERP|LOG_SYNCH, 2, 
@@ -4022,43 +4023,14 @@ byte *
 get_global_do_syscall_entry()
 {
     int method = get_syscall_method();
-    if (method == SYSCALL_METHOD_INT) {
-#ifdef WINDOWS
-        if (DYNAMO_OPTION(sygate_int))
-            return (byte *)global_do_syscall_sygate_int;
-        else
-#endif
-            return (byte *)global_do_syscall_int;
-    } else if (method == SYSCALL_METHOD_SYSENTER) {
-#ifdef WINDOWS
-        if (DYNAMO_OPTION(sygate_sysenter))
-            return (byte *)global_do_syscall_sygate_sysenter;
-        else
-            return (byte *)global_do_syscall_sysenter;
-#else
-        return (byte *)global_do_syscall_int;
-#endif
-    }
-#ifdef WINDOWS
-    else if (method == SYSCALL_METHOD_WOW64)
-        return (byte *)global_do_syscall_wow64;
-#endif
-    else if (method == SYSCALL_METHOD_SYSCALL) {
-#ifdef X64
-        return (byte *)global_do_syscall_syscall;
-#else
-# ifdef WINDOWS
-        ASSERT_NOT_IMPLEMENTED(false && "PR 205898: 32-bit syscall on Windows NYI");
-# else
-        return (byte *)global_do_syscall_int;
-# endif
-#endif
+    if (method == SYSCALL_METHOD_SVC) {
+            return (byte *)global_do_syscall_svc;
     } else {
 #ifdef LINUX
         /* PR 205310: we sometimes have to execute syscalls before we
          * see an app syscall: for a signal default action, e.g.
          */
-        return (byte *)IF_X64_ELSE(global_do_syscall_syscall,global_do_syscall_int);
+        return (byte *)IF_X64_ELSE(global_do_syscall_syscall,global_do_syscall_svc);
 #else
         ASSERT_NOT_REACHED();
 #endif
@@ -4249,7 +4221,7 @@ unhook_vsyscall(void)
     uint prot;
     bool res;
     uint len = VSYS_DISPLACED_LEN;
-    if (get_syscall_method() != SYSCALL_METHOD_SYSENTER)
+    if (get_syscall_method() != SYSCALL_METHOD_SVC)
         return false;
     ASSERT(!sysenter_hook_failed);
     ASSERT(vsyscall_sysenter_return_pc != NULL);
@@ -4275,144 +4247,17 @@ void
 check_syscall_method(dcontext_t *dcontext, instr_t *instr)
 {
     int new_method = SYSCALL_METHOD_UNINITIALIZED;
-#ifdef NO
-// TODO SJF INSTR
-    if (instr_get_opcode(instr) == OP_int)
-        new_method = SYSCALL_METHOD_INT;
-    else if (instr_get_opcode(instr) == OP_sysenter)
-        new_method = SYSCALL_METHOD_SYSENTER;
-    else if (instr_get_opcode(instr) == OP_syscall)
-        new_method = SYSCALL_METHOD_SYSCALL;
-#ifdef WINDOWS
-    else if (instr_get_opcode(instr) == OP_call_ind)
-        new_method = SYSCALL_METHOD_WOW64;
-#endif
-    else
-#endif //NO
-        ASSERT_NOT_REACHED();
 
-    if (new_method == SYSCALL_METHOD_SYSENTER ||
-        IF_X64_ELSE(false, new_method == SYSCALL_METHOD_SYSCALL)) {
-        DO_ONCE({
-            /* FIXME: DO_ONCE will unprot and reprot, and here we unprot again */
-            SELF_UNPROTECT_DATASEC(DATASEC_RARELY_PROT);
-            /* FIXME : using the raw-bits as the app pc for the instr is
-             * not really supported, but places in monitor assume it as well */
-            ASSERT(instr_raw_bits_valid(instr) && 
-                   !instr_has_allocated_bits(instr));
-            /* Some places (such as clean_syscall_wrapper) assume that only int system
-             * calls are used in older versions of windows. */
-            IF_WINDOWS(ASSERT(get_os_version() > WINDOWS_VERSION_2000 &&
-                              "Expected int syscall method on NT and 2000"));
-            /* Used by SYSCALL_PC in win32/os.c for non int system calls */
-            IF_WINDOWS(app_sysenter_instr_addr = instr_get_raw_bits(instr));
-            /* we expect, only on XP and later or on recent linux kernels, 
-             * indirected syscalls through a certain page, which we record here
-             * FIXME: don't allow anyone to make this region writable?
-             */
-            /* FIXME : we need to verify that windows lays out all of the 
-             * syscall stuff as expected on AMD chips: xref PR 205898.
-             */
-            /* FIXME: bootstrapping problem...would be nicer to read ahead and find
-             * syscall before needing to know about page it's on, but for now we just
-             * check if our initial assignments were correct
-             */
-            vsyscall_syscall_end_pc = instr_get_raw_bits(instr) +
-                instr_length(dcontext, instr);
-            IF_WINDOWS({
-                /* for XP sp0,1 (but not sp2) and 03 fixup boostrap values */
-                if (vsyscall_page_start ==  VSYSCALL_PAGE_START_BOOTSTRAP_VALUE) {
-                    vsyscall_page_start = (app_pc) PAGE_START(instr_get_raw_bits(instr));
-                    ASSERT(vsyscall_page_start == VSYSCALL_PAGE_START_BOOTSTRAP_VALUE);
-                }
-                if (vsyscall_after_syscall == VSYSCALL_AFTER_SYSCALL_BOOTSTRAP_VALUE) {
-                    /* for XP sp0,1 and 03 the ret is immediately after the 
-                     * sysenter instruction */
-                    vsyscall_after_syscall = instr_get_raw_bits(instr) +
-                        instr_length(dcontext, instr);
-                    ASSERT(vsyscall_after_syscall ==
-                           VSYSCALL_AFTER_SYSCALL_BOOTSTRAP_VALUE);
-                }
-            });
-            /* For linux, we should have found "[vdso]" in the maps file */
-            IF_LINUX(ASSERT(vsyscall_page_start != NULL &&
-                            vsyscall_page_start ==
-                            (app_pc) PAGE_START(instr_get_raw_bits(instr))));
-            LOG(GLOBAL, LOG_SYSCALLS|LOG_VMAREAS, 2,
-                "Found vsyscall @ "PFX" => page "PFX", post "PFX"\n",
-                instr_get_raw_bits(instr), vsyscall_page_start,
-                IF_WINDOWS_ELSE(vsyscall_after_syscall, vsyscall_syscall_end_pc));
-            /* make sure system call numbers match */
-            IF_WINDOWS(DOCHECK(1, { check_syscall_numbers(dcontext); }));
-            SELF_PROTECT_DATASEC(DATASEC_RARELY_PROT);
-        });
-    } else {
-#ifdef WINDOWS
-        DO_ONCE({
-            /* FIXME: DO_ONCE will unprot and reprot, and here we unprot again */
-            SELF_UNPROTECT_DATASEC(DATASEC_RARELY_PROT);
-            /* Close vsyscall page hole.
-             * FIXME: the vsyscall page can still be in use and contain int:
-             * though I have yet to see that case where the page is not marked rx.
-             * On linux the vsyscall page is reached via "call *%gs:0x10", but
-             * sometimes that call ends up at /lib/ld-2.3.4.so:_dl_sysinfo_int80
-             * instead (which is the case when the vsyscall page is marked with no
-             * permissions).
-             */
-            LOG(GLOBAL, LOG_SYSCALLS|LOG_VMAREAS, 2,
-                "Closing vsyscall page hole (int @ "PFX") => page "PFX", post "PFX"\n",
-                instr_get_translation(instr), vsyscall_page_start,
-                IF_WINDOWS_ELSE(vsyscall_after_syscall, vsyscall_syscall_end_pc));
-            vsyscall_page_start = NULL;
-            vsyscall_after_syscall = NULL;
-            ASSERT_CURIOSITY(new_method != SYSCALL_METHOD_WOW64 ||
-                             (get_os_version() > WINDOWS_VERSION_XP &&
-                              is_wow64_process(NT_CURRENT_PROCESS) &&
-                              "Unexpected WOW64 syscall method"));
-            /* make sure system call numbers match */
-            DOCHECK(1, { check_syscall_numbers(dcontext); });
-            SELF_PROTECT_DATASEC(DATASEC_RARELY_PROT);
-        });
-#else
-        /* On Linux we can't clear vsyscall_page_start as the app will often use both
-         * inlined int and vsyscall sysenter system calls. We handle fixing up for that
-         * in the next ifdef. */
-#endif
-    }
+    if (instr_get_opcode(instr) == OP_svc)
+        new_method = SYSCALL_METHOD_SVC;
+    else
+        ASSERT_NOT_REACHED();
 
 #ifdef LINUX
     if (new_method != get_syscall_method() &&
-        /* PR 286922: for linux, vsyscall method trumps occasional use of int.  We
-         * update do_syscall for the vsyscall method, and use do_int_syscall for any
-         * int uses. */
-        (new_method != SYSCALL_METHOD_INT ||
-         (get_syscall_method() != SYSCALL_METHOD_SYSENTER &&
-          get_syscall_method() != SYSCALL_METHOD_SYSCALL))) {
-        ASSERT(get_syscall_method() == SYSCALL_METHOD_UNINITIALIZED ||
-               get_syscall_method() == SYSCALL_METHOD_INT);
-        if (new_method == SYSCALL_METHOD_SYSENTER) {
-# ifndef HAVE_TLS
-            if (DYNAMO_OPTION(hook_vsyscall)) {
-                /* PR 361894: we use TLS for our vsyscall hook (PR 212570) */
-                FATAL_USAGE_ERROR(SYSENTER_NOT_SUPPORTED, 2, 
-                                  get_application_name(), get_application_pid());
-            }
-# endif
-            /* Hook the sysenter continuation point so we don't lose control */
-            if (!sysenter_hook_failed && !hook_vsyscall(dcontext)) {
-                /* PR 212570: for now we bail out to using int;
-                 * for performance we should clobber the retaddr and
-                 * keep the sysenters.
-                 */
-                SELF_UNPROTECT_DATASEC(DATASEC_RARELY_PROT);
-                sysenter_hook_failed = true;
-                SELF_PROTECT_DATASEC(DATASEC_RARELY_PROT);
-                LOG(GLOBAL, LOG_SYSCALLS|LOG_VMAREAS, 1,
-                    "Unable to hook vsyscall page; falling back on int\n");
-            }
-            if (sysenter_hook_failed)
-                new_method = SYSCALL_METHOD_INT;
-        }
+         /* Only one method of syscalls for ARM */
+         new_method == SYSCALL_METHOD_SVC ) 
+    {
         if (get_syscall_method() == SYSCALL_METHOD_UNINITIALIZED ||
             new_method != get_syscall_method()) {
             set_syscall_method(new_method);
@@ -4436,16 +4281,13 @@ get_syscall_method(void)
 bool
 does_syscall_ret_to_callsite(void)
 {
-    return (syscall_method == SYSCALL_METHOD_INT || 
-            syscall_method == SYSCALL_METHOD_SYSCALL
-            IF_WINDOWS(|| syscall_method == SYSCALL_METHOD_WOW64));
+    return (syscall_method == SYSCALL_METHOD_SVC);
 }
 
 void
 set_syscall_method(int method)
 {
-    ASSERT(syscall_method == SYSCALL_METHOD_UNINITIALIZED
-           IF_LINUX(|| syscall_method == SYSCALL_METHOD_INT/*PR 286922*/));
+    ASSERT(syscall_method == SYSCALL_METHOD_UNINITIALIZED);
     syscall_method = method;
 }
 

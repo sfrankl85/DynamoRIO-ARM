@@ -4841,13 +4841,17 @@ dr_syscall_invoke_another(void *drcontext)
                   "dr_syscall_invoke_another() can only be called from post-syscall event");
     LOG(THREAD, LOG_SYSCALLS, 2, "invoking additional syscall on client request\n");
     dcontext->client_data->invoke_another_syscall = true;
+#ifdef ARM
+    if (get_syscall_method() == SYSCALL_METHOD_SVC) {
+#else
     if (get_syscall_method() == SYSCALL_METHOD_SYSENTER) {
+#endif
         priv_mcontext_t *mc = get_mcontext(dcontext);
         /* restore xbp to xsp */
         #ifdef ARM
-        mc->r3 = mc->r13;
+          mc->r3 = mc->r13;
         #else
-        mc->xbp = mc->xsp;
+          mc->xbp = mc->xsp;
         #endif
     }
     /* for x64 we don't need to copy xcx into r10 b/c we use r10 as our param */
@@ -5377,12 +5381,20 @@ handle_close_pre(dcontext_t *dcontext)
  * is currently in a syscall handler.
  * Alternatively for sysenter we could set app_sysenter_instr_addr for Linux.
  */
-#define SYSCALL_PC(dc) \
- ((get_syscall_method() == SYSCALL_METHOD_INT ||     \
-   get_syscall_method() == SYSCALL_METHOD_SYSCALL) ? \
-  (ASSERT(SYSCALL_LENGTH == INT_LENGTH),             \
-   POST_SYSCALL_PC(dc) - INT_LENGTH) :               \
-  (vsyscall_syscall_end_pc - SYSENTER_LENGTH))
+#ifdef ARM
+# define SYSCALL_PC(dc) \
+  ((get_syscall_method() == SYSCALL_METHOD_SVC ) ? \
+   (ASSERT(SYSCALL_LENGTH == SVC_LENGTH),             \
+    POST_SYSCALL_PC(dc) - SVC_LENGTH) :               \
+    0 )
+#else
+# define SYSCALL_PC(dc) \
+  ((get_syscall_method() == SYSCALL_METHOD_INT ||     \
+    get_syscall_method() == SYSCALL_METHOD_SYSCALL) ? \
+   (ASSERT(SYSCALL_LENGTH == INT_LENGTH),             \
+    POST_SYSCALL_PC(dc) - INT_LENGTH) :               \
+   (vsyscall_syscall_end_pc - SYSENTER_LENGTH))
+#endif
 
 static void
 handle_exit(dcontext_t *dcontext)

@@ -936,12 +936,7 @@ fcache_enter_func_t get_fcache_enter_shared_routine(dcontext_t *dcontext);
  */
 enum {
     SYSCALL_METHOD_UNINITIALIZED,
-    SYSCALL_METHOD_INT,
-    SYSCALL_METHOD_SYSENTER,
-    SYSCALL_METHOD_SYSCALL,
-#ifdef WINDOWS
-    SYSCALL_METHOD_WOW64,
-#endif
+    SYSCALL_METHOD_SVC,
 };
 #ifdef LINUX
 enum { SYSCALL_METHOD_LONGEST_INSTR = 2 }; /* to ensure safe patching */
@@ -1403,6 +1398,7 @@ enum {
     CTI_FAR_ABS_LENGTH = 7, /* 9A 1B 07 00 34 39 call 0739:3400071B            */
                             /* 07                                              */
 
+    SVC_LENGTH = 4,
     INT_LENGTH = 2,
     SYSCALL_LENGTH = 2,
     SYSENTER_LENGTH = 2,

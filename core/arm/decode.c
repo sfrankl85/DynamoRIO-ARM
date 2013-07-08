@@ -226,18 +226,20 @@ indir_var_reg_offs_factor(int optype)
  */
 
 instr_info_t* decode_data_processing_and_els(byte* instr_word, 
-                                            decode_info_t* di, bool just_opcode)
+                                             decode_info_t* di, bool just_opcode,
+                                             opnd_t* dsts, opnd_t* srcs, 
+                                             int* numdsts, int* numsrcs)
 {
     instr_info_t *info = NULL;
     uint        opc = 0, temp = 0;
     bool        s_bit = false;
      
 
-    opc |= (word[0] & 0x1) << 4;
+    opc |= (instr_word[0] & 0x1) << 4;
 
-    opc |= (word[1] >> 4);
+    opc |= (instr_word[1] >> 4);
 
-    temp = (word[1] << 7); 
+    temp = (instr_word[1] << 7); 
     temp = (temp >> 7);
 
     s_bit = (bool)temp;
@@ -247,7 +249,8 @@ instr_info_t* decode_data_processing_and_els(byte* instr_word,
 }
 
 instr_info_t* decode_data_processing_imm(byte* instr_word, 
-                                          decode_info_t* di, bool just_opcode)
+                                         decode_info_t* di, bool just_opcode,
+                                         opnd_t* dsts, opnd_t* srcs, int* numdsts, int* numsrcs)
 {
     instr_info_t *info = NULL;
 
@@ -255,7 +258,8 @@ instr_info_t* decode_data_processing_imm(byte* instr_word,
 }
 
 instr_info_t* decode_load_store1(byte* instr_word, 
-                                 decode_info_t* di, bool just_opcode)
+                                 decode_info_t* di, bool just_opcode,
+                                 opnd_t* dsts, opnd_t* srcs, int* numdsts, int* numsrcs)
 {
     instr_info_t *info = NULL;
 
@@ -263,7 +267,8 @@ instr_info_t* decode_load_store1(byte* instr_word,
 }
 
 instr_info_t* decode_load_store2_and_media(byte* instr_word, 
-                                           decode_info_t* di, bool just_opcode)
+                                           decode_info_t* di, bool just_opcode,
+                                           opnd_t* dsts, opnd_t* srcs, int* numdsts, int* numsrcs)
 {
     instr_info_t *info = NULL;
 
@@ -271,7 +276,8 @@ instr_info_t* decode_load_store2_and_media(byte* instr_word,
 }
 
 instr_info_t* decode_load_store_multiple(byte* instr_word, 
-                                        decode_info_t* di, bool just_opcode)
+                                        decode_info_t* di, bool just_opcode,
+                                        opnd_t* dsts, opnd_t* srcs, int* numdsts, int* numsrcs)
 {
     instr_info_t *info = NULL;
 
@@ -279,7 +285,8 @@ instr_info_t* decode_load_store_multiple(byte* instr_word,
 }
 
 instr_info_t* decode_branch(byte* instr_word, 
-                            decode_info_t* di, bool just_opcode)
+                            decode_info_t* di, bool just_opcode,
+                            opnd_t* dsts, opnd_t* srcs, int* numdsts, int* numsrcs)
 {
     /* OP_b, OP_bl, OP_blx */
     instr_info_t *info = NULL;
@@ -301,20 +308,25 @@ instr_info_t* decode_branch(byte* instr_word,
     if( just_opcode )
       return info;
 
+    /* SJF Check that the dsts and srcs are valid 
+       arrays if flagged for operand decoding*/
+    ASSERT( srcs != NULL && dsts != NULL ); 
+
     /* Decode imm here */
 
-    immed |= (word[1] << 16); 
-    immed |= (word[2] << 8);
-    immed |= (word[3]);
+    immed |= (instr_word[1] << 16); 
+    immed |= (instr_word[2] << 8);
+    immed |= (instr_word[3]);
 
-    instr_set_src( instr, 0, 
-                   opnd_create_immed_int((ptr_int_t)(immed), OPSZ_4_24));
+    srcs[*numsrcs] = opnd_create_immed_int((ptr_int_t)(immed), OPSZ_4_24);
+    *numsrcs++;
 
     return info;
 }
 
 instr_info_t* decode_coprocessor_data_movement(byte* instr_word,
-                                               decode_info_t* di, bool just_opcode)
+                                               decode_info_t* di, bool just_opcode,
+                                               opnd_t* dsts, opnd_t* srcs, int* numdsts, int* numsrcs)
 {
     instr_info_t *info = NULL;
 
@@ -322,7 +334,8 @@ instr_info_t* decode_coprocessor_data_movement(byte* instr_word,
 }
 
 instr_info_t* decode_advanced_coprocessor(byte* instr_word,
-                                          decode_info_t* di, bool just_opcode)
+                                          decode_info_t* di, bool just_opcode,
+                                          opnd_t* dsts, opnd_t* srcs, int* numdsts, int* numsrcs)
 {
     instr_info_t *info = NULL;
 
@@ -340,7 +353,8 @@ instr_info_t* decode_advanced_coprocessor(byte* instr_word,
 static byte *
 read_instruction(byte *pc, byte *orig_pc,
                  const instr_info_t **ret_info, decode_info_t *di,
-                 bool just_opcode _IF_DEBUG(bool report_invalid))
+                 bool just_opcode _IF_DEBUG(bool report_invalid),
+                 opnd_t* dsts, opnd_t* srcs, int* numdsts, int* numsrcs )
 {
     DEBUG_DECLARE(byte *post_suffix_pc = NULL;)
     byte instr_byte, temp, instr_type;
@@ -378,28 +392,36 @@ read_instruction(byte *pc, byte *orig_pc,
     switch( instr_type )
     {
         case INSTR_TYPE_DATA_PROCESSING_AND_ELS:
-          info = decode_data_processing_and_els(instr_word, di, just_opcode); 
+          info = decode_data_processing_and_els(instr_word, di, just_opcode, 
+                                                dsts, srcs, numdsts, numsrcs); 
           break;
         case INSTR_TYPE_DATA_PROCESSING_IMM:
-          info = decode_data_processing_imm(instr_word, di, just_opcode); 
+          info = decode_data_processing_imm(instr_word, di, just_opcode,
+                                            dsts, srcs, numdsts, numsrcs); 
           break;
         case INSTR_TYPE_LOAD_STORE1:
-          info = decode_load_store1(instr_word, di, just_opcode); 
+          info = decode_load_store1(instr_word, di, just_opcode,
+                                    dsts, srcs, numdsts, numsrcs); 
           break;
         case INSTR_TYPE_LOAD_STORE2_AND_MEDIA:
-          info = decode_load_store2_and_media(instr_word, di, just_opcode); 
+          info = decode_load_store2_and_media(instr_word, di, just_opcode, 
+                                              dsts, srcs, numdsts, numsrcs); 
           break;
         case INSTR_TYPE_LOAD_STORE_MULTIPLE:
-          info = decode_load_store_multiple(instr_word, di, just_opcode); 
+          info = decode_load_store_multiple(instr_word, di, just_opcode, 
+                                            dsts, srcs, numdsts, numsrcs); 
           break;
         case INSTR_TYPE_BRANCH:
-          info = decode_branch(instr_word, di, just_opcode); 
+          info = decode_branch(instr_word, di, just_opcode,
+                               dsts, srcs, numdsts, numsrcs); 
           break;
         case INSTR_TYPE_COPROCESSOR_DATA_MOVEMENT:
-          info = decode_coprocessor_data_movement(instr_word, di, just_opcode); 
+          info = decode_coprocessor_data_movement(instr_word, di, just_opcode, 
+                                                  dsts, srcs, numdsts, numsrcs); 
           break;
         case INSTR_TYPE_ADVANCED_COPROCESSOR_AND_SYSCALL:
-          info = decode_advanced_coprocessor(instr_word, di, just_opcode); 
+          info = decode_advanced_coprocessor(instr_word, di, just_opcode,
+                                             dsts, srcs, numdsts, numsrcs); 
           break;
         default:
           CLIENT_ASSERT(false, "decode_error: unknown instr_type");
@@ -503,7 +525,8 @@ decode_cpsr_usage(dcontext_t *dcontext, byte *pc, uint *usage)
     decode_info_t di;
 
     /* don't decode immeds, instead use decode_next_pc, it's faster */
-    read_instruction(pc, pc, &info, &di, true /* just opcode */ _IF_DEBUG(true));
+    read_instruction(pc, pc, &info, &di, true /* just opcode */ _IF_DEBUG(true),
+                     NULL, NULL, NULL, NULL);
     *usage = info->cpsr;
     pc = decode_next_pc(dcontext, pc);
     /* failure handled fine -- we'll go ahead and return the NULL */
@@ -519,7 +542,8 @@ decode_opcode_usage(dcontext_t *dcontext, byte *pc, uint *usage)
     decode_info_t di;
 
     /* don't decode immeds, instead use decode_next_pc, it's faster */
-    read_instruction(pc, pc, &info, &di, true /* just opcode */ _IF_DEBUG(true));
+    read_instruction(pc, pc, &info, &di, true /* just opcode */ _IF_DEBUG(true),
+                     NULL, NULL, NULL, NULL);
     *usage = info->opcode;
     pc = decode_next_pc(dcontext, pc);
     /* failure handled fine -- we'll go ahead and return the NULL */
@@ -555,7 +579,8 @@ decode_opcode(dcontext_t *dcontext, byte *pc, instr_t *instr)
      * than decoding immeds!
      */
     read_instruction(pc, pc, &info, &di, true /* just opcode */
-                     _IF_DEBUG(!TEST(INSTR_IGNORE_INVALID, instr->flags)));
+                     _IF_DEBUG(!TEST(INSTR_IGNORE_INVALID, instr->flags)),
+                     NULL, NULL, NULL, NULL);
     sz = decode_sizeof(dcontext, pc, NULL _IF_X64(&rip_rel_pos));
     IF_X64(instr_set_x86_mode(instr, get_x86_mode(dcontext)));
     instr_set_opcode(instr, info->type);
@@ -615,7 +640,8 @@ decode_common(dcontext_t *dcontext, byte *pc, byte *orig_pc, instr_t *instr)
 
     next_pc = read_instruction(pc, orig_pc, &info, &di, false /* not just opcode,
                                                                  decode operands too */
-                               _IF_DEBUG(!TEST(INSTR_IGNORE_INVALID, instr->flags)));
+                               _IF_DEBUG(!TEST(INSTR_IGNORE_INVALID, instr->flags)), 
+                                dsts, srcs, &instr_num_dsts, &instr_num_srcs);
     instr_set_opcode(instr, info->type);
     IF_X64(instr_set_x86_mode(instr, di.x86_mode));
     /* failure up to this point handled fine -- we set opcode to OP_INVALID */

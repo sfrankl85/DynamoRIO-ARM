@@ -121,16 +121,16 @@ START_FILE
 
 /* SJF Changed */
 #define PUSHGPR \
-        stmdb   r13!, {r0-r12}  @N@\
+        stmdb   r13!, {r14}     @N@\
         str     r13, [r13]      @N@\
         sub     r13, r13, immediate(4) @N@\
-        stmdb   r13!, {r14}
+        stmdb   r13!, {r0-r12}  
 
 #define POPGPR  \
-        ldmia   r13!, {r14}     @N@\
+        ldmia   !r13, {r0-r12}  
         ldr     r13,  [r13]                 @N@\
         add     r13, r13, immediate(4)      @N@\
-        ldmia   !r13, {r0-r12}  
+        ldmia   r13!, {r14}     @N@\
 
 # define PRIV_MCXT_SIZE (17*ARG_SZ + PRE_QR_PADDING + QR_SAVED_SIZE)
 # define dstack_OFFSET     (PRIV_MCXT_SIZE+UPCXT_EXTRA+3*ARG_SZ)
@@ -138,11 +138,12 @@ START_FILE
 
 /* offsetof(dcontext_t, is_exiting) */
 #define is_exiting_OFFSET (dstack_OFFSET+1*ARG_SZ)
-#define PUSHGPR_R13_OFFS  (17*ARG_SZ)  /* Num of fields before r13 in priv_mcontext_t */
+#define PUSHGPR_R13_OFFS  (13*ARG_SZ)  /* Num of fields before r13 in priv_mcontext_t */
 #define MCONTEXT_R13_OFFS (PUSHGPR_R13_OFFS)
 
 /* SJF BEGIN These defines should be the correct value or have been altered */ 
 #define PUSH_PRIV_MCXT_PRE_PC_SHIFT (- QR_SAVED_SIZE - PRE_QR_PADDING)
+#define GPRS_STORED_SIZE  (15 * ARG_SZ)
 # define ARG_SZ 4
 /* SJF END*/
 
@@ -587,30 +588,6 @@ cat_have_lock:
         jmp      REG_XSI  /* go do the syscall! */
 #endif
         END_FUNC(cleanup_and_terminate)
-
-/* global_do_syscall_int
- * Caller is responsible for all set up.  For windows this means putting the
- * syscall num in eax and putting the args at edx.  For linux this means putting
- * the syscall num in eax, and the args in ebx, ecx, edx, esi, edi and ebp (in
- * that order, as needed).  global_do_syscall is only used with system calls
- * that we don't expect to return, so for debug builds we go into an infinite
- * loop if syscall returns.
- */
-        DECLARE_FUNC(global_do_syscall_int)
-GLOBAL_LABEL(global_do_syscall_int:)
-#ifdef WINDOWS
-        int      HEX(2e)
-#else
-        int      HEX(80)
-#endif
-#ifdef DEBUG
-        jmp      debug_infinite_loop
-#endif
-#ifdef LINUX
-        /* we do come here for SYS_kill which can fail: try again via exit_group */
-        jmp      dynamorio_sys_exit_group
-#endif
-        END_FUNC(global_do_syscall_int)
 
 /* For sygate hack need to indirect the system call through ntdll. */
 #ifdef WINDOWS
@@ -2403,9 +2380,12 @@ GLOBAL_LABEL(get_pic_r7:)
 #define PUSH_PRIV_MCXT(pcval)                              \
         add      REG_R13, REG_R13, immediate(PUSH_PRIV_MCXT_PRE_PC_SHIFT)  @N@\
         push     {pcval}                                        @N@\
-        PUSHF                                                   @N@\
+        sub      REG_R13, REG_R13, immediate(ARG_SZ)            @N@\
         PUSHGPR                                                 @N@\
-        sub      REG_R0, REG_R13, immediate(PRIV_MCXT_SIZE)     @N@\
+        add      REG_R13, REG_R13, immediate(GPRS_STORED_SIZE+ARG_SZ)  @N@\
+        PUSHF                                                   @N@\
+        sub      REG_R13, REG_R13, immediate(GPRS_STORED_SIZE) @N@\
+        add      REG_R0, REG_R13, immediate(PRIV_MCXT_SIZE)     @N@\
         str      REG_R0, [REG_R13, immediate(PUSHGPR_R13_OFFS)]
 
 /* Pops the GPRs and flags from a priv_mcontext off the stack.  Does not
@@ -2589,9 +2569,9 @@ END_FUNC(unexpected_return)
  * that we don't expect to return, so for debug builds we go into an infinite
  * loop if syscall returns.
  */
-DECLARE_FUNC(global_do_syscall_int)
-GLOBAL_LABEL(global_do_syscall_int:)
-        swi      #0x0 
+DECLARE_FUNC(global_do_syscall_svc)
+GLOBAL_LABEL(global_do_syscall_svc:)
+        svc      #0x0 
 #ifdef DEBUG
         b      debug_infinite_loop
 #endif
@@ -2748,8 +2728,11 @@ DECL_EXTERN(dr_app_start_helper)
 /* SJF clobbers R4 */
 DECLARE_EXPORTED_FUNC(dynamorio_app_take_over)
 GLOBAL_LABEL(dynamorio_app_take_over:)
+#ifdef NO
+//Fuck alignment for now
         sub     REG_R13, REG_R13, immediate(FRAME_ALIGNMENT)  /* Maintain alignment. */
         add     REG_R13, REG_R13, immediate(ARG_SZ)  /* Maintain alignment. */
+#endif
 
         /* grab exec state and pass as param in a priv_mcontext_t struct */
         add    REG_R4, REG_R13, immediate(PUSH_PRIV_MCXT_PRE_PC_SHIFT)
@@ -2765,7 +2748,7 @@ GLOBAL_LABEL(dynamorio_app_take_over:)
         add      REG_R13, REG_R13, immediate(PRIV_MCXT_SIZE)
         add      REG_R13, REG_R13, immediate(FRAME_ALIGNMENT)
         sub      REG_R13, REG_R13, immediate(ARG_SZ)
-        mov      pc, r14 
+        mov      pc, r14
 END_FUNC(dynamorio_app_take_over)
 
 /*

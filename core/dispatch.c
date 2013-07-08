@@ -669,7 +669,11 @@ dispatch_enter_dynamorio(dcontext_t *dcontext)
          * We could put in a custom exit stub and return routine and recover,
          * but we need to get library independent anyway so it's not worth it.
          */
+#ifdef ARM
+        ASSERT(get_syscall_method() == SYSCALL_METHOD_SVC);
+#else
         ASSERT(get_syscall_method() == SYSCALL_METHOD_SYSENTER);
+#endif
         IF_X64(ASSERT_NOT_REACHED()); /* no sysenter support on x64 */
         /* PR 356503: clients using libraries that make syscalls can end up here */
         IF_CLIENT_INTERFACE(found_client_sysenter());
@@ -1616,6 +1620,8 @@ adjust_syscall_continuation(dcontext_t *dcontext)
      * space immediately after the sysenter instr, which is our normal
      * continuation pc, we have no work to do here either!
      */
+#ifdef NO
+//Dont know whether any of this needs doing for ARM
     if (get_syscall_method() == SYSCALL_METHOD_SYSENTER) {
         /* we still see some int syscalls (for SYS_clone in particular) */
         ASSERT(dcontext->sys_was_int ||
@@ -1634,6 +1640,7 @@ adjust_syscall_continuation(dcontext_t *dcontext)
             dcontext->asynch_target = vsyscall_sysenter_return_pc;
         }
     }
+#endif
 }
 #endif
 
