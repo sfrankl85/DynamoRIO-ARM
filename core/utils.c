@@ -2316,6 +2316,9 @@ is_readable_without_exception_try(byte *pc, size_t size)
         return is_readable_without_exception(pc, size);
     }
 
+#ifdef NO
+// This is causing the stack to become corrupt(or exposing some previous 
+//   stack corruption. Do remove for now
     TRY_EXCEPT(dcontext, {
         byte *check_pc = (byte *) ALIGN_BACKWARD(pc, PAGE_SIZE);
         if (size > (size_t)((byte *)POINTER_MAX - pc)) {
@@ -2338,6 +2341,7 @@ is_readable_without_exception_try(byte *pc, size_t size)
         /* no state to preserve */
         return false;
     });
+#endif //NO
 
     return true;
 }

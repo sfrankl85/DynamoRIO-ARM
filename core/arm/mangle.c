@@ -4869,7 +4869,6 @@ insert_selfmod_sandbox(dcontext_t *dcontext, instrlist_t *ilist, uint flags,
                        app_pc start_pc, app_pc end_pc, /* end is open */
                        bool record_translation, bool for_cache)
 {
-#ifdef NO
     instr_t *instr, *next;
 
     if (!INTERNAL_OPTION(cache_consistency))
@@ -4923,10 +4922,12 @@ insert_selfmod_sandbox(dcontext_t *dcontext, instrlist_t *ilist, uint flags,
                 instrlist_set_translation_target(ilist, instr_get_translation(instr));
             }
 
+/*          SJF Removed
             if (opcode == OP_rep_ins || opcode == OP_rep_movs || opcode == OP_rep_stos) {
                 sandbox_rep_instr(dcontext, ilist, instr, next, start_pc, end_pc);
                 continue;
             }
+*/
 
             /* FIXME case 8165: optimize for multiple push/pop */
             for (i=0; i<instr_num_dsts(instr); i++) {
@@ -4954,7 +4955,6 @@ insert_selfmod_sandbox(dcontext_t *dcontext, instrlist_t *ilist, uint flags,
         instrlist_set_translation_target(ilist, NULL);
     instrlist_set_our_mangling(ilist, false); /* PR 267260 */
     return true;
-#endif //NO
 }
 
 /* Offsets within selfmod sandbox top-of-bb code that we patch once

@@ -134,14 +134,15 @@ START_FILE
 
 # define PRIV_MCXT_SIZE (17*ARG_SZ + PRE_QR_PADDING + QR_SAVED_SIZE)
 # define dstack_OFFSET     (PRIV_MCXT_SIZE+UPCXT_EXTRA+3*ARG_SZ)
-# define MCONTEXT_PC_OFFS  (9*ARG_SZ)
+# define MCONTEXT_PC_OFFS  (16*ARG_SZ)
 
 /* offsetof(dcontext_t, is_exiting) */
 #define is_exiting_OFFSET (dstack_OFFSET+1*ARG_SZ)
+
+/* SJF BEGIN These defines should be the correct value or have been altered */ 
 #define PUSHGPR_R13_OFFS  (13*ARG_SZ)  /* Num of fields before r13 in priv_mcontext_t */
 #define MCONTEXT_R13_OFFS (PUSHGPR_R13_OFFS)
 
-/* SJF BEGIN These defines should be the correct value or have been altered */ 
 #define PUSH_PRIV_MCXT_PRE_PC_SHIFT (- QR_SAVED_SIZE - PRE_QR_PADDING)
 #define GPRS_STORED_SIZE  (15 * ARG_SZ)
 # define ARG_SZ 4
@@ -2400,7 +2401,7 @@ GLOBAL_LABEL(get_pic_r7:)
 
 DECLARE_FUNC(dynamorio_syscall)
 GLOBAL_LABEL(dynamorio_syscall:)
-        /* Backup regs */
+        /* Backup regs and lr */
         stmdb    r13!, {r4-r10}
 
         /*mov      r1, r1 Unnecessary now as r1 already contains arg numbers*/ /* num_args */
@@ -2477,7 +2478,7 @@ syscall_0args:
 do_syscall:
         svc      #0x0 /* SJF Converted this to swi call */ 
 
-        /* Restore the registers */
+        /* Restore the registers and lr into pc*/
         ldmia    r13!, {r4-r10}
 
         /* return val is in r14 for us */
