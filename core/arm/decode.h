@@ -299,8 +299,7 @@ typedef struct decode_info_t {
      * prefixes can be treated as absolute.
      */
     /* SJF Remove x86 stuff from here. No modrm or prefixes or seg_override.
-           Add ARM specific info such as condition code, instr_type.
-           Not altering it too much as not sure what most of it does */
+           Add ARM specific info such as condition code, instr_type.*/
     byte cond;
     byte instr_type;
     byte opcode;
