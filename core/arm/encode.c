@@ -3727,7 +3727,7 @@ encode_data_processing_and_els(decode_info_t* di, instr_t* instr, byte* pc)
         case OP_ldrexb: //C
         case OP_ldrexd: //C
         case OP_ldrexh: //C
-          nxt_pc = encode_1dst_reg_1src_reg_0src_imm(di, instr, pc);
+          nxt_pc = encode_1dst_reg_1src_reg_0src_imm_2(di, instr, pc);
           break;
         //misc
         case OP_cps:

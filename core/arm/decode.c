@@ -270,6 +270,435 @@ instr_info_t* decode_data_processing_and_els(byte* instr_word,
     return info;
 }
 
+void
+decode_1dst_reg_2src_reg_1src_imm( decode_info_t* di, byte* instr_words, opnd_t* dsts,
+                                   opnd_t* srcs, int numdsts, int numsrcs )
+{
+    int reg, immed, type;
+    //1st Dst
+    reg = (instr_word[2] >> 4);
+    
+    dsts[*numdsts] = opnd_create_reg((reg_id_t)reg);
+    *numdsts++;
+
+    //1st src
+    reg = (instr_word[1] & 0xf); 
+
+    srcs[*numsrcs] = opnd_create_reg((reg_id_t)reg);
+    *numsrcs++;
+
+    //2nd src
+    reg = (instr_word[3] & 0xf);
+
+    srcs[*numsrcs] = opnd_create_reg((reg_id_t)reg);
+    *numsrcs++;
+
+    //3rd src
+    immed = (instr_word[2] & 0xf);
+    immed = immed << 1;
+
+    immed |= (instr_word[3] >> 7);
+
+    srcs[*numsrcs] = opnd_create_immed_int((ptr_int_t)(immed), OPSZ_4_5);
+    *numsrcs++;
+
+    //Shift type
+    type = (instr_word[3] & 0x60) >> 5;
+
+    di->shift_type = type;
+}
+
+void
+decode_1dst_reg_1src_reg_0src_imm_1( decode_info_t* di, byte* instr_words, opnd_t* dsts,
+                                   opnd_t* srcs, int numdsts, int numsrcs )
+{
+    int reg;
+
+    //1st Dst
+    reg = (instr_word[2] >> 4);
+
+    dsts[*numdsts] = opnd_create_reg((reg_id_t)reg);
+    *numdsts++;
+
+    //1st src
+    reg = (instr_word[1] & 0xf);
+
+    srcs[*numsrcs] = opnd_create_reg((reg_id_t)reg);
+    *numsrcs++;
+}
+
+void
+decode_1dst_reg_1src_reg_0src_imm_2( decode_info_t* di, byte* instr_words, opnd_t* dsts,
+                                   opnd_t* srcs, int numdsts, int numsrcs )
+{
+    int reg;
+
+    //1st Dst
+    reg = (instr_word[2] >> 4);
+
+    dsts[*numdsts] = opnd_create_reg((reg_id_t)reg);
+    *numdsts++;
+
+    //1st src
+    reg = (instr_word[3] & 0xf);
+
+    srcs[*numsrcs] = opnd_create_reg((reg_id_t)reg);
+    *numsrcs++;
+}
+
+void 
+decode_1dst_reg_2src_reg_0src_imm_1( decode_info_t* di, byte* instr_words, opnd_t* dsts,
+                                   opnd_t* srcs, int numdsts, int numsrcs )
+{
+    int reg;
+
+    //1st Dst
+    reg = (instr_word[2] >> 4);
+
+    dsts[*numdsts] = opnd_create_reg((reg_id_t)reg);
+    *numdsts++;
+
+    //1st src
+    reg = (instr_word[3] & 0xf);
+
+    srcs[*numsrcs] = opnd_create_reg((reg_id_t)reg);
+    *numsrcs++;
+
+    //2nd src
+    reg = (instr_word[2] & 0xf);
+
+    srcs[*numsrcs] = opnd_create_reg((reg_id_t)reg);
+    *numsrcs++;
+
+}
+
+
+void
+decode_1dst_reg_2src_reg_0src_imm_2( decode_info_t* di, byte* instr_words, opnd_t* dsts,
+                                   opnd_t* srcs, int numdsts, int numsrcs )
+{
+    int reg;
+
+    //1st Dst
+    reg = (instr_word[1] & 0xf);
+
+    dsts[*numdsts] = opnd_create_reg((reg_id_t)reg);
+    *numdsts++;
+
+    //1st src
+    reg = (instr_word[3] & 0xf);
+
+    srcs[*numsrcs] = opnd_create_reg((reg_id_t)reg);
+    *numsrcs++;
+
+    //2nd src
+    reg = (instr_word[2] & 0xf);
+
+    srcs[*numsrcs] = opnd_create_reg((reg_id_t)reg);
+    *numsrcs++;
+
+}
+
+void
+decode_1dst_reg_2src_reg_0src_imm_3( decode_info_t* di, byte* instr_words, opnd_t* dsts,
+                                   opnd_t* srcs, int numdsts, int numsrcs )
+{
+    int reg;
+
+    //1st Dst
+    reg = (instr_word[1] & 0xf);
+
+    dsts[*numdsts] = opnd_create_reg((reg_id_t)reg); 
+    *numdsts++;
+
+    //1st src
+    reg = (instr_word[3] & 0xf);
+
+    srcs[*numsrcs] = opnd_create_reg((reg_id_t)reg); 
+    *numsrcs++;
+
+    //2nd src
+    reg = (instr_word[2] & 0xf);
+
+    srcs[*numsrcs] = opnd_create_reg((reg_id_t)reg); 
+    *numsrcs++;
+
+}
+
+void 
+decode_1dst_reg_2src_reg_0src_imm_4( decode_info_t* di, byte* instr_words, opnd_t* dsts,
+                                   opnd_t* srcs, int numdsts, int numsrcs )
+{
+    int reg;
+
+    //1st Dst
+    reg = (instr_word[2] >> 4);
+
+    dsts[*numdsts] = opnd_create_reg((reg_id_t)reg); 
+    *numdsts++;
+
+    //1st src
+    reg = (instr_word[1] & 0xf);
+
+    srcs[*numsrcs] = opnd_create_reg((reg_id_t)reg);
+    *numsrcs++;
+
+    //2nd src
+    reg = (instr_word[3] & 0xf);
+
+    srcs[*numsrcs] = opnd_create_reg((reg_id_t)reg);
+    *numsrcs++;
+}
+
+void
+decode_1dst_reg_2src_reg_0src_imm_5( decode_info_t* di, byte* instr_words, opnd_t* dsts,
+                                   opnd_t* srcs, int numdsts, int numsrcs )
+{
+   int reg;
+
+    //1st Dst
+    reg = (instr_word[2] >> 4);
+
+    dsts[*numdsts] = opnd_create_reg((reg_id_t)reg); 
+    *numdsts++;
+
+    //1st src
+    reg = (instr_word[1] & 0xf);
+
+    srcs[*numsrcs] = opnd_create_reg((reg_id_t)reg);
+    *numsrcs++;
+
+    //2nd src
+    reg = (instr_word[3] & 0xf);
+
+    srcs[*numsrcs] = opnd_create_reg((reg_id_t)reg);
+    *numsrcs++;
+}
+
+void
+decode_1dst_reg_0src_reg_1src_imm_1( decode_info_t* di, byte* instr_words, opnd_t* dsts,
+                                   opnd_t* srcs, int numdsts, int numsrcs )
+{
+    int reg, immed;
+
+    //1st Dst
+    reg = (instr_word[2] >> 4);
+
+    dsts[*numdsts] = opnd_create_reg((reg_id_t)reg); 
+    *numdsts++;
+
+    //1st src
+    immed = (instr_word[2] & 0xf);
+    immed = immed << 8;
+
+    immed |= (instr_word[3]);
+
+    srcs[*numsrcs] = opnd_create_immed_int((ptr_int_t)(immed), OPSZ_4_12);
+    *numsrcs++;
+}
+
+void
+decode_1dst_reg_0src_reg_1src_imm_2( decode_info_t* di, byte* instr_words, opnd_t* dsts,
+                                   opnd_t* srcs, int numdsts, int numsrcs )
+{
+    int reg, immed;
+
+    //1st Dst
+    reg = (instr_word[2] >> 4);
+
+    dsts[*numdsts] = opnd_create_reg((reg_id_t)reg);
+    *numdsts++;
+
+    //1st src
+    immed = (instr_word[2] & 0xf);
+    immed = immed << 8;
+
+    immed |= (instr_word[3]);
+
+    srcs[*numsrcs] = opnd_create_immed_int((ptr_int_t)(immed), OPSZ_4_12);
+    *numsrcs++;
+
+}
+
+void
+decode_1dst_reg_0src_reg_1src_imm_3( decode_info_t* di, byte* instr_words, opnd_t* dsts,
+                                   opnd_t* srcs, int numdsts, int numsrcs )
+{
+}
+
+void
+decode_1dst_reg_1src_reg_1src_imm_1( decode_info_t* di, byte* instr_words, opnd_t* dsts,
+                                   opnd_t* srcs, int numdsts, int numsrcs )
+{
+}
+
+void
+decode_1dst_reg_2src_reg_1src_imm_2( decode_info_t* di, byte* instr_words, opnd_t* dsts,
+                                   opnd_t* srcs, int numdsts, int numsrcs )
+{
+}
+
+void
+decode_1dst_reg_1src_reg_1src_imm_3( decode_info_t* di, byte* instr_words, opnd_t* dsts,
+                                   opnd_t* srcs, int numdsts, int numsrcs )
+{
+}
+
+void
+decode_1dst_reg_1src_reg_1src_imm_4( decode_info_t* di, byte* instr_words, opnd_t* dsts,
+                                   opnd_t* srcs, int numdsts, int numsrcs )
+{
+}
+
+void
+decode_0dst_reg_1src_imm_1src_mask( decode_info_t* di, byte* instr_words, opnd_t* dsts,
+                                   opnd_t* srcs, int numdsts, int numsrcs )
+{
+}
+
+void
+decode_0dst_reg_1src_reg_1src_mask( decode_info_t* di, byte* instr_words, opnd_t* dsts,
+                                   opnd_t* srcs, int numdsts, int numsrcs )
+{
+}
+
+void
+decode_0dst_reg_1src_reg_0src_imm( decode_info_t* di, byte* instr_words, opnd_t* dsts,
+                                   opnd_t* srcs, int numdsts, int numsrcs )
+{
+}
+
+void
+decode_1dst_reg_2src_reg_1src_imm( decode_info_t* di, byte* instr_words, opnd_t* dsts,
+                                   opnd_t* srcs, int numdsts, int numsrcs )
+{
+}
+
+void
+decode_1dst_reg_3src_reg_0src_imm( decode_info_t* di, byte* instr_words, opnd_t* dsts,
+                                   opnd_t* srcs, int numdsts, int numsrcs )
+{
+}
+
+void
+decode_0dst_reg_1src_reglist( decode_info_t* di, byte* instr_words, opnd_t* dsts,
+                                   opnd_t* srcs, int numdsts, int numsrcs )
+{
+}
+
+void
+decode_1dst_reg_1src_reglist( decode_info_t* di, byte* instr_words, opnd_t* dsts,
+                                   opnd_t* srcs, int numdsts, int numsrcs )
+{
+}
+
+void
+decode_branch_instrs( decode_info_t* di, byte* instr_words, opnd_t* dsts,
+                                   opnd_t* srcs, int numdsts, int numsrcs )
+{
+}
+
+void
+decode_operands( decode_info_t* di, int encoding, byte* instr_words, opnd_t* dsts, 
+                 opnd_t* srcs, int numdsts, int numsrcs )
+{
+    switch( encoding )
+    {
+      case 1DST_REG_1SRC_REG_0SRC_IMM_1:
+        decode_1dst_reg_1src_reg_0src_imm_1(di, instr_words, dsts, 
+                                            srcs, numdsts, numsrcs );
+        break;
+      case 1DST_REG_1SRC_REG_0SRC_IMM_2:
+        decode_1dst_reg_1src_reg_0src_imm_2(di, instr_words, dsts, 
+                                            srcs, numdsts, numsrcs );
+        break;
+      case 1DST_REG_2SRC_REG_0SRC_IMM_1:
+        decode_1dst_reg_2src_reg_0src_imm_1(di, instr_words, dsts, 
+                                            srcs, numdsts, numsrcs );
+        break;
+      case 1DST_REG_2SRC_REG_0SRC_IMM_2:
+        decode_1dst_reg_2src_reg_0src_imm_2(di, instr_words, dsts, 
+                                            srcs, numdsts, numsrcs );
+        break;
+      case 1DST_REG_2SRC_REG_0SRC_IMM_3:
+        decode_1dst_reg_2src_reg_0src_imm_3(di, instr_words, dsts, 
+                                            srcs, numdsts, numsrcs );
+        break;
+      case 1DST_REG_2SRC_REG_0SRC_IMM_4:
+        decode_1dst_reg_2src_reg_0src_imm_4(di, instr_words, dsts, 
+                                            srcs, numdsts, numsrcs );
+        break;
+      case 1DST_REG_2SRC_REG_0SRC_IMM_5:
+        decode_1dst_reg_2src_reg_0src_imm_5(di, instr_words, dsts, 
+                                            srcs, numdsts, numsrcs );
+        break;
+      case 1DST_REG_0SRC_REG_1SRC_IMM_1: 
+        decode_1dst_reg_0src_reg_1src_imm_1(di, instr_words, dsts, 
+                                            srcs, numdsts, numsrcs );
+        break;
+      case 1DST_REG_0SRC_REG_1SRC_IMM_2:
+        decode_1dst_reg_0src_reg_1src_imm_2(di, instr_words, dsts, 
+                                            srcs, numdsts, numsrcs );
+        break;
+      case 1DST_REG_0SRC_REG_1SRC_IMM_3:
+        decode_1dst_reg_0src_reg_1src_imm_3(di, instr_words, dsts, 
+                                            srcs, numdsts, numsrcs );
+        break;
+      case 1DST_REG_1SRC_REG_1SRC_IMM_1:
+        decode_1dst_reg_1src_reg_1src_imm_1(di, instr_words, dsts, 
+                                            srcs, numdsts, numsrcs );
+        break;
+      case 1DST_REG_2SRC_REG_1SRC_IMM_2:
+        decode_1dst_reg_2src_reg_1src_imm_2(di, instr_words, dsts, 
+                                            srcs, numdsts, numsrcs );
+        break;
+      case 1DST_REG_1SRC_REG_1SRC_IMM_3:
+        decode_1dst_reg_1src_reg_1src_imm_3(di, instr_words, dsts, 
+                                            srcs, numdsts, numsrcs );
+        break;
+      case 1DST_REG_1SRC_REG_1SRC_IMM_4:
+        decode_1dst_reg_1src_reg_1src_imm_4(di, instr_words, dsts, 
+                                            srcs, numdsts, numsrcs );
+        break;
+      case 0DST_REG_1SRC_IMM_1SRC_MASK:
+        decode_0dst_reg_1src_imm_1src_mask(di, instr_words, dsts, 
+                                           srcs, numdsts, numsrcs );
+        break;
+      case 0DST_REG_1SRC_REG_1SRC_MASK:
+        decode_0dst_reg_1src_reg_1src_mask(di, instr_words, dsts, 
+                                           srcs, numdsts, numsrcs );
+        break;
+      case 0DST_REG_1SRC_REG_0SRC_IMM:
+        decode_0dst_reg_1src_reg_0src_imm(di, instr_words, dsts, 
+                                          srcs, numdsts, numsrcs );
+        break;
+      case 1DST_REG_2SRC_REG_1SRC_IMM:
+        decode_1dst_reg_2src_reg_1src_imm(di, instr_words, dsts, 
+                                          srcs, numdsts, numsrcs );
+        break;
+      case 1DST_REG_3SRC_REG_0SRC_IMM:
+        decode_1dst_reg_3src_reg_0src_imm(di, instr_words, dsts, 
+                                          srcs, numdsts, numsrcs );
+        break;
+      case 0DST_REG_1SRC_REGLIST:
+        decode_0dst_reg_1src_reglist(di, instr_words, dsts, 
+                                     srcs, numdsts, numsrcs );
+        break;
+      case 1DST_REG_1SRC_REGLIST:
+        decode_1dst_reg_1src_reglist(di, instr_words, dsts, 
+                                     srcs, numdsts, numsrcs );
+        break;
+      case BRANCH_INSTR:
+        decode_branch_instrs(di, instr_words, dsts, 
+                             srcs, numdsts, numsrcs );
+        break;
+
+      default:
+        //Fail
+        break;
+    }
+}
+
 instr_info_t* decode_data_processing_register_shifted_register(byte* instr_word,
                                                                decode_info_t* di, bool just_opcode,
                                                                opnd_t* dsts, opnd_t* srcs, 
@@ -1018,13 +1447,16 @@ instr_info_t* decode_data_processing_register(byte* instr_word,
                                               int* numdsts, int* numsrcs)
 {
     instr_info_t *info = NULL;
-    uint opcode = 0, s_bit = 0;
+    uint opcode = 0, s_bit = 0, reg = 0, immed = 0;
+    int  encoding_type = UNKNOWN_ENCODING;
 
     if( ((instr_word[0] & 0x1) == 0 ) && //op1 == 0000x
         ((instr_word[1] & 0xe0) == 0 ))
     {
       di->opcode = OP_and_reg; 
       di->s_bit  = ((instr_word[1] & 0x10) == 0 ) ? false : true;
+
+      encoding_type = 
     }
     else if( ((instr_word[0] & 0x1) == 0) && //op1 == 0001x
              ((instr_word[1] & 0xe0) == 0x20))
@@ -1154,11 +1586,23 @@ instr_info_t* decode_data_processing_register(byte* instr_word,
       di->s_bit  = ((instr_word[1] & 0x10) == 0 ) ? false : true;
     }
 
+    if( di->opcode == OP_UNDECODED )
+      return NULL;
+
     if( just_opcode )
-      return &armv7a_instrs[di->opcode];
+      return op_instr[di->opcode];
+
+    encoding = opcode_get_encoding_type( di->opcode );
+
+    CLIENT_ASSERT( (encoding != INVALID_ENCODING), 
+            "decode_data_processing_register: Invalid encoding" );
 
     //Make sure we have somewhere to store the dsts and srcs if needed 
     ASSERT( srcs != NULL && dsts != NULL );
+
+
+    decode_operands( di, encoding, instr_words, 
+                     dsts, srcs, numdsts, numsrcs );
 
 }
 
@@ -1489,6 +1933,109 @@ instr_info_t* decode_parallel_signed_arith(byte* instr_word,
     }
 }
 
+instr_info_t* decode_signed_mul(byte* instr_word,
+                                decode_info_t* di, bool just_opcode,
+                                opnd_t* dsts, opnd_t* srcs, int* numdsts, int* numsrcs)
+{
+    // | cond | 011 10 | op1 |    |  A   |    | op2 | 1 |       |
+
+    if( (instr_word[1] & 0x70) == 0x0 ) //op1 == 000
+    {
+      if( (instr_word[3] & 0xc0) == 0x0) //op2 == 00x
+      {
+        if( (instr_word[2] & 0xf0) == 0xf0 ) //A == 1111
+        {
+          di->opcode = OP_smuad;
+          if( (instr_word[3] & 0x10) == 0x10 )
+            di->m_bit = true;
+          else
+            di->m_bit = false;
+        }
+        else
+        {
+          di->opcode = OP_smlad;
+          if( (instr_word[3] & 0x10) == 0x10 )
+            di->m_bit = true;
+          else
+            di->m_bit = false;
+
+        }
+      }
+      else if( (instr_word[3] & 0xc0) == 0x40) //op2 == 01x
+      {
+        if( (instr_word[2] & 0xf0) == 0xf0 ) //A == 1111
+        {
+          di->opcode = OP_smusd;
+          if( (instr_word[3] & 0x10) == 0x10 )
+            di->m_bit = true;
+          else
+            di->m_bit = false;
+        }
+        else
+        {
+          di->opcode = OP_smlsd;
+          if( (instr_word[3] & 0x10) == 0x10 )
+            di->m_bit = true;
+          else
+            di->m_bit = false;
+
+        }
+      }
+    }
+    else if( (instr_word[1] & 0x70) == 0x40 ) //op1 == 100
+    {
+      if( (instr_word[3] & 0xc0) == 0x0) //op2 == 00x
+      {
+          di->opcode = OP_smlald;
+          if( (instr_word[3] & 0x10) == 0x10 )
+            di->m_bit = true;
+          else
+            di->m_bit = false;
+
+      }
+      else if( (instr_word[3] & 0xc0) == 0x40) //op2 == 01x
+      {
+          di->opcode = OP_smlsld;
+          if( (instr_word[3] & 0x10) == 0x10 )
+            di->m_bit = true;
+          else
+            di->m_bit = false;
+      }
+    }
+    else if( (instr_word[1] & 0x70) == 0x50 ) //op1 == 101
+    {
+      if( (instr_word[3] & 0xc0) == 0x0) //op2 == 00x
+      {
+        if( (instr_word[2] & 0xf0) == 0xf0 ) //A == 1111
+        {
+          di->opcode = OP_smmul;
+          if( (instr_word[3] & 0x10) == 0x10 )
+            di->r_bit = true;
+          else
+            di->r_bit = false;
+        }
+        else
+        {
+          di->opcode = OP_smmla;
+          if( (instr_word[3] & 0x10) == 0x10 )
+            di->r_bit = true;
+          else
+            di->r_bit = false;
+
+        }
+      }
+      else if( (instr_word[3] & 0xc0) == 0xc0) //op2 == 11x
+      {
+          di->opcode = OP_smmls;
+          if( (instr_word[3] & 0x10) == 0x10 )
+            di->r_bit = true;
+          else
+            di->r_bit = false;
+      }
+    }
+}
+
+
 instr_info_t* decode_parallel_pack_unpack(byte* instr_word,
                                            decode_info_t* di, bool just_opcode,
                                            opnd_t* dsts, opnd_t* srcs, int* numdsts, int* numsrcs)
@@ -1574,11 +2121,11 @@ instr_info_t* decode_parallel_pack_unpack(byte* instr_word,
       }
       else if( (instr_word[1] & 0x70) == 0x60 ) //op1 == 110
       {
-        if( (instr_word[3] & 0x70) == 0x20) //op2 == 001
+        if( (instr_word[3] & 0xe0) == 0x20) //op2 == 001
         {
           di->opcode = OP_usat16;
         }
-        else if( (instr_word[3] & 0x70) == 0x60) //op2 == 011
+        else if( (instr_word[3] & 0xe0) == 0x60) //op2 == 011
         {
           if( (instr_word[1] & 0xf) == 0xf)
             di->opcode = OP_uxtb;
@@ -1586,8 +2133,25 @@ instr_info_t* decode_parallel_pack_unpack(byte* instr_word,
             di->opcode = OP_uxtab;
         }
       }
+      else if( (instr_word[1] & 0x70) == 0x70 ) //op1 == 111
+      {
+        if( (instr_word[3] & 0xe0) == 0x20) //op2 == 001
+        {
+          di->opcode = OP_rbit;
+        }
+        else if( (instr_word[3] & 0xe0) == 0x60) //op2 == 011
+        {
+          if( (instr_word[1] & 0xf) == 0xf)
+            di->opcode = OP_uxth;
+          else
+            di->opcode = OP_uxtah;
+        }
+        else if( (instr_word[3] & 0xe0) == 0xa0) //op2 == 101
+        {
+          di->opcode = OP_revsh;
+        }
+      }
     }
-
 }
 
 instr_info_t* decode_media(byte* instr_word,
@@ -1661,16 +2225,197 @@ instr_info_t* decode_system_call_and_coprocessor(byte* instr_word,
                             decode_info_t* di, bool just_opcode,
                             opnd_t* dsts, opnd_t* srcs, int* numdsts, int* numsrcs)
 {
+    // | cond | 11 | op1 | Rn |      | coproc  |    | op |    |
     instr_info_t *info = NULL;
+
+    if( ((instr_word[0] & 0x3 ) == 0 ) &&
+        (((instr_word[0] & 0x3  ) != 0 ) ||
+         ((instr_word[1] & 0xa0 ) != 0 )))//op1 == 0xxxxx not 000x0x
+    {
+      if(( instr_word[2] & 0xe ) == 0xa )
+        //decode_ext_reg_load_store
+    }
+    else if( ((instr_word[0] & 0x3 ) == 0  &&
+              (instr_word[1] & 0x10) == 0 ) &&
+             (((instr_word[0] & 0x3  ) != 0 ) ||
+              ((instr_word[1] & 0xa0 ) != 0 )) )//op1 == 0xxxx0 not 000x0x
+    {
+      if(( instr_word[2] & 0xe ) != 0xa )
+      {
+        di->opcode = OP_stc;
+      }
+    }
+    else if( ((instr_word[0] & 0x3 ) == 0  &&
+              (instr_word[1] & 0x10) == 0x10 ) &&
+             (((instr_word[0] & 0x3  ) != 0 ) ||
+              ((instr_word[1] & 0xa0 ) != 0 )) )//op1 == 0xxxx1 not 000x0x
+    {
+      if(( instr_word[2] & 0xe ) != 0xa )
+      {
+        if( (instr_word[1] & 0xf) == 0xf )
+          di->opcode = OP_ldc_lit;
+        else
+          di->opcode = OP_ldc_imm;
+      }
+    }
+    else if( (instr_word[0] & 0x3 ) == 0  && //op1 == 00000x
+             (instr_word[1] & 0xe0) == 0x40 )
+    {
+      if(( instr_word[2] & 0xe ) == 0xa )
+      {
+        //decode_64_bit_transfers
+      }
+    }
+    else if( (instr_word[0] & 0x3 ) == 0  &&  //op1 == 00010x
+             (instr_word[1] & 0xe0) == 0x40 ) 
+    {
+      if(( instr_word[2] & 0xe ) == 0xa )
+      {
+        //decode_64_bit_transfers
+      }
+    }
+    else if( (instr_word[0] & 0x3 ) == 0  &&  //op1 == 000100
+             (instr_word[1] & 0xf0) == 0x40 )
+    {
+      if(( instr_word[2] & 0xe ) != 0xa )
+      {
+        di->opcode = OP_mcrr;
+      }
+    }
+    else if( (instr_word[0] & 0x3 ) == 0  &&  //op1 == 000101
+             (instr_word[1] & 0xf0) == 0x50 )
+    {
+      if(( instr_word[2] & 0xe ) != 0xa )
+      {
+        di->opcode = OP_mrrc;
+      }
+    }
+    else if( (instr_word[0] & 0x3 ) == 0x2 ) //op1 == 10xxxx
+    {
+      if(( instr_word[3] & 0x10 ) == 0x0 ) //op == 0
+      {
+        if(( instr_word[2] & 0xe ) == 0xa ) //coproc == 101x
+        {
+          //decode_vfp_data_processing
+        }
+        else //coproc != 101x
+          di->opcode = OP_cdp;
+      }
+      else //op == 1
+      {
+        if(( instr_word[2] & 0xe ) == 0xa ) //coproc == 101x
+        {
+          //decode_advanced_simd
+        }
+      }
+    }
+    else if( (instr_word[0] & 0x3 ) == 0x2 &&
+             (instr_word[1] & 0x10) == 0x0) //op1 == 10xxx0
+    {
+      if(( instr_word[3] & 0x10 ) == 0x10 ) //op == 1
+      {
+        if(( instr_word[2] & 0xe ) != 0xa ) //coproc != 101x
+        {
+          di->opcode = OP_mcr;
+        }
+      }
+    }
+    else if( (instr_word[0] & 0x3 ) == 0x2 &&
+             (instr_word[1] & 0x10) == 0x10) //op1 == 10xxx1
+    {
+      if(( instr_word[3] & 0x10 ) == 0x10 ) //op == 1
+      {
+        if(( instr_word[2] & 0xe ) != 0xa ) //coproc != 101x
+        {
+          di->opcode = OP_mrc;
+        }
+      }
+    }
+    else if( (instr_word[0] & 0x3 ) == 0x3 ) //op1 == 11xxxx
+    {
+      di->opcode = OP_svc;
+    }
 
     return info;
 }
 
 
-instr_info_t* decode_branch(byte* instr_word, 
+instr_info_t* decode_branch(byte* instr_word,
                             decode_info_t* di, bool just_opcode,
                             opnd_t* dsts, opnd_t* srcs, int* numdsts, int* numsrcs)
 {
+    // | cond | 10 | op |   Rn    |  R   |          |
+
+    if( (instr_word[0] & 0x3 ) == 0x0 &&
+        (instr_word[1] & 0xd0) == 0x0 ) //op == 0000x0
+    {
+      di->opcode = OP_stmda; 
+    }
+    else if( (instr_word[0] & 0x3 ) == 0x0 &&
+             (instr_word[1] & 0xd0) == 0x10 ) //op == 0000x1
+    {
+      di->opcode = OP_ldmda;
+    }
+    else if( (instr_word[0] & 0x3 ) == 0x0 &&
+             (instr_word[1] & 0xd0) == 0x80 ) //op == 0010x0
+    {
+      di->opcode = OP_stmia;
+    }
+    else if( (instr_word[0] & 0x3 ) == 0x0 &&
+             (instr_word[1] & 0xd0) == 0x90 ) //op == 0010x1
+    {
+      di->opcode = OP_ldmia;
+    }
+    else if( (instr_word[0] & 0x3 ) == 0x1 &&
+             (instr_word[1] & 0xd0) == 0x0 ) //op == 0100x0
+    {
+      di->opcode = OP_stmdb;
+    }
+    else if( (instr_word[0] & 0x3 ) == 0x1 &&
+             (instr_word[1] & 0xd0) == 0x10 ) //op == 0100x1
+    {
+      di->opcode = OP_ldmdb;
+    }
+    else if( (instr_word[0] & 0x3 ) == 0x1 &&
+             (instr_word[1] & 0xd0) == 0x80 ) //op == 0110x0
+    {
+      di->opcode = OP_stmib;
+    }
+    else if( (instr_word[0] & 0x3 ) == 0x1 &&
+             (instr_word[1] & 0xd0) == 0x90 ) //op == 0110x1
+    {
+      di->opcode = OP_ldmib;
+    }
+    else if( (instr_word[0] & 0x2 ) == 0x0 &&
+             (instr_word[1] & 0x50) == 0x40 ) //op == 0xx1x0
+    {
+      di->opcode = OP_stm;
+    }
+    else if( (instr_word[0] & 0x2 ) == 0x0 &&
+             (instr_word[1] & 0x50) == 0x50 ) //op == 0xx1x1
+    {
+      di->opcode = OP_ldm;
+      if( (instr_word[2] & 0x80) == 0x80)
+        di->r_bit = true;
+      else
+        di->r_bit = false;
+    }
+    else if( (instr_word[0] & 0x3 ) == 0x2 )  //op == 10xxxx
+    {
+      di->opcode = OP_b;
+    }
+    else if( (instr_word[0] & 0x3 ) == 0x3 )  //op == 11xxxx
+    {
+      di->opcode = OP_bl;
+    }
+
+}
+
+instr_info_t* decode_branch_old(byte* instr_word, 
+                            decode_info_t* di, bool just_opcode,
+                            opnd_t* dsts, opnd_t* srcs, int* numdsts, int* numsrcs)
+{
+//OLD
     /* OP_b, OP_bl, OP_blx */
     instr_info_t *info = NULL;
     uint  immed = 0;

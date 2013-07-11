@@ -314,6 +314,8 @@ typedef struct decode_info_t {
     bool b_flag; //word or byte?
     bool d_flag; //???
     bool h_flag; //???
+    bool m_flag; //For signed multiplies 
+    bool r_flag; //For stm to flag to overwrite cpsr with spsr 
    
     //What type of shift is it if there is one
     byte shift_type;
@@ -374,6 +376,36 @@ enum {
 
   UNKNOWN_SHIFT
 };
+
+// Enum to store encoding type
+enum {
+  UNKNOWN_ENCODING,
+
+  1DST_REG_1SRC_REG_0SRC_IMM_1,
+  1DST_REG_1SRC_REG_0SRC_IMM_2,
+  1DST_REG_2SRC_REG_0SRC_IMM_1,
+  1DST_REG_2SRC_REG_0SRC_IMM_2,
+  1DST_REG_2SRC_REG_0SRC_IMM_3,
+  1DST_REG_2SRC_REG_0SRC_IMM_4,
+  1DST_REG_2SRC_REG_0SRC_IMM_5,
+  1DST_REG_0SRC_REG_1SRC_IMM_1, //Rn, 0000, imm12
+  1DST_REG_0SRC_REG_1SRC_IMM_2, //0000, Rn, imm12
+  1DST_REG_0SRC_REG_1SRC_IMM_3,
+  1DST_REG_1SRC_REG_1SRC_IMM_1,
+  1DST_REG_1SRC_REG_1SRC_IMM_2,
+  1DST_REG_1SRC_REG_1SRC_IMM_3,
+  1DST_REG_1SRC_REG_1SRC_IMM_4,
+  0DST_REG_1SRC_IMM_1SRC_MASK,
+  0DST_REG_1SRC_REG_1SRC_MASK,
+  0DST_REG_1SRC_REG_0SRC_IMM,
+  1DST_REG_2SRC_REG_1SRC_IMM,
+  1DST_REG_3SRC_REG_0SRC_IMM,
+  0DST_REG_1SRC_REGLIST,
+  1DST_REG_1SRC_REGLIST,
+  BRANCH_INSTR,
+
+  INVALID_ENCODING
+}
  
 
 /* PR 225845: Our IR does not try to specify the format of the operands or the

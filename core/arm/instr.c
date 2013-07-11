@@ -3658,11 +3658,124 @@ instr_type_is_branch(int instr_type)
     return( instr_type == INSTR_TYPE_BRANCH );
 }
 
+int
+opcode_get_encoding_type(int opc)
+{
+    switch( opc )
+    {
+      case OP_and_reg: case OP_adc_reg:
+      case OP_add_reg: case OP_sub_reg:
+      case OP_sbc_reg: case OP_rsc_reg:
+      case OP_rsb_reg: case OP_orr_reg:
+      case OP_eor_reg: case OP_bic_reg:
+      case OP_ldrt:    case OP_ldr_reg:
+      case OP_ldrb_reg: case OP_str_reg:
+      case OP_strb_reg:
+        return 1DST_REG_2SRC_REG_1SRC_IMM;
+
+      case OP_mvn_reg: case OP_add_sp_reg:
+      case OP_sub_sp_reg:
+        return 1DST_REG_1SRC_REG_1SRC_IMM_1;
+
+      case OP_sub_imm: case OP_sbc_imm:
+      case OP_rsc_imm: case OP_rsb_imm:
+      case OP_orr_imm: case OP_bic_imm:
+      case OP_eor_imm: case OP_and_imm:
+      case OP_add_imm: case OP_adc_imm:
+      case OP_str_imm: case OP_ldr_imm:
+      case OP_ldrb_imm: case OP_strb_imm:
+      case OP_strt:    case OP_strbt:
+      case OP_ldrbt:
+        return 1DST_REG_1SRC_REG_1SRC_IMM_2;
+
+      case OP_cmp_reg: case OP_cmn_reg:
+      case OP_teq_reg: case OP_tst_reg:
+        return 1DST_REG_1SRC_REG_1SRC_IMM_3;
+
+      case OP_strh_imm: case OP_ldrd_imm:
+      case OP_ldrh_imm: case OP_ldrsb_imm:
+      case OP_strd_imm: case OP_strht:
+        return 1DST_REG_1SRC_REG_1SRC_IMM_4;
+
+      case OP_mov_reg: case OP_rrx:
+        return 1DST_REG_1SRC_REG_0SRC_IMM_1;
+
+      case OP_ldrex: case OP_ldrexh:
+      case OP_ldrexb:  case OP_ldrexd:
+        return 1DST_REG_1SRC_REG_0SRC_IMM_2;
+
+      case OP_sel:
+      case OP_rbit:    case OP_rev:
+      case OP_rev16:   case OP_revsh:
+        return 1DST_REG_1SRC_REG_0SRC_IMM;
+
+      case OP_add_sp_imm: case OP_adr:
+      case OP_cmn_imm:    case OP_cmp_imm:
+      case OP_teq_imm:    case OP_tst_imm:
+        return 1DST_REG_0SRC_REG_1SRC_IMM_1;
+
+      case OP_sub_sp_imm: case OP_mvn_imm:
+      case OP_mov_imm:    case OP_ldr_lit:
+      case OP_ldrb_lit:
+        return 1DST_REG_0SRC_REG_1SRC_IMM_2;
+
+      case OP_ldrd_lit:   case OP_ldrh_lit:
+      case OP_ldrsb_lit:  case OP_ldrsh_lit:
+        return 1DST_REG_0SRC_REG_1SRC_IMM_3;
+
+      case OP_lsl_reg:    case OP_lsr_reg:
+      case OP_asr_reg:    case OP_ror_reg:
+      case OP_mvn_rsr:
+        return 1DST_REG_2SRC_REG_0SRC_IMM_1;
+
+      case OP_mul:
+        return 1DST_REG_2SRC_REG_0SRC_IMM_2;
+
+      case OP_cmn_rsr:    case OP_cmp_rsr:
+      case OP_teq_rsr:    case OP_tst_rsr:
+        return 1DST_REG_2SRC_REG_0SRC_IMM_3;
+
+      case OP_ldrd_reg:
+        return 1DST_REG_2SRC_REG_0SRC_IMM_4;
+
+      case OP_qadd:       case OP_qadd16:
+      case OP_qadd8:      case OP_qdadd:
+      case OP_qsub:       case OP_strh_reg:
+      case OP_ldrh_reg:   case OP_ldrht:
+      case OP_ldrsbt:     case OP_ldrsh_reg:
+      case OP_strd_reg:   case OP_ldrsht:
+      case OP_swp:        case OP_swpb:
+      case OP_strex:      case OP_strexb:
+      case OP_strexd:     case OP_strexh:
+      case OP_sadd16:     case OP_sasx:
+      case OP_ssub16:     case OP_sadd8:
+      case OP_ssub8:      case OP_qasx:
+      case OP_qsax:       case OP_qsub16:
+      case OP_qsub8:      case OP_shadd16:
+      case OP_shadd8:     case OP_shsax:
+      case OP_shsub16:    case OP_shsub8:
+        return 1DST_REG_2SRC_REG_0SRC_IMM_5;
+
+      default:
+        return INVALID_ENCODING;
+    }
+}
+
 bool
 opcode_is_unconditional(int opc)
 {
-   //TODO SJF Insert all uncond instrs here
-   if( opc == OP_bx )
+   if( opc == OP_cps     || opc == OP_setend  || opc == OP_pli_imm  ||
+       opc == OP_pli_lit || opc == OP_pld_imm || opc == OP_pldw_imm ||
+       opc == OP_pld_lit || opc == OP_clrex   || opc == OP_dsb      ||
+       opc == OP_dmb     || opc == OP_isb     || opc == OP_pli_reg  ||
+       opc == OP_pld_reg || opc == OP_pldw_reg|| opc == OP_srs      ||
+       opc == OP_rfe     || opc == OP_bl      || opc == OP_blx      ||
+       opc == OP_ldc_imm || opc == OP_ldc2_imm|| opc == OP_ldc_lit  ||
+       opc == OP_ldc2_lit || opc == OP_stc    || opc == OP_stc2     ||
+       opc == OP_mcrr    || opc == OP_mcrr2   || opc == OP_mrrc     ||
+       opc == OP_mrrc2   || opc == OP_cdp     || opc == OP_cdp2     ||
+       opc == OP_mcr     || opc == OP_mcr2    || opc == OP_mrc      ||
+       opc == OP_mrc2 )
      return true;
    else
      return false;
