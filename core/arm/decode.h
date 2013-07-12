@@ -405,7 +405,7 @@ enum {
   BRANCH_INSTR,
 
   INVALID_ENCODING
-}
+};
  
 
 /* PR 225845: Our IR does not try to specify the format of the operands or the

@@ -248,7 +248,7 @@ instr_info_t* decode_data_processing_and_els(byte* instr_word,
 //OLD
     instr_info_t *info = NULL;
     uint        opc = 0, temp = 0, opcode =0;
-    bool        s_bit = false;
+    bool        s_flag = false;
      
 
     opc |= (instr_word[0] & 0x1) << 4;
@@ -258,7 +258,7 @@ instr_info_t* decode_data_processing_and_els(byte* instr_word,
     temp = (instr_word[1] << 7); 
     temp = (temp >> 7);
 
-    s_bit = (bool)temp;
+    s_flag = (bool)temp;
 
     //Zero s bit
     opc &= 0x1e;
@@ -271,8 +271,8 @@ instr_info_t* decode_data_processing_and_els(byte* instr_word,
 }
 
 void
-decode_1dst_reg_2src_reg_1src_imm( decode_info_t* di, byte* instr_words, opnd_t* dsts,
-                                   opnd_t* srcs, int numdsts, int numsrcs )
+decode_1dst_reg_2src_reg_1src_imm( decode_info_t* di, byte* instr_word, opnd_t* dsts,
+                                   opnd_t* srcs, int *numdsts, int *numsrcs )
 {
     int reg, immed, type;
     //1st Dst
@@ -309,8 +309,8 @@ decode_1dst_reg_2src_reg_1src_imm( decode_info_t* di, byte* instr_words, opnd_t*
 }
 
 void
-decode_1dst_reg_1src_reg_0src_imm_1( decode_info_t* di, byte* instr_words, opnd_t* dsts,
-                                   opnd_t* srcs, int numdsts, int numsrcs )
+decode_1dst_reg_1src_reg_0src_imm_1( decode_info_t* di, byte* instr_word, opnd_t* dsts,
+                                   opnd_t* srcs, int *numdsts, int *numsrcs )
 {
     int reg;
 
@@ -328,8 +328,8 @@ decode_1dst_reg_1src_reg_0src_imm_1( decode_info_t* di, byte* instr_words, opnd_
 }
 
 void
-decode_1dst_reg_1src_reg_0src_imm_2( decode_info_t* di, byte* instr_words, opnd_t* dsts,
-                                   opnd_t* srcs, int numdsts, int numsrcs )
+decode_1dst_reg_1src_reg_0src_imm_2( decode_info_t* di, byte* instr_word, opnd_t* dsts,
+                                   opnd_t* srcs, int *numdsts, int *numsrcs )
 {
     int reg;
 
@@ -347,8 +347,8 @@ decode_1dst_reg_1src_reg_0src_imm_2( decode_info_t* di, byte* instr_words, opnd_
 }
 
 void 
-decode_1dst_reg_2src_reg_0src_imm_1( decode_info_t* di, byte* instr_words, opnd_t* dsts,
-                                   opnd_t* srcs, int numdsts, int numsrcs )
+decode_1dst_reg_2src_reg_0src_imm_1( decode_info_t* di, byte* instr_word, opnd_t* dsts,
+                                   opnd_t* srcs, int *numdsts, int *numsrcs )
 {
     int reg;
 
@@ -374,8 +374,8 @@ decode_1dst_reg_2src_reg_0src_imm_1( decode_info_t* di, byte* instr_words, opnd_
 
 
 void
-decode_1dst_reg_2src_reg_0src_imm_2( decode_info_t* di, byte* instr_words, opnd_t* dsts,
-                                   opnd_t* srcs, int numdsts, int numsrcs )
+decode_1dst_reg_2src_reg_0src_imm_2( decode_info_t* di, byte* instr_word, opnd_t* dsts,
+                                   opnd_t* srcs, int *numdsts, int *numsrcs )
 {
     int reg;
 
@@ -400,8 +400,8 @@ decode_1dst_reg_2src_reg_0src_imm_2( decode_info_t* di, byte* instr_words, opnd_
 }
 
 void
-decode_1dst_reg_2src_reg_0src_imm_3( decode_info_t* di, byte* instr_words, opnd_t* dsts,
-                                   opnd_t* srcs, int numdsts, int numsrcs )
+decode_1dst_reg_2src_reg_0src_imm_3( decode_info_t* di, byte* instr_word, opnd_t* dsts,
+                                   opnd_t* srcs, int *numdsts, int *numsrcs )
 {
     int reg;
 
@@ -426,8 +426,8 @@ decode_1dst_reg_2src_reg_0src_imm_3( decode_info_t* di, byte* instr_words, opnd_
 }
 
 void 
-decode_1dst_reg_2src_reg_0src_imm_4( decode_info_t* di, byte* instr_words, opnd_t* dsts,
-                                   opnd_t* srcs, int numdsts, int numsrcs )
+decode_1dst_reg_2src_reg_0src_imm_4( decode_info_t* di, byte* instr_word, opnd_t* dsts,
+                                   opnd_t* srcs, int *numdsts, int *numsrcs )
 {
     int reg;
 
@@ -451,8 +451,8 @@ decode_1dst_reg_2src_reg_0src_imm_4( decode_info_t* di, byte* instr_words, opnd_
 }
 
 void
-decode_1dst_reg_2src_reg_0src_imm_5( decode_info_t* di, byte* instr_words, opnd_t* dsts,
-                                   opnd_t* srcs, int numdsts, int numsrcs )
+decode_1dst_reg_2src_reg_0src_imm_5( decode_info_t* di, byte* instr_word, opnd_t* dsts,
+                                   opnd_t* srcs, int *numdsts, int *numsrcs )
 {
    int reg;
 
@@ -476,8 +476,8 @@ decode_1dst_reg_2src_reg_0src_imm_5( decode_info_t* di, byte* instr_words, opnd_
 }
 
 void
-decode_1dst_reg_0src_reg_1src_imm_1( decode_info_t* di, byte* instr_words, opnd_t* dsts,
-                                   opnd_t* srcs, int numdsts, int numsrcs )
+decode_1dst_reg_0src_reg_1src_imm_1( decode_info_t* di, byte* instr_word, opnd_t* dsts,
+                                   opnd_t* srcs, int *numdsts, int *numsrcs )
 {
     int reg, immed;
 
@@ -498,8 +498,8 @@ decode_1dst_reg_0src_reg_1src_imm_1( decode_info_t* di, byte* instr_words, opnd_
 }
 
 void
-decode_1dst_reg_0src_reg_1src_imm_2( decode_info_t* di, byte* instr_words, opnd_t* dsts,
-                                   opnd_t* srcs, int numdsts, int numsrcs )
+decode_1dst_reg_0src_reg_1src_imm_2( decode_info_t* di, byte* instr_word, opnd_t* dsts,
+                                   opnd_t* srcs, int *numdsts, int *numsrcs )
 {
     int reg, immed;
 
@@ -521,175 +521,169 @@ decode_1dst_reg_0src_reg_1src_imm_2( decode_info_t* di, byte* instr_words, opnd_
 }
 
 void
-decode_1dst_reg_0src_reg_1src_imm_3( decode_info_t* di, byte* instr_words, opnd_t* dsts,
-                                   opnd_t* srcs, int numdsts, int numsrcs )
+decode_1dst_reg_0src_reg_1src_imm_3( decode_info_t* di, byte* instr_word, opnd_t* dsts,
+                                   opnd_t* srcs, int *numdsts, int *numsrcs )
 {
 }
 
 void
-decode_1dst_reg_1src_reg_1src_imm_1( decode_info_t* di, byte* instr_words, opnd_t* dsts,
-                                   opnd_t* srcs, int numdsts, int numsrcs )
+decode_1dst_reg_1src_reg_1src_imm_1( decode_info_t* di, byte* instr_word, opnd_t* dsts,
+                                   opnd_t* srcs, int *numdsts, int *numsrcs )
 {
 }
 
 void
-decode_1dst_reg_2src_reg_1src_imm_2( decode_info_t* di, byte* instr_words, opnd_t* dsts,
-                                   opnd_t* srcs, int numdsts, int numsrcs )
+decode_1dst_reg_2src_reg_1src_imm_2( decode_info_t* di, byte* instr_word, opnd_t* dsts,
+                                   opnd_t* srcs, int *numdsts, int *numsrcs )
 {
 }
 
 void
-decode_1dst_reg_1src_reg_1src_imm_3( decode_info_t* di, byte* instr_words, opnd_t* dsts,
-                                   opnd_t* srcs, int numdsts, int numsrcs )
+decode_1dst_reg_1src_reg_1src_imm_3( decode_info_t* di, byte* instr_word, opnd_t* dsts,
+                                   opnd_t* srcs, int *numdsts, int *numsrcs )
 {
 }
 
 void
-decode_1dst_reg_1src_reg_1src_imm_4( decode_info_t* di, byte* instr_words, opnd_t* dsts,
-                                   opnd_t* srcs, int numdsts, int numsrcs )
+decode_1dst_reg_1src_reg_1src_imm_4( decode_info_t* di, byte* instr_word, opnd_t* dsts,
+                                   opnd_t* srcs, int *numdsts, int *numsrcs )
 {
 }
 
 void
-decode_0dst_reg_1src_imm_1src_mask( decode_info_t* di, byte* instr_words, opnd_t* dsts,
-                                   opnd_t* srcs, int numdsts, int numsrcs )
+decode_0dst_reg_1src_imm_1src_mask( decode_info_t* di, byte* instr_word, opnd_t* dsts,
+                                   opnd_t* srcs, int *numdsts, int *numsrcs )
 {
 }
 
 void
-decode_0dst_reg_1src_reg_1src_mask( decode_info_t* di, byte* instr_words, opnd_t* dsts,
-                                   opnd_t* srcs, int numdsts, int numsrcs )
+decode_0dst_reg_1src_reg_1src_mask( decode_info_t* di, byte* instr_word, opnd_t* dsts,
+                                   opnd_t* srcs, int *numdsts, int *numsrcs )
 {
 }
 
 void
-decode_0dst_reg_1src_reg_0src_imm( decode_info_t* di, byte* instr_words, opnd_t* dsts,
-                                   opnd_t* srcs, int numdsts, int numsrcs )
+decode_0dst_reg_1src_reg_0src_imm( decode_info_t* di, byte* instr_word, opnd_t* dsts,
+                                   opnd_t* srcs, int *numdsts, int *numsrcs )
 {
 }
 
 void
-decode_1dst_reg_2src_reg_1src_imm( decode_info_t* di, byte* instr_words, opnd_t* dsts,
-                                   opnd_t* srcs, int numdsts, int numsrcs )
+decode_1dst_reg_3src_reg_0src_imm( decode_info_t* di, byte* instr_word, opnd_t* dsts,
+                                   opnd_t* srcs, int *numdsts, int *numsrcs )
 {
 }
 
 void
-decode_1dst_reg_3src_reg_0src_imm( decode_info_t* di, byte* instr_words, opnd_t* dsts,
-                                   opnd_t* srcs, int numdsts, int numsrcs )
+decode_0dst_reg_1src_reglist( decode_info_t* di, byte* instr_word, opnd_t* dsts,
+                                   opnd_t* srcs, int *numdsts, int *numsrcs )
 {
 }
 
 void
-decode_0dst_reg_1src_reglist( decode_info_t* di, byte* instr_words, opnd_t* dsts,
-                                   opnd_t* srcs, int numdsts, int numsrcs )
+decode_1dst_reg_1src_reglist( decode_info_t* di, byte* instr_word, opnd_t* dsts,
+                                   opnd_t* srcs, int *numdsts, int *numsrcs )
 {
 }
 
 void
-decode_1dst_reg_1src_reglist( decode_info_t* di, byte* instr_words, opnd_t* dsts,
-                                   opnd_t* srcs, int numdsts, int numsrcs )
+decode_branch_instrs( decode_info_t* di, byte* instr_word, opnd_t* dsts,
+                                   opnd_t* srcs, int *numdsts, int *numsrcs )
 {
 }
 
 void
-decode_branch_instrs( decode_info_t* di, byte* instr_words, opnd_t* dsts,
-                                   opnd_t* srcs, int numdsts, int numsrcs )
-{
-}
-
-void
-decode_operands( decode_info_t* di, int encoding, byte* instr_words, opnd_t* dsts, 
-                 opnd_t* srcs, int numdsts, int numsrcs )
+decode_operands( decode_info_t* di, int encoding, byte* instr_word, opnd_t* dsts, 
+                 opnd_t* srcs, int *numdsts, int *numsrcs )
 {
     switch( encoding )
     {
       case 1DST_REG_1SRC_REG_0SRC_IMM_1:
-        decode_1dst_reg_1src_reg_0src_imm_1(di, instr_words, dsts, 
+        decode_1dst_reg_1src_reg_0src_imm_1(di, instr_word, dsts, 
                                             srcs, numdsts, numsrcs );
         break;
       case 1DST_REG_1SRC_REG_0SRC_IMM_2:
-        decode_1dst_reg_1src_reg_0src_imm_2(di, instr_words, dsts, 
+        decode_1dst_reg_1src_reg_0src_imm_2(di, instr_word, dsts, 
                                             srcs, numdsts, numsrcs );
         break;
       case 1DST_REG_2SRC_REG_0SRC_IMM_1:
-        decode_1dst_reg_2src_reg_0src_imm_1(di, instr_words, dsts, 
+        decode_1dst_reg_2src_reg_0src_imm_1(di, instr_word, dsts, 
                                             srcs, numdsts, numsrcs );
         break;
       case 1DST_REG_2SRC_REG_0SRC_IMM_2:
-        decode_1dst_reg_2src_reg_0src_imm_2(di, instr_words, dsts, 
+        decode_1dst_reg_2src_reg_0src_imm_2(di, instr_word, dsts, 
                                             srcs, numdsts, numsrcs );
         break;
       case 1DST_REG_2SRC_REG_0SRC_IMM_3:
-        decode_1dst_reg_2src_reg_0src_imm_3(di, instr_words, dsts, 
+        decode_1dst_reg_2src_reg_0src_imm_3(di, instr_word, dsts, 
                                             srcs, numdsts, numsrcs );
         break;
       case 1DST_REG_2SRC_REG_0SRC_IMM_4:
-        decode_1dst_reg_2src_reg_0src_imm_4(di, instr_words, dsts, 
+        decode_1dst_reg_2src_reg_0src_imm_4(di, instr_word, dsts, 
                                             srcs, numdsts, numsrcs );
         break;
       case 1DST_REG_2SRC_REG_0SRC_IMM_5:
-        decode_1dst_reg_2src_reg_0src_imm_5(di, instr_words, dsts, 
+        decode_1dst_reg_2src_reg_0src_imm_5(di, instr_word, dsts, 
                                             srcs, numdsts, numsrcs );
         break;
       case 1DST_REG_0SRC_REG_1SRC_IMM_1: 
-        decode_1dst_reg_0src_reg_1src_imm_1(di, instr_words, dsts, 
+        decode_1dst_reg_0src_reg_1src_imm_1(di, instr_word, dsts, 
                                             srcs, numdsts, numsrcs );
         break;
       case 1DST_REG_0SRC_REG_1SRC_IMM_2:
-        decode_1dst_reg_0src_reg_1src_imm_2(di, instr_words, dsts, 
+        decode_1dst_reg_0src_reg_1src_imm_2(di, instr_word, dsts, 
                                             srcs, numdsts, numsrcs );
         break;
       case 1DST_REG_0SRC_REG_1SRC_IMM_3:
-        decode_1dst_reg_0src_reg_1src_imm_3(di, instr_words, dsts, 
+        decode_1dst_reg_0src_reg_1src_imm_3(di, instr_word, dsts, 
                                             srcs, numdsts, numsrcs );
         break;
       case 1DST_REG_1SRC_REG_1SRC_IMM_1:
-        decode_1dst_reg_1src_reg_1src_imm_1(di, instr_words, dsts, 
+        decode_1dst_reg_1src_reg_1src_imm_1(di, instr_word, dsts, 
                                             srcs, numdsts, numsrcs );
         break;
       case 1DST_REG_2SRC_REG_1SRC_IMM_2:
-        decode_1dst_reg_2src_reg_1src_imm_2(di, instr_words, dsts, 
+        decode_1dst_reg_2src_reg_1src_imm_2(di, instr_word, dsts, 
                                             srcs, numdsts, numsrcs );
         break;
       case 1DST_REG_1SRC_REG_1SRC_IMM_3:
-        decode_1dst_reg_1src_reg_1src_imm_3(di, instr_words, dsts, 
+        decode_1dst_reg_1src_reg_1src_imm_3(di, instr_word, dsts, 
                                             srcs, numdsts, numsrcs );
         break;
       case 1DST_REG_1SRC_REG_1SRC_IMM_4:
-        decode_1dst_reg_1src_reg_1src_imm_4(di, instr_words, dsts, 
+        decode_1dst_reg_1src_reg_1src_imm_4(di, instr_word, dsts, 
                                             srcs, numdsts, numsrcs );
         break;
       case 0DST_REG_1SRC_IMM_1SRC_MASK:
-        decode_0dst_reg_1src_imm_1src_mask(di, instr_words, dsts, 
+        decode_0dst_reg_1src_imm_1src_mask(di, instr_word, dsts, 
                                            srcs, numdsts, numsrcs );
         break;
       case 0DST_REG_1SRC_REG_1SRC_MASK:
-        decode_0dst_reg_1src_reg_1src_mask(di, instr_words, dsts, 
+        decode_0dst_reg_1src_reg_1src_mask(di, instr_word, dsts, 
                                            srcs, numdsts, numsrcs );
         break;
       case 0DST_REG_1SRC_REG_0SRC_IMM:
-        decode_0dst_reg_1src_reg_0src_imm(di, instr_words, dsts, 
+        decode_0dst_reg_1src_reg_0src_imm(di, instr_word, dsts, 
                                           srcs, numdsts, numsrcs );
         break;
       case 1DST_REG_2SRC_REG_1SRC_IMM:
-        decode_1dst_reg_2src_reg_1src_imm(di, instr_words, dsts, 
+        decode_1dst_reg_2src_reg_1src_imm(di, instr_word, dsts, 
                                           srcs, numdsts, numsrcs );
         break;
       case 1DST_REG_3SRC_REG_0SRC_IMM:
-        decode_1dst_reg_3src_reg_0src_imm(di, instr_words, dsts, 
+        decode_1dst_reg_3src_reg_0src_imm(di, instr_word, dsts, 
                                           srcs, numdsts, numsrcs );
         break;
       case 0DST_REG_1SRC_REGLIST:
-        decode_0dst_reg_1src_reglist(di, instr_words, dsts, 
+        decode_0dst_reg_1src_reglist(di, instr_word, dsts, 
                                      srcs, numdsts, numsrcs );
         break;
       case 1DST_REG_1SRC_REGLIST:
-        decode_1dst_reg_1src_reglist(di, instr_words, dsts, 
+        decode_1dst_reg_1src_reglist(di, instr_word, dsts, 
                                      srcs, numdsts, numsrcs );
         break;
       case BRANCH_INSTR:
-        decode_branch_instrs(di, instr_words, dsts, 
+        decode_branch_instrs(di, instr_word, dsts, 
                              srcs, numdsts, numsrcs );
         break;
 
@@ -708,115 +702,115 @@ instr_info_t* decode_data_processing_register_shifted_register(byte* instr_word,
         ((instr_word[1] & 0xe0) == 0 ))
     {
       di->opcode = OP_and_rsr; 
-      di->s_bit  = ((instr_word[1] & 0x10) == 0 ) ? false : true;
+      di->s_flag  = ((instr_word[1] & 0x10) == 0 ) ? false : true;
     }
     else if( ((instr_word[0] & 0x1) == 0 ) && //op1 == 0001x
              ((instr_word[1] & 0xe0) == 0x20 ))
     {
       di->opcode = OP_eor_rsr; 
-      di->s_bit  = ((instr_word[1] & 0x10) == 0 ) ? false : true;
+      di->s_flag  = ((instr_word[1] & 0x10) == 0 ) ? false : true;
     }
     else if( ((instr_word[0] & 0x1) == 0 ) && //op1 == 0010x
              ((instr_word[1] & 0xe0) == 0x40 ))
     {
       di->opcode = OP_sub_rsr; 
-      di->s_bit  = ((instr_word[1] & 0x10) == 0 ) ? false : true;
+      di->s_flag  = ((instr_word[1] & 0x10) == 0 ) ? false : true;
     }
     else if( ((instr_word[0] & 0x1) == 0 ) && //op1 == 0011x
              ((instr_word[1] & 0xe0) == 0x60 ))
     {
       di->opcode = OP_rsb_rsr; 
-      di->s_bit  = ((instr_word[1] & 0x10) == 0 ) ? false : true;
+      di->s_flag  = ((instr_word[1] & 0x10) == 0 ) ? false : true;
     }
     else if( ((instr_word[0] & 0x1) == 0 ) && //op1 == 0100x
              ((instr_word[1] & 0xe0) == 0x80 ))
     {
       di->opcode = OP_add_rsr; 
-      di->s_bit  = ((instr_word[1] & 0x10) == 0 ) ? false : true;
+      di->s_flag  = ((instr_word[1] & 0x10) == 0 ) ? false : true;
     }
     else if( ((instr_word[0] & 0x1) == 0 ) && //op1 == 0101x
              ((instr_word[1] & 0xe0) == 0xa0 ))
     {
       di->opcode = OP_adc_rsr; 
-      di->s_bit  = ((instr_word[1] & 0x10) == 0 ) ? false : true;
+      di->s_flag  = ((instr_word[1] & 0x10) == 0 ) ? false : true;
     }
     else if( ((instr_word[0] & 0x1) == 0 ) && //op1 == 0110x
              ((instr_word[1] & 0xe0) == 0xc0 ))
     {
       di->opcode = OP_sbc_rsr;
-      di->s_bit  = ((instr_word[1] & 0x10) == 0 ) ? false : true;
+      di->s_flag  = ((instr_word[1] & 0x10) == 0 ) ? false : true;
     }
     else if( ((instr_word[0] & 0x1) == 0 ) && //op1 == 0111x
              ((instr_word[1] & 0xe0) == 0xe0 ))
     {
       di->opcode = OP_rsc_rsr;
-      di->s_bit  = ((instr_word[1] & 0x10) == 0 ) ? false : true;
+      di->s_flag  = ((instr_word[1] & 0x10) == 0 ) ? false : true;
     }
     else if( ((instr_word[0] & 0x1) == 1 ) && //op1 == 10001
              ((instr_word[1] & 0xf0) == 0x10 ))
     {
       di->opcode = OP_tst_rsr;
-      di->s_bit  = ((instr_word[1] & 0x10) == 0 ) ? false : true;
+      di->s_flag  = ((instr_word[1] & 0x10) == 0 ) ? false : true;
     }
     else if( ((instr_word[0] & 0x1) == 1 ) && //op1 == 10011
              ((instr_word[1] & 0xf0) == 0x30 ))
     {
       di->opcode = OP_teq_rsr;
-      di->s_bit  = ((instr_word[1] & 0x10) == 0 ) ? false : true;
+      di->s_flag  = ((instr_word[1] & 0x10) == 0 ) ? false : true;
     }
     else if( ((instr_word[0] & 0x1) == 1 ) && //op1 == 10101
              ((instr_word[1] & 0xf0) == 0x50 ))
     {
       di->opcode = OP_cmp_rsr;
-      di->s_bit  = ((instr_word[1] & 0x10) == 0 ) ? false : true;
+      di->s_flag  = ((instr_word[1] & 0x10) == 0 ) ? false : true;
     }
     else if( ((instr_word[0] & 0x1) == 1 ) && //op1 == 10111
              ((instr_word[1] & 0xf0) == 0x70 ))
     {
       di->opcode = OP_cmn_rsr;
-      di->s_bit  = ((instr_word[1] & 0x10) == 0 ) ? false : true;
+      di->s_flag  = ((instr_word[1] & 0x10) == 0 ) ? false : true;
     }
     else if( ((instr_word[0] & 0x1) == 1 ) && //op1 == 1100x
              ((instr_word[1] & 0xe0) == 0x80 ))
     {
       di->opcode = OP_orr_rsr;
-      di->s_bit  = ((instr_word[1] & 0x10) == 0 ) ? false : true;
+      di->s_flag  = ((instr_word[1] & 0x10) == 0 ) ? false : true;
     }
     else if( ((instr_word[0] & 0x1) == 1 ) && //op1 == 1101x
              ((instr_word[1] & 0xe0) == 0xa0 ))
     {
       if( ((instr_word[3] & 0x60) == 0 )) //op2 == 00
       { 
-        di->opcode = OP_lsl_rsr;
-        di->s_bit  = ((instr_word[1] & 0x10) == 0 ) ? false : true;
+        di->opcode = OP_lsl_reg;
+        di->s_flag  = ((instr_word[1] & 0x10) == 0 ) ? false : true;
       }
       else if( ((instr_word[3] & 0x60) == 0x20 )) //op2 == 01
       {
-        di->opcode = OP_lsr_rsr;
-        di->s_bit  = ((instr_word[1] & 0x10) == 0 ) ? false : true;
+        di->opcode = OP_lsr_reg;
+        di->s_flag  = ((instr_word[1] & 0x10) == 0 ) ? false : true;
       }
       else if( ((instr_word[3] & 0x60) == 0x40 )) //op2 == 10
       {
-        di->opcode = OP_asr_rsr;
-        di->s_bit  = ((instr_word[1] & 0x10) == 0 ) ? false : true;
+        di->opcode = OP_asr_reg;
+        di->s_flag  = ((instr_word[1] & 0x10) == 0 ) ? false : true;
       }
       else if( ((instr_word[3] & 0x60) == 0x60 )) //op2 == 11
       {
-        di->opcode = OP_ror_rsr;
-        di->s_bit  = ((instr_word[1] & 0x10) == 0 ) ? false : true;
+        di->opcode = OP_ror_reg;
+        di->s_flag  = ((instr_word[1] & 0x10) == 0 ) ? false : true;
       }
     }
     else if( ((instr_word[0] & 0x1) == 1 ) && //op1 == 1110x
              ((instr_word[1] & 0xe0) == 0xc0 ))
     {
       di->opcode = OP_bic_rsr;
-      di->s_bit  = ((instr_word[1] & 0x10) == 0 ) ? false : true;
+      di->s_flag  = ((instr_word[1] & 0x10) == 0 ) ? false : true;
     }
     else if( ((instr_word[0] & 0x1) == 1 ) && //op1 == 1111x
              ((instr_word[1] & 0xe0) == 0xe0 ))
     {
       di->opcode = OP_mvn_rsr;
-      di->s_bit  = ((instr_word[1] & 0x10) == 0 ) ? false : true;
+      di->s_flag  = ((instr_word[1] & 0x10) == 0 ) ? false : true;
     }
 
 
@@ -831,13 +825,13 @@ instr_info_t* decode_data_processing_imm(byte* instr_word,
         ((instr_word[1] & 0xe0) == 0 ))
     {
       di->opcode = OP_and_imm; 
-      di->s_bit  = ((instr_word[1] & 0x10) == 0 ) ? false : true;
+      di->s_flag  = ((instr_word[1] & 0x10) == 0 ) ? false : true;
     }
     else if( ((instr_word[0] & 0x1) == 0 ) && //op == 0001x
              ((instr_word[1] & 0xe0) == 0x20 ))
     {
       di->opcode = OP_eor_imm; 
-      di->s_bit  = ((instr_word[1] & 0x10) == 0 ) ? false : true;
+      di->s_flag  = ((instr_word[1] & 0x10) == 0 ) ? false : true;
     }
     else if( ((instr_word[0] & 0x1) == 0 ) && //op == 0010x
              ((instr_word[1] & 0xe0) == 0x40 ))
@@ -845,19 +839,19 @@ instr_info_t* decode_data_processing_imm(byte* instr_word,
       if( ((instr_word[1] & 0xf) != 0xf)) //Rn != 1111(r15)
       {
         di->opcode = OP_sub_imm; 
-        di->s_bit  = ((instr_word[1] & 0x10) == 0 ) ? false : true;
+        di->s_flag  = ((instr_word[1] & 0x10) == 0 ) ? false : true;
       }
       else
       {
         di->opcode = OP_adr; 
-        di->s_bit  = ((instr_word[1] & 0x10) == 0 ) ? false : true;
+        di->s_flag  = ((instr_word[1] & 0x10) == 0 ) ? false : true;
       }
     }
     else if( ((instr_word[0] & 0x1) == 0 ) && //op == 0011x
              ((instr_word[1] & 0xe0) == 0x60 ))
     {
       di->opcode = OP_rsb_imm; 
-      di->s_bit  = ((instr_word[1] & 0x10) == 0 ) ? false : true;
+      di->s_flag  = ((instr_word[1] & 0x10) == 0 ) ? false : true;
     }
     else if( ((instr_word[0] & 0x1) == 0 ) && //op == 0100x
              ((instr_word[1] & 0xe0) == 0x80 ))
@@ -865,31 +859,31 @@ instr_info_t* decode_data_processing_imm(byte* instr_word,
       if( ((instr_word[1] & 0xf) != 0xf)) //Rn != 1111(r15)
       {
         di->opcode = OP_add_imm;
-        di->s_bit  = ((instr_word[1] & 0x10) == 0 ) ? false : true;
+        di->s_flag  = ((instr_word[1] & 0x10) == 0 ) ? false : true;
       }
       else     
       {
         di->opcode = OP_adr;
-        di->s_bit  = ((instr_word[1] & 0x10) == 0 ) ? false : true;
+        di->s_flag  = ((instr_word[1] & 0x10) == 0 ) ? false : true;
       }
     }
     else if( ((instr_word[0] & 0x1) == 0 ) && //op == 0101x
              ((instr_word[1] & 0xe0) == 0xa0 ))
     {
       di->opcode = OP_adc_imm;
-      di->s_bit  = ((instr_word[1] & 0x10) == 0 ) ? false : true;
+      di->s_flag  = ((instr_word[1] & 0x10) == 0 ) ? false : true;
     }
     else if( ((instr_word[0] & 0x1) == 0 ) && //op == 0110x
              ((instr_word[1] & 0xe0) == 0xc0 ))
     {
       di->opcode = OP_sbc_imm;
-      di->s_bit  = ((instr_word[1] & 0x10) == 0 ) ? false : true;
+      di->s_flag  = ((instr_word[1] & 0x10) == 0 ) ? false : true;
     }
     else if( ((instr_word[0] & 0x1) == 0 ) && //op == 0111x
              ((instr_word[1] & 0xe0) == 0xe0 ))
     {
       di->opcode = OP_rsc_imm;
-      di->s_bit  = ((instr_word[1] & 0x10) == 0 ) ? false : true;
+      di->s_flag  = ((instr_word[1] & 0x10) == 0 ) ? false : true;
     }
     else if( ((instr_word[0] & 0x1) == 1 ) && //op == 10001
              ((instr_word[1] & 0xf0) == 0x10 ))
@@ -915,25 +909,25 @@ instr_info_t* decode_data_processing_imm(byte* instr_word,
              ((instr_word[1] & 0xe0) == 0x80 ))
     {
       di->opcode = OP_orr_imm;
-      di->s_bit  = ((instr_word[1] & 0x10) == 0 ) ? false : true;
+      di->s_flag  = ((instr_word[1] & 0x10) == 0 ) ? false : true;
     }
     else if( ((instr_word[0] & 0x1) == 1 ) && //op == 1101x
              ((instr_word[1] & 0xe0) == 0xa0 ))
     {
       di->opcode = OP_mov_imm;
-      di->s_bit  = ((instr_word[1] & 0x10) == 0 ) ? false : true;
+      di->s_flag  = ((instr_word[1] & 0x10) == 0 ) ? false : true;
     }
     else if( ((instr_word[0] & 0x1) == 1 ) && //op == 1110x
              ((instr_word[1] & 0xe0) == 0xc0 ))
     {
       di->opcode = OP_bic_imm;
-      di->s_bit  = ((instr_word[1] & 0x10) == 0 ) ? false : true;
+      di->s_flag  = ((instr_word[1] & 0x10) == 0 ) ? false : true;
     }
     else if( ((instr_word[0] & 0x1) == 1 ) && //op == 1111x
              ((instr_word[1] & 0xe0) == 0xe0 ))
     {
       di->opcode = OP_mvn_imm;
-      di->s_bit  = ((instr_word[1] & 0x10) == 0 ) ? false : true;
+      di->s_flag  = ((instr_word[1] & 0x10) == 0 ) ? false : true;
     }
 
 
@@ -1019,7 +1013,8 @@ instr_info_t* decode_misc(byte* instr_word,
     }
     else if( (instr_word[1] & 0x60) == 0x60 ) //op == 11 
     {
-      di->opcode = OP_smc;
+      di->opcode = OP_UNDECODED;
+      //di->opcode = OP_smc; SJF Missing opcode
     }
   }
 
@@ -1094,12 +1089,12 @@ instr_info_t* decode_mul_and_mla(byte* instr_word,
     if( ((instr_word[1] & 0xe0) == 0 ))  //op == 000x
     {
       di->opcode = OP_mul; 
-      di->s_bit  = ((instr_word[1] & 0x10) == 0 ) ? false : true;
+      di->s_flag  = ((instr_word[1] & 0x10) == 0 ) ? false : true;
     }
     else if( ((instr_word[1] & 0xe0) == 0x20 ))  //op == 001x
     {
       di->opcode = OP_mla;
-      di->s_bit  = ((instr_word[1] & 0x10) == 0 ) ? false : true;
+      di->s_flag  = ((instr_word[1] & 0x10) == 0 ) ? false : true;
     }
     else if( ((instr_word[1] & 0xf0) == 0x40 ))  //op == 0100
     {
@@ -1112,22 +1107,22 @@ instr_info_t* decode_mul_and_mla(byte* instr_word,
     else if( ((instr_word[1] & 0xe0) == 0x80 ))  //op == 100x 
     {
       di->opcode = OP_umull;
-      di->s_bit  = ((instr_word[1] & 0x10) == 0 ) ? false : true;
+      di->s_flag  = ((instr_word[1] & 0x10) == 0 ) ? false : true;
     }
     else if( ((instr_word[1] & 0xe0) == 0xa0 ))  //op == 101x 
     {
       di->opcode = OP_umlal;
-      di->s_bit  = ((instr_word[1] & 0x10) == 0 ) ? false : true;
+      di->s_flag  = ((instr_word[1] & 0x10) == 0 ) ? false : true;
     }
     else if( ((instr_word[1] & 0xe0) == 0xc0 ))  //op == 110x 
     {
       di->opcode = OP_smull;
-      di->s_bit  = ((instr_word[1] & 0x10) == 0 ) ? false : true;
+      di->s_flag  = ((instr_word[1] & 0x10) == 0 ) ? false : true;
     }
     else if( ((instr_word[1] & 0xe0) == 0xe0 ))  //op == 111x 
     {
       di->opcode = OP_smlal;
-      di->s_bit  = ((instr_word[1] & 0x10) == 0 ) ? false : true;
+      di->s_flag  = ((instr_word[1] & 0x10) == 0 ) ? false : true;
     }
 
 }
@@ -1140,16 +1135,16 @@ instr_info_t* decode_extra_load_store_unpriv_1(byte* instr_word,
    if( ((instr_word[1] & 0x10 ) == 0x0 )) //op == 0 
    {
       di->opcode = OP_strht;
-      di->p_bit  = ((instr_word[0] & 0x1) == 0 ) ? false : true;
-      di->u_bit  = ((instr_word[1] & 0x80) == 0 ) ? false : true;
-      di->w_bit  = ((instr_word[1] & 0x20) == 0 ) ? false : true;
+      di->p_flag  = ((instr_word[0] & 0x1) == 0 ) ? false : true;
+      di->u_flag  = ((instr_word[1] & 0x80) == 0 ) ? false : true;
+      di->w_flag  = ((instr_word[1] & 0x20) == 0 ) ? false : true;
    }
    else //op == 1
    {
       di->opcode = OP_ldrht;
-      di->p_bit  = ((instr_word[0] & 0x1) == 0 ) ? false : true;
-      di->u_bit  = ((instr_word[1] & 0x80) == 0 ) ? false : true;
-      di->w_bit  = ((instr_word[1] & 0x20) == 0 ) ? false : true;
+      di->p_flag  = ((instr_word[0] & 0x1) == 0 ) ? false : true;
+      di->u_flag  = ((instr_word[1] & 0x80) == 0 ) ? false : true;
+      di->w_flag  = ((instr_word[1] & 0x20) == 0 ) ? false : true;
    }
 
 }
@@ -1168,9 +1163,9 @@ instr_info_t* decode_extra_load_store_unpriv_2(byte* instr_word,
      else //op == 1
      {
         di->opcode = OP_ldrsbt;
-        di->p_bit  = ((instr_word[0] & 0x1) == 0 ) ? false : true;
-        di->u_bit  = ((instr_word[1] & 0x80) == 0 ) ? false : true;
-        di->w_bit  = ((instr_word[1] & 0x20) == 0 ) ? false : true;
+        di->p_flag  = ((instr_word[0] & 0x1) == 0 ) ? false : true;
+        di->u_flag  = ((instr_word[1] & 0x80) == 0 ) ? false : true;
+        di->w_flag  = ((instr_word[1] & 0x20) == 0 ) ? false : true;
      }
    }
    else
@@ -1182,9 +1177,9 @@ instr_info_t* decode_extra_load_store_unpriv_2(byte* instr_word,
      else //op == 1
      {
         di->opcode = OP_ldrsht;
-        di->p_bit  = ((instr_word[0] & 0x1) == 0 ) ? false : true;
-        di->u_bit  = ((instr_word[1] & 0x80) == 0 ) ? false : true;
-        di->w_bit  = ((instr_word[1] & 0x20) == 0 ) ? false : true;
+        di->p_flag  = ((instr_word[0] & 0x1) == 0 ) ? false : true;
+        di->u_flag  = ((instr_word[1] & 0x80) == 0 ) ? false : true;
+        di->w_flag  = ((instr_word[1] & 0x20) == 0 ) ? false : true;
      }
    }
 
@@ -1202,32 +1197,32 @@ instr_info_t* decode_extra_load_store_2(byte* instr_word,
       if( (instr_word[1] & 0x50) == 0 ) //op1 == xx0x0
       {
         di->opcode = OP_ldrd_reg;
-        di->p_bit  = ((instr_word[0] & 0x1) == 0 ) ? false : true;
-        di->u_bit  = ((instr_word[1] & 0x80) == 0 ) ? false : true;
-        di->w_bit  = ((instr_word[1] & 0x20) == 0 ) ? false : true;
+        di->p_flag  = ((instr_word[0] & 0x1) == 0 ) ? false : true;
+        di->u_flag  = ((instr_word[1] & 0x80) == 0 ) ? false : true;
+        di->w_flag  = ((instr_word[1] & 0x20) == 0 ) ? false : true;
       }
       else if( (instr_word[1] & 0x50) == 0x10 ) //op1 == xx0x1
       {
         di->opcode = OP_ldrsb_reg;
-        di->p_bit  = ((instr_word[0] & 0x1) == 0 ) ? false : true;
-        di->u_bit  = ((instr_word[1] & 0x80) == 0 ) ? false : true;
-        di->w_bit  = ((instr_word[1] & 0x20) == 0 ) ? false : true;
+        di->p_flag  = ((instr_word[0] & 0x1) == 0 ) ? false : true;
+        di->u_flag  = ((instr_word[1] & 0x80) == 0 ) ? false : true;
+        di->w_flag  = ((instr_word[1] & 0x20) == 0 ) ? false : true;
       }
       else if( (instr_word[1] & 0x50) == 0x40 ) //op1 == xx1x0
       {
         if( (instr_word[1] & 0xf) == 0xf ) //Rn == 1111 
         {
           di->opcode = OP_ldrd_lit;
-          di->p_bit  = ((instr_word[0] & 0x1) == 0 ) ? false : true;
-          di->u_bit  = ((instr_word[1] & 0x80) == 0 ) ? false : true;
-          di->w_bit  = ((instr_word[1] & 0x20) == 0 ) ? false : true;
+          di->p_flag  = ((instr_word[0] & 0x1) == 0 ) ? false : true;
+          di->u_flag  = ((instr_word[1] & 0x80) == 0 ) ? false : true;
+          di->w_flag  = ((instr_word[1] & 0x20) == 0 ) ? false : true;
         }
         else
         {
           di->opcode = OP_ldrd_imm;
-          di->p_bit  = ((instr_word[0] & 0x1) == 0 ) ? false : true;
-          di->u_bit  = ((instr_word[1] & 0x80) == 0 ) ? false : true;
-          di->w_bit  = ((instr_word[1] & 0x20) == 0 ) ? false : true;
+          di->p_flag  = ((instr_word[0] & 0x1) == 0 ) ? false : true;
+          di->u_flag  = ((instr_word[1] & 0x80) == 0 ) ? false : true;
+          di->w_flag  = ((instr_word[1] & 0x20) == 0 ) ? false : true;
         }
       }
       else if( (instr_word[1] & 0x50) == 0x50 ) //op1 == xx1x1
@@ -1235,16 +1230,16 @@ instr_info_t* decode_extra_load_store_2(byte* instr_word,
         if( (instr_word[1] & 0xf) == 0xf ) //Rn == 1111 
         {
           di->opcode = OP_ldrsb_lit;
-          di->p_bit  = ((instr_word[0] & 0x1) == 0 ) ? false : true;
-          di->u_bit  = ((instr_word[1] & 0x80) == 0 ) ? false : true;
-          di->w_bit  = ((instr_word[1] & 0x20) == 0 ) ? false : true;
+          di->p_flag  = ((instr_word[0] & 0x1) == 0 ) ? false : true;
+          di->u_flag  = ((instr_word[1] & 0x80) == 0 ) ? false : true;
+          di->w_flag  = ((instr_word[1] & 0x20) == 0 ) ? false : true;
         }
         else
         {
           di->opcode = OP_ldrsb_imm;
-          di->p_bit  = ((instr_word[0] & 0x1) == 0 ) ? false : true;
-          di->u_bit  = ((instr_word[1] & 0x80) == 0 ) ? false : true;
-          di->w_bit  = ((instr_word[1] & 0x20) == 0 ) ? false : true;
+          di->p_flag  = ((instr_word[0] & 0x1) == 0 ) ? false : true;
+          di->u_flag  = ((instr_word[1] & 0x80) == 0 ) ? false : true;
+          di->w_flag  = ((instr_word[1] & 0x20) == 0 ) ? false : true;
         }
       }
     }
@@ -1253,39 +1248,39 @@ instr_info_t* decode_extra_load_store_2(byte* instr_word,
       if( (instr_word[1] & 0x50) == 0 ) //op1 == xx0x0
       {
         di->opcode = OP_strd_reg;
-        di->p_bit  = ((instr_word[0] & 0x1) == 0 ) ? false : true;
-        di->u_bit  = ((instr_word[1] & 0x80) == 0 ) ? false : true;
-        di->w_bit  = ((instr_word[1] & 0x20) == 0 ) ? false : true;
+        di->p_flag  = ((instr_word[0] & 0x1) == 0 ) ? false : true;
+        di->u_flag  = ((instr_word[1] & 0x80) == 0 ) ? false : true;
+        di->w_flag  = ((instr_word[1] & 0x20) == 0 ) ? false : true;
       }
       else if( (instr_word[1] & 0x50) == 0x10 ) //op1 == xx0x1
       {
         di->opcode = OP_ldrsh_reg;
-        di->p_bit  = ((instr_word[0] & 0x1) == 0 ) ? false : true;
-        di->u_bit  = ((instr_word[1] & 0x80) == 0 ) ? false : true;
-        di->w_bit  = ((instr_word[1] & 0x20) == 0 ) ? false : true;
+        di->p_flag  = ((instr_word[0] & 0x1) == 0 ) ? false : true;
+        di->u_flag  = ((instr_word[1] & 0x80) == 0 ) ? false : true;
+        di->w_flag  = ((instr_word[1] & 0x20) == 0 ) ? false : true;
       }
       else if( (instr_word[1] & 0x50) == 0x40 ) //op1 == xx1x0
       {
         di->opcode = OP_strd_imm;
-        di->p_bit  = ((instr_word[0] & 0x1) == 0 ) ? false : true;
-        di->u_bit  = ((instr_word[1] & 0x80) == 0 ) ? false : true;
-        di->w_bit  = ((instr_word[1] & 0x20) == 0 ) ? false : true;
+        di->p_flag  = ((instr_word[0] & 0x1) == 0 ) ? false : true;
+        di->u_flag  = ((instr_word[1] & 0x80) == 0 ) ? false : true;
+        di->w_flag  = ((instr_word[1] & 0x20) == 0 ) ? false : true;
       }
       else if( (instr_word[1] & 0x50) == 0x50 ) //op1 == xx1x1
       {
         if( (instr_word[1] & 0xf) == 0xf ) //Rn == 1111 
         {
           di->opcode = OP_ldrsh_lit;
-          di->p_bit  = ((instr_word[0] & 0x1) == 0 ) ? false : true;
-          di->u_bit  = ((instr_word[1] & 0x80) == 0 ) ? false : true;
-          di->w_bit  = ((instr_word[1] & 0x20) == 0 ) ? false : true;
+          di->p_flag  = ((instr_word[0] & 0x1) == 0 ) ? false : true;
+          di->u_flag  = ((instr_word[1] & 0x80) == 0 ) ? false : true;
+          di->w_flag  = ((instr_word[1] & 0x20) == 0 ) ? false : true;
         }
         else
         {
           di->opcode = OP_ldrsh_imm;
-          di->p_bit  = ((instr_word[0] & 0x1) == 0 ) ? false : true;
-          di->u_bit  = ((instr_word[1] & 0x80) == 0 ) ? false : true;
-          di->w_bit  = ((instr_word[1] & 0x20) == 0 ) ? false : true;
+          di->p_flag  = ((instr_word[0] & 0x1) == 0 ) ? false : true;
+          di->u_flag  = ((instr_word[1] & 0x80) == 0 ) ? false : true;
+          di->w_flag  = ((instr_word[1] & 0x20) == 0 ) ? false : true;
         }
       }
 
@@ -1302,39 +1297,39 @@ instr_info_t* decode_extra_load_store_1(byte* instr_word,
     if( (instr_word[1] & 0x50) == 0 ) //op1 == xx0x0
     {
       di->opcode = OP_strh_reg;
-      di->p_bit  = ((instr_word[0] & 0x1) == 0 ) ? false : true;
-      di->u_bit  = ((instr_word[1] & 0x80) == 0 ) ? false : true;
-      di->w_bit  = ((instr_word[1] & 0x20) == 0 ) ? false : true;
+      di->p_flag  = ((instr_word[0] & 0x1) == 0 ) ? false : true;
+      di->u_flag  = ((instr_word[1] & 0x80) == 0 ) ? false : true;
+      di->w_flag  = ((instr_word[1] & 0x20) == 0 ) ? false : true;
     }
     else if( (instr_word[1] & 0x50) == 0x10 ) //op1 == xx0x1
     {
       di->opcode = OP_ldrh_reg;
-      di->p_bit  = ((instr_word[0] & 0x1) == 0 ) ? false : true;
-      di->u_bit  = ((instr_word[1] & 0x80) == 0 ) ? false : true;
-      di->w_bit  = ((instr_word[1] & 0x20) == 0 ) ? false : true;
+      di->p_flag  = ((instr_word[0] & 0x1) == 0 ) ? false : true;
+      di->u_flag  = ((instr_word[1] & 0x80) == 0 ) ? false : true;
+      di->w_flag  = ((instr_word[1] & 0x20) == 0 ) ? false : true;
     }
     else if( (instr_word[1] & 0x50) == 0x40 ) //op1 == xx1x0
     {
       di->opcode = OP_strh_imm;
-      di->p_bit  = ((instr_word[0] & 0x1) == 0 ) ? false : true;
-      di->u_bit  = ((instr_word[1] & 0x80) == 0 ) ? false : true;
-      di->w_bit  = ((instr_word[1] & 0x20) == 0 ) ? false : true;
+      di->p_flag  = ((instr_word[0] & 0x1) == 0 ) ? false : true;
+      di->u_flag  = ((instr_word[1] & 0x80) == 0 ) ? false : true;
+      di->w_flag  = ((instr_word[1] & 0x20) == 0 ) ? false : true;
     }
     else if( (instr_word[1] & 0x50) == 0x50 ) //op1 == xx1x1
     {
       if( (instr_word[1] & 0xf) == 0xf ) //Rn == 1111 
       {
         di->opcode = OP_ldrh_lit;
-        di->p_bit  = ((instr_word[0] & 0x1) == 0 ) ? false : true;
-        di->u_bit  = ((instr_word[1] & 0x80) == 0 ) ? false : true;
-        di->w_bit  = ((instr_word[1] & 0x20) == 0 ) ? false : true;
+        di->p_flag  = ((instr_word[0] & 0x1) == 0 ) ? false : true;
+        di->u_flag  = ((instr_word[1] & 0x80) == 0 ) ? false : true;
+        di->w_flag  = ((instr_word[1] & 0x20) == 0 ) ? false : true;
       }
       else
       {
         di->opcode = OP_ldrh_imm;
-        di->p_bit  = ((instr_word[0] & 0x1) == 0 ) ? false : true;
-        di->u_bit  = ((instr_word[1] & 0x80) == 0 ) ? false : true;
-        di->w_bit  = ((instr_word[1] & 0x20) == 0 ) ? false : true;
+        di->p_flag  = ((instr_word[0] & 0x1) == 0 ) ? false : true;
+        di->u_flag  = ((instr_word[1] & 0x80) == 0 ) ? false : true;
+        di->w_flag  = ((instr_word[1] & 0x20) == 0 ) ? false : true;
       }
     }
   
@@ -1447,58 +1442,56 @@ instr_info_t* decode_data_processing_register(byte* instr_word,
                                               int* numdsts, int* numsrcs)
 {
     instr_info_t *info = NULL;
-    uint opcode = 0, s_bit = 0, reg = 0, immed = 0;
-    int  encoding_type = UNKNOWN_ENCODING;
+    uint opcode = 0, s_flag = 0, reg = 0, immed = 0;
+    int  encoding = UNKNOWN_ENCODING;
 
     if( ((instr_word[0] & 0x1) == 0 ) && //op1 == 0000x
         ((instr_word[1] & 0xe0) == 0 ))
     {
       di->opcode = OP_and_reg; 
-      di->s_bit  = ((instr_word[1] & 0x10) == 0 ) ? false : true;
-
-      encoding_type = 
+      di->s_flag  = ((instr_word[1] & 0x10) == 0 ) ? false : true;
     }
     else if( ((instr_word[0] & 0x1) == 0) && //op1 == 0001x
              ((instr_word[1] & 0xe0) == 0x20))
     {
       di->opcode = OP_eor_reg;
-      di->s_bit  = ((instr_word[1] & 0x10) == 0 ) ? false : true;
+      di->s_flag  = ((instr_word[1] & 0x10) == 0 ) ? false : true;
     }
     else if( ((instr_word[0] & 0x1) == 0) && //op1 == 0010x
              ((instr_word[1] & 0xe0) == 0x40))
     {
       di->opcode = OP_sub_reg;
-      di->s_bit  = ((instr_word[1] & 0x10) == 0 ) ? false : true;
+      di->s_flag  = ((instr_word[1] & 0x10) == 0 ) ? false : true;
     }
     else if( ((instr_word[0] & 0x1) == 0) && //op1 == 0011x
              ((instr_word[1] & 0xe0) == 0x60))
     {
       di->opcode = OP_rsb_reg;
-      di->s_bit  = ((instr_word[1] & 0x10) == 0 ) ? false : true;
+      di->s_flag  = ((instr_word[1] & 0x10) == 0 ) ? false : true;
     }
     else if( ((instr_word[0] & 0x1) == 0) && //op1 == 0100x
              ((instr_word[1] & 0xe0) == 0x80))
     {
       di->opcode = OP_add_reg;
-      di->s_bit  = ((instr_word[1] & 0x10) == 0 ) ? false : true;
+      di->s_flag  = ((instr_word[1] & 0x10) == 0 ) ? false : true;
     }
     else if( ((instr_word[0] & 0x1) == 0) && //op1 == 0101x
              ((instr_word[1] & 0xe0) == 0xa0))
     {
       di->opcode = OP_adc_reg;
-      di->s_bit  = ((instr_word[1] & 0x10) == 0 ) ? false : true;
+      di->s_flag  = ((instr_word[1] & 0x10) == 0 ) ? false : true;
     }
     else if( ((instr_word[0] & 0x1) == 0) && //op1 == 0110x
              ((instr_word[1] & 0xe0) == 0xc0))
     {
       di->opcode = OP_sbc_reg;
-      di->s_bit  = ((instr_word[1] & 0x10) == 0 ) ? false : true;
+      di->s_flag  = ((instr_word[1] & 0x10) == 0 ) ? false : true;
     }
     else if( ((instr_word[0] & 0x1) == 0) && //op1 == 0111x
              ((instr_word[1] & 0xe0) == 0xe0))
     {
       di->opcode = OP_rsc_reg;
-      di->s_bit  = ((instr_word[1] & 0x10) == 0 ) ? false : true;
+      di->s_flag  = ((instr_word[1] & 0x10) == 0 ) ? false : true;
     }
     else if( ((instr_word[0] & 0x1) == 1) && //op1 == 10001 
              ((instr_word[1] & 0xf0) == 0x10))
@@ -1524,7 +1517,7 @@ instr_info_t* decode_data_processing_register(byte* instr_word,
              ((instr_word[1] & 0xe0) == 0x80))
     {
       di->opcode = OP_orr_reg;
-      di->s_bit  = ((instr_word[1] & 0x10) == 0 ) ? false : true;
+      di->s_flag  = ((instr_word[1] & 0x10) == 0 ) ? false : true;
     }
     else if( ((instr_word[0] & 0x1) == 1) && //op1 == 1101x 
              ((instr_word[1] & 0xe0) == 0xa0))
@@ -1534,42 +1527,42 @@ instr_info_t* decode_data_processing_register(byte* instr_word,
           ((instr_word[3] & 0x60) == 0 ) ) //op3 == 00
       {
         di->opcode = OP_mov_reg;
-        di->s_bit  = ((instr_word[1] & 0x10) == 0 ) ? false : true;
+        di->s_flag  = ((instr_word[1] & 0x10) == 0 ) ? false : true;
       }
       else if( (((instr_word[2] & 0xf) != 0) || //op2 != 00000
                 ((instr_word[3] & 0x80) != 0)) && 
                ((instr_word[3] & 0x60) == 0 ) ) //op3 == 00
       {
         di->opcode = OP_lsl_imm;
-        di->s_bit  = ((instr_word[1] & 0x10) == 0 ) ? false : true;
+        di->s_flag  = ((instr_word[1] & 0x10) == 0 ) ? false : true;
       }
       else if( (((instr_word[2] & 0xf) != 0) || //op2 != 00000
                 ((instr_word[3] & 0x80) != 0)) && 
                ((instr_word[3] & 0x60) == 0x20 ) ) //op3 == 01
       {
         di->opcode = OP_lsr_imm;
-        di->s_bit  = ((instr_word[1] & 0x10) == 0 ) ? false : true;
+        di->s_flag  = ((instr_word[1] & 0x10) == 0 ) ? false : true;
       }
       else if( (((instr_word[2] & 0xf) != 0) || //op2 != 00000
                 ((instr_word[3] & 0x80) != 0)) && 
                ((instr_word[3] & 0x60) == 0x40 ) ) //op3 == 10
       {
         di->opcode = OP_asr_imm;
-        di->s_bit  = ((instr_word[1] & 0x10) == 0 ) ? false : true;
+        di->s_flag  = ((instr_word[1] & 0x10) == 0 ) ? false : true;
       }
       else if( (((instr_word[2] & 0xf) == 0) && //op2 == 00000
                 ((instr_word[3] & 0x80) == 0)) && 
                ((instr_word[3] & 0x60) == 0x60 ) ) //op3 == 11
       {
         di->opcode = OP_rrx;
-        di->s_bit  = ((instr_word[1] & 0x10) == 0 ) ? false : true;
+        di->s_flag  = ((instr_word[1] & 0x10) == 0 ) ? false : true;
       }
       else if( (((instr_word[2] & 0xf) != 0) || //op2 != 00000
                 ((instr_word[3] & 0x80) != 0)) && 
                ((instr_word[3] & 0x60) == 0x60 ) ) //op3 == 11
       {
         di->opcode = OP_ror_imm;
-        di->s_bit  = ((instr_word[1] & 0x10) == 0 ) ? false : true;
+        di->s_flag  = ((instr_word[1] & 0x10) == 0 ) ? false : true;
       }
 
     }
@@ -1577,13 +1570,13 @@ instr_info_t* decode_data_processing_register(byte* instr_word,
              ((instr_word[1] & 0xe0) == 0xc0))
     {
       di->opcode = OP_bic_reg;
-      di->s_bit  = ((instr_word[1] & 0x10) == 0 ) ? false : true;
+      di->s_flag  = ((instr_word[1] & 0x10) == 0 ) ? false : true;
     }
     else if( ((instr_word[0] & 0x1) == 1) && //op1 == 1111x 
              ((instr_word[1] & 0xe0) == 0xe0))
     {
       di->opcode = OP_mvn_reg;
-      di->s_bit  = ((instr_word[1] & 0x10) == 0 ) ? false : true;
+      di->s_flag  = ((instr_word[1] & 0x10) == 0 ) ? false : true;
     }
 
     if( di->opcode == OP_UNDECODED )
@@ -1601,7 +1594,7 @@ instr_info_t* decode_data_processing_register(byte* instr_word,
     ASSERT( srcs != NULL && dsts != NULL );
 
 
-    decode_operands( di, encoding, instr_words, 
+    decode_operands( di, encoding, instr_word, 
                      dsts, srcs, numdsts, numsrcs );
 
 }
@@ -1857,18 +1850,21 @@ instr_info_t* decode_parallel_unsigned_arith(byte* instr_word,
       else if( (instr_word[3] & 0xe0) == 0x40 ) //op2 == 010
         di->opcode = OP_uqsax;
       else if( (instr_word[3] & 0xe0) == 0x60 ) //op2 == 011
-        di->opcode = OP_uqsub16;
+        //di->opcode = OP_uqsub16; SJF Missing opcode
+        di->opcode = OP_UNDECODED; 
       else if( (instr_word[3] & 0xe0) == 0x80 ) //op2 == 100 
         di->opcode = OP_uqadd8;
       else if( (instr_word[3] & 0xe0) == 0xe0 ) //op2 == 111 
-        di->opcode = OP_uqsub8;
+        //di->opcode = OP_uqsub8; SJF Missing opcode
+        di->opcode = OP_UNDECODED; 
     }
     else if( (instr_word[1] & 0x30 ) == 0x30 ) //op1 == 11
     {
       if( (instr_word[3] & 0xe0) == 0x0 ) //op2 == 000
         di->opcode = OP_uhadd16;
       else if( (instr_word[3] & 0xe0) == 0x20 ) //op2 == 001
-        di->opcode = OP_uhasx;
+        //di->opcode = OP_uhasx; SJF Missing opcode
+        di->opcode = OP_UNDECODED; 
       else if( (instr_word[3] & 0xe0) == 0x40 ) //op2 == 010
         di->opcode = OP_uhsax;
       else if( (instr_word[3] & 0xe0) == 0x60 ) //op2 == 011
@@ -1921,7 +1917,8 @@ instr_info_t* decode_parallel_signed_arith(byte* instr_word,
       if( (instr_word[3] & 0xe0) == 0x0 ) //op2 == 000
         di->opcode = OP_shadd16;
       else if( (instr_word[3] & 0xe0) == 0x20 ) //op2 == 001
-        di->opcode = OP_shasx;
+        //di->opcode = OP_shasx; SJF Missing opcode
+        di->opcode = OP_UNDECODED;
       else if( (instr_word[3] & 0xe0) == 0x40 ) //op2 == 010
         di->opcode = OP_shsax;
       else if( (instr_word[3] & 0xe0) == 0x60 ) //op2 == 011
@@ -1947,17 +1944,17 @@ instr_info_t* decode_signed_mul(byte* instr_word,
         {
           di->opcode = OP_smuad;
           if( (instr_word[3] & 0x10) == 0x10 )
-            di->m_bit = true;
+            di->m_flag = true;
           else
-            di->m_bit = false;
+            di->m_flag = false;
         }
         else
         {
           di->opcode = OP_smlad;
           if( (instr_word[3] & 0x10) == 0x10 )
-            di->m_bit = true;
+            di->m_flag = true;
           else
-            di->m_bit = false;
+            di->m_flag = false;
 
         }
       }
@@ -1967,17 +1964,17 @@ instr_info_t* decode_signed_mul(byte* instr_word,
         {
           di->opcode = OP_smusd;
           if( (instr_word[3] & 0x10) == 0x10 )
-            di->m_bit = true;
+            di->m_flag = true;
           else
-            di->m_bit = false;
+            di->m_flag = false;
         }
         else
         {
           di->opcode = OP_smlsd;
           if( (instr_word[3] & 0x10) == 0x10 )
-            di->m_bit = true;
+            di->m_flag = true;
           else
-            di->m_bit = false;
+            di->m_flag = false;
 
         }
       }
@@ -1988,18 +1985,18 @@ instr_info_t* decode_signed_mul(byte* instr_word,
       {
           di->opcode = OP_smlald;
           if( (instr_word[3] & 0x10) == 0x10 )
-            di->m_bit = true;
+            di->m_flag = true;
           else
-            di->m_bit = false;
+            di->m_flag = false;
 
       }
       else if( (instr_word[3] & 0xc0) == 0x40) //op2 == 01x
       {
           di->opcode = OP_smlsld;
           if( (instr_word[3] & 0x10) == 0x10 )
-            di->m_bit = true;
+            di->m_flag = true;
           else
-            di->m_bit = false;
+            di->m_flag = false;
       }
     }
     else if( (instr_word[1] & 0x70) == 0x50 ) //op1 == 101
@@ -2010,17 +2007,17 @@ instr_info_t* decode_signed_mul(byte* instr_word,
         {
           di->opcode = OP_smmul;
           if( (instr_word[3] & 0x10) == 0x10 )
-            di->r_bit = true;
+            di->r_flag = true;
           else
-            di->r_bit = false;
+            di->r_flag = false;
         }
         else
         {
           di->opcode = OP_smmla;
           if( (instr_word[3] & 0x10) == 0x10 )
-            di->r_bit = true;
+            di->r_flag = true;
           else
-            di->r_bit = false;
+            di->r_flag = false;
 
         }
       }
@@ -2028,9 +2025,9 @@ instr_info_t* decode_signed_mul(byte* instr_word,
       {
           di->opcode = OP_smmls;
           if( (instr_word[3] & 0x10) == 0x10 )
-            di->r_bit = true;
+            di->r_flag = true;
           else
-            di->r_bit = false;
+            di->r_flag = false;
       }
     }
 }
@@ -2059,7 +2056,8 @@ instr_info_t* decode_parallel_pack_unpack(byte* instr_word,
       }
       else if( (instr_word[3] & 0xe0) == 0xa0) //op2 == 101 
       {
-        di->opcode = OP_sxtb;
+        di->opcode = OP_UNDECODED;
+        //di->opcode = OP_sxtb; SJF Missing opcode
       }
     }
     else if( (instr_word[1] & 0x60) == 0x20 ) //op1 == 01x
@@ -2078,7 +2076,8 @@ instr_info_t* decode_parallel_pack_unpack(byte* instr_word,
         else if( (instr_word[3] & 0xe0) == 0x20) //op2 == 011 
         {
           if( (instr_word[1] & 0xf) == 0xf)
-            di->opcode = OP_sxtb;
+            //di->opcode = OP_sxtb; SJF Missing opcode
+            di->opcode = OP_UNDECODED;
           else
             di->opcode = OP_sxtab;
         }
@@ -2092,7 +2091,8 @@ instr_info_t* decode_parallel_pack_unpack(byte* instr_word,
         else if( (instr_word[3] & 0xe0) == 0x20) //op2 == 011 
         {
           if( (instr_word[1] & 0xf) == 0xf)
-            di->opcode = OP_sxth;
+            di->opcode = OP_UNDECODED;
+            //di->opcode = OP_sxth; SJF Missing opcode
           else
             di->opcode = OP_sxtah;
         }
@@ -2233,7 +2233,9 @@ instr_info_t* decode_system_call_and_coprocessor(byte* instr_word,
          ((instr_word[1] & 0xa0 ) != 0 )))//op1 == 0xxxxx not 000x0x
     {
       if(( instr_word[2] & 0xe ) == 0xa )
+      {
         //decode_ext_reg_load_store
+      }
     }
     else if( ((instr_word[0] & 0x3 ) == 0  &&
               (instr_word[1] & 0x10) == 0 ) &&
@@ -2396,9 +2398,9 @@ instr_info_t* decode_branch(byte* instr_word,
     {
       di->opcode = OP_ldm;
       if( (instr_word[2] & 0x80) == 0x80)
-        di->r_bit = true;
+        di->r_flag = true;
       else
-        di->r_bit = false;
+        di->r_flag = false;
     }
     else if( (instr_word[0] & 0x3 ) == 0x2 )  //op == 10xxxx
     {
@@ -2471,6 +2473,7 @@ read_instruction(byte *pc, byte *orig_pc,
     instr_info_t* info;
     bool vex_noprefix = false;
     byte instr_word[4] = {0};
+    byte op = 0;
 
     /* initialize di */
     /* though we only need di->start_pc for full decode rip-rel (and
@@ -2700,7 +2703,7 @@ decode_opcode(dcontext_t *dcontext, byte *pc, instr_t *instr)
     /* operands are NOT set */
     instr_set_operands_valid(instr, false);
     /* raw bits are valid though and crucial for encoding */
-    instr_set_raw_bits(instr, pc, sz);
+    instr_set_raw_flags(instr, pc, sz);
     /* must set rip_rel_pos after setting raw bits */
     IF_X64(instr_set_rip_rel_pos(instr, rip_rel_pos));
     return pc + sz;
@@ -2778,13 +2781,13 @@ decode_common(dcontext_t *dcontext, byte *pc, byte *orig_pc, instr_t *instr)
         /* We do not want to copy when encoding and condone an invalid
          * relative target
          */
-        instr_set_raw_bits_valid(instr, false);
+        instr_set_raw_flags_valid(instr, false);
         instr_set_translation(instr, orig_pc);
     } else {
         /* we set raw bits AFTER setting all srcs and dsts b/c setting
          * a src or dst marks instr as having invalid raw bits
          */
-        instr_set_raw_bits(instr, pc, (uint)(next_pc - pc));
+        instr_set_raw_flags(instr, pc, (uint)(next_pc - pc));
     }
 
     return next_pc;
@@ -2865,7 +2868,7 @@ unit_check_decode_ff_opcode() {
             instr_init(GLOBAL_DCONTEXT, &instr);
             instr.bytes = raw_bytes;
             instr.length = 15;
-            instr_set_raw_bits_valid(&instr, true);
+            instr_set_raw_flags_valid(&instr, true);
             instr_set_operands_valid(&instr, false);
 
             next_pc = decode_opcode(GLOBAL_DCONTEXT, instr.bytes, &instr);
