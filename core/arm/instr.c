@@ -3671,11 +3671,11 @@ opcode_get_encoding_type(int opc)
       case OP_ldrt:    case OP_ldr_reg:
       case OP_ldrb_reg: case OP_str_reg:
       case OP_strb_reg:
-        return 1DST_REG_2SRC_REG_1SRC_IMM;
+        return ENC_1DST_REG_2SRC_REG_1SRC_IMM;
 
       case OP_mvn_reg: case OP_add_sp_reg:
       case OP_sub_sp_reg:
-        return 1DST_REG_1SRC_REG_1SRC_IMM_1;
+        return ENC_1DST_REG_1SRC_REG_1SRC_IMM_1;
 
       case OP_sub_imm: case OP_sbc_imm:
       case OP_rsc_imm: case OP_rsb_imm:
@@ -3686,57 +3686,57 @@ opcode_get_encoding_type(int opc)
       case OP_ldrb_imm: case OP_strb_imm:
       case OP_strt:    case OP_strbt:
       case OP_ldrbt:
-        return 1DST_REG_1SRC_REG_1SRC_IMM_2;
+        return ENC_1DST_REG_1SRC_REG_1SRC_IMM_2;
 
       case OP_cmp_reg: case OP_cmn_reg:
       case OP_teq_reg: case OP_tst_reg:
-        return 1DST_REG_1SRC_REG_1SRC_IMM_3;
+        return ENC_1DST_REG_1SRC_REG_1SRC_IMM_3;
 
       case OP_strh_imm: case OP_ldrd_imm:
       case OP_ldrh_imm: case OP_ldrsb_imm:
       case OP_strd_imm: case OP_strht:
-        return 1DST_REG_1SRC_REG_1SRC_IMM_4;
+        return ENC_1DST_REG_1SRC_REG_1SRC_IMM_4;
 
       case OP_mov_reg: case OP_rrx:
-        return 1DST_REG_1SRC_REG_0SRC_IMM_1;
+        return ENC_1DST_REG_1SRC_REG_0SRC_IMM_1;
 
       case OP_ldrex: case OP_ldrexh:
       case OP_ldrexb:  case OP_ldrexd:
-        return 1DST_REG_1SRC_REG_0SRC_IMM_2;
+        return ENC_1DST_REG_1SRC_REG_0SRC_IMM_2;
 
       case OP_sel:
       case OP_rbit:    case OP_rev:
       case OP_rev16:   case OP_revsh:
-        return 1DST_REG_1SRC_REG_0SRC_IMM;
+        return ENC_1DST_REG_1SRC_REG_0SRC_IMM_1;
 
       case OP_add_sp_imm: case OP_adr:
       case OP_cmn_imm:    case OP_cmp_imm:
       case OP_teq_imm:    case OP_tst_imm:
-        return 1DST_REG_0SRC_REG_1SRC_IMM_1;
+        return ENC_1DST_REG_0SRC_REG_1SRC_IMM_1;
 
       case OP_sub_sp_imm: case OP_mvn_imm:
       case OP_mov_imm:    case OP_ldr_lit:
       case OP_ldrb_lit:
-        return 1DST_REG_0SRC_REG_1SRC_IMM_2;
+        return ENC_1DST_REG_0SRC_REG_1SRC_IMM_2;
 
       case OP_ldrd_lit:   case OP_ldrh_lit:
       case OP_ldrsb_lit:  case OP_ldrsh_lit:
-        return 1DST_REG_0SRC_REG_1SRC_IMM_3;
+        return ENC_1DST_REG_0SRC_REG_1SRC_IMM_3;
 
       case OP_lsl_reg:    case OP_lsr_reg:
       case OP_asr_reg:    case OP_ror_reg:
       case OP_mvn_rsr:
-        return 1DST_REG_2SRC_REG_0SRC_IMM_1;
+        return ENC_1DST_REG_2SRC_REG_0SRC_IMM_1;
 
       case OP_mul:
-        return 1DST_REG_2SRC_REG_0SRC_IMM_2;
+        return ENC_1DST_REG_2SRC_REG_0SRC_IMM_2;
 
       case OP_cmn_rsr:    case OP_cmp_rsr:
       case OP_teq_rsr:    case OP_tst_rsr:
-        return 1DST_REG_2SRC_REG_0SRC_IMM_3;
+        return ENC_1DST_REG_2SRC_REG_0SRC_IMM_3;
 
       case OP_ldrd_reg:
-        return 1DST_REG_2SRC_REG_0SRC_IMM_4;
+        return ENC_1DST_REG_2SRC_REG_0SRC_IMM_4;
 
       case OP_qadd:       case OP_qadd16:
       case OP_qadd8:      case OP_qdadd:
@@ -3754,7 +3754,24 @@ opcode_get_encoding_type(int opc)
       case OP_qsub8:      case OP_shadd16:
       case OP_shadd8:     case OP_shsax:
       case OP_shsub16:    case OP_shsub8:
-        return 1DST_REG_2SRC_REG_0SRC_IMM_5;
+        return ENC_1DST_REG_2SRC_REG_0SRC_IMM_5;
+
+      case OP_stm:        case OP_stmia:
+      case OP_stmea:      case OP_stmda:
+      case OP_stmed:      case OP_stmdb:
+      case OP_stmfd:      case OP_ldm:
+      case OP_ldmda:      case OP_ldmfa: 
+      case OP_ldmia:      case OP_ldmfd:
+      case OP_ldmib:      case OP_ldmed:
+        return ENC_0DST_REG_1SRC_REGLIST; 
+
+      case OP_pop:        case OP_push:
+        return ENC_1DST_REG_1SRC_REGLIST; 
+
+      case OP_b:          case OP_bl:
+      case OP_blx_imm:    case OP_blx_reg:
+      case OP_bx:         case OP_bxj:
+        return BRANCH_INSTR;
 
       default:
         return INVALID_ENCODING;
@@ -3769,7 +3786,7 @@ opcode_is_unconditional(int opc)
        opc == OP_pld_lit || opc == OP_clrex   || opc == OP_dsb      ||
        opc == OP_dmb     || opc == OP_isb     || opc == OP_pli_reg  ||
        opc == OP_pld_reg || opc == OP_pldw_reg|| opc == OP_srs      ||
-       opc == OP_rfe     || opc == OP_bl      || opc == OP_blx      ||
+       opc == OP_rfe     || opc == OP_bl      || opc == OP_blx_imm  ||
        opc == OP_ldc_imm || opc == OP_ldc2_imm|| opc == OP_ldc_lit  ||
        opc == OP_ldc2_lit || opc == OP_stc    || opc == OP_stc2     ||
        opc == OP_mcrr    || opc == OP_mcrr2   || opc == OP_mrrc     ||

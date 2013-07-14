@@ -179,6 +179,19 @@ opnd_create_reg(reg_id_t r)
 
 INSTR_INLINE
 opnd_t
+opnd_create_reg_list(reg_list_t rl)
+{
+    opnd_t opnd IF_DEBUG(= {0});  /* FIXME: Needed until i#417 is fixed. */
+    CLIENT_ASSERT(rl <= DR_REG_LIST_MAX && rl >= DR_REG_LIST_MIN,
+                  "opnd_create_reg_list: invalid reg list");
+    opnd.kind = REG_LIST_kind;
+    opnd.value.reg_list = rl;
+    return opnd;
+}
+
+
+INSTR_INLINE
+opnd_t
 opnd_create_pc(app_pc pc)
 {
     opnd_t opnd;

@@ -1892,6 +1892,7 @@ encode_1dst_reg_0src_reg_1src_imm_3(decode_info_t* di, instr_t* instr, byte* pc)
     }
 
     // SRC 1
+    //TODO Encode the second opcode here
     {
         opnd = instr_get_src(instr, 0);
 

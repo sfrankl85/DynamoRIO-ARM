@@ -338,8 +338,8 @@ enum {
 /* we avoid typedef-ing the enum, as its storage size is compiler-specific */
 /* TODO SJF Changed back to byte again as increase of instr_t struct was causing issues.
             I dont think I need all the debug regs anyway so a byte should be good enough */
-/* TODO SJF Changed byte to int as num of regs is now > 255 */
 typedef byte reg_id_t; /* contains a DR_REG_ enum value */
+typedef int  reg_list_t; /* contains mask of regs 16 bits long */
 /* Changed this to an int as a byte is too small to store all the new registers.
    TODO This may need changing back depending on whether my values in DR_REG_XXX 
         are correct or not */
@@ -385,6 +385,8 @@ extern const reg_id_t dr_reg_fixer[];
  */
 #define DR_REG_LAST_VALID_ENUM  DR_REG_CPSR 
 #define DR_REG_LAST_ENUM        DR_REG_CPSR /**< Last value of register enums */
+#define DR_REG_LIST_MIN         0     //0000 0000 0000 0000
+#define DR_REG_LIST_MAX         0xff  //1111 1111 1111 1111
 /* DR_API EXPORT END */
 #define REG_START_SPILL   DR_REG_R7
 #define REG_STOP_SPILL    DR_REG_R14
@@ -622,6 +624,7 @@ struct _opnd_t {
          */
         instr_t *instr;         /* INSTR_kind, FAR_INSTR_kind, and MEM_INSTR_kind */
         reg_id_t reg;           /* REG_kind */
+        reg_list_t reg_list;
         struct {
             int disp;
             reg_id_t base_reg : REG_SPECIFIER_BITS;
@@ -662,6 +665,7 @@ enum {
     PC_kind,
     INSTR_kind,
     REG_kind,
+    REG_LIST_kind,
     BASE_DISP_kind, /* optional DR_SEG_ reg + base reg + scaled index reg + disp */
     FAR_PC_kind,    /* a segment is specified as a selector value */
     FAR_INSTR_kind, /* a segment is specified as a selector value */

@@ -350,6 +350,7 @@ sub process_header_line($)
              $l !~ /DR_REG_ENUM_COMPATIBILITY/ &&
              $l !~ /REG_SPECIFIER_BITS/ &&
              $l !~ /REG_kind/ &&
+             $l !~ /REG_LIST_kind/ &&  #SJF New _kind enum
              $l !~ /conflict/ &&
              $l !~ /compatibility/ &&
              $l !~ /weird errors/)) {

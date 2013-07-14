@@ -319,7 +319,8 @@ typedef struct decode_info_t {
    
     //What type of shift is it if there is one
     byte shift_type;
-    //n flag/a flag???
+    //For msr instr
+    byte mask;
 
     /* immed info */
     opnd_size_t size_immed;
@@ -350,9 +351,9 @@ enum {
     /* operand types */
     TYPE_NONE,
     TYPE_A, /* immediate that is absolute address */
-    TYPE_I, /* immediate */
-    TYPE_J, /* immediate that is relative offset of R13 */
-    TYPE_M, /* Memory address */
+    TYPE_I, /* immediate *///SJF Used
+    TYPE_J, /* immediate that is relative offset of R13 *///SJF Used
+    TYPE_M, /* Memory address *///SJF Used
     TYPE_O, /* immediate that is memory offset */
     TYPE_P, /* register that is memory offset */
     TYPE_S, /* Mask opnd. Used for msr/mrs cpsr writes */
@@ -360,7 +361,7 @@ enum {
     TYPE_FLOATCONST,
     TYPE_FLOATMEM,
     /* TODO Do I need separate values here for the thumb regs. */
-    TYPE_REG,     /* hardcoded register */
+    TYPE_REG,     /* hardcoded register *///SJF Used
     TYPE_CO_REG,     /* hardcoded coprocessor register */
     TYPE_INDIR_E,
     TYPE_INDIR_REG,
@@ -381,31 +382,45 @@ enum {
 enum {
   UNKNOWN_ENCODING,
 
-  1DST_REG_1SRC_REG_0SRC_IMM_1,
-  1DST_REG_1SRC_REG_0SRC_IMM_2,
-  1DST_REG_2SRC_REG_0SRC_IMM_1,
-  1DST_REG_2SRC_REG_0SRC_IMM_2,
-  1DST_REG_2SRC_REG_0SRC_IMM_3,
-  1DST_REG_2SRC_REG_0SRC_IMM_4,
-  1DST_REG_2SRC_REG_0SRC_IMM_5,
-  1DST_REG_0SRC_REG_1SRC_IMM_1, //Rn, 0000, imm12
-  1DST_REG_0SRC_REG_1SRC_IMM_2, //0000, Rn, imm12
-  1DST_REG_0SRC_REG_1SRC_IMM_3,
-  1DST_REG_1SRC_REG_1SRC_IMM_1,
-  1DST_REG_1SRC_REG_1SRC_IMM_2,
-  1DST_REG_1SRC_REG_1SRC_IMM_3,
-  1DST_REG_1SRC_REG_1SRC_IMM_4,
-  0DST_REG_1SRC_IMM_1SRC_MASK,
-  0DST_REG_1SRC_REG_1SRC_MASK,
-  0DST_REG_1SRC_REG_0SRC_IMM,
-  1DST_REG_2SRC_REG_1SRC_IMM,
-  1DST_REG_3SRC_REG_0SRC_IMM,
-  0DST_REG_1SRC_REGLIST,
-  1DST_REG_1SRC_REGLIST,
+  ENC_1DST_REG_1SRC_REG_0SRC_IMM_1,
+  ENC_1DST_REG_1SRC_REG_0SRC_IMM_2,
+  ENC_1DST_REG_2SRC_REG_0SRC_IMM_1,
+  ENC_1DST_REG_2SRC_REG_0SRC_IMM_2,
+  ENC_1DST_REG_2SRC_REG_0SRC_IMM_3,
+  ENC_1DST_REG_2SRC_REG_0SRC_IMM_4,
+  ENC_1DST_REG_2SRC_REG_0SRC_IMM_5,
+  ENC_1DST_REG_0SRC_REG_1SRC_IMM_1, //Rn, 0000, imm12
+  ENC_1DST_REG_0SRC_REG_1SRC_IMM_2, //0000, Rn, imm12
+  ENC_1DST_REG_0SRC_REG_1SRC_IMM_3,
+  ENC_1DST_REG_1SRC_REG_1SRC_IMM_1,
+  ENC_1DST_REG_1SRC_REG_1SRC_IMM_2,
+  ENC_1DST_REG_1SRC_REG_1SRC_IMM_3,
+  ENC_1DST_REG_1SRC_REG_1SRC_IMM_4,
+  ENC_0DST_REG_1SRC_IMM_1SRC_MASK,
+  ENC_0DST_REG_1SRC_REG_1SRC_MASK,
+  ENC_0DST_REG_1SRC_REG_0SRC_IMM,
+  ENC_1DST_REG_2SRC_REG_1SRC_IMM,
+  ENC_1DST_REG_3SRC_REG_0SRC_IMM,
+  ENC_0DST_REG_1SRC_REGLIST,
+  ENC_1DST_REG_1SRC_REGLIST,
   BRANCH_INSTR,
 
   INVALID_ENCODING
 };
+
+// Enum to mask type for 'msr' instr
+// TODO SJF Check mask values correct + what does 00 mean?
+// See ARMv7-A tech ref page 520.
+enum {
+  UNKNOWN_MASK,     //00
+
+  WRITE_G_MASK,     //01
+  WRITE_NZCVQ_MASK, //10
+  WRITE_ALL_MASK,   //11
+
+  INVALID_MASK
+};
+
  
 
 /* PR 225845: Our IR does not try to specify the format of the operands or the
