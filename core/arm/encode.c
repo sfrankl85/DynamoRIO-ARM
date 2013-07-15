@@ -372,6 +372,15 @@ reg_rm_selectable(reg_id_t reg)
 }
 
 static bool
+mask_value_ok(int mask)
+{
+  if( mask >= UNKNOWN_MASK && mask <= WRITE_ALL_MASK )
+    return true;
+  else
+    return false;
+}
+
+static bool
 mem_size_ok(decode_info_t *di/*prefixes field is IN/OUT; x86_mode is IN*/,
             opnd_t opnd, int optype, opnd_size_t opsize)
 {
@@ -421,6 +430,9 @@ opnd_type_ok(decode_info_t *di/*prefixes field is IN/OUT; x86_mode is IN*/,
         {
             return (opnd_is_far_pc(opnd) || opnd_is_far_instr(opnd));
         }
+    case TYPE_O:  //For the mask value
+        return (opnd_is_mask(opnd) && mask_value_ok(opnd_get_mask_value(opnd)));
+
     case TYPE_REG:
         /* SJF Changed opnd_get_reg to opnd_get_size. Looks like a mistake to me */
         return (opnd_is_reg(opnd) && opnd_get_size(opnd) == opsize);
@@ -455,10 +467,6 @@ opnd_type_ok(decode_info_t *di/*prefixes field is IN/OUT; x86_mode is IN*/,
          * so we don't need to choose among templates now: we'll complain
          * at emit time if we have reachability issues. */
         return (opnd_is_near_pc(opnd) || opnd_is_near_instr(opnd));
-    case TYPE_O:
-        return ((opnd_is_abs_addr(opnd) ||
-                 (!X64_MODE(di) && opnd_is_mem_instr(opnd))) &&
-                size_ok(di, opnd_get_size(opnd), opsize, false/*!addr*/));
     case TYPE_P: /* SJF Offset type */
         return false;
     case TYPE_INDIR_REG:

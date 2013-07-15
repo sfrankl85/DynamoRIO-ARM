@@ -58,10 +58,10 @@
 #define Ra  TYPE_REG,    OPSZ_4  /* 32 bit value contained in reg */
 #define Rh  TYPE_REG,    OPSZ_4 /* TODO 16 bit array of regs */
 #define Ma  TYPE_M,      OPSZ_4  /* Memory address contained in reg */
-#define Oa  TYPE_P,      OPSZ_4  /* Memory address contained in reg */
 #define Cr  TYPE_CO_REG, OPSZ_4
 #define Co  TYPE_CO_REG, OPSZ_4_5
 #define Rl  TYPE_S,      OPSZ_4_12 /* Register list. Bits indicate reg flag */
+#define Mk  TYPE_O,      OPSZ_4_2  /* 2 bit mask value. for msr/mrs */
 #define I3  TYPE_I,      OPSZ_4_3  /* Immediate value contained in instr */
 #define I4  TYPE_I,      OPSZ_4_4  /* " */
 #define I5  TYPE_I,      OPSZ_4_5  /* " */
@@ -236,8 +236,8 @@ const instr_info_t armv7a_instrs[] = {
     {OP_mrrc,        cdm, 0x5, "mrrc",     xx, xx, xx,  xx,  xx,  0x0, 0x0,  x, END_LIST}, /*mrrc()*//*TODO */
     {OP_mrrc2,       cdm, 0x5, "mrrc2",    xx, xx, xx,  xx,  xx,  0x0, 0x0,  x, END_LIST}, /*mrrc2()*//* TODO */
     {OP_mrs,         dpe, 0x10,"mrs",      xx, xx, Ra,  xx,  xx,  0x0, 0x0,  x, END_LIST}, /*mrs()*//* TODO */
-    {OP_msr_imm,     dpi, 0x12,"msr_imm",  xx, xx, I12, xx,  xx,  0x0, 0x0,  x, END_LIST}, /*msr_imm()*/
-    {OP_msr_reg,     dpe, 0x12,"msr_reg",  xx, xx, Ra,  xx,  xx,  0x0, 0x0,  x, END_LIST}, /*msr_reg()*/
+    {OP_msr_imm,     dpi, 0x12,"msr_imm",  xx, xx, I12, Mk,  xx,  0x0, 0x0,  x, END_LIST}, /*msr_imm()*/
+    {OP_msr_reg,     dpe, 0x12,"msr_reg",  xx, xx, Ra,  Mk,  xx,  0x0, 0x0,  x, END_LIST}, /*msr_reg()*/
     {OP_mul,         dpe, 0x0, "mul",      Ra, xx, Ra,  Ra,  xx,  0x0, 0x0,  x, END_LIST}, /*mul()*/
     {OP_mvn_imm,     dpi, 0x1e,"mvn_imm",  Ra, xx, I12, xx,  xx,  0x0, 0x0,  x, END_LIST}, /*mvn_imm()*/
     {OP_mvn_reg,     dpe, 0x1e,"mvn_reg",  Ra, xx, Ra,  I5,  xx,  0x0, 0x0,  x, END_LIST}, /*mvn_reg()*/

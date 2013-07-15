@@ -405,11 +405,8 @@ static const byte threebyte_38_vex_extra[256] = {
 };
 
 /* Returns the length of the instruction at pc.
- * If num_prefixes is non-NULL, returns the number of prefix bytes.
- * If rip_rel_pos is non-NULL, returns the offset into the instruction
- * of a rip-relative addressing displacement (for data only: ignores
- * control-transfer relative addressing), or 0 if none.
- * May return 0 size for certain invalid instructions
+ * SJF Note: All arm instructions are 4 bytes/32 bits.
+ * Will need to change this for Thumb interleaving
  */
 int
 decode_sizeof(dcontext_t *dcontext, byte *start_pc, int *num_prefixes
@@ -426,151 +423,8 @@ decode_sizeof(dcontext_t *dcontext, byte *start_pc, int *num_prefixes
     bool rep_prefix = false;
     byte reg_opcode;    /* reg_opcode field of modrm byte */
 
-#ifdef NO
-    /* Check for prefix byte(s) */
-    while (found_prefix) {
-        /* NOTE - rex prefixes must come after all other prefixes (including
-         * prefixes that are part of the opcode xref PR 271878).  We match
-         * read_instruction() in considering pre-prefix rex bytes as part of
-         * the following instr, event when ignored, rather then treating them
-         * as invalid.  This in effect nops improperly placed rex prefixes which
-         * (xref PR 241563 and Intel Manual 2A 2.2.1) is the correct thing to do.
-         * Rex prefixes are 0x40-0x4f; >=0x48 has rex.w bit set.
-         */
-        if (X64_MODE_DC(dcontext) && opc >= REX_PREFIX_BASE_OPCODE &&
-            opc <= (REX_PREFIX_BASE_OPCODE | REX_PREFIX_ALL_OPFLAGS)) {
-            if (opc >= (REX_PREFIX_BASE_OPCODE | REX_PREFIX_W_OPFLAG)) {
-                qword_operands = true;
-                if (word_operands)
-                    word_operands = false; /* rex.w trumps data16 */
-            } /* else, doesn't affect instr size */
-            opc = (uint)*(++pc);
-            sz += 1;
-        } else {
-            switch (opc) {
-            case 0x66:    /* operand size */
-                /* rex.w before other prefixes is a nop */
-                if (qword_operands)
-                    qword_operands = false;
-                word_operands = true;
-                opc = (uint)*(++pc);
-                sz += 1;
-                break;
-            case 0xf2: case 0xf3: /* REP */
-                rep_prefix = true;
-                /* fall through */
-            case 0xf0:          /* LOCK */
-            case 0x64: case 0x65: /* segment overrides */
-            case 0x26: case 0x36:
-            case 0x2e: case 0x3e:
-                opc = (uint)*(++pc);
-                sz += 1;
-                break;
-            case 0x67:
-                addr16 = true;
-                opc = (uint)*(++pc);
-                sz += 1;
-                /* up to caller to check for addr prefix! */
-                break;
-            case 0xc4:
-            case 0xc5: {
-                /* If 64-bit mode or mod selects for register, this is vex */
-                if (X64_MODE_DC(dcontext) || TESTALL(MODRM_BYTE(3, 0, 0), *(pc+1))) {
-                    /* Assumptions:
-                     * - no vex-encoded instr size differs based on vex.w,
-                     *   so we don't bother to set qword_operands
-                     * - no vex-encoded instr size differs based on prefixes,
-                     *   so we don't bother to decode vex.pp
-                     */
-                    bool vex3 = (opc == 0xc4);
-                    byte vex_mm = 0;
-                    opc = (uint)*(++pc); /* 2nd vex prefix byte */
-                    sz += 1;
-                    if (vex3) {
-                        vex_mm = (byte) (opc & 0x1f);
-                        opc = (uint)*(++pc); /* 3rd vex prefix byte */
-                        sz += 1;
-                    }
-                    opc = (uint)*(++pc); /* 1st opcode byte */
-                    sz += 1;
-                    if (num_prefixes != NULL)
-                        *num_prefixes = sz;
-                    /* no prefixes after vex + already did full size, so goto end */
-                    if (!vex3 || (vex3 && (vex_mm == 1))) {
-                        sz += sizeof_escape(dcontext, pc, addr16
-                                            _IF_X64(&rip_rel_pc));
-                        goto decode_sizeof_done;
-                    } else if (vex_mm == 2) {
-                        sz += sizeof_3byte_38(dcontext, pc - 1, addr16, true
-                                              _IF_X64(&rip_rel_pc));
-                        goto decode_sizeof_done;
-                    } else if (vex_mm == 3) {
-                        sz += sizeof_3byte_3a(dcontext, pc - 1, addr16
-                                              _IF_X64(&rip_rel_pc));
-                        goto decode_sizeof_done;
-                    }
-                } else
-                    found_prefix = false;
-                break;
-            }
-            default:
-                found_prefix = false;
-            }
-        }
-    }
-    if (num_prefixes != NULL)
-        *num_prefixes = sz;
-    if (word_operands) {
-            sz += immed_adjustment[opc]; /* no adjustment for 2-byte escapes */
-    }
-    if (addr16) {  /* no adjustment for 2-byte escapes */
-        if (X64_MODE_DC(dcontext)) /* from 64 bits down to 32 bits */
-            sz += 2*disp_adjustment[opc];
-        else /* from 32 bits down to 16 bits */
-            sz += disp_adjustment[opc];
-    }
-
-    /* opc now really points to opcode */
-    sz += fixed_length[opc];
-    varlen = variable_length[opc];
-
-    /* for a valid instr, sz must be > 0 here, but we don't want to assert
-     * since we need graceful failure
-     */
-
-    if (varlen == VARLEN_MODRM)
-        sz += sizeof_modrm(dcontext, pc+1, addr16 _IF_X64(&rip_rel_pc));
-    else if (varlen == VARLEN_ESCAPE) {
-        sz += sizeof_escape(dcontext, pc+1, addr16 _IF_X64(&rip_rel_pc));
-        /* special case: Intel and AMD added size-differing prefix-dependent instrs! */
-        if (*(pc+1) == 0x78) {
-            /* XXX: if have rex.w prefix we clear word_operands: is that legal combo? */
-            if (word_operands || rep_prefix) {
-                /* extrq, insertq: 2 1-byte immeds */
-                sz += 2;
-            } /* else, vmread, w/ no immeds */
-        }
-    } else if (varlen == VARLEN_FP_OP)
-        sz += sizeof_fp_op(dcontext, pc+1, addr16 _IF_X64(&rip_rel_pc));
-    else
-        CLIENT_ASSERT(varlen == VARLEN_NONE, "internal decoding error");
-
-    /* special case that doesn't fit the mold (of course one had to exist) */
-    reg_opcode = (byte) (((*(pc + 1)) & 0x38) >> 3);
-    if (opc == 0xf6 && reg_opcode == 0) {
-        sz += 1;        /* TEST Eb,ib -- add size of immediate */
-    } else if (opc == 0xf7 && reg_opcode == 0) {
-        if (word_operands)
-            sz += 2;    /* TEST Ew,iw -- add size of immediate */
-        else
-            sz += 4;    /* TEST El,il -- add size of immediate */
-    }
-
-#endif //NO
-
     sz = 4; //SJF ARM all 32 bits
 
- decode_sizeof_done:
     return sz;
 
 }
@@ -886,16 +740,15 @@ decode_cti(dcontext_t *dcontext, byte *pc, instr_t *instr)
 {
     byte byte0, byte1;
     byte *start_pc = pc;
+    opnd_t dsts[3];
+    opnd_t srcs[2];
+    int instr_num_dsts, instr_num_srcs;
+    decode_info_t di = {0};
+    instr_info_t info = {0};
 
     /* find and remember the instruction and its size */
-    int prefixes;
+    int prefixes = 0;
     byte modrm = 0;    /* used only for EFLAGS_6_SPECIAL */
-#ifdef X64
-    /* PR 251479: we need to know about all rip-relative addresses.
-     * Since change/setting raw bits invalidates, we must set this
-     * on every return. */
-    uint rip_rel_pos;
-#endif
     int sz = decode_sizeof(dcontext, pc, &prefixes _IF_X64(&rip_rel_pos));
     if (sz == 0) {
         /* invalid instruction! */
@@ -909,301 +762,90 @@ decode_cti(dcontext_t *dcontext, byte *pc, instr_t *instr)
      * front, because any instr_set_src, instr_set_dst, or
      * instr_set_opcode will kill original bits state */
 
-    /* Fill in SEG_FS and SEG_GS override prefixes, ignore rest for now.
-     * We rely on having these set during bb building.
-     * FIXME - could be done in decode_sizeof which is already walking these
-     * bytes, but would need to complicate its interface and prefixes are
-     * fairly rare to begin with. */
-/* TODO SJF No segmetns in ARM ??? 
-    if (prefixes > 0) {
-        for (i = 0; i < prefixes; i++, pc++) {
-            switch (*pc) {
-            case FS_SEG_OPCODE:
-                instr_set_prefix_flag(instr, PREFIX_SEG_FS);
-                break;
-            case GS_SEG_OPCODE:
-                instr_set_prefix_flag(instr, PREFIX_SEG_GS);
-                break;
-            default:
-                break;
-            }
-        }
-    }
-*/
-
     byte0 = *pc;
     byte1 = *(pc + 1);
 
+#ifdef NO
+/*TODO SJF Maybe convert the interesting table to some ARM equiv
+           not really needed for now as opcode needs proper decode 
+           cant just grab the first byte
+ */
     if (interesting[byte0] == 0) {
         /* assumption: opcode already OP_UNDECODED */
         /* assumption: operands are already marked invalid (instr was reset) */
         instr_set_raw_bits(instr, start_pc, sz);
-        IF_X64(instr_set_rip_rel_pos(instr, rip_rel_pos));
         return (start_pc + sz);
     }
+#endif
 
-    /* FIXME: would further "interesting" table produce any noticeable
-     * performance improvement?
-     */
-
+    /* SJF No prefixes for ARM. May need to do a full decode 
+           in some instances. So maybe readd this? 
     if (prefixes > 0) {
-        /* prefixes are rare on ctis
-         * rather than handle them all here, just do full decode
-         * FIXME: if we start to see more and more jcc branch hints we
-         * may change our minds here!  This is case 211206/6749.
-         */
         if (decode(dcontext, start_pc, instr) == NULL)
             return NULL;
         else
             return (start_pc + sz);
     }
+    */
 
-#ifdef FOOL_CPUID
-    /* for fooling program into thinking hardware is different than it is */
-    if (byte0==0x0f && byte1==0xa2) { /* cpuid */
-        instr_set_opcode(instr, OP_cpuid);
-        /* don't bother to set dsts/srcs */
-        instr_set_operands_valid(instr, false);
-        instr_set_raw_bits(instr, start_pc, sz);
-        IF_X64(instr_set_rip_rel_pos(instr, rip_rel_pos));
-        return (start_pc + sz);
+/* TODO SJF 
+   decode the instruction opcode. 
+   If it is a cti or a syscall then decode it fully.
+   return pc after instr
+ */
+
+    pc = decode_opcode( dcontext, pc, instr );
+/*
+    pc = read_instruction(pc, pc, &info, &di, true  
+                          _IF_DEBUG(!TEST(INSTR_IGNORE_INVALID, instr->flags)),
+                          dsts, srcs, &instr_num_dsts, &instr_num_srcs);
+*/
+
+    if( opcode_is_cti( instr->opcode ))
+    {
+       //decode fully only call decode_common.
+       pc = decode( dcontext, pc, instr );
+/*
+      pc = read_instruction(start_pc, start_pc, &info, &di, false  //SJF Everything 
+                            _IF_DEBUG(!TEST(INSTR_IGNORE_INVALID, instr->flags)),
+                            dsts, srcs, &instr_num_dsts, &instr_num_srcs);
+
+      instr_set_opcode(instr, info.type);
+      instr_set_operands_valid(instr, true);
+      di.len = (int) (pc - start_pc);
+
+      instr_set_num_opnds(dcontext, instr, instr_num_dsts, instr_num_srcs);
+      if (instr_num_dsts > 0) {
+          memcpy(instr->dsts, dsts, ((instr_num_dsts)*(sizeof(opnd_t))));
+      }
+      if (instr_num_srcs > 0) {
+          instr->src0 = srcs[0];
+          if (instr_num_srcs > 1) {
+              memcpy(instr->srcs, &(srcs[1]), (instr_num_srcs-1)*sizeof(opnd_t));
+          }
+      }
+
+      if (start_pc != pc) {
+          instr_set_raw_bits_valid(instr, false);
+          instr_set_translation(instr, start_pc);
+      } else {
+          instr_set_raw_bits(instr, pc, (uint)(pc - start_pc));
+      }
+*/
+
+      CLIENT_ASSERT( (pc == (start_pc + sz)), "decode_cti: pc != (start_pc + sz)" );
+
+      return pc;
+    } 
+    else
+    {
+      /* all non-pc-relative instructions */
+      /* assumption: opcode already OP_UNDECODED */
+      instr_set_raw_bits(instr, start_pc, sz);
+
+      /* assumption: operands are already marked invalid (instr was reset) */
+      return (start_pc + sz);
     }
-#endif
-
-    /* prefixes won't make a difference for 8-bit-offset jumps */
-
-#ifdef NO
-/* TODO SJF Change all these to the correct opcodes */
-    if (byte0 == 0xeb) {                /* jmp_short */
-        app_pc tgt = convert_8bit_offset(pc, byte1, 2);
-        instr_set_opcode(instr, OP_jmp_short);
-        instr_set_num_opnds(dcontext, instr, 0, 1);
-        instr_set_target(instr, opnd_create_pc(tgt));
-        instr_set_raw_bits(instr, start_pc, sz);
-        IF_X64(instr_set_rip_rel_pos(instr, rip_rel_pos));
-        return (pc + 2);
-    }
-
-    if ((byte0 & 0xf0) == 0x70) {       /* jcc_short */
-        /* 2-byte pc-relative jumps with an 8-bit displacement */
-        app_pc tgt = convert_8bit_offset(pc, byte1, 2);
-        /* Set the instr's opcode field.  Relies on special ordering
-         * in opcode enum. */
-        instr_set_opcode(instr, OP_jo_short + (byte0 & 0x0f));
-
-        /* calculate the branch's target address */
-        instr_set_num_opnds(dcontext, instr, 0, 1);
-        instr_set_target(instr, opnd_create_pc(tgt));
-
-        instr_set_raw_bits(instr, start_pc, sz);
-        IF_X64(instr_set_rip_rel_pos(instr, rip_rel_pos));
-        return (pc + 2);
-    }
-
-    if (byte0 == 0xe8) {                /* call */
-        int offset = *((int *)(pc + 1));
-        app_pc tgt = pc + offset + 5;
-        instr_set_opcode(instr, OP_call);
-        instr_set_num_opnds(dcontext, instr, 2, 2);
-        instr_set_target(instr, opnd_create_pc(tgt));
-        instr_set_src(instr, 1, opnd_create_reg(REG_XSP));
-        instr_set_dst(instr, 0, opnd_create_reg(REG_XSP));
-        instr_set_dst(instr, 1, opnd_create_base_disp
-                      (REG_XSP, REG_NULL, 0, 0,
-                       resolve_variable_size_dc(dcontext, 0, OPSZ_call, false)));
-        instr_set_raw_bits(instr, start_pc, sz);
-        IF_X64(instr_set_rip_rel_pos(instr, rip_rel_pos));
-        return (pc + 5);
-    }
-
-    if (byte0 == 0xe9) {                /* jmp */
-        int offset = *((int *)(pc + 1));
-        app_pc tgt = pc + offset + 5;
-        instr_set_opcode(instr, OP_jmp);
-        instr_set_num_opnds(dcontext, instr, 0, 1);
-        instr_set_target(instr, opnd_create_pc(tgt));
-        instr_set_raw_bits(instr, start_pc, sz);
-        IF_X64(instr_set_rip_rel_pos(instr, rip_rel_pos));
-        return (pc + 5);
-    }
-
-    if ((byte0 == 0x0f) && ((byte1 & 0xf0) == 0x80)) { /* jcc */
-        /* 6-byte pc-relative jumps with a 32-bit displacement */
-        /* calculate the branch's target address */
-        int offset = *((int *)(pc + 2));
-        app_pc tgt = pc + offset + 6;
-        /* Set the instr's opcode field.  Relies on special ordering
-         * in opcode enum. */
-        instr_set_opcode(instr, OP_jo + (byte1 & 0x0f));
-
-        instr_set_num_opnds(dcontext, instr, 0, 1);
-        instr_set_target(instr, opnd_create_pc(tgt));
-
-        instr_set_raw_bits(instr, start_pc, sz);
-        IF_X64(instr_set_rip_rel_pos(instr, rip_rel_pos));
-        return (pc + 6);
-    }
-
-    if (byte0 == 0xff) {                /* check for indirect calls/branches */
-        /* dispatch based on bits 5,4,3 in mod_rm byte */
-        uint opc = (byte1 >> 3) & 0x7;
-
-        if (opc >= 2 && opc <= 5) {
-            /* this is an indirect jump or call */
-            /* we care about the operands and prefixes, so just do the full decode
-             */
-            if (decode(dcontext, start_pc, instr) == NULL)
-                return NULL;
-            else
-                return (start_pc + sz);
-        }
-        /* otherwise it wasn't an indirect branch so continue */
-    }
-
-    if ((byte0 & 0xf0) == 0xc0) {       /* check for returns */
-        byte nibble1 = (byte) (byte0 & 0x0f);
-        switch (nibble1) {
-        case 2:   /* ret w/ 2-byte immed */
-        case 0xa: /* far ret w/ 2-byte immed */
-            /* we bailed out to decode() earlier if any prefixes */
-            CLIENT_ASSERT(prefixes == 0, "decode_cti: internal prefix error");
-            instr_set_opcode(instr, nibble1 == 2 ? OP_ret : OP_ret_far);
-            instr_set_num_opnds(dcontext, instr, 1, 3);
-            instr_set_dst(instr, 0, opnd_create_reg(REG_XSP));
-            instr_set_src(instr, 0,
-                          opnd_create_immed_int(*((short*)(pc+1)), OPSZ_2));
-            instr_set_src(instr, 1, opnd_create_reg(REG_XSP));
-            instr_set_src(instr, 2, opnd_create_base_disp
-                          (REG_XSP, REG_NULL, 0, 0,
-                           resolve_variable_size_dc(dcontext, 0,
-                                                    nibble1 == 2 ? OPSZ_ret :
-                                                    OPSZ_REXVARSTACK, false)));
-            instr_set_raw_bits(instr, start_pc, sz);
-            IF_X64(instr_set_rip_rel_pos(instr, rip_rel_pos));
-            return (pc + 3);
-        case 3:         /* ret w/ no immed */
-            instr_set_opcode(instr, OP_ret);
-            instr_set_raw_bits(instr, start_pc, sz);
-            IF_X64(instr_set_rip_rel_pos(instr, rip_rel_pos));
-            /* we don't set any operands and leave to an up-decode for that */
-            return (pc + 1);
-        case 0xb: /* far ret w/ no immed */
-            instr_set_opcode(instr, OP_ret_far);
-            instr_set_raw_bits(instr, start_pc, sz);
-            IF_X64(instr_set_rip_rel_pos(instr, rip_rel_pos));
-            /* we don't set any operands and leave to an up-decode for that */
-            return (pc + 1);
-        }
-        /* otherwise it wasn't a return so continue */
-    }
-
-    if ((byte0 & 0xf0) == 0xe0) {       /* check for a funny 8-bit branch */
-        byte nibble1 = (byte) (byte0 & 0x0f);
-
-        /* determine the opcode */
-        if (nibble1 == 0) {             /* loopne */
-            instr_set_opcode(instr, OP_loopne);
-        } else if (nibble1 == 1) {      /* loope */
-            instr_set_opcode(instr, OP_loope);
-        } else if (nibble1 == 2) {      /* loop */
-            instr_set_opcode(instr, OP_loop);
-        } else if (nibble1 == 3) {      /* jecxz */
-            instr_set_opcode(instr, OP_jecxz);
-        } else if (nibble1 == 10) {     /* jmp_far */
-            /* we need prefix info (data size controls immediate offset size),
-             * this is rare so go ahead and do full decode
-             */
-            if (decode(dcontext, start_pc, instr) == NULL)
-                return NULL;
-            else
-                return (start_pc + sz);
-        }
-        if (instr_opcode_valid(instr)) {
-            /* calculate the branch's target address */
-            app_pc tgt = convert_8bit_offset(pc, byte1, 2);
-            /* all (except jmp far) use ecx as a source */
-            instr_set_num_opnds(dcontext, instr, 0, 2);
-            /* if we made it here, no addr prefix, so REG_XCX not REG_ECX or REG_CX */
-            CLIENT_ASSERT(prefixes == 0, "decoding internal inconsistency");
-            instr_set_src(instr, 1, opnd_create_reg(REG_XCX));
-            instr_set_target(instr, opnd_create_pc(tgt));
-            instr_set_raw_bits(instr, start_pc, sz);
-            IF_X64(instr_set_rip_rel_pos(instr, rip_rel_pos));
-            return (pc + 2);
-        }
-        /* otherwise it wasn't a funny 8-bit cbr so continue */
-    }
-
-    if (byte0 == 0x9a) {        /* check for far-absolute calls */
-        /* we need prefix info, this is rare so we do a full decode
-         */
-        if (decode(dcontext, start_pc, instr) == NULL)
-            return NULL;
-        else
-            return (start_pc + sz);
-    }
-
-    /* both win32 and linux want to know about interrupts */
-    if (byte0 == 0xcd) { /* int */
-        instr_set_opcode(instr, OP_int);
-        instr_set_num_opnds(dcontext, instr, 2, 2);
-        instr_set_dst(instr, 0, opnd_create_reg(REG_XSP));
-        instr_set_dst(instr, 1,
-                      opnd_create_base_disp(REG_XSP, REG_NULL, 0, 0, OPSZ_4));
-        instr_set_src(instr, 0, opnd_create_immed_int((char)byte1, OPSZ_1));
-        instr_set_src(instr, 1, opnd_create_reg(REG_XSP));
-        instr_set_raw_bits(instr, start_pc, sz);
-        IF_X64(instr_set_rip_rel_pos(instr, rip_rel_pos));
-        return (pc + 2);
-    }
-    /* sys{enter,exit,call,ret} */
-    if (byte0 == 0x0f &&
-        (byte1 == 0x34 || byte1 == 0x35 || byte1 == 0x05 || byte1 == 0x07)) {
-        if (byte1 == 0x34) {
-            instr_set_opcode(instr, OP_sysenter);
-            instr_set_num_opnds(dcontext, instr, 1, 0);
-            instr_set_dst(instr, 0, opnd_create_reg(REG_XSP));
-        } else if (byte1 == 0x34) {
-            instr_set_opcode(instr, OP_sysexit);
-            instr_set_num_opnds(dcontext, instr, 1, 0);
-            instr_set_dst(instr, 0, opnd_create_reg(REG_XSP));
-        } else if (byte1 == 0x05) {
-            instr_set_opcode(instr, OP_syscall);
-            instr_set_num_opnds(dcontext, instr, 1, 0);
-            instr_set_dst(instr, 0, opnd_create_reg(REG_XCX));
-        } else if (byte1 == 0x07) {
-            instr_set_opcode(instr, OP_sysret);
-            instr_set_num_opnds(dcontext, instr, 0, 0);
-        }
-        instr_set_raw_bits(instr, start_pc, sz);
-        IF_X64(instr_set_rip_rel_pos(instr, rip_rel_pos));
-        return (pc + 2);
-    }
-    /* iret */
-    if (byte0 == 0xcf) {
-        instr_set_opcode(instr, OP_iret);
-        instr_set_raw_bits(instr, start_pc, sz);
-        IF_X64(instr_set_rip_rel_pos(instr, rip_rel_pos));
-        return (pc + 1);
-    }
-
-#ifdef LINUX
-    /* mov_seg instruction detection for i#107: mangling seg update/query. */
-    if (INTERNAL_OPTION(mangle_app_seg) && (byte0 == 0x8c || byte0 == 0x8e)) {
-        instr_set_opcode(instr, OP_mov_seg);
-        instr_set_raw_bits(instr, start_pc, sz);
-        IF_X64(instr_set_rip_rel_pos(instr, rip_rel_pos));
-        return (start_pc + sz);
-    }
-#endif
-#endif //NO
-
-    /* all non-pc-relative instructions */
-    /* assumption: opcode already OP_UNDECODED */
-    instr_set_raw_bits(instr, start_pc, sz);
-    IF_X64(instr_set_rip_rel_pos(instr, rip_rel_pos));
-    /* assumption: operands are already marked invalid (instr was reset) */
-    return (start_pc + sz);
 }
 
 /* Returns a pointer to the pc of the next instruction

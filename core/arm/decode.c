@@ -3241,12 +3241,6 @@ decode_opcode(dcontext_t *dcontext, byte *pc, instr_t *instr)
     const instr_info_t *info;
     decode_info_t di;
     int sz;
-#ifdef X64
-    /* PR 251479: we need to know about all rip-relative addresses.
-     * Since change/setting raw bits invalidates, we must set this
-     * on every return. */
-    uint rip_rel_pos;
-#endif
     IF_X64(di.x86_mode = instr_get_x86_mode(instr));
     /* when pass true to read_instruction it doesn't decode immeds,
      * so have to call decode_next_pc, but that ends up being faster
@@ -3256,7 +3250,6 @@ decode_opcode(dcontext_t *dcontext, byte *pc, instr_t *instr)
                      _IF_DEBUG(!TEST(INSTR_IGNORE_INVALID, instr->flags)),
                      NULL, NULL, NULL, NULL);
     sz = decode_sizeof(dcontext, pc, NULL _IF_X64(&rip_rel_pos));
-    IF_X64(instr_set_x86_mode(instr, get_x86_mode(dcontext)));
     instr_set_opcode(instr, info->type);
     /* read_instruction sets opcode to OP_INVALID for illegal instr.
      * decode_sizeof will return 0 for _some_ illegal instrs, so we
@@ -3271,8 +3264,7 @@ decode_opcode(dcontext_t *dcontext, byte *pc, instr_t *instr)
     instr_set_operands_valid(instr, false);
     /* raw bits are valid though and crucial for encoding */
     instr_set_raw_bits(instr, pc, sz);
-    /* must set rip_rel_pos after setting raw bits */
-    IF_X64(instr_set_rip_rel_pos(instr, rip_rel_pos));
+
     return pc + sz;
 }
 

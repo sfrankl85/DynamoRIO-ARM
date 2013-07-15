@@ -477,8 +477,8 @@
     instr_create_0dst_0src((dc), OP_mrrc2)
 #define INSTR_CREATE_mrs(dc, s, c) \
     instr_create_0dst_1src((dc), OP_mrs, (s), (c))
-#define INSTR_CREATE_msr_imm(dc, d, s, c) \
-    instr_create_1dst_1src((dc), OP_msr_imm, (d), (s), (c))
+#define INSTR_CREATE_msr_imm(dc, s1, s2, c) \
+    instr_create_0dst_2src((dc), OP_msr_imm, (s1), (s2), (c))
 #define INSTR_CREATE_msr_reg(dc, s1, s2, c) \
     instr_create_0dst_2src((dc), OP_msr_reg, (s1), (s2), (c))
 #define INSTR_CREATE_mul(dc) \

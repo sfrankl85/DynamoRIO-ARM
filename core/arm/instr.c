@@ -103,12 +103,12 @@ bool opnd_is_immed_float(opnd_t op) { return OPND_IS_IMMED_FLOAT(op); }
 bool opnd_is_near_pc    (opnd_t op) { return OPND_IS_NEAR_PC(op); }
 bool opnd_is_near_instr (opnd_t op) { return OPND_IS_NEAR_INSTR(op); }
 bool opnd_is_reg        (opnd_t op) { return OPND_IS_REG(op); }
+bool opnd_is_mask       (opnd_t op) { return OPND_IS_MASK(op); }
 bool opnd_is_base_disp  (opnd_t op) { return OPND_IS_BASE_DISP(op); }
 bool opnd_is_far_pc     (opnd_t op) { return OPND_IS_FAR_PC(op); }
 bool opnd_is_far_instr  (opnd_t op) { return OPND_IS_FAR_INSTR(op); }
 bool opnd_is_mem_instr  (opnd_t op) { return OPND_IS_MEM_INSTR(op); }
 bool opnd_is_valid      (opnd_t op) { return OPND_IS_VALID(op); }
-bool opnd_is_mask       (opnd_t op) { return OPND_IS_MASK(op); }
 #define opnd_is_null            OPND_IS_NULL
 #define opnd_is_immed_int       OPND_IS_IMMED_INT
 #define opnd_is_immed_float     OPND_IS_IMMED_FLOAT
@@ -219,6 +219,18 @@ opnd_get_size(opnd_t opnd)
         CLIENT_ASSERT(false, "opnd_get_size: unknown opnd type");
         return OPSZ_NA;
     }
+}
+
+int
+opnd_get_mask_value(opnd_t opnd)
+{
+  if( opnd.kind == MASK_kind )
+  {
+    return opnd.value.mask;
+  }
+  else
+    return INVALID_MASK;
+  
 }
 
 void
@@ -3793,6 +3805,18 @@ opcode_is_unconditional(int opc)
        opc == OP_mrrc2   || opc == OP_cdp     || opc == OP_cdp2     ||
        opc == OP_mcr     || opc == OP_mcr2    || opc == OP_mrc      ||
        opc == OP_mrc2 )
+     return true;
+   else
+     return false;
+}
+
+bool 
+opcode_is_cti(int opc)
+{
+   //A move instr to r15 is a control transfer instr.
+   // Caller needs to verify that instr dst 1 is r15
+   if( opc == OP_b || opc == OP_bl || opc == OP_blx_imm ||
+       opc == OP_blx_reg || opc == OP_bx || opc == OP_mov_reg )
      return true;
    else
      return false;

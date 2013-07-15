@@ -1595,8 +1595,6 @@ static bool
 bb_process_non_ignorable_syscall(dcontext_t *dcontext, build_bb_t *bb,
                                  int sysnum)
 {
-#ifdef NO
-//TODO SJF
     BBPRINT(bb, 3, "found non-ignorable system call 0x%04x\n", sysnum);
     STATS_INC(non_ignorable_syscalls);
     bb->exit_type |= LINK_NI_SYSCALL;
@@ -1605,7 +1603,7 @@ bb_process_non_ignorable_syscall(dcontext_t *dcontext, build_bb_t *bb,
         "ending bb at syscall & removing the interrupt itself\n");
     /* Indicate that this is a non-ignorable syscall so mangle will remove */
 #ifdef LINUX
-    if (instr_get_opcode(bb->instr) == OP_int) {
+    if (instr_get_opcode(bb->instr) == OP_svc) {
         bb->exit_type |= LINK_NI_SYSCALL_INT;
         bb->instr->flags |= INSTR_NI_SYSCALL_INT;
     } else
@@ -1616,7 +1614,6 @@ bb_process_non_ignorable_syscall(dcontext_t *dcontext, build_bb_t *bb,
     /* this block must be the last one in a trace */
     bb->flags |= FRAG_MUST_END_TRACE;
     return false; /* end bb now */
-#endif
 }
 
 /* returns true to indicate "continue bb" and false to indicate "end bb now" */
@@ -1664,16 +1661,17 @@ bb_process_syscall(dcontext_t *dcontext, build_bb_t *bb)
         sysnum = -1;
     }
 #endif
-#ifdef NO
+
     if (sysnum > -1 &&
         DYNAMO_OPTION(ignore_syscalls) && 
-        ignorable_system_call(sysnum)
+        ignorable_system_call(sysnum))
+    {
         /* PR 288101: On Linux we do not yet support inlined sysenter instrs as we
          * do not have in-cache support for the post-sysenter continuation: we rely
          * for now on very simple sysenter handling where dispatch uses asynch_target
          * to know where to go next.
          */
-        IF_LINUX(&& instr_get_opcode(bb->instr) != OP_sysenter)) {
+        //IF_LINUX(&& instr_get_opcode(bb->instr) != OP_sysenter)) SJF No sysenter for ARM
 
         bool continue_bb;
 
@@ -1683,7 +1681,6 @@ bb_process_syscall(dcontext_t *dcontext, build_bb_t *bb)
             return continue_bb;
         }
     }
-#endif
 #ifdef WINDOWS
     if (sysnum > -1 && DYNAMO_OPTION(shared_syscalls) &&
         optimizable_system_call(sysnum)) {
@@ -2914,27 +2911,6 @@ build_bb_ilist(dcontext_t *dcontext, build_bb_t *bb)
                 bb->eflags = eflags_analysis(bb->instr, bb->eflags, &eflags_6);
 */
 
-#ifdef LINUX
-#ifdef NO
-            //SJF No prefix or segmetns for ARM
-            if (INTERNAL_OPTION(mangle_app_seg) && 
-                instr_get_prefix_flag(bb->instr, PREFIX_SEG_FS | PREFIX_SEG_GS)) {
-                /* These segment prefix flags are not persistent and are 
-                 * only used as hints just after decoding. 
-                 * They are not accurate later and can be misleading.
-                 * This can only be used right after decoding for quick check,
-                 * and a walk of operands should be performed to look for 
-                 * actual far mem refs.
-                 */
-                /* i#107, mangle reference with segment register */
-                /* we up-decode the instr when !full_decode to make sure it will
-                 * pass the instr_opcode_valid check in mangle and be mangled.
-                 */
-                instr_get_opcode(bb->instr);
-                break;
-            }
-#endif //NO
-#endif
             /* i#107, opcode mov_seg will be set in decode_cti, 
              * so instr_opcode_valid(bb->instr) is true, and terminates the loop.
              */
@@ -3045,34 +3021,6 @@ build_bb_ilist(dcontext_t *dcontext, build_bb_t *bb)
             break;
         }
 
-#ifdef NO
-//SJF No prefixs for ARM
-        if (instr_get_prefix_flag(bb->instr,
-                                  (SEG_TLS == SEG_GS) ? PREFIX_SEG_GS : PREFIX_SEG_FS)
-            /* __errno_location is interpreted when global, though it's hidden in TOT */
-            IF_LINUX(&& !is_in_dynamo_dll(bb->instr_start)) &&
-            /* i#107 allows DR/APP using the same segment register. */
-            !INTERNAL_OPTION(mangle_app_seg)) {
-            /* On linux we use a segment register and do not yet
-             * support the application using the same register!
-             */
-            CLIENT_ASSERT(false, "no support yet for application using non-NPTL segment");
-            ASSERT_BUG_NUM(205276, false);
-        }
-
-        /* far direct is treated as indirect (i#823) */
-        if (instr_is_near_ubr(bb->instr)) {
-            if (bb_process_ubr(dcontext, bb))
-                continue;
-            else {
-                if (bb->instr != NULL) /* else, bb_process_ubr() set exit_type */
-                    bb->exit_type |= instr_branch_type(bb->instr);
-                break;
-            }
-        } else
-            instrlist_append(bb->ilist, bb->instr);
-#endif //NO
-
 #ifdef RETURN_AFTER_CALL
         if (bb->app_interp && dynamo_options.ret_after_call) {
             if (instr_is_call(bb->instr)) {
@@ -3131,36 +3079,6 @@ build_bb_ilist(dcontext_t *dcontext, build_bb_t *bb)
                 else
                     ibl_branch_type = IBL_INDCALL;
             } 
-#ifdef NO
-            else {
-                /* indirect jump */
-                /* was prev instr a direct call? if so, this is a PLT-style ind call */
-                instr_t *prev = instr_get_prev(bb->instr);
-                if (prev != NULL && instr_opcode_valid(prev) && instr_is_call_direct(prev)) {
-                    bb->exit_type |= INSTR_IND_JMP_PLT_EXIT;
-                    /* just because we have a CALL to JMP* makes it
-                       only a _likely_ PLT call, we still have to make
-                       sure it goes through IAT - see case 4269
-                    */
-                    STATS_INC(num_indirect_jumps_likely_PLT);
-                }
-
-                elide_and_continue_if_converted = true;
-                        
-                if (DYNAMO_OPTION(IAT_convert) 
-                    && bb_process_IAT_convertible_indjmp(dcontext, bb, 
-                                                         &elide_and_continue_if_converted)) {
-                    /* Clear the IND_JMP_PLT_EXIT flag since we've converted
-                     * the PLT to a direct transition (and possibly elided).
-                     * Xref case 7867 for why leaving this flag in the eliding
-                     * case can cause later failures. */
-                    bb->exit_type &= ~INSTR_CALL_EXIT; /* leave just JMP */
-                    normal_indirect_processing = false;
-                } else          /* FIXME: this can always be set */
-                    ibl_branch_type = IBL_INDJMP;
-                STATS_INC(num_indirect_jumps);
-            }
-#endif //NO
 
 #ifdef CUSTOM_TRACES_RET_REMOVAL
             if (instr_is_return(bb->instr))
@@ -3527,6 +3445,7 @@ build_bb_ilist(dcontext_t *dcontext, build_bb_t *bb)
 
 #ifdef NO
 //SJF More eflag stuff
+// TODO Convert the eflags checking stuff to cpsr checking stuff
     if (!INTERNAL_OPTION(unsafe_ignore_eflags_prefix)
         IF_X64(|| !INTERNAL_OPTION(unsafe_ignore_eflags_trace))) {
         bb->flags |= instr_eflags_to_fragment_eflags(bb->eflags);

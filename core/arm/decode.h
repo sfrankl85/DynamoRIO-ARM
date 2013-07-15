@@ -354,7 +354,7 @@ enum {
     TYPE_I, /* immediate *///SJF Used
     TYPE_J, /* immediate that is relative offset of R13 *///SJF Used
     TYPE_M, /* Memory address *///SJF Used
-    TYPE_O, /* immediate that is memory offset */
+    TYPE_O, /* mask value for msr/mrs */
     TYPE_P, /* register that is memory offset */
     TYPE_S, /* Mask opnd. Used for msr/mrs cpsr writes */
     TYPE_1,
