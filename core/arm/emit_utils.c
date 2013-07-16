@@ -618,7 +618,6 @@ is_patchable_exit_stub(dcontext_t *dcontext, linkstub_t *l, fragment_t *f)
 bool
 is_exit_cti_stub_patchable(dcontext_t *dcontext, instr_t *inst, uint frag_flags)
 {
-#ifdef NO
 //TODO SJF INSTR
     app_pc target;
     /* we figure out what the linkstub flags should be 
@@ -634,7 +633,6 @@ is_exit_cti_stub_patchable(dcontext_t *dcontext, instr_t *inst, uint frag_flags)
         lflags |= LINK_DIRECT;
     }
     return is_patchable_exit_stub_helper(dcontext, target, lflags, frag_flags);
-#endif//NO
 }
 
 uint
@@ -1283,8 +1281,6 @@ patchable_exit_cti_align_offs(dcontext_t *dcontext, instr_t *inst, cache_pc pc)
 bool
 is_exit_cti_patchable(dcontext_t *dcontext, instr_t *inst, uint frag_flags)
 {
-#ifdef NO
-//TODO SJF
     app_pc target;
     if (TEST(FRAG_COARSE_GRAIN, frag_flags)) {
         /* Case 8647: coarse grain fragment bodies always link through stubs
@@ -1330,7 +1326,6 @@ is_exit_cti_patchable(dcontext_t *dcontext, instr_t *inst, uint frag_flags)
             return false;
         return true;
     }
-#endif //NO
 }
 
 /* returns true if exit cti no longer points at stub

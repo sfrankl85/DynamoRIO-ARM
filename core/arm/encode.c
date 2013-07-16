@@ -1116,13 +1116,14 @@ encode_bits_31_to_20(decode_info_t* di, instr_t* instr, instr_info_t* info, byte
     //get last 4 bits of opcode
     b = 15; //0000 1111 
     b &= (byte) info->opcode;
+    word[1] |= (b << 4);
 
     /**************** Encode flags is necessary for instr *************/
 
     //Add s bit if necessary
     if( instr_has_s_bit( instr ))
     {
-      t = di->s_flag ? 0x16 : 0 ;
+      t = di->s_flag ? 0x10 : 0 ;
       word[1] |= t; 
     }
 
@@ -1153,6 +1154,32 @@ encode_bits_31_to_20(decode_info_t* di, instr_t* instr, instr_info_t* info, byte
       t = di->p_flag ? 0x1 : 0 ;
       word[0] |= t;
     }
+}
+
+void
+encode_bits_7_to_4(decode_info_t* di, instr_t* instr, instr_info_t* info, byte* word)
+{
+  //Encode the '2nd' opcode in bits[7,4] if needed.
+  //Also adds the shift type if required
+
+  if( instr_is_shift_type( instr ))
+  {
+    switch( di->shift_type )
+    {
+      case LOGICAL_LEFT:
+      case LOGICAL_RIGHT:
+      case ARITH_RIGHT:
+      case ROTATE_RIGHT:
+        word[3] |= (di->shift_type << 5);
+        break;
+
+      default:
+        break;
+    }
+  }
+
+  //Just add the opcode here. If not needed and 0 will make no difference
+  word[3] |= info->opcode2;
 }
 
 
@@ -1276,24 +1303,8 @@ encode_1dst_reg_2src_reg_1src_imm(decode_info_t* di, instr_t* instr, byte* pc)
             break;
         }
     }
-        
 
-    //Set bits[6,5] to indicate shift
-    if( instr_is_shift_type( instr ))
-    {
-      switch( di->shift_type )
-      {
-        case LOGICAL_LEFT:
-        case LOGICAL_RIGHT:
-        case ARITH_RIGHT:
-        case ROTATE_RIGHT: 
-          word[3] |= (di->shift_type << 5);
-          break;
-
-        default:
-          break;
-      }
-    }
+    encode_bits_7_to_4( di, instr, info, word );
 
    //Word should now be an instruction. MSB encoding
    *((byte *)pc) = word[0];
@@ -1378,6 +1389,8 @@ encode_1dst_reg_1src_reg_0src_imm_2(decode_info_t* di, instr_t* instr, byte* pc)
         }
     }
 
+    encode_bits_7_to_4( di, instr, info, word );
+
    //Word should now be an instruction. MSB encoding
    *((byte *)pc) = word[0];
    pc++;
@@ -1460,6 +1473,9 @@ encode_1dst_reg_1src_reg_0src_imm(decode_info_t* di, instr_t* instr, byte* pc)
 
         }
     }
+
+    encode_bits_7_to_4( di, instr, info, word );
+
 
    //Word should now be an instruction. MSB encoding
    *((byte *)pc) = word[0];
@@ -1573,22 +1589,7 @@ encode_1dst_reg_2src_reg_0src_imm(decode_info_t* di, instr_t* instr, byte* pc)
         }
     }
 
-    //Set bits[6,5] to indicate shift
-    if( instr_is_shift_type( instr ))
-    {
-      switch( di->shift_type )
-      {
-        case LOGICAL_LEFT:
-        case LOGICAL_RIGHT:
-        case ARITH_RIGHT:
-        case ROTATE_RIGHT: 
-          word[3] |= (di->shift_type << 5);
-          break;
-
-        default:
-          break;
-      }
-    }
+    encode_bits_7_to_4( di, instr, info, word );
 
    //Word should now be an instruction. MSB encoding
    *((byte *)pc) = word[0];
@@ -1695,23 +1696,7 @@ encode_1dst_reg_1src_reg_1src_imm_3(decode_info_t* di, instr_t* instr, byte* pc)
         }
     }
 
-    //Set bits[6,5] to indicate shift
-    if( instr_is_shift_type( instr ))
-    {
-      switch( di->shift_type )
-      {
-        case LOGICAL_LEFT:
-        case LOGICAL_RIGHT:
-        case ARITH_RIGHT:
-        case ROTATE_RIGHT: 
-          word[3] |= (di->shift_type << 5);
-          break;
-
-        default:
-          break;
-      }
-    }
-
+    encode_bits_7_to_4( di, instr, info, word );
 
    //Word should now be an instruction. MSB encoding
    *((byte *)pc) = word[0];
@@ -1818,22 +1803,7 @@ encode_1dst_reg_1src_reg_1src_imm(decode_info_t* di, instr_t* instr, byte* pc)
         }
     }
 
-    //Set bits[6,5] to indicate shift
-    if( instr_is_shift_type( instr ))
-    {
-      switch( di->shift_type )
-      {
-        case LOGICAL_LEFT:
-        case LOGICAL_RIGHT:
-        case ARITH_RIGHT:
-        case ROTATE_RIGHT: 
-          word[3] |= (di->shift_type << 5);
-          break;
-
-        default:
-          break;
-      }
-    }
+    encode_bits_7_to_4( di, instr, info, word );
 
 
    //Word should now be an instruction. MSB encoding
@@ -1923,23 +1893,7 @@ encode_1dst_reg_0src_reg_1src_imm_3(decode_info_t* di, instr_t* instr, byte* pc)
         }
     }
 
-    //Set bits[6,5] to indicate shift
-    if( instr_is_shift_type( instr ))
-    {
-      switch( di->shift_type )
-      {
-        case LOGICAL_LEFT:
-        case LOGICAL_RIGHT:
-        case ARITH_RIGHT:
-        case ROTATE_RIGHT: 
-          word[3] |= (di->shift_type << 5);
-          break;
-
-        default:
-          break;
-      }
-    }
-
+    encode_bits_7_to_4( di, instr, info, word );
 
    //Word should now be an instruction. MSB encoding
    *((byte *)pc) = word[0];
@@ -2028,23 +1982,7 @@ encode_1dst_reg_0src_reg_1src_imm_2(decode_info_t* di, instr_t* instr, byte* pc)
         }
     }
 
-    //Set bits[6,5] to indicate shift
-    if( instr_is_shift_type( instr ))
-    {
-      switch( di->shift_type )
-      {
-        case LOGICAL_LEFT:
-        case LOGICAL_RIGHT:
-        case ARITH_RIGHT:
-        case ROTATE_RIGHT: 
-          word[3] |= (di->shift_type << 5);
-          break;
-
-        default:
-          break;
-      }
-    }
-
+    encode_bits_7_to_4( di, instr, info, word );
 
    //Word should now be an instruction. MSB encoding
    *((byte *)pc) = word[0];
@@ -2132,23 +2070,7 @@ encode_1dst_reg_0src_reg_1src_imm(decode_info_t* di, instr_t* instr, byte* pc)
         }
     }
 
-    //Set bits[6,5] to indicate shift
-    if( instr_is_shift_type( instr ))
-    {
-      switch( di->shift_type )
-      {
-        case LOGICAL_LEFT:
-        case LOGICAL_RIGHT:
-        case ARITH_RIGHT:
-        case ROTATE_RIGHT: 
-          word[3] |= (di->shift_type << 5);
-          break;
-
-        default:
-          break;
-      }
-    }
-
+    encode_bits_7_to_4( di, instr, info, word );
 
    //Word should now be an instruction. MSB encoding
    *((byte *)pc) = word[0];
@@ -2257,23 +2179,7 @@ encode_1dst_reg_1src_reg_1src_imm_4(decode_info_t* di, instr_t* instr, byte* pc)
         }
     }
 
-    //Set bits[6,5] to indicate shift
-    if( instr_is_shift_type( instr ))
-    {
-      switch( di->shift_type )
-      {
-        case LOGICAL_LEFT:
-        case LOGICAL_RIGHT:
-        case ARITH_RIGHT:
-        case ROTATE_RIGHT: 
-          word[3] |= (di->shift_type << 5);
-          break;
-
-        default:
-          break;
-      }
-    }
-
+    encode_bits_7_to_4( di, instr, info, word );
 
    //Word should now be an instruction. MSB encoding
    *((byte *)pc) = word[0];
@@ -2393,23 +2299,7 @@ encode_1dst_reg_1src_reg_1src_imm_2(decode_info_t* di, instr_t* instr, byte* pc)
         }
     }
 
-    //Set bits[6,5] to indicate shift
-    if( instr_is_shift_type( instr ))
-    {
-      switch( di->shift_type )
-      {
-        case LOGICAL_LEFT:
-        case LOGICAL_RIGHT:
-        case ARITH_RIGHT:
-        case ROTATE_RIGHT: 
-          word[3] |= (di->shift_type << 5);
-          break;
-
-        default:
-          break;
-      }
-    }
-
+    encode_bits_7_to_4( di, instr, info, word );
 
    //Word should now be an instruction. MSB encoding
    *((byte *)pc) = word[0];
@@ -2499,23 +2389,7 @@ encode_0dst_reg_1src_imm_1src_mask(decode_info_t* di, instr_t* instr, byte* pc)
 
     //TODO Need to write to bits[7,4] if mul(1001)
 
-    //Set bits[6,5] to indicate shift
-    if( instr_is_shift_type( instr ))
-    {
-      switch( di->shift_type )
-      {
-        case LOGICAL_LEFT:
-        case LOGICAL_RIGHT:
-        case ARITH_RIGHT:
-        case ROTATE_RIGHT: 
-          word[3] |= (di->shift_type << 5);
-          break;
-
-        default:
-          break;
-      }
-    }
-
+    encode_bits_7_to_4( di, instr, info, word );
 
    //Word should now be an instruction. MSB encoding
    *((byte *)pc) = word[0];
@@ -2601,22 +2475,7 @@ encode_0dst_reg_1src_reg_1src_mask(decode_info_t* di, instr_t* instr, byte* pc)
 
     //TODO Need to write to bits[7,4] if mul(1001)
 
-    //Set bits[6,5] to indicate shift
-    if( instr_is_shift_type( instr ))
-    {
-      switch( di->shift_type )
-      {
-        case LOGICAL_LEFT:
-        case LOGICAL_RIGHT:
-        case ARITH_RIGHT:
-        case ROTATE_RIGHT: 
-          word[3] |= (di->shift_type << 5);
-          break;
-
-        default:
-          break;
-      }
-    }
+    encode_bits_7_to_4( di, instr, info, word );
 
 
    //Word should now be an instruction. MSB encoding
@@ -2681,25 +2540,7 @@ encode_0dst_reg_1src_reg_0src_imm(decode_info_t* di, instr_t* instr, byte* pc)
         }    
     }
 
-    //TODO Need to write to bits[7,4] if mul(1001)
-
-    //Set bits[6,5] to indicate shift
-    if( instr_is_shift_type( instr ))
-    {
-      switch( di->shift_type )
-      {
-        case LOGICAL_LEFT:
-        case LOGICAL_RIGHT:
-        case ARITH_RIGHT:
-        case ROTATE_RIGHT: 
-          word[3] |= (di->shift_type << 5);
-          break;
-
-        default:
-          break;
-      }
-    }
-
+    encode_bits_7_to_4( di, instr, info, word );
 
    //Word should now be an instruction. MSB encoding
    *((byte *)pc) = word[0];
@@ -2806,25 +2647,7 @@ encode_1dst_reg_2src_reg_0src_imm_2(decode_info_t* di, instr_t* instr, byte* pc)
         }
     }
 
-    //TODO Need to write to bits[7,4] if mul(1001)
-
-    //Set bits[6,5] to indicate shift
-    if( instr_is_shift_type( instr ))
-    {
-      switch( di->shift_type )
-      {
-        case LOGICAL_LEFT:
-        case LOGICAL_RIGHT:
-        case ARITH_RIGHT:
-        case ROTATE_RIGHT: 
-          word[3] |= (di->shift_type << 5);
-          break;
-
-        default:
-          break;
-      }
-    }
-
+    encode_bits_7_to_4( di, instr, info, word );
 
    //Word should now be an instruction. MSB encoding
    *((byte *)pc) = word[0];
@@ -2934,6 +2757,8 @@ encode_1dst_reg_2src_reg_0src_imm_5(decode_info_t* di, instr_t* instr, byte* pc)
 
     }
 
+    encode_bits_7_to_4( di, instr, info, word );
+
    //Word should now be an instruction. MSB encoding
    *((byte *)pc) = word[0];
    pc++;
@@ -3042,6 +2867,8 @@ encode_1dst_reg_2src_reg_0src_imm_4(decode_info_t* di, instr_t* instr, byte* pc)
 
     }
 
+    encode_bits_7_to_4( di, instr, info, word );
+
    //Word should now be an instruction. MSB encoding
    *((byte *)pc) = word[0];
    pc++;
@@ -3149,6 +2976,8 @@ encode_1dst_reg_2src_reg_0src_imm_3(decode_info_t* di, instr_t* instr, byte* pc)
         }
 
     }
+
+    encode_bits_7_to_4( di, instr, info, word );
 
    //Word should now be an instruction. MSB encoding
    *((byte *)pc) = word[0];
@@ -3280,6 +3109,7 @@ encode_1dst_reg_3src_reg_0src_imm(decode_info_t* di, instr_t* instr, byte* pc)
 
     }
 
+    encode_bits_7_to_4( di, instr, info, word );
 
    //Word should now be an instruction. MSB encoding
    *((byte *)pc) = word[0];
@@ -3344,6 +3174,8 @@ encode_0dst_reg_1src_reglist(decode_info_t* di, instr_t* instr, byte* pc)
         }
 
     }
+
+    encode_bits_7_to_4( di, instr, info, word );
 
    //Word should now be an instruction. MSB encoding
    *((byte *)pc) = word[0];
@@ -3430,6 +3262,8 @@ encode_1dst_reg_1src_reglist(decode_info_t* di, instr_t* instr, byte* pc)
         }
 
     }
+
+    encode_bits_7_to_4( di, instr, info, word );
 
    //Word should now be an instruction. MSB encoding
    *((byte *)pc) = word[0];

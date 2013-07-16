@@ -278,19 +278,19 @@ decode_1dst_reg_2src_reg_1src_imm( decode_info_t* di, byte* instr_word, opnd_t* 
     //1st Dst
     reg = (instr_word[2] >> 4);
     
-    dsts[*numdsts] = opnd_create_reg((reg_id_t)reg);
+    dsts[*numdsts] = opnd_create_reg((reg_id_t)(++reg)); //Increment to get correct REG_XX value;
     (*numdsts)++;
 
     //1st src
     reg = (instr_word[1] & 0xf); 
 
-    srcs[*numsrcs] = opnd_create_reg((reg_id_t)reg);
+    srcs[*numsrcs] = opnd_create_reg((reg_id_t)(++reg)); //Increment to get correct REG_XX value;
     (*numsrcs)++;
 
     //2nd src
     reg = (instr_word[3] & 0xf);
 
-    srcs[*numsrcs] = opnd_create_reg((reg_id_t)reg);
+    srcs[*numsrcs] = opnd_create_reg((reg_id_t)(++reg)); //Increment to get correct REG_XX value;
     (*numsrcs)++;
 
     //3rd src
@@ -317,13 +317,13 @@ decode_1dst_reg_1src_reg_0src_imm_1( decode_info_t* di, byte* instr_word, opnd_t
     //1st Dst
     reg = (instr_word[2] >> 4);
 
-    dsts[*numdsts] = opnd_create_reg((reg_id_t)reg);
+    dsts[*numdsts] = opnd_create_reg((reg_id_t)(++reg)); //Increment to get correct REG_XX value;
     (*numdsts)++;
 
     //1st src
     reg = (instr_word[1] & 0xf);
 
-    srcs[*numsrcs] = opnd_create_reg((reg_id_t)reg);
+    srcs[*numsrcs] = opnd_create_reg((reg_id_t)(++reg)); //Increment to get correct REG_XX value;
     (*numsrcs)++;
 }
 
@@ -336,13 +336,13 @@ decode_1dst_reg_1src_reg_0src_imm_2( decode_info_t* di, byte* instr_word, opnd_t
     //1st Dst
     reg = (instr_word[2] >> 4);
 
-    dsts[*numdsts] = opnd_create_reg((reg_id_t)reg);
+    dsts[*numdsts] = opnd_create_reg((reg_id_t)(++reg)); //Increment to get correct REG_XX value;
     (*numdsts)++;
 
     //1st src
     reg = (instr_word[3] & 0xf);
 
-    srcs[*numsrcs] = opnd_create_reg((reg_id_t)reg);
+    srcs[*numsrcs] = opnd_create_reg((reg_id_t)(++reg)); //Increment to get correct REG_XX value;
     (*numsrcs)++;
 }
 
@@ -355,19 +355,19 @@ decode_1dst_reg_2src_reg_0src_imm_1( decode_info_t* di, byte* instr_word, opnd_t
     //1st Dst
     reg = (instr_word[2] >> 4);
 
-    dsts[*numdsts] = opnd_create_reg((reg_id_t)reg);
+    dsts[*numdsts] = opnd_create_reg((reg_id_t)(++reg)); //Increment to get correct REG_XX value;
     (*numdsts)++;
 
     //1st src
     reg = (instr_word[3] & 0xf);
 
-    srcs[*numsrcs] = opnd_create_reg((reg_id_t)reg);
+    srcs[*numsrcs] = opnd_create_reg((reg_id_t)(++reg)); //Increment to get correct REG_XX value;
     (*numsrcs)++;
 
     //2nd src
     reg = (instr_word[2] & 0xf);
 
-    srcs[*numsrcs] = opnd_create_reg((reg_id_t)reg);
+    srcs[*numsrcs] = opnd_create_reg((reg_id_t)(++reg)); //Increment to get correct REG_XX value;
     (*numsrcs)++;
 
 }
@@ -382,19 +382,19 @@ decode_1dst_reg_2src_reg_0src_imm_2( decode_info_t* di, byte* instr_word, opnd_t
     //1st Dst
     reg = (instr_word[1] & 0xf);
 
-    dsts[*numdsts] = opnd_create_reg((reg_id_t)reg);
+    dsts[*numdsts] = opnd_create_reg((reg_id_t)(++reg)); //Increment to get correct REG_XX value;
     (*numdsts)++;
 
     //1st src
     reg = (instr_word[3] & 0xf);
 
-    srcs[*numsrcs] = opnd_create_reg((reg_id_t)reg);
+    srcs[*numsrcs] = opnd_create_reg((reg_id_t)(++reg)); //Increment to get correct REG_XX value;
     (*numsrcs)++;
 
     //2nd src
     reg = (instr_word[2] & 0xf);
 
-    srcs[*numsrcs] = opnd_create_reg((reg_id_t)reg);
+    srcs[*numsrcs] = opnd_create_reg((reg_id_t)(++reg)); //Increment to get correct REG_XX value;
     (*numsrcs)++;
 
 }
@@ -408,19 +408,19 @@ decode_1dst_reg_2src_reg_0src_imm_3( decode_info_t* di, byte* instr_word, opnd_t
     //1st Dst
     reg = (instr_word[1] & 0xf);
 
-    dsts[*numdsts] = opnd_create_reg((reg_id_t)reg); 
+    dsts[*numdsts] = opnd_create_reg((reg_id_t)(++reg)); //Increment to get correct REG_XX value; 
     (*numdsts)++;
 
     //1st src
     reg = (instr_word[3] & 0xf);
 
-    srcs[*numsrcs] = opnd_create_reg((reg_id_t)reg); 
+    srcs[*numsrcs] = opnd_create_reg((reg_id_t)(++reg)); //Increment to get correct REG_XX value; 
     (*numsrcs)++;
 
     //2nd src
     reg = (instr_word[2] & 0xf);
 
-    srcs[*numsrcs] = opnd_create_reg((reg_id_t)reg); 
+    srcs[*numsrcs] = opnd_create_reg((reg_id_t)(++reg)); //Increment to get correct REG_XX value; 
     (*numsrcs)++;
 
 }
@@ -434,19 +434,19 @@ decode_1dst_reg_2src_reg_0src_imm_4( decode_info_t* di, byte* instr_word, opnd_t
     //1st Dst
     reg = (instr_word[2] >> 4);
 
-    dsts[*numdsts] = opnd_create_reg((reg_id_t)reg); 
+    dsts[*numdsts] = opnd_create_reg((reg_id_t)(++reg)); //Increment to get correct REG_XX value; 
     (*numdsts)++;
 
     //1st src
     reg = (instr_word[1] & 0xf);
 
-    srcs[*numsrcs] = opnd_create_reg((reg_id_t)reg);
+    srcs[*numsrcs] = opnd_create_reg((reg_id_t)(++reg)); //Increment to get correct REG_XX value;
     (*numsrcs)++;
 
     //2nd src
     reg = (instr_word[3] & 0xf);
 
-    srcs[*numsrcs] = opnd_create_reg((reg_id_t)reg);
+    srcs[*numsrcs] = opnd_create_reg((reg_id_t)(++reg)); //Increment to get correct REG_XX value;
     (*numsrcs)++;
 }
 
@@ -459,19 +459,19 @@ decode_1dst_reg_2src_reg_0src_imm_5( decode_info_t* di, byte* instr_word, opnd_t
     //1st Dst
     reg = (instr_word[2] >> 4);
 
-    dsts[*numdsts] = opnd_create_reg((reg_id_t)reg); 
+    dsts[*numdsts] = opnd_create_reg((reg_id_t)(++reg)); //Increment to get correct REG_XX value; 
     (*numdsts)++;
 
     //1st src
     reg = (instr_word[1] & 0xf);
 
-    srcs[*numsrcs] = opnd_create_reg((reg_id_t)reg);
+    srcs[*numsrcs] = opnd_create_reg((reg_id_t)(++reg)); //Increment to get correct REG_XX value;
     (*numsrcs)++;
 
     //2nd src
     reg = (instr_word[3] & 0xf);
 
-    srcs[*numsrcs] = opnd_create_reg((reg_id_t)reg);
+    srcs[*numsrcs] = opnd_create_reg((reg_id_t)(++reg)); //Increment to get correct REG_XX value;
     (*numsrcs)++;
 }
 
@@ -484,7 +484,7 @@ decode_1dst_reg_0src_reg_1src_imm_1( decode_info_t* di, byte* instr_word, opnd_t
     //1st Dst
     reg = (instr_word[2] >> 4);
 
-    dsts[*numdsts] = opnd_create_reg((reg_id_t)reg); 
+    dsts[*numdsts] = opnd_create_reg((reg_id_t)(++reg)); //Increment to get correct REG_XX value; 
     (*numdsts)++;
 
     //1st src
@@ -506,7 +506,7 @@ decode_1dst_reg_0src_reg_1src_imm_2( decode_info_t* di, byte* instr_word, opnd_t
     //1st Dst
     reg = (instr_word[2] >> 4);
 
-    dsts[*numdsts] = opnd_create_reg((reg_id_t)reg);
+    dsts[*numdsts] = opnd_create_reg((reg_id_t)(++reg)); //Increment to get correct REG_XX value;
     (*numdsts)++;
 
     //1st src
@@ -529,7 +529,7 @@ decode_1dst_reg_0src_reg_1src_imm_3( decode_info_t* di, byte* instr_word, opnd_t
     //1st Dst
     reg = (instr_word[2] >> 4);
 
-    dsts[*numdsts] = opnd_create_reg((reg_id_t)reg);
+    dsts[*numdsts] = opnd_create_reg((reg_id_t)(++reg)); //Increment to get correct REG_XX value;
     (*numdsts)++;
 
     //1st src
@@ -551,13 +551,13 @@ decode_1dst_reg_1src_reg_1src_imm_1( decode_info_t* di, byte* instr_word, opnd_t
     //1st Dst
     reg = (instr_word[2] >> 4);
 
-    dsts[*numdsts] = opnd_create_reg((reg_id_t)reg);
+    dsts[*numdsts] = opnd_create_reg((reg_id_t)(++reg)); //Increment to get correct REG_XX value;
     (*numdsts)++;
 
     //1st src
     reg = (instr_word[3] & 0xf);
 
-    srcs[*numsrcs] = opnd_create_reg((reg_id_t)reg);
+    srcs[*numsrcs] = opnd_create_reg((reg_id_t)(++reg)); //Increment to get correct REG_XX value;
     (*numsrcs)++;
 
     //2nd src
@@ -582,13 +582,13 @@ decode_1dst_reg_1src_reg_1src_imm_2( decode_info_t* di, byte* instr_word, opnd_t
     //1st Dst
     reg = (instr_word[2] >> 4);
 
-    dsts[*numdsts] = opnd_create_reg((reg_id_t)reg);
+    dsts[*numdsts] = opnd_create_reg((reg_id_t)(++reg)); //Increment to get correct REG_XX value;
     (*numdsts)++;
 
     //1st src
     reg = (instr_word[1] & 0xf);
 
-    srcs[*numsrcs] = opnd_create_reg((reg_id_t)reg);
+    srcs[*numsrcs] = opnd_create_reg((reg_id_t)(++reg)); //Increment to get correct REG_XX value;
     (*numsrcs)++;
 
     //2nd src
@@ -610,13 +610,13 @@ decode_1dst_reg_1src_reg_1src_imm_3( decode_info_t* di, byte* instr_word, opnd_t
     //1st Dst
     reg = (instr_word[1] & 0xf);
 
-    dsts[*numdsts] = opnd_create_reg((reg_id_t)reg);
+    dsts[*numdsts] = opnd_create_reg((reg_id_t)(++reg)); //Increment to get correct REG_XX value;
     (*numdsts)++;
 
     //1st src
     reg = (instr_word[3] & 0xf);
 
-    srcs[*numsrcs] = opnd_create_reg((reg_id_t)reg);
+    srcs[*numsrcs] = opnd_create_reg((reg_id_t)(++reg)); //Increment to get correct REG_XX value;
     (*numsrcs)++;
 
     //2nd src
@@ -641,13 +641,13 @@ decode_1dst_reg_1src_reg_1src_imm_4( decode_info_t* di, byte* instr_word, opnd_t
     //1st Dst
     reg = (instr_word[2] >> 4);
 
-    dsts[*numdsts] = opnd_create_reg((reg_id_t)reg);
+    dsts[*numdsts] = opnd_create_reg((reg_id_t)(++reg)); //Increment to get correct REG_XX value;
     (*numdsts)++;
 
     //1st src
     reg = (instr_word[1] & 0xf);
 
-    srcs[*numsrcs] = opnd_create_reg((reg_id_t)reg);
+    srcs[*numsrcs] = opnd_create_reg((reg_id_t)(++reg)); //Increment to get correct REG_XX value;
     (*numsrcs)++;
 
     //2nd src
@@ -688,7 +688,7 @@ decode_0dst_reg_1src_reg_1src_mask( decode_info_t* di, byte* instr_word, opnd_t*
     //1st src 
     reg = (instr_word[3] & 0xf);
 
-    srcs[*numsrcs] = opnd_create_reg((reg_id_t)reg);
+    srcs[*numsrcs] = opnd_create_reg((reg_id_t)(++reg)); //Increment to get correct REG_XX value;
     (*numsrcs)++;
 
     //mask
@@ -704,7 +704,7 @@ decode_0dst_reg_1src_reg_0src_imm( decode_info_t* di, byte* instr_word, opnd_t* 
     //1st src 
     reg = (instr_word[2] >> 4);
 
-    srcs[*numsrcs] = opnd_create_reg((reg_id_t)reg);
+    srcs[*numsrcs] = opnd_create_reg((reg_id_t)(++reg)); //Increment to get correct REG_XX value;
     (*numsrcs)++;
 }
 
@@ -717,25 +717,25 @@ decode_1dst_reg_3src_reg_0src_imm( decode_info_t* di, byte* instr_word, opnd_t* 
     //1st Dst
     reg = (instr_word[2] >> 4);
 
-    dsts[*numdsts] = opnd_create_reg((reg_id_t)reg);
+    dsts[*numdsts] = opnd_create_reg((reg_id_t)(++reg)); //Increment to get correct REG_XX value;
     (*numdsts)++;
 
     //1st src
     reg = (instr_word[1] & 0xf);
 
-    srcs[*numsrcs] = opnd_create_reg((reg_id_t)reg);
+    srcs[*numsrcs] = opnd_create_reg((reg_id_t)(++reg)); //Increment to get correct REG_XX value;
     (*numsrcs)++;
 
     //2nd src
     reg = (instr_word[3] & 0xf);
 
-    srcs[*numsrcs] = opnd_create_reg((reg_id_t)reg); 
+    srcs[*numsrcs] = opnd_create_reg((reg_id_t)(++reg)); //Increment to get correct REG_XX value; 
     (*numsrcs)++;
 
     //3rd src
     reg = (instr_word[2] & 0xf);
 
-    srcs[*numsrcs] = opnd_create_reg((reg_id_t)reg);
+    srcs[*numsrcs] = opnd_create_reg((reg_id_t)(++reg)); //Increment to get correct REG_XX value;
     (*numsrcs)++;
 
     //Shift type
@@ -766,7 +766,7 @@ decode_1dst_reg_1src_reglist( decode_info_t* di, byte* instr_word, opnd_t* dsts,
     //1st dst 
     reg = (instr_word[1] & 0xf);
 
-    dsts[*numdsts] = opnd_create_reg((reg_id_t)reg);
+    dsts[*numdsts] = opnd_create_reg((reg_id_t)(++reg)); //Increment to get correct REG_XX value;
     (*numdsts)++;
 
     //1st src
@@ -791,7 +791,7 @@ decode_branch_instrs( decode_info_t* di, byte* instr_word, opnd_t* dsts,
     {
       reg = (instr_word[3] & 0xf);
 
-      srcs[*numsrcs] = opnd_create_reg((reg_id_t)reg);
+      srcs[*numsrcs] = opnd_create_reg((reg_id_t)(++reg)); //Increment to get correct REG_XX value;
       (*numsrcs)++;
     }
     else

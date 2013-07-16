@@ -214,7 +214,7 @@ typedef struct instr_info_t {
 
     unsigned int opcode2;  //SJF Optional second opcode at bits[7,4];
 
-    byte flags; /* flags and possible opcode2 */
+    byte flags; /* flags */
     byte cpsr; /* CPSR flags  */
     ptr_int_t code; /* for PREFIX: one of the PREFIX_ constants, or SEG_ constant
                      * for EXTENSION and *_EXT: index into extensions table

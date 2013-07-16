@@ -3822,6 +3822,19 @@ opcode_is_cti(int opc)
      return false;
 }
 
+bool
+opcode_is_branch(int opc)
+{
+    return (opc == OP_b || opc == OP_bl || OP_blx_imm ||
+            opc == OP_blx_reg || opc == OP_bx || opc == OP_bxj );
+}
+
+bool
+instr_is_branch(instr_t *instr)
+{
+    int opc = instr_get_opcode(instr);
+    return opcode_is_branch(opc);
+}
 
 /* An exit CTI is a control-transfer instruction whose target
  * is a pc (and not an instr_t pointer).  This routine assumes
@@ -3833,16 +3846,36 @@ opcode_is_cti(int opc)
 bool
 instr_is_exit_cti(instr_t *instr)
 {
-    int instr_type;
+    int opc;
+    opnd_t opnd;
+
     if (!instr_operands_valid(instr) || /* implies !opcode_valid */
         !instr_ok_to_mangle(instr))
         return false;
-    /* XXX: avoid conditional decode in instr_get_opcode() for speed. */
-    instr_type = instr->instr_type;
-    if (instr_type_is_branch(instr_type) ) {
+
+    if (instr_is_branch(instr) ) {
         /* far pc should only happen for mangle's call to here */
         return opnd_is_pc(instr_get_target(instr));
     }
+    else
+    {
+       opc = instr_get_opcode(instr);
+
+       if( opc == OP_mov_reg )
+       {
+           if( instr->dsts != NULL )
+           {
+             opnd = instr->dsts[0];
+
+             if( opnd.kind == REG_kind )
+             {
+               if( opnd.value.reg == REG_R15 )
+                 return true;
+             }
+           }
+       }
+    }
+
     return false;
 }
 
@@ -3861,18 +3894,6 @@ instr_is_mov(instr_t *instr)
     return (opc == OP_mov_imm || opc == OP_mov_reg || opc == OP_movt ); 
 }
 
-bool
-opcode_is_branch(int opc)
-{
-    return (opc == OP_b);
-}
-
-bool
-instr_is_branch(instr_t *instr)
-{
-    int opc = instr_get_opcode(instr);
-    return opcode_is_branch(opc);
-}
 
 bool
 opcode_is_mbr(int opc)
@@ -3883,6 +3904,8 @@ opcode_is_mbr(int opc)
 bool 
 opcode_is_call(int opc)
 {
+    //SJF Treat branch link instrs as return instrs as
+    // they store the pc to allow a return 
     return( opc == OP_bl || opc == OP_blx_imm || opc == OP_blx_reg );
 }
 
