@@ -326,8 +326,8 @@ static inline bool atomic_dec_becomes_zero(volatile int *var) {
 /* returns true if var was equal to compare */
 static inline bool atomic_compare_exchange_int(volatile int *var,
                                            int compare, int exchange) {
-    int         tmp;
-    return (ATOMIC_COMPARE_EXCHANGE_int(*(var), compare, exchange, tmp) == (compare));
+    int         tmp, tmp2;
+    return (ATOMIC_COMPARE_EXCHANGE_int(*(var), compare, exchange, tmp, tmp2) == (compare));
 }
 static inline bool atomic_compare_exchange_int64(volatile int64 *var,
                                                  int64 compare, int64 exchange) {
@@ -428,21 +428,38 @@ static inline int64 atomic_add_exchange_int64(volatile int64 *var, int64 value) 
 # define ATOMIC_ADD_EXCHANGE_int64(var, val, res, tmp) \
     ATOMIC_ADD_EXCHANGE_suffix("q", var, val, res, tmp)
 
+#ifdef NO
 /* COMPARE AND XCHG */
-# define ATOMIC_COMPARE_EXCHANGE_suffix(suffix, var, compare, exchange, tmp) \
-   __asm__ __volatile__( "l3:    ldrex" suffix " %2, %0\n"      \
-                         "       teq     %2, %3\n"              \
-                         "       strexeq %2, %1, %0\n"          \
+# define ATOMIC_COMPARE_EXCHANGE_suffix(suffix, var, compare, exchange, tmp, tmp2) \
+   __asm__ __volatile__( "l3:    mov     %3, %0\n"  \
+			 "       ldrex" suffix " %2, [%3]\n"      \
+                         "       teq     %2, %4\n"              \
+                         "       strexeq %2, %1, [%3]\n"          \
                          "       movne   %2, #0\n"              \
                          "       cmp     %2, #0\n"              \
                          "       bne     l3\n"                  \
                         : "=m" (var)                             \
-                        : "r" (exchange), "r" (tmp),         \
+                        : "r" (exchange), "r" (tmp), "r" (tmp2), \
                           "r" (compare)                       \
                         : "memory", "cc")
+#endif
 
-# define ATOMIC_COMPARE_EXCHANGE_int(var, compare, exchange, tmp) \
-    ATOMIC_COMPARE_EXCHANGE_suffix("", var, compare, exchange, tmp)
+/* COMPARE AND XCHG */
+# define ATOMIC_COMPARE_EXCHANGE_suffix(suffix, var, compare, exchange, tmp, tmp2) \
+   __asm__ __volatile__( "l3:    ldrex" suffix " %0, %1\n"      \
+                         "       teq     %0, %3\n"              \
+                         "       strexeq %0, %2, %1\n"          \
+                         "       movne   %0, #0\n"              \
+                         "       cmp     %0, #0\n"              \
+                         "       bne     l3\n"                  \
+                        : "=r" (tmp), "=m" (var)                \
+                        : "r" (exchange),               \
+                          "r" (compare)                  \
+                        : "memory", "cc")
+
+
+# define ATOMIC_COMPARE_EXCHANGE_int(var, compare, exchange, tmp, tmp2) \
+    ATOMIC_COMPARE_EXCHANGE_suffix("", var, compare, exchange, tmp, tmp2)
 # define ATOMIC_COMPARE_EXCHANGE ATOMIC_COMPARE_EXCHANGE_int
 
 # define ATOMIC_COMPARE_EXCHANGE_PTR ATOMIC_COMPARE_EXCHANGE
@@ -555,9 +572,9 @@ static inline void atomic_add( volatile int *var, int value)
 static inline void atomic_compare_exchange(volatile int *var,
                                            int compare, int exchange)
 {
-    int tmp;
+    int tmp, tmp2;
 
-    ATOMIC_COMPARE_EXCHANGE(var, compare, exchange, tmp);
+    ATOMIC_COMPARE_EXCHANGE(var, compare, exchange, tmp, tmp2);
 }
 
 /* exchanges *var with newval and returns original *var */
@@ -632,9 +649,9 @@ static inline bool atomic_compare_exchange_int(volatile int *var,
                                                int compare, int exchange)
 {
     unsigned char c;
-    int t, tmp;
+    int t, tmp, tmp2;
 
-    ATOMIC_COMPARE_EXCHANGE(*var, compare, exchange, tmp);
+    ATOMIC_COMPARE_EXCHANGE(*var, compare, exchange, tmp, tmp2);
     /* ZF is set if matched, all other flags are as if a normal compare happened */
     /* we convert ZF value back to C */
     SET_IF_NOT_ZERO(c);

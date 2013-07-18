@@ -616,8 +616,8 @@ if (UNIX)
 
   # Check ARM specific flags
   if (ARM)
-    set(ASM_FLAGS "${ASM_FLAGS} --noexecstack -marm -march=armv7-a -mcpu=cortex-a15 -mnaked-reg --noexecstack")
-    set(BASE_CFLAGS "-marm ${BASE_CFLAGS}")
+    set(ASM_FLAGS "${ASM_FLAGS} --noexecstack -marm -march=armv7-a -mcpu=cortex-a9 -mnaked-reg --noexecstack")
+    set(BASE_CFLAGS "-marm -mcpu=cortex-a9 ${BASE_CFLAGS}")
     #set(LD_FLAGS "-elf32-littlearm" )
     set(LD_FLAGS "" )
   else (ARM)
