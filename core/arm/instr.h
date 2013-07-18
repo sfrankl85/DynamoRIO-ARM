@@ -3775,86 +3775,53 @@ instr_raw_is_rip_rel_lea(byte *pc, byte *read_end);
 
 
 /****************************************************************************
- * EFLAGS
+ * CPSR 
  */
-/* we only care about these 11 flags, and mostly only about the first 6
- * we consider an undefined effect on a flag to be a write
- */
-#define EFLAGS_READ_CF   0x00000001 /**< Reads CF (Carry Flag). */             
-#define EFLAGS_READ_PF   0x00000002 /**< Reads PF (Parity Flag). */            
-#define EFLAGS_READ_AF   0x00000004 /**< Reads AF (Auxiliary Carry Flag). */   
-#define EFLAGS_READ_ZF   0x00000008 /**< Reads ZF (Zero Flag). */              
-#define EFLAGS_READ_SF   0x00000010 /**< Reads SF (Sign Flag). */              
-#define EFLAGS_READ_TF   0x00000020 /**< Reads TF (Trap Flag). */              
-#define EFLAGS_READ_IF   0x00000040 /**< Reads IF (Interrupt Enable Flag). */  
-#define EFLAGS_READ_DF   0x00000080 /**< Reads DF (Direction Flag). */         
-#define EFLAGS_READ_OF   0x00000100 /**< Reads OF (Overflow Flag). */          
-#define EFLAGS_READ_NT   0x00000200 /**< Reads NT (Nested Task). */            
-#define EFLAGS_READ_RF   0x00000400 /**< Reads RF (Resume Flag). */            
-#define EFLAGS_WRITE_CF  0x00000800 /**< Writes CF (Carry Flag). */             
-#define EFLAGS_WRITE_PF  0x00001000 /**< Writes PF (Parity Flag). */            
-#define EFLAGS_WRITE_AF  0x00002000 /**< Writes AF (Auxiliary Carry Flag). */   
-#define EFLAGS_WRITE_ZF  0x00004000 /**< Writes ZF (Zero Flag). */              
-#define EFLAGS_WRITE_SF  0x00008000 /**< Writes SF (Sign Flag). */              
-#define EFLAGS_WRITE_TF  0x00010000 /**< Writes TF (Trap Flag). */              
-#define EFLAGS_WRITE_IF  0x00020000 /**< Writes IF (Interrupt Enable Flag). */  
-#define EFLAGS_WRITE_DF  0x00040000 /**< Writes DF (Direction Flag). */         
-#define EFLAGS_WRITE_OF  0x00080000 /**< Writes OF (Overflow Flag). */          
-#define EFLAGS_WRITE_NT  0x00100000 /**< Writes NT (Nested Task). */            
-#define EFLAGS_WRITE_RF  0x00200000 /**< Writes RF (Resume Flag). */            
+#define CPSR_READ_N   0x00000001 /**< Reads CF (Carry Flag). */             
+#define CPSR_READ_Z   0x00000010 /**< Reads CF (Carry Flag). */             
+#define CPSR_READ_C   0x00000100 /**< Reads CF (Carry Flag). */             
+#define CPSR_READ_V   0x00001000 /**< Reads CF (Carry Flag). */             
+#define CPSR_READ_Q   0x00010000 /**< Reads CF (Carry Flag). */             
+#define CPSR_WRITE_N  0x00000002 /**< Writes CF (Carry Flag). */             
+#define CPSR_WRITE_Z  0x00000020 /**< Writes CF (Carry Flag). */             
+#define CPSR_WRITE_C  0x00000200 /**< Writes CF (Carry Flag). */             
+#define CPSR_WRITE_V  0x00002000 /**< Writes CF (Carry Flag). */             
+#define CPSR_WRITE_Q  0x00020000 /**< Writes CF (Carry Flag). */             
 
-#define EFLAGS_READ_ALL  0x000007ff /**< Reads all flags. */    
-#define EFLAGS_WRITE_ALL 0x003ff800 /**< Writes all flags. */   
-/* 6 most common flags ("arithmetic flags"): CF, PF, AF, ZF, SF, OF */
-/** Reads all 6 arithmetic flags (CF, PF, AF, ZF, SF, OF). */ 
-#define EFLAGS_READ_6    0x0000011f
-/** Writes all 6 arithmetic flags (CF, PF, AF, ZF, SF, OF). */ 
-#define EFLAGS_WRITE_6   0x0008f800
+#define CPSR_READ_ALL  0x000007ff /**< Reads all flags. */    
+#define CPSR_WRITE_ALL 0x003ff800 /**< Writes all flags. */   
+/* 5 most common flags ("arithmetic flags"): N, Z, C, V, Q  */
+/** Reads all 5 arithmetic flags (N, Z, C, V, Q). */ 
+#define CPSR_READ_5    0x0000011f
+/** Writes all 5 arithmetic flags (N, Z, C, V, Q). */ 
+#define CPSR_WRITE_5   0x0008f800
 
-/** Converts an EFLAGS_WRITE_* value to the corresponding EFLAGS_READ_* value. */
-#define EFLAGS_WRITE_TO_READ(x) ((x) >> 11)
-/** Converts an EFLAGS_READ_* value to the corresponding EFLAGS_WRITE_* value. */
-#define EFLAGS_READ_TO_WRITE(x) ((x) << 11)
+//TODO SJF Check these work. Prob wont
+/** Converts an CPSR_WRITE_* value to the corresponding CPSR_READ_* value. */
+#define CPSR_WRITE_TO_READ(x) ((x) >> 11)
+/** Converts an CPSR_READ_* value to the corresponding CPSR_WRITE_* value. */
+#define CPSR_READ_TO_WRITE(x) ((x) << 11)
 
 /**
- * The actual bits in the eflags register that we care about:\n<pre>
- *   11 10  9  8  7  6  5  4  3  2  1  0
- *   OF DF       SF ZF    AF    PF    CF  </pre>
+ * SJF: CPSR flags
+ *
+ * 31 30 29 28 27 26 25 24 23 22 21 20 19 18 17 16 15 14 13 12 11 10 9 8 7 6 5 4 3 2 1 0
+ * N  Z  C  V  Q  IT IT J  | Reserved || GE[3:0] | |    IT[7:2]    | E A I F T | M[4:0]|
  */
 enum {
-    EFLAGS_CF = 0x00000001, /**< The bit in the eflags register of CF (Carry Flag). */
-    EFLAGS_PF = 0x00000004, /**< The bit in the eflags register of PF (Parity Flag). */
-    EFLAGS_AF = 0x00000010, /**< The bit in the eflags register of AF (Aux Carry Flag). */
-    EFLAGS_ZF = 0x00000040, /**< The bit in the eflags register of ZF (Zero Flag). */
-    EFLAGS_SF = 0x00000080, /**< The bit in the eflags register of SF (Sign Flag). */
-    EFLAGS_DF = 0x00000400, /**< The bit in the eflags register of DF (Direction Flag). */
-    EFLAGS_OF = 0x00000800, /**< The bit in the eflags register of OF (Overflow Flag). */
+    CPSR_N = 0x80000000, /** The bit in the cpsr of N(negative flag) */
+    CPSR_Z = 0x40000000, /** The bit in the cpsr of Z(zero flag) */
+    CPSR_C = 0x20000000, /** The bit in the cpsr of C(carry flag) */
+    CPSR_V = 0x08000000, /** The bit in the cpsr of V(overflow flag) */
+    CPSR_Q = 0x04000000, /** The bit in the cpsr of Q(cumulative saturation flag) */
+    CPSR_E = 0x200,      /** The bit in the cpsr of E(endianess flag) */
+    CPSR_T = 0x20,       /** The bit in the cpsr of T(thumb flag) */
 };
 
 /* DR_API EXPORT END */
 
 /* even on x64, displacements are 32 bits, so we keep the "int" type and 4-byte size */
 #define PC_RELATIVE_TARGET(addr) ( *((int *)(addr)) + (addr) + 4 )
-
-enum {
-    RAW_OPCODE_nop             = 0x90,
-    RAW_OPCODE_jmp_short       = 0xeb,
-    RAW_OPCODE_call            = 0xe8,
-    RAW_OPCODE_ret             = 0xc3,
-    RAW_OPCODE_jmp             = 0xe9,
-    RAW_OPCODE_push_imm32      = 0x68,
-    RAW_OPCODE_jcc_short_start = 0x70,
-    RAW_OPCODE_jcc_short_end   = 0x7f,
-    RAW_OPCODE_jcc_byte1       = 0x0f,
-    RAW_OPCODE_jcc_byte2_start = 0x80,
-    RAW_OPCODE_jcc_byte2_end   = 0x8f,
-    RAW_OPCODE_loop_start      = 0xe0,
-    RAW_OPCODE_loop_end        = 0xe3,
-    RAW_OPCODE_lea             = 0x8d,
-    RAW_PREFIX_jcc_not_taken   = 0x2e,
-    RAW_PREFIX_jcc_taken       = 0x3e,
-    RAW_PREFIX_lock            = 0xf0,
-};
 
 enum { /* FIXME: vs RAW_OPCODE_* enum */
     FS_SEG_OPCODE        = 0x64,
@@ -3871,35 +3838,6 @@ enum { /* FIXME: vs RAW_OPCODE_* enum */
     TLS_SEG_OPCODE       = FS_SEG_OPCODE,
 #endif
 
-    DATA_PREFIX_OPCODE   = 0x66,
-    ADDR_PREFIX_OPCODE   = 0x67,
-    REPNE_PREFIX_OPCODE  = 0xf2,
-    REP_PREFIX_OPCODE    = 0xf3,
-    REX_PREFIX_BASE_OPCODE = 0x40,
-    REX_PREFIX_W_OPFLAG    = 0x8,
-    REX_PREFIX_R_OPFLAG    = 0x4,
-    REX_PREFIX_X_OPFLAG    = 0x2,
-    REX_PREFIX_B_OPFLAG    = 0x1,
-    REX_PREFIX_ALL_OPFLAGS = 0xf,
-    MOV_REG2MEM_OPCODE   = 0x89,
-    MOV_MEM2REG_OPCODE   = 0x8b,
-    MOV_XAX2MEM_OPCODE   = 0xa3, /* no ModRm */
-    MOV_MEM2XAX_OPCODE   = 0xa1, /* no ModRm */
-    MOV_IMM2XAX_OPCODE   = 0xb8, /* no ModRm */
-    MOV_IMM2XBX_OPCODE   = 0xbb, /* no ModRm */
-    MOV_IMM2MEM_OPCODE   = 0xc7, /* has ModRm */
-    JECXZ_OPCODE         = 0xe3,
-    JMP_SHORT_OPCODE     = 0xeb,
-    JMP_OPCODE           = 0xe9,
-    JNE_OPCODE_1         = 0x0f,
-    SAHF_OPCODE          = 0x9e,
-    LAHF_OPCODE          = 0x9f,
-    SETO_OPCODE_1        = 0x0f,
-    SETO_OPCODE_2        = 0x90,
-    ADD_AL_OPCODE        = 0x04,
-    INC_MEM32_OPCODE_1   = 0xff, /* has /0 as well */
-    MODRM16_DISP16       = 0x06, /* see vol.2 Table 2-1 for modR/M */
-    SIB_DISP32           = 0x25, /* see vol.2 Table 2-1 for modR/M */
 };
 
 /* length of our mangling of jecxz/loop*, beyond a possible addr prefix byte */
@@ -4437,70 +4375,341 @@ enum {
 /*   461 */     OP_wfi,
 /*   462 */     OP_yield,
 
+/*   463 */     OP_AFTER_LAST_ARM, //SJF Sentinel value to border ARM opcodes
+
+//SJF Add the thumb instrs here. Just duplicate the ARM equivs
+
+/*   464 */     OP_T_add_reg,
+/*   465 */     OP_T_adc_reg,
+/*   466 */     OP_T_add_low_reg,
+/*   467 */     OP_T_add_high_reg,
+/*   468 */     OP_T_add_sp_imm,
+/*   469 */     OP_T_add_imm_3,
+/*   470 */     OP_T_add_imm_8,
+/*   471 */     OP_T_and_reg,
+/*   472 */     OP_T_asr_imm,
+/*   473 */     OP_T_asr_reg,
+/*   474 */     OP_T_b,
+/*   475 */     OP_T_bic_reg,
+/*   476 */     OP_T_bkpt,
+/*   477 */     OP_T_blx_ref,
+/*   478 */     OP_T_bx,
+/*   479 */     OP_T_cbnz,
+/*   480 */     OP_T_cbnz_2,
+/*   481 */     OP_T_cbz,
+/*   482 */     OP_T_cbz_2,
+/*   483 */     OP_T_cmn_reg,
+/*   484 */     OP_T_cmp_high_reg,
+/*   485 */     OP_T_cmp_imm,
+/*   486 */     OP_T_cmp_reg,
+/*   487 */     OP_T_cps,
+/*   488 */     OP_T_eor_reg,
+/*   489 */     OP_T_it,
+/*   490 */     OP_T_ldrb_imm,
+/*   491 */     OP_T_ldrb_reg,
+/*   492 */     OP_T_ldrh_imm,
+/*   493 */     OP_T_ldrh_reg,
+/*   494 */     OP_T_ldrsb_reg,
+/*   495 */     OP_T_ldrsh_reg,
+/*   496 */     OP_T_ldr_imm,
+/*   497 */     OP_T_ldr_reg,
+/*   498 */     OP_T_lsl_imm,
+/*   499 */     OP_T_lsl_reg,
+/*   500 */     OP_T_lsr_imm,
+/*   501 */     OP_T_lsr_reg,
+/*   502 */     OP_T_mov_imm,
+/*   503 */     OP_T_mov_high_reg,
+/*   504 */     OP_T_mov_low_reg,
+/*   505 */     OP_T_mvn_reg,
+/*   506 */     OP_T_mul,
+/*   507 */     OP_T_nop,
+/*   508 */     OP_T_orr_reg,
+/*   509 */     OP_T_pop,
+/*   510 */     OP_T_push,
+/*   511 */     OP_T_rev,
+/*   512 */     OP_T_rev16,
+/*   513 */     OP_T_revsh,
+/*   514 */     OP_T_ror_reg,
+/*   515 */     OP_T_rsb_imm,
+/*   516 */     OP_T_sbc_reg,
+/*   517 */     OP_T_setend,
+/*   518 */     OP_T_sev,
+/*   519 */     OP_T_str_imm,
+/*   520 */     OP_T_str_reg,
+/*   521 */     OP_T_str_sp,
+/*   522 */     OP_T_strb_imm,
+/*   523 */     OP_T_strb_reg,
+/*   524 */     OP_T_strh_imm,
+/*   525 */     OP_T_strh_reg,
+/*   526 */     OP_T_sub_sp_imm,
+/*   527 */     OP_T_sub_imm_8,
+/*   528 */     OP_T_sub_reg,
+/*   529 */     OP_T_sub_imm_3,
+/*   530 */     OP_T_svc,
+/*   531 */     OP_T_sxth,
+/*   532 */     OP_T_sxtb,
+/*   533 */     OP_T_tst_reg,
+/*   534 */     OP_T_uxtb,
+/*   535 */     OP_T_uxth,
+/*   536 */     OP_T_wfe,
+/*   537 */     OP_T_wfi,
+/*   538 */     OP_T_yield,
+/*   539 */     OP_T_32_and_imm,
+/*   540 */     OP_T_32_tst_imm,
+/*   541 */     OP_T_32_bic_imm,
+/*   542 */     OP_T_32_orr_imm,
+/*   543 */     OP_T_32_mov_imm,
+/*   544 */     OP_T_32_orn_imm,
+/*   545 */     OP_T_32_mvn_imm,
+/*   546 */     OP_T_32_eor_imm,
+/*   547 */     OP_T_32_teq_imm,
+/*   548 */     OP_T_32_add_imm,
+/*   549 */     OP_T_32_cmn_imm,
+/*   550 */     OP_T_32_adc_imm,
+/*   551 */     OP_T_32_sbc_imm,
+/*   552 */     OP_T_32_sub_imm,
+/*   553 */     OP_T_32_cmp_imm,
+/*   554 */     OP_T_32_rsb_imm,
+/*   555 */     OP_T_32_add_wide,
+/*   556 */     OP_T_32_adr,
+/*   557 */     OP_T_32_mov_wide,
+/*   558 */     OP_T_32_adr_2,
+/*   559 */     OP_T_32_movt_top,
+/*   560 */     OP_T_32_ssat,
+/*   561 */     OP_T_32_ssat16,
+/*   562 */     OP_T_32_sbfx,
+/*   563 */     OP_T_32_bfi,
+/*   564 */     OP_T_32_bfc,
+/*   565 */     OP_T_32_usat16,
+/*   566 */     OP_T_32_ubfx,
+/*   567 */     OP_T_32_b,
+/*   568 */     OP_T_32_msr_reg_app,
+/*   569 */     OP_T_32_msr_reg_sys,
+/*   570 */     OP_T_32_bxj,
+/*   571 */     OP_T_32_subs,
+/*   572 */     OP_T_32_mrs,
+/*   573 */     OP_T_32_smc,
+/*   574 */     OP_T_32_b_2,
+/*   575 */     OP_T_32_blx_imm,
+/*   576 */     OP_T_32_bl,
+/*   577 */     OP_T_32_cps,
+/*   578 */     OP_T_32_nop,
+/*   579 */     OP_T_32_yield,
+/*   580 */     OP_T_32_wfe,
+/*   581 */     OP_T_32_wfi,
+/*   582 */     OP_T_32_sev,
+/*   583 */     OP_T_32_dbg,
+/*   584 */     OP_T_32_enterx,
+/*   585 */     OP_T_32_leavex,
+/*   586 */     OP_T_32_clrex,
+/*   587 */     OP_T_32_dsb,
+/*   588 */     OP_T_32_dmb,
+/*   589 */     OP_T_32_isb,
+/*   590 */     OP_T_32_srs,
+/*   591 */     OP_T_32_rfe,
+/*   592 */     OP_T_32_stm,
+/*   593 */     OP_T_32_stmia,
+/*   594 */     OP_T_32_stmea,
+/*   595 */     OP_T_32_ldm,
+/*   596 */     OP_T_32_ldmia,
+/*   597 */     OP_T_32_ldmfd,
+/*   598 */     OP_T_32_pop,
+/*   599 */     OP_T_32_stmdb,
+/*   600 */     OP_T_32_stmfd,
+/*   601 */     OP_T_32_push,
+/*   602 */     OP_T_32_ldmdb,
+/*   603 */     OP_T_32_ldmea,
+/*   604 */     OP_T_32_strex,
+/*   605 */     OP_T_32_ldrex,
+/*   606 */     OP_T_32_strd_imm,
+/*   607 */     OP_T_32_ldrd_imm,
+/*   608 */     OP_T_32_ldrd_lit,
+/*   609 */     OP_T_32_strexb,
+/*   610 */     OP_T_32_strexh,
+/*   611 */     OP_T_32_strexd,
+/*   612 */     OP_T_32_tbb,
+/*   613 */     OP_T_32_tbh,
+/*   614 */     OP_T_32_ldrexb,
+/*   615 */     OP_T_32_ldrexh,
+/*   616 */     OP_T_32_ldrexd,
+/*   617 */     OP_T_32_ldr_imm,
+/*   618 */     OP_T_32_ldrt,
+/*   619 */     OP_T_32_ldr_reg,
+/*   620 */     OP_T_32_ldr_lit,
+/*   621 */     OP_T_32_ldrh_lit,
+/*   622 */     OP_T_32_ldrh_imm,
+/*   623 */     OP_T_32_ldrht,
+/*   624 */     OP_T_32_ldrh_reg,
+/*   625 */     OP_T_32_ldrsh_imm,
+/*   626 */     OP_T_32_ldrsht,
+/*   627 */     OP_T_32_ldrsh_reg,
+/*   628 */     OP_T_32_ldrb_lit,
+/*   629 */     OP_T_32_ldrb_imm,
+/*   630 */     OP_T_32_ldrbt,
+/*   631 */     OP_T_32_ldrb_reg,
+/*   632 */     OP_T_32_ldrsb_lit,
+/*   633 */     OP_T_32_ldrsb_imm,
+/*   634 */     OP_T_32_ldrsbt,
+/*   635 */     OP_T_32_ldrsb,
+/*   636 */     OP_T_32_pld_imm,
+/*   637 */     OP_T_32_pld_lit,
+/*   638 */     OP_T_32_pld_reg,
+/*   639 */     OP_T_32_pli_imm,
+/*   640 */     OP_T_32_pli_lit,
+/*   641 */     OP_T_32_pli_reg,
+/*   642 */     OP_T_32_strb_imm,
+/*   643 */     OP_T_32_strbt,
+/*   644 */     OP_T_32_strb_reg,
+/*   645 */     OP_T_32_strh_imm,
+/*   646 */     OP_T_32_strht,
+/*   647 */     OP_T_32_strh_reg,
+/*   648 */     OP_T_32_str_imm,
+/*   649 */     OP_T_32_strt,
+/*   650 */     OP_T_32_str_reg,
+/*   651 */     OP_T_32_and_reg,
+/*   652 */     OP_T_32_tst_reg,
+/*   653 */     OP_T_32_bic_reg,
+/*   654 */     OP_T_32_orr_reg,
+/*   655 */     OP_T_32_mov_reg,
+/*   656 */     OP_T_32_orn_reg,
+/*   657 */     OP_T_32_mvn_reg,
+/*   658 */     OP_T_32_eor_reg,
+/*   659 */     OP_T_32_teq_reg,
+/*   660 */     OP_T_32_pkh,
+/*   661 */     OP_T_32_add_reg,
+/*   662 */     OP_T_32_cmn_reg,
+/*   663 */     OP_T_32_adc_reg,
+/*   664 */     OP_T_32_sbc_reg,
+/*   665 */     OP_T_32_sub_reg,
+/*   666 */     OP_T_32_cmp_reg,
+/*   667 */     OP_T_32_rsb_reg,
+/*   668 */     OP_T_32_lsl_reg,
+/*   669 */     OP_T_32_lsr_reg,
+/*   670 */     OP_T_32_asr_reg,
+/*   671 */     OP_T_32_ror_reg,
+/*   672 */     OP_T_32_sxtah,
+/*   673 */     OP_T_32_sxth,
+/*   674 */     OP_T_32_uxtah,
+/*   675 */     OP_T_32_uxth,
+/*   676 */     OP_T_32_sxtab16,
+/*   677 */     OP_T_32_sxtb16,
+/*   678 */     OP_T_32_uxtab16,
+/*   679 */     OP_T_32_uxtb16,
+/*   680 */     OP_T_32_sxtab,
+/*   681 */     OP_T_32_sxtb,
+/*   682 */     OP_T_32_uxtab,
+/*   683 */     OP_T_32_uxtb,
+/*   684 */     OP_T_32_sadd16,
+/*   685 */     OP_T_32_sasx,
+/*   686 */     OP_T_32_ssax,
+/*   687 */     OP_T_32_ssub16,
+/*   688 */     OP_T_32_sadd8,
+/*   689 */     OP_T_32_ssub8,
+/*   690 */     OP_T_32_qadd16,
+/*   691 */     OP_T_32_qasx,
+/*   692 */     OP_T_32_qsax,
+/*   693 */     OP_T_32_qsub16,
+/*   694 */     OP_T_32_qadd8,
+/*   695 */     OP_T_32_qsub8,
+/*   696 */     OP_T_32_shadd16,
+/*   697 */     OP_T_32_shasx,
+/*   698 */     OP_T_32_shsax,
+/*   699 */     OP_T_32_shsub16,
+/*   700 */     OP_T_32_shadd8,
+/*   701 */     OP_T_32_shsub8,
+/*   702 */     OP_T_32_uadd16,
+/*   703 */     OP_T_32_uasx,
+/*   704 */     OP_T_32_usax,
+/*   705 */     OP_T_32_usub16,
+/*   706 */     OP_T_32_uadd8,
+/*   707 */     OP_T_32_usub8,
+/*   708 */     OP_T_32_uqadd16,
+/*   709 */     OP_T_32_uqasx,
+/*   710 */     OP_T_32_uqsax,
+/*   711 */     OP_T_32_uqsub16,
+/*   712 */     OP_T_32_uqadd8,
+/*   713 */     OP_T_32_uqsub8,
+/*   714 */     OP_T_32_uhadd16,
+/*   715 */     OP_T_32_uhasx,
+/*   716 */     OP_T_32_uhsax,
+/*   717 */     OP_T_32_uhsub16,
+/*   718 */     OP_T_32_uhadd8,
+/*   719 */     OP_T_32_uhsub8,
+/*   720 */     OP_T_32_qadd,
+/*   721 */     OP_T_32_qdadd,
+/*   722 */     OP_T_32_qsub,
+/*   723 */     OP_T_32_qdsub,
+/*   724 */     OP_T_32_rev,
+/*   725 */     OP_T_32_rev16,
+/*   726 */     OP_T_32_rbit,
+/*   727 */     OP_T_32_revsh,
+/*   728 */     OP_T_32_sel,
+/*   729 */     OP_T_32_clz,
+/*   730 */     OP_T_32_mla,
+/*   731 */     OP_T_32_mul,
+/*   732 */     OP_T_32_mls,
+/*   733 */     OP_T_32_smlabb,
+/*   734 */     OP_T_32_smlabt,
+/*   735 */     OP_T_32_smlatb,
+/*   736 */     OP_T_32_smlatt,
+/*   737 */     OP_T_32_smulbb,
+/*   738 */     OP_T_32_smulbt,
+/*   739 */     OP_T_32_smultb,
+/*   740 */     OP_T_32_smultt,
+/*   741 */     OP_T_32_smlad,
+/*   742 */     OP_T_32_smuad,
+/*   743 */     OP_T_32_smlawb,
+/*   744 */     OP_T_32_smlawt,
+/*   745 */     OP_T_32_smulwb,
+/*   746 */     OP_T_32_smulwt,
+/*   747 */     OP_T_32_smlsd,
+/*   748 */     OP_T_32_smusd,
+/*   749 */     OP_T_32_smmla,
+/*   750 */     OP_T_32_smmul,
+/*   751 */     OP_T_32_smmls,
+/*   752 */     OP_T_32_usad8,
+/*   753 */     OP_T_32_usada8,
+/*   754 */     OP_T_32_smull,
+/*   755 */     OP_T_32_sdiv,
+/*   756 */     OP_T_32_umull,
+/*   757 */     OP_T_32_udiv,
+/*   758 */     OP_T_32_smlal,
+/*   759 */     OP_T_32_smlalbb,
+/*   760 */     OP_T_32_smlalbt,
+/*   761 */     OP_T_32_smlaltb,
+/*   762 */     OP_T_32_smlaltt,
+/*   763 */     OP_T_32_smlald,
+/*   764 */     OP_T_32_smlsld,
+/*   765 */     OP_T_32_umlal,
+/*   766 */     OP_T_32_umaal,
+/*   767 */     OP_T_32_stc,
+/*   768 */     OP_T_32_stc2,
+/*   769 */     OP_T_32_ldc_imm,
+/*   770 */     OP_T_32_ldc_lit,
+/*   771 */     OP_T_32_ldc2_imm,
+/*   772 */     OP_T_32_ldc2_lit,
+/*   773 */     OP_T_32_mcrr,
+/*   774 */     OP_T_32_mcrr2,
+/*   775 */     OP_T_32_mrrc,
+/*   776 */     OP_T_32_mrrc2,
+/*   777 */     OP_T_32_cdp,
+/*   778 */     OP_T_32_cdp2,
+/*   779 */     OP_T_32_mcr,
+/*   780 */     OP_T_32_mcr2,
+/*   781 */     OP_T_32_mrc,
+/*   782 */     OP_T_32_mrc2,
+
+
+//TODO add the Adv SIMD/VFP instructions for Thumb
 
     OP_AFTER_LAST,
     OP_FIRST = OP_adc_imm,            /**< First real opcode. */
     OP_LAST  = OP_AFTER_LAST - 1, /**< Last real opcode. */
 };
 
-#ifdef IA32_ON_IA64
-/* redefine instead of if else so works with genapi.pl script */
-#define OP_LAST OP_jmpe_abs
-#endif
-
 /* alternative names */
-/* we do not equate the fwait+op opcodes
- *   fstsw, fstcw, fstenv, finit, fclex
- * for us that has to be a sequence of instructions: a separate fwait
- */
-/* 16-bit versions that have different names */
-#define OP_cbw        OP_cwde /**< Alternative opcode name for 16-bit version. */
-#define OP_cwd        OP_cdq /**< Alternative opcode name for 16-bit version. */
-#define OP_jcxz       OP_jecxz /**< Alternative opcode name for 16-bit version. */
-/* 64-bit versions that have different names */
-#define OP_jrcxz      OP_jecxz     /**< Alternative opcode name for 64-bit version. */
-#define OP_cmpxchg16b OP_cmpxchg8b /**< Alternative opcode name for 64-bit version. */
-#define OP_pextrq     OP_pextrd    /**< Alternative opcode name for 64-bit version. */
-#define OP_pinsrq     OP_pinsrd    /**< Alternative opcode name for 64-bit version. */
-/* reg-reg version has different name */
-#define OP_movhlps    OP_movlps /**< Alternative opcode name for reg-reg version. */
-#define OP_movlhps    OP_movhps /**< Alternative opcode name for reg-reg version. */
-/* condition codes */
-#define OP_jae_short  OP_jnb_short  /**< Alternative opcode name. */
-#define OP_jnae_short OP_jb_short   /**< Alternative opcode name. */
-#define OP_ja_short   OP_jnbe_short /**< Alternative opcode name. */
-#define OP_jna_short  OP_jbe_short  /**< Alternative opcode name. */
-#define OP_je_short   OP_jz_short   /**< Alternative opcode name. */
-#define OP_jne_short  OP_jnz_short  /**< Alternative opcode name. */
-#define OP_jge_short  OP_jnl_short  /**< Alternative opcode name. */
-#define OP_jg_short   OP_jnle_short /**< Alternative opcode name. */
-#define OP_jae  OP_jnb        /**< Alternative opcode name. */
-#define OP_jnae OP_jb         /**< Alternative opcode name. */
-#define OP_ja   OP_jnbe       /**< Alternative opcode name. */
-#define OP_jna  OP_jbe        /**< Alternative opcode name. */
-#define OP_je   OP_jz         /**< Alternative opcode name. */
-#define OP_jne  OP_jnz        /**< Alternative opcode name. */
-#define OP_jge  OP_jnl        /**< Alternative opcode name. */
-#define OP_jg   OP_jnle       /**< Alternative opcode name. */
-#define OP_setae  OP_setnb    /**< Alternative opcode name. */
-#define OP_setnae OP_setb     /**< Alternative opcode name. */
-#define OP_seta   OP_setnbe   /**< Alternative opcode name. */
-#define OP_setna  OP_setbe    /**< Alternative opcode name. */
-#define OP_sete   OP_setz     /**< Alternative opcode name. */
-#define OP_setne  OP_setnz    /**< Alternative opcode name. */
-#define OP_setge  OP_setnl    /**< Alternative opcode name. */
-#define OP_setg   OP_setnle   /**< Alternative opcode name. */
-#define OP_cmovae  OP_cmovnb  /**< Alternative opcode name. */
-#define OP_cmovnae OP_cmovb   /**< Alternative opcode name. */
-#define OP_cmova   OP_cmovnbe /**< Alternative opcode name. */
-#define OP_cmovna  OP_cmovbe  /**< Alternative opcode name. */
-#define OP_cmove   OP_cmovz   /**< Alternative opcode name. */
-#define OP_cmovne  OP_cmovnz  /**< Alternative opcode name. */
-#define OP_cmovge  OP_cmovnl  /**< Alternative opcode name. */
-#define OP_cmovg   OP_cmovnle /**< Alternative opcode name. */
+
 /* undocumented opcodes */
-#define OP_icebp OP_int1
-#define OP_setalc OP_salc
 
 /****************************************************************************/
 /* DR_API EXPORT END */

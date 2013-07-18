@@ -218,6 +218,7 @@ static void
 internal_opnd_disassemble(char *buf, size_t bufsz, size_t *sofar INOUT,
                           dcontext_t *dcontext, opnd_t opnd)
 {
+#ifdef NO
     switch (opnd.kind) {
     case NULL_kind:
         break;
@@ -489,6 +490,7 @@ internal_opnd_disassemble(char *buf, size_t bufsz, size_t *sofar INOUT,
         print_to_buffer(buf, bufsz, sofar, "UNKNOWN OPERAND TYPE %d\n", opnd.kind);
         CLIENT_ASSERT(false, "opnd_disassemble: invalid opnd type");
     }
+#endif
 }
 
 void

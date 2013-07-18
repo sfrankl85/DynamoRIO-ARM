@@ -2041,24 +2041,23 @@ make_to_nop(prop_state_t *state, instr_t *inst, const char *pre,
     return backup;
 }
 
-/* uses < 0 as short for if top bit is set */
-/* calculates zf pf sf flags from some result immed */
+//SJF Changed to nzcv. Fixme TODO
 static int 
-calculate_zf_pf_sf(int immed)
+calculate_n_z_c_v(int immed)
 {
     int result = 0;
     int i;
     bool parity = true;
     if (immed == 0)
-        result = result | EFLAGS_READ_ZF;
+        result = result | CPSR_READ_N;
     if (immed < 0)
-        result = result | EFLAGS_READ_SF;
+        result = result | CPSR_READ_N;
     for (i = 0; i < 8; i++) {
         if (((immed >> i) & 0x1) != 0)
             parity = !parity;
     }
     if (parity)
-        result = result | EFLAGS_READ_PF;
+        result = result | CPSR_READ_N;
     return result;
 }
 
@@ -2139,7 +2138,7 @@ prop_simplify(instr_t *inst, prop_state_t *state)
         case OP_inc:
             {
                 immed3 = immed1 + 1;
-                eflags = calculate_zf_pf_sf(immed3);
+                eflags = calculate_n_z_c_v(immed3);
                 eflags_valid = EFLAGS_READ_ZF | EFLAGS_READ_SF | EFLAGS_READ_PF;
                 eflags_invalid = instr_get_eflags(inst) & EFLAGS_READ_ALL & (~eflags_valid);
                 if (do_forward_check_eflags(inst, eflags, eflags_valid, eflags_invalid, state))
@@ -2151,7 +2150,7 @@ prop_simplify(instr_t *inst, prop_state_t *state)
         case OP_dec:
             {
                 immed3 = immed1 - 1;
-                eflags = calculate_zf_pf_sf(immed3);
+                eflags = calculate_n_z_c_v(immed3);
                 eflags_valid = EFLAGS_READ_ZF | EFLAGS_READ_SF | EFLAGS_READ_PF;
                 eflags_invalid = instr_get_eflags(inst) & EFLAGS_READ_ALL & (~eflags_valid);
                 if (do_forward_check_eflags(inst, eflags, eflags_valid, eflags_invalid, state))
@@ -2317,7 +2316,7 @@ prop_simplify(instr_t *inst, prop_state_t *state)
                             eflags_valid = EFLAGS_READ_CF | EFLAGS_READ_PF | EFLAGS_READ_ZF | EFLAGS_READ_SF | EFLAGS_READ_OF | EFLAGS_READ_AF;
                             // technically AF is undefined, but since no one
                             // should be relying on it we can set it to zero
-                            eflags = calculate_zf_pf_sf(immed3);
+                            eflags = calculate_n_z_c_v(immed3);
                             if (do_forward_check_eflags(inst, eflags, eflags_valid, 0, state)) {
                                 replacement = INSTR_CREATE_nop(state->dcontext);    
                                 replace_inst(dcontext, state->trace, inst, replacement);
@@ -2329,7 +2328,7 @@ prop_simplify(instr_t *inst, prop_state_t *state)
                         {
                             //FIXME of and sf and af correct? FIXME!!
                             immed3 = immed1 - immed2;
-                            eflags = calculate_zf_pf_sf(immed3);
+                            eflags = calculate_n_z_c_v(immed3);
                             if (((uint)immed1) < ((uint)immed2)) {
                                 eflags = eflags | EFLAGS_READ_CF;
                             }

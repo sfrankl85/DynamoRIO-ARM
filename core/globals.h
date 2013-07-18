@@ -606,6 +606,14 @@ enum {
     WRITABLE=true
 };
 
+//SJF Enum to describe current instruction set accepted
+enum {
+    UNKNOWN_MODE,
+    ARM_MODE,
+    THUMB_MODE,
+    INVALID_MODE
+};
+
 /* Number of nested calls into native modules that we support.  This number
  * needs to equal the number of stubs in x86.asm:back_from_native_retstubs,
  * which is checked at startup in native_exec.c.
@@ -981,6 +989,8 @@ struct _dcontext_t {
     bool post_syscall;
 # endif
 #endif
+
+    byte mode;  //SJF New var to track whther in ARM or Thumb mode
 };
 
 /* sentinel value for dcontext_t* used to indicate

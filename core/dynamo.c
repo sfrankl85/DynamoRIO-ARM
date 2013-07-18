@@ -1224,7 +1224,9 @@ dynamo_process_exit_cleanup(void)
             callback_interception_unintercept();
         }
 #else /* LINUX */
+# ifndef ARM
         unhook_vsyscall();
+# endif
 #endif /* LINUX */
 
         return dynamo_shared_exit(IF_WINDOWS_(NULL) /* not detaching */
@@ -1494,6 +1496,10 @@ create_new_dynamo_context(bool initial, byte *dstack_in)
 #ifdef LINUX
     dcontext->owning_process = get_process_id();
 #endif
+
+    //SJF Default it to ARM mode
+    dcontext->mode = ARM_MODE;
+
     /* thread_record is set in add_thread */
     /* all of the thread-private fcache and hashtable fields are shared
      * among all dcontext instances of a thread, so the caller must
@@ -1589,6 +1595,8 @@ initialize_dynamo_context(dcontext_t *dcontext)
     dcontext->signals_pending = false;
 #endif
 
+    //SJF Set default mode to ARM
+    dcontext->mode = ARM_MODE;
     /* all thread-private fields are initialized in dynamo_thread_init
      * or in create_callback_dcontext because they must be initialized differently
      * in those two cases
@@ -1743,6 +1751,9 @@ create_callback_dcontext(dcontext_t *old_dcontext)
     new_dcontext->aslr_context.last_child_padded =
         old_dcontext->aslr_context.last_child_padded;
 #endif
+
+    //SJF Copy across mode
+    new_dcontext->mode = old_dcontext->mode;
 
     LOG(new_dcontext->logfile, LOG_TOP, 2,
         "made new dcontext "PFX" (old="PFX")\n", new_dcontext, old_dcontext);

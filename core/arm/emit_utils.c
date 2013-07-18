@@ -336,6 +336,7 @@ insert_relative_target(byte *pc, cache_pc target, bool hot_patch)
 byte *
 insert_relative_jump(byte *pc, cache_pc target, bool hot_patch)
 {
+#ifdef NO
     int value;
     ASSERT(pc != NULL);
     *pc = JMP_OPCODE;
@@ -349,6 +350,7 @@ insert_relative_jump(byte *pc, cache_pc target, bool hot_patch)
     *(int *)pc = value;
     pc += 4;
     return pc;
+#endif
 }
 
 /* make sure to keep in sync w/ instr_raw_is_tls_spill() */
@@ -1029,6 +1031,7 @@ insert_exit_stub_other_flags(dcontext_t *dcontext, fragment_t *f,
          */
         /* addr16 mov <target>, fs:<dir-stub-spill> */
         /* FIXME: PR 209709: test perf and remove if outweighs space */
+#ifdef NO
         *pc = ADDR_PREFIX_OPCODE; pc++;
         *pc = TLS_SEG_OPCODE; pc++;
         *pc = MOV_IMM2MEM_OPCODE; pc++;
@@ -1037,6 +1040,7 @@ insert_exit_stub_other_flags(dcontext_t *dcontext, fragment_t *f,
         *((uint *)pc) = (uint)(ptr_uint_t) EXIT_TARGET_TAG(dcontext, f, l); pc += 4;
         /* jmp to exit target */
         pc = insert_relative_jump(pc, exit_target, NOT_HOT_PATCHABLE);
+#endif
     } else {
         /* direct branch */
 
@@ -1053,13 +1057,14 @@ insert_exit_stub_other_flags(dcontext_t *dcontext, fragment_t *f,
         }
 #endif
         /* mov $linkstub_ptr,%xax */
-
+#ifdef NO
         /* shared w/ 32-bit and 64-bit !FRAG_IS_32 */
         *pc = MOV_IMM2XAX_OPCODE; pc++;
         *((ptr_uint_t *)pc) = (ptr_uint_t)l; pc += sizeof(l);
 
         /* jmp to exit target */
         pc = insert_relative_jump(pc, exit_target, NOT_HOT_PATCHABLE);
+#endif
 
 #ifdef PROFILE_LINKCOUNT
         if (linkcount) {
@@ -1591,6 +1596,8 @@ link_indirect_exit(dcontext_t *dcontext, fragment_t *f, linkstub_t *l, bool hot_
          * except for -unsafe_ignore_eflags_trace stay-on-trace cmp,jne
          */
         pc = EXIT_CTI_PC(f, l);
+#ifdef NO
+//TODO SJF 
         /* for x64, or -unsafe_ignore_eflags_trace, a trace may have a jne to the stub */
         if (*pc == JNE_OPCODE_1) {
             ASSERT(TEST(FRAG_IS_TRACE, f->flags));
@@ -1607,6 +1614,7 @@ link_indirect_exit(dcontext_t *dcontext, fragment_t *f, linkstub_t *l, bool hot_
         } else {
             ASSERT(*pc == JMP_OPCODE);
         }
+#endif
     }
     /* get absolute address of target */
     cur_target = (app_pc) PC_RELATIVE_TARGET(pc+1);
@@ -1641,6 +1649,7 @@ indirect_linkstub_stub_pc(dcontext_t *dcontext, fragment_t *f, linkstub_t *l)
     cache_pc stub;
     if (!EXIT_HAS_STUB(l->flags, f->flags))
         return NULL;
+#ifdef NO
     /* for x64, or -unsafe_ignore_eflags_trace, a trace may have a jne to the stub */
     if (*cti == JNE_OPCODE_1) {
         ASSERT(TEST(FRAG_IS_TRACE, f->flags));
@@ -1658,6 +1667,7 @@ indirect_linkstub_stub_pc(dcontext_t *dcontext, fragment_t *f, linkstub_t *l)
             stub = cti;
         }
     }
+#endif
     ASSERT(stub >= cti && (stub - cti) <= MAX_FRAGMENT_SIZE);
     if (!TEST(LINK_LINKED, l->flags)) {
         /* the unlink target is not always the start of the stub */
@@ -1729,10 +1739,12 @@ linkstub_cbr_disambiguate(dcontext_t *dcontext, fragment_t *f,
 cache_pc
 cbr_fallthrough_exit_cti(cache_pc prev_cti_pc)
 {
+#ifdef NO
     if (*prev_cti_pc == RAW_PREFIX_jcc_taken ||
         *prev_cti_pc == RAW_PREFIX_jcc_not_taken)
         prev_cti_pc++;
     return (prev_cti_pc + CBR_LONG_LENGTH);
+#endif
 }
 
 /* This is an atomic operation with respect to a thread executing in the
@@ -1818,15 +1830,6 @@ unlink_indirect_exit(dcontext_t *dcontext, fragment_t *f, linkstub_t *l)
         } else {
             /* cti goes straight to ibl, and must be a jmp, not jcc */
             pc = EXIT_CTI_PC(f, l);
-            /* for x64, or -unsafe_ignore_eflags_trace, a trace may have a jne */
-            if (*pc == JNE_OPCODE_1) {
-                ASSERT(TEST(FRAG_IS_TRACE, f->flags));
-#ifndef X64
-                ASSERT(INTERNAL_OPTION(unsafe_ignore_eflags_trace));
-#endif
-                pc++; /* 2-byte opcode, skip 1st here */
-            } else
-                ASSERT (*pc == JMP_OPCODE);
         }
         cur_target = (cache_pc) PC_RELATIVE_TARGET(pc+1);
         exit_target = get_unlinked_entry(dcontext, cur_target);
@@ -1885,6 +1888,7 @@ entrance_stub_jmp(cache_pc stub)
 bool
 coarse_is_entrance_stub(cache_pc stub)
 {
+#ifdef NO
     bool res = false;
     /* FIXME: case 10334: pass in info and if non-NULL avoid lookup here? */
     coarse_info_t *info = get_stub_coarse_info(stub);
@@ -1903,6 +1907,7 @@ coarse_is_entrance_stub(cache_pc stub)
         });
     }
     return res;
+#endif
 }
 
 /* FIXME: case 10334: pass in info? */
@@ -1923,12 +1928,14 @@ coarse_is_trace_head(cache_pc stub)
 cache_pc
 entrance_stub_jmp_target(cache_pc stub)
 {
+#ifdef NO
     cache_pc jmp = entrance_stub_jmp(stub);
     cache_pc tgt;
     ASSERT(jmp != NULL);
     tgt = (cache_pc) PC_RELATIVE_TARGET(jmp+1);
     ASSERT(*jmp == JMP_OPCODE);
     return tgt;
+#endif
 }
 
 app_pc
@@ -2017,6 +2024,7 @@ coarse_cti_is_intra_fragment(dcontext_t *dcontext, coarse_info_t *info,
 cache_pc
 coarse_indirect_stub_jmp_target(cache_pc stub)
 {
+#ifdef NO
     cache_pc prefix_tgt, tgt;
     cache_pc jmp;
     size_t stub_size;
@@ -2036,6 +2044,7 @@ coarse_indirect_stub_jmp_target(cache_pc stub)
     ASSERT(*prefix_tgt == JMP_OPCODE);
     tgt = (cache_pc) PC_RELATIVE_TARGET(prefix_tgt+1);
     return tgt;
+#endif
 }
 
 uint
@@ -2745,16 +2754,22 @@ insert_fragment_prefix(dcontext_t *dcontext, fragment_t *f)
                      */
                     STATS_INC(num_oflag_prefix_restore);
 
+#ifdef NO 
+//SJF Resore cpsr here ????
                     /* 04 7f   add $0x7f,%al */
                     *pc = ADD_AL_OPCODE; pc++;
                     *pc = 0x7f; pc++;
+#endif
 
                     ASSERT(pc - restore_of_prefix_pc == PREFIX_SIZE_RESTORE_OF);
                 }
             
+#ifdef NO 
+//SJF Resore cpsr here ????
                 /* restore other 5 flags w/ sahf */
                 *pc = SAHF_OPCODE; pc++;
                 ASSERT(PREFIX_SIZE_FIVE_EFLAGS == 1);
+#endif
             }
             /* restore xax */
             pc = insert_restore_register(dcontext, f, pc, REG_RR0);
@@ -7515,36 +7530,6 @@ decode_syscall_num(dcontext_t *dcontext, byte *entry)
     }
     instr_free(dcontext, &instr);
     return syscall;
-}
-
-/* If code_buf points to a jmp rel32 returns true and returns the target of
- * the jmp in jmp_target as if was located at app_loc. */
-bool
-is_jmp_rel32(byte *code_buf, app_pc app_loc, app_pc *jmp_target /* OUT */)
-{
-    if (*code_buf == JMP_OPCODE) {
-        if (jmp_target != NULL) {
-            *jmp_target = app_loc + JMP_LONG_LENGTH +
-                *(int *)(code_buf+1);
-        }
-        return true;
-    }
-    return false;
-}
-
-/* If code_buf points to a jmp rel8 returns true and returns the target of
- * the jmp in jmp_target as if was located at app_loc. */
-bool
-is_jmp_rel8(byte *code_buf, app_pc app_loc, app_pc *jmp_target /* OUT */)
-{
-    if (*code_buf == JMP_SHORT_OPCODE) {
-        if (jmp_target != NULL) {
-            *jmp_target = app_loc + JMP_SHORT_LENGTH +
-                *(char *)(code_buf+1);
-        }
-        return true;
-    }
-    return false;
 }
 
 #ifdef LINUX

@@ -1118,254 +1118,6 @@ bb_verify_sysenter_pattern(dcontext_t *dcontext, build_bb_t *bb)
     return instr;
 }
 
-/* Only used for the Borland SEH exemption. */
-/* FIXME - we can't really tell a push from a pop since both are typically a
- * mov to fs:[0], but double processing doesn't hurt. */
-/* NOTE we don't see dynamic SEH frame pushes, we only see the first SEH push
- * per mov -> fs:[0] instruction in the app.  So we don't see modified in place
- * handler addresses (see at_Borland_SEH_rct_exemption()) or handler addresses
- * that are passed into a shared routine that sets up the frame (not yet seen,
- * note that MS dlls that have a _SEH_prolog hardcode the handler address in
- * the _SEH_prolog routine, only the data is passed in).
- */
-static void
-bb_process_SEH_push(dcontext_t *dcontext, build_bb_t *bb, void *value)
-{
-    if (value == NULL || value == (void *)PTR_UINT_MINUS_1) {
-        /* could be popping off the last frame (leaving -1) of the SEH stack */
-        STATS_INC(num_endlist_SEH_write);
-        ASSERT_CURIOSITY(value != NULL);
-        return;
-    }
-    LOG(THREAD, LOG_INTERP, 3, "App moving "PFX" to fs:[0]\n", value);
-# ifdef RETURN_AFTER_CALL
-    if (DYNAMO_OPTION(borland_SEH_rct)) {
-        /* xref case 5752, the Borland compiler SEH implementation uses a push
-         * imm ret motif for fall through to the finally of a try finally block
-         * (very similar to what the Microsoft NT at_SEH_rct_exception() is
-         * doing). The layout will always look like this :
-         *     push e:  (imm32)  (e should be in the .E/.F table)
-         *  a:
-         *     ...
-         *  b: ret
-         *  c: jmp rel32         (c should be in the .E/.F table)
-         *  d: jmp a:  (rel8/32)
-         *     ... (usually nothing)
-         *  e:
-         * (where ret at b is targeting e, or a valid after call).  The 
-         * exception dispatcher calls c (the SEH frame has c as the handler)
-         * which jmps to the exception handler which, in turn, calls d to
-         * execute the finally block.  Fall through is as shown above. So,
-         * we see a .E violation for the handlers call to d and a .C violation
-         * for the fall trough case of the ret @ b targeting e.  We may also
-         * see a .E violation for a call to a as sometimes the handler computes
-         * the target of the jmp @ d an passes that to a different exception
-         * handler.
-         *
-         * For try-except we see the following layout :
-         *           I've only seen jmp ind in the case that led to needing
-         *           at_Borland_SEH_rct_exemption() to be added, not that
-         *           it makes any difference.
-         *    [ jmp z:  (rel8/32) || (rarely) ret || (very rarely) jmp ind]
-         * x: jmp rel32          (x should be in the .E/.F table)  
-         * y:
-         *    ...
-         *    call rel32
-         * [z: ... || ret ]
-         * Though there may be other optimized layouts (the ret instead of the
-         * jmp z: is one such) so we may not want to rely on anything other
-         * then x y.  The exception dispatcher calls x (the SEH frame has x as
-         * the handler) which jmps to the exception handler which, in turn,
-         * jmps to y to execute the except block.  We see a .F violation from
-         * the handler's jmp to y.  at_Borland_SEH_rct_exemption() covers a
-         * case where the address of x (and thus y) in an existing SEH frame
-         * is changed in place instead of popping and pushing a new frame.
-         *
-         * All addresses (rel and otherwise) should be in the same module.  So
-         * we need to recognize the patter and add d:/y: to the .E/.F table
-         * as well as a: (sometimes the handler calculates the target of d and
-         * passes that up to a higher level routine, though I don't see the
-         * point) and add e: to the .C table.
-         *
-         * It would be preferable to handle these exemptions reactively at
-         * the violation point, but unfortunately, by the time we get to the
-         * violation the SEH frame information has been popped off the stack
-         * and is lost, so we have to do it pre-emptively here (pattern
-         * matching at violation time has proven to difficult in the face of
-         * certain compiler optimizations). See at_Borland_SEH_rct_exemption()
-         * in callback.c, that could handle all ind branches to y and ind calls
-         * to d (see below) at an acceptable level of security if we desired.
-         * Handling the ret @ b to e reactively would require the ability to
-         * recreate the exact src cti (so we can use the addr of the ret to
-         * pattern match) at the violation point (something that can't always
-         * currently be done, reset flushing etc.).  Handling the ind call to
-         * a (which I've never acutally seen, though I've seen the address
-         * computed and it looks like it could likely be hit) reactively is
-         * more tricky. Prob. the only way to handle that is to allow .E/.F
-         * transistions to any address after a push imm32 of an address in the
-         * same module, but that might be too permissive.  FIXME - should still
-         * revisit doing the exemptions reactively at some point, esp. once we
-         * can reliably get the src cti.
-         */
-
-        extern bool seen_Borland_SEH; /* set for callback.c */
-        /* First read in the SEH frame, this is the observed structure and
-         * the first two fields (which are all that we use) are constrained by
-         * ntdll exception dispatcher (see EXCEPTION_REGISTRATION decleration
-         * in ntdll.h). */
-        /* FIXME - could just use EXCEPTION_REGISTRATION period since all we
-         * need is the handler address and it would allow simpler curiosity
-         * [see 8181] below.  If, as is expected, other options make use of
-         * this routine we'll probably have one shared get of the SEH frame
-         * anyways. */
-        typedef struct _borland_seh_frame_t {
-            EXCEPTION_REGISTRATION reg;
-            reg_t xbp; /* not used by us */
-        } borland_seh_frame_t;
-        borland_seh_frame_t frame;
-        /* will hold [b,e] or [x-1,y] */
-        byte target_buf[RET_0_LENGTH + 2 * JMP_LONG_LENGTH];
-        app_pc handler_jmp_target = NULL;
-
-        if (!safe_read(value, sizeof(frame), &frame)) {
-            /* We already checked for NULL and -1 above so this should be
-             * a valid SEH frame. Xref 8181, borland_seh_frame_t struct is
-             * bigger then EXCEPTION_REGISTRATION (which is all that is 
-             * required) so verify smaller size is readable. */
-            ASSERT_CURIOSITY(sizeof(EXCEPTION_REGISTRATION) < sizeof(frame) &&
-                             safe_read(value, sizeof(EXCEPTION_REGISTRATION),
-                                       &frame));
-            goto post_borland;
-        }
-        /* frame.reg.handler is c or y, read extra prior bytes to look for b */
-        if (!safe_read((app_pc)frame.reg.handler - RET_0_LENGTH,
-                       sizeof(target_buf), target_buf)) {
-            goto post_borland;
-        }
-        if (is_jmp_rel32(&target_buf[RET_0_LENGTH], (app_pc)frame.reg.handler,
-                         &handler_jmp_target)) {
-            /* we have a possible match, now do the more expensive checking */
-            app_pc base;
-            LOG(THREAD, LOG_INTERP, 3,
-                "Read possible borland SEH frame @"PFX"\n\t"
-                "next="PFX" handler="PFX" xbp="PFX"\n\t",
-                value, frame.reg.prev, frame.reg.handler, frame.xbp);
-            DOLOG(3, LOG_INTERP, {
-                dump_buffer_as_bytes(THREAD, target_buf, sizeof(target_buf), 0);
-            });
-            /* optimize check if we've already processed this frame once */
-            if ((DYNAMO_OPTION(rct_ind_jump) != OPTION_DISABLED ||
-                 DYNAMO_OPTION(rct_ind_call) != OPTION_DISABLED) &&
-                rct_ind_branch_target_lookup(dcontext,
-                                             (app_pc)frame.reg.handler +
-                                             JMP_LONG_LENGTH)) {
-                /* we already processed this SEH frame once, this is prob. a
-                 * frame pop, no need to continue */
-                STATS_INC(num_borland_SEH_dup_frame);
-                LOG(THREAD, LOG_INTERP, 3,
-                    "Processing duplicate Borland SEH frame\n");
-                goto post_borland;
-            }
-            base = get_module_base((app_pc)frame.reg.handler);
-            STATS_INC(num_borland_SEH_initial_match);
-            /* Perf opt, we use the cheaper get_allocation_base() below instead
-             * of get_module_base().  We are checking the result against a
-             * known module base (base) so no need to duplicate the is module
-             * check.  FIXME - the checks prob. aren't even necessary given the
-             * later is_in_code_section checks. Xref case 8171. */
-            /* FIXME - (perf) we could cache the region from the first
-             * is_in_code_section() call and check against that before falling
-             * back on is_in_code_section in case of multiple code sections. */
-            if (base != NULL &&
-                get_allocation_base(handler_jmp_target) == base &&
-                get_allocation_base(bb->instr_start) == base &&
-                /* FIXME - with -rct_analyze_at_load we should be able to
-                 * verify that frame->handler (x: c:) is on the .E/.F
-                 * table already. We could also try to match known pre x:
-                 * post y: patterns. */
-                is_in_code_section(base, bb->instr_start, NULL, NULL) &&
-                is_in_code_section(base, handler_jmp_target, NULL, NULL) &&
-                is_range_in_code_section(base, (app_pc)frame.reg.handler,
-                                         (app_pc)frame.reg.handler+JMP_LONG_LENGTH+1,
-                                         NULL, NULL)) {
-                app_pc finally_target;
-                byte push_imm_buf[PUSH_IMM32_LENGTH];
-                DEBUG_DECLARE(bool ok;)
-                /* we have a match, add handler+JMP_LONG_LENGTH (y: d:)
-                 * to .E/.F table */
-                STATS_INC(num_borland_SEH_try_match);
-                LOG(THREAD, LOG_INTERP, 2,
-                    "Found Borland SEH frame adding "PFX" to .E/.F table\n",
-                    (app_pc)frame.reg.handler+JMP_LONG_LENGTH);
-                if ((DYNAMO_OPTION(rct_ind_jump) != OPTION_DISABLED ||
-                     DYNAMO_OPTION(rct_ind_call) != OPTION_DISABLED)) {
-                    mutex_lock(&rct_module_lock);
-                    rct_add_valid_ind_branch_target(dcontext,
-                                                    (app_pc)frame.reg.handler +
-                                                    JMP_LONG_LENGTH);
-                    mutex_unlock(&rct_module_lock);
-                }
-                /* we set this as an enabler for another exemption in 
-                 * callback .C, see notes there */
-                if (!seen_Borland_SEH) {
-                    SELF_UNPROTECT_DATASEC(DATASEC_RARELY_PROT);
-                    seen_Borland_SEH = true;
-                    SELF_PROTECT_DATASEC(DATASEC_RARELY_PROT);
-                }
-                /* case 8648: used to decide which RCT entries to persist */
-                DEBUG_DECLARE(ok =) os_module_set_flag(base, MODULE_HAS_BORLAND_SEH);
-                ASSERT(ok);
-                /* look for .C addresses for try finally */
-                if (target_buf[0] == RAW_OPCODE_ret &&
-                    (is_jmp_rel32(&target_buf[RET_0_LENGTH+JMP_LONG_LENGTH],
-                                  (app_pc)frame.reg.handler+JMP_LONG_LENGTH,
-                                  &finally_target) ||
-                     is_jmp_rel8(&target_buf[RET_0_LENGTH+JMP_LONG_LENGTH],
-                                 (app_pc)frame.reg.handler+JMP_LONG_LENGTH,
-                                 &finally_target)) &&
-                    safe_read(finally_target - sizeof(push_imm_buf), 
-                              sizeof(push_imm_buf), push_imm_buf) &&
-                    push_imm_buf[0] == RAW_OPCODE_push_imm32) {
-                    app_pc push_val = *(app_pc *)&push_imm_buf[1];
-                    /* do a few more, expensive, sanity checks */
-                    /* FIXME - (perf) see earlier note on get_allocation_base()
-                     * and is_in_code_section() usage. */
-                    if (get_allocation_base(finally_target) == base &&
-                        is_in_code_section(base, finally_target, NULL, NULL) &&
-                        get_allocation_base(push_val) == base &&
-                        /* FIXME - could also check that push_val is in
-                         * .E/.F table, at least for -rct_analyze_at_load */
-                        is_in_code_section(base, push_val, NULL, NULL)) {
-                        /* Full match, add push_val (e:) to the .C table
-                         * and finally_target (a:) to the .E/.F table */
-                        STATS_INC(num_borland_SEH_finally_match);
-                        LOG(THREAD, LOG_INTERP, 2,
-                            "Found Borland SEH finally frame adding "PFX" to"
-                            " .C table and "PFX" to .E/.F table\n",
-                            push_val, finally_target);
-                        if ((DYNAMO_OPTION(rct_ind_jump) != OPTION_DISABLED ||
-                             DYNAMO_OPTION(rct_ind_call) != OPTION_DISABLED)) {
-                            mutex_lock(&rct_module_lock);
-                            rct_add_valid_ind_branch_target(dcontext,
-                                                            finally_target);
-                            mutex_unlock(&rct_module_lock);
-                        }
-                        if (DYNAMO_OPTION(ret_after_call)) {
-                            fragment_add_after_call(dcontext, push_val);
-                        }
-                    } else {
-                        ASSERT_CURIOSITY(false &&
-                                         "partial borland seh finally match");
-                    }
-                }
-            }
-        }
-    }
- post_borland:
-# endif /* RETURN_AFTER_CALL */
-    return;
-}
-
 /* helper routine for bb_process_fs_ref
  * return true if bb should be continued, false if it shouldn't  */
 static bool
@@ -3448,7 +3200,7 @@ build_bb_ilist(dcontext_t *dcontext, build_bb_t *bb)
 // TODO Convert the eflags checking stuff to cpsr checking stuff
     if (!INTERNAL_OPTION(unsafe_ignore_eflags_prefix)
         IF_X64(|| !INTERNAL_OPTION(unsafe_ignore_eflags_trace))) {
-        bb->flags |= instr_eflags_to_fragment_eflags(bb->eflags);
+        bb->flags |= instr_cpsr_to_fragment_cpsr(bb->eflags);
         if (TEST(FRAG_WRITES_EFLAGS_OF, bb->flags)) {
             LOG(THREAD, LOG_INTERP, 4, "fragment writes OF prior to reading it!\n");
             STATS_INC(bbs_eflags_writes_of);
@@ -6138,20 +5890,21 @@ mangle_trace(dcontext_t *dcontext, instrlist_t *ilist, monitor_data_t *md)
  * assuming that the instr_t flags correspond to the start of the fragment_t
  */
 uint
-instr_eflags_to_fragment_eflags(uint instr_eflags)
+instr_cpsr_to_fragment_cpsr(uint instr_cpsr)
 {
-    uint frag_eflags = 0;
-    if (instr_eflags == EFLAGS_WRITE_OF) {
+//TODO Fixme
+    uint frag_cpsr = 0;
+    if (instr_cpsr == CPSR_WRITE_N) {
         /* this fragment writes OF before reading it 
          * May still read other flags before writing them.
          */
-        frag_eflags |= FRAG_WRITES_EFLAGS_OF;
-    } else if (instr_eflags == EFLAGS_WRITE_6) {
+        frag_cpsr |= FRAG_WRITES_EFLAGS_OF;
+    } else if (instr_cpsr == CPSR_WRITE_5) {
         /* fragment writes all 6 prior to reading */
-        frag_eflags |= FRAG_WRITES_EFLAGS_6;
-        frag_eflags |= FRAG_WRITES_EFLAGS_OF;
+        frag_cpsr |= FRAG_WRITES_EFLAGS_6;
+        frag_cpsr |= FRAG_WRITES_EFLAGS_OF;
     }
-    return frag_eflags;
+    return frag_cpsr;
 }
 
 /* This translates f's code into an instrlist_t and returns it.

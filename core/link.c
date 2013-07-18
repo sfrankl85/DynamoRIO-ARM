@@ -3581,6 +3581,9 @@ in_coarse_stub_prefixes(cache_pc pc)
     return false;
 }
 
+#ifdef ARM
+ // Dont need this for ARM?
+#else
 /* If target is a coarse ibl prefix, returns its target (i.e., the final
  * ibl routine target); else, returns the original target passed in.
  */
@@ -3597,6 +3600,7 @@ coarse_deref_ibl_prefix(dcontext_t *dcontext, cache_pc target)
     }
     return target;
 }
+#endif
 
 coarse_info_t *
 get_stub_coarse_info(cache_pc pc)

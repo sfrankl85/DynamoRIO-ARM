@@ -450,46 +450,6 @@ convert_to_near_rel(dcontext_t *dcontext, instr_t *instr)
     convert_to_near_rel_common(dcontext, NULL, instr);
 }
 
-/* For jecxz and loop*, we create 3 instructions in a single
- * instr that we treat like a single conditional branch.
- * On re-decoding our own output we need to recreate that instr.
- * This routine assumes that the instructions encoded at pc
- * are indeed a mangled cti short.
- * Assumes that the first instr has already been decoded into instr,
- * that pc points to the start of that instr.
- * Converts instr into a new 3-raw-byte-instr with a private copy of the
- * original raw bits.
- * Optionally modifies the target to "target" if "target" is non-null.
- * Returns the pc of the instruction after the remangled sequence.
- */
-byte *
-remangle_short_rewrite(dcontext_t *dcontext,
-                       instr_t *instr, byte *pc, app_pc target)
-{
-    uint mangled_sz = CTI_SHORT_REWRITE_LENGTH;
-    if (*pc == ADDR_PREFIX_OPCODE)
-        mangled_sz++;
-
-    /* first set the target in the actual operand src0 */
-    if (target == NULL) {
-        /* acquire existing absolute target */
-        int rel_target = *((int *)(pc + mangled_sz - 4));
-        target = pc + mangled_sz + rel_target;
-    }
-    instr_set_target(instr, opnd_create_pc(target));
-    /* now set up the bundle of raw instructions
-     * we've already read the first 2-byte instruction, jecxz/loop*
-     * they all take up mangled_sz bytes
-     */
-    instr_allocate_raw_bits(dcontext, instr, mangled_sz);
-    instr_set_raw_bytes(instr, pc, mangled_sz);
-    /* for x64 we may not reach, but we go ahead and try */
-    instr_set_raw_word(instr, mangled_sz - 4, (int)(target - (pc + mangled_sz)));
-    /* now make operands valid */
-    instr_set_operands_valid(instr, true);
-    return (pc+mangled_sz);
-}
-
 /***************************************************************************/
 #if !defined(STANDALONE_DECODER)
 
@@ -511,6 +471,7 @@ insert_push_all_registers(dcontext_t *dcontext, clean_call_info_t *cci,
                           uint alignment, instr_t *push_pc)
 {
 #ifdef NO
+//TODO SJF Push all ARM gprs
     uint dstack_offs = 0;
     int  offs_beyond_xmm = 0;
     if (cci == NULL)
@@ -4293,7 +4254,7 @@ sandbox_rep_instr(dcontext_t *dcontext, instrlist_t *ilist, instr_t *instr, inst
     app_pc after_write;
     uint opndsize = opnd_size_in_bytes(opnd_get_size(instr_get_dst(instr,0)));
     uint flags =
-        instr_eflags_to_fragment_eflags(forward_eflags_analysis(dcontext, ilist, next));
+        instr_cpsr_to_fragment_cpsr(forward_eflags_analysis(dcontext, ilist, next));
     bool use_tls = IF_X64_ELSE(true, false);
     instr_t *next_app = next;
     DOLOG(3, LOG_INTERP, { loginst(dcontext, 3, instr, "writes memory"); });
@@ -4441,7 +4402,7 @@ sandbox_write(dcontext_t *dcontext, instrlist_t *ilist, instr_t *instr, instr_t 
     app_pc after_write = NULL;
     uint opndsize = opnd_size_in_bytes(opnd_get_size(op));
     uint flags =
-        instr_eflags_to_fragment_eflags(forward_eflags_analysis(dcontext, ilist, next));
+        instr_cpsr_to_fragment_cpsr(forward_eflags_analysis(dcontext, ilist, next));
     bool use_tls = IF_X64_ELSE(true, false);
     instr_t *next_app = next;
     DOLOG(3, LOG_INTERP, { loginst(dcontext, 3, instr, "writes memory"); });

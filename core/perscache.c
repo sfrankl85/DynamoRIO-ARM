@@ -887,6 +887,8 @@ void
 transfer_coarse_stub(dcontext_t *dcontext, coarse_freeze_info_t *freeze_info,
                      cache_pc stub, bool trace_head, bool replace_outgoing)
 {
+#ifndef ARM
+//TODO SJF Comment out for AMR
     cache_pc tgt = entrance_stub_jmp_target(stub);
     cache_pc pc = freeze_info->stubs_cur_pc; /* target pc */
     uint sz;
@@ -935,6 +937,7 @@ transfer_coarse_stub(dcontext_t *dcontext, coarse_freeze_info_t *freeze_info,
     }
     pc = (cache_pc) ALIGN_FORWARD(pc, coarse_stub_alignment(freeze_info->src_info));
     freeze_info->stubs_cur_pc = pc;
+#endif
 }
 
 void

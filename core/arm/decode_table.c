@@ -124,12 +124,340 @@ const instr_info_t invalid_instr =
     {OP_INVALID,  0x000000, "(bad)", xx, xx, xx, xx, xx, no, x, NA};
 
 /* KEY: imm=immediate, rsr=register shifted register, reg=register, sp=stackpointer */
-/* All ARM instructions are fixed length at 32 bits. 
-   The opcode is split across multiple bits. TODO may need another opcode */
 /* TODO Add them alphabeticaly for the moment as this is how they are declared inside 
-        the ARM tech manual. Change to numerical ordering?? <- No point. No advantages */
+        the ARMv7-A/R tech ref manual. Change to numerical ordering?? <- No point. No advantages */
+
+/* Thumb instrs are 16 bits or two 16 bit instrs. For the 32 bit ones define only one OP_ type */
+/* For 16 bit thumbs vvv */
+/* opcode is bits[15,10], opcode2 is bits[9,6] */
+/* For 32 bit thumbs vvv */
+/* opcode1 is bits[15,10] in instr 1. opcode2 is bits[9,4] in instr 1 Ignore instr_type */
+const instr_info_t thumb_instrs[] = {
+    {OP_T_add_reg,  0x1, 0x1, "T_add_reg",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_add_reg()*/
+    {OP_T_adc_reg,  0x1, 0x1, "T_adc_reg",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_adc_reg()*/
+    {OP_T_add_low_reg,  0x1, 0x1, "T_add_low_reg",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_add_low_reg()*/
+    {OP_T_add_high_reg,  0x1, 0x1, "T_add_high_reg",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_add_high_reg()*/
+    {OP_T_add_sp_imm,  0x1, 0x1, "T_add_sp_imm",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_add_sp_imm()*/
+    {OP_T_add_imm_3,  0x1, 0x1, "T_add_imm_3",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_add_imm_3()*/
+    {OP_T_add_imm_8,  0x1, 0x1, "T_add_imm_8",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_add_imm_8()*/
+    {OP_T_and_reg,  0x1, 0x1, "T_and_reg",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_and_reg()*/
+    {OP_T_asr_imm,  0x1, 0x1, "T_asr_imm",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_asr_imm()*/
+    {OP_T_asr_reg,  0x1, 0x1, "T_asr_reg",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_asr_reg()*/
+    {OP_T_b,  0x1, 0x1, "T_b",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_b()*/
+    {OP_T_bic_reg,  0x1, 0x1, "T_bic_reg",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_bic_reg()*/
+    {OP_T_bkpt,  0x1, 0x1, "T_bkpt",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_bkpt()*/
+    {OP_T_blx_ref,  0x1, 0x1, "T_blx_ref",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_blx_ref()*/
+    {OP_T_bx,  0x1, 0x1, "T_bx",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_bx()*/
+    {OP_T_cbnz,  0x1, 0x1, "T_cbnz",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_cbnz()*/
+    {OP_T_cbnz_2,  0x1, 0x1, "T_cbnz_2",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_cbnz_2()*/
+    {OP_T_cbz,  0x1, 0x1, "T_cbz",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_cbz()*/
+    {OP_T_cbz_2,  0x1, 0x1, "T_cbz_2",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_cbz_2()*/
+    {OP_T_cmn_reg,  0x1, 0x1, "T_cmn_reg",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_cmn_reg()*/
+    {OP_T_cmp_high_reg,  0x1, 0x1, "T_cmp_high_reg",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_cmp_high_reg()*/
+    {OP_T_cmp_imm,  0x1, 0x1, "T_cmp_imm",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_cmp_imm()*/
+    {OP_T_cmp_reg,  0x1, 0x1, "T_cmp_reg",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_cmp_reg()*/
+    {OP_T_cps,  0x1, 0x1, "T_cps",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_cps()*/
+    {OP_T_eor_reg,  0x1, 0x1, "T_eor_reg",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_eor_reg()*/
+    {OP_T_it,  0x1, 0x1, "T_it",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_it()*/
+    {OP_T_ldrb_imm,  0x1, 0x1, "T_ldrb_imm",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_ldrb_imm()*/
+    {OP_T_ldrb_reg,  0x1, 0x1, "T_ldrb_reg",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_ldrb_reg()*/
+    {OP_T_ldrh_imm,  0x1, 0x1, "T_ldrh_imm",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_ldrh_imm()*/
+    {OP_T_ldrh_reg,  0x1, 0x1, "T_ldrh_reg",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_ldrh_reg()*/
+    {OP_T_ldrsb_reg,  0x1, 0x1, "T_ldrsb_reg",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_ldrsb_reg()*/
+    {OP_T_ldrsh_reg,  0x1, 0x1, "T_ldrsh_reg",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_ldrsh_reg()*/
+    {OP_T_ldr_imm,  0x1, 0x1, "T_ldr_imm",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_ldr_imm()*/
+    {OP_T_ldr_reg,  0x1, 0x1, "T_ldr_reg",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_ldr_reg()*/
+    {OP_T_lsl_imm,  0x1, 0x1, "T_lsl_imm",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_lsl_imm()*/
+    {OP_T_lsl_reg,  0x1, 0x1, "T_lsl_reg",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_lsl_reg()*/
+    {OP_T_lsr_imm,  0x1, 0x1, "T_lsr_imm",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_lsr_imm()*/
+    {OP_T_lsr_reg,  0x1, 0x1, "T_lsr_reg",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_lsr_reg()*/
+    {OP_T_mov_imm,  0x1, 0x1, "T_mov_imm",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_mov_imm()*/
+    {OP_T_mov_high_reg,  0x1, 0x1, "T_mov_high_reg",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_mov_high_reg()*/
+    {OP_T_mov_low_reg,  0x1, 0x1, "T_mov_low_reg",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_mov_low_reg()*/
+    {OP_T_mvn_reg,  0x1, 0x1, "T_mvn_reg",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_mvn_reg()*/
+    {OP_T_mul,  0x1, 0x1, "T_mul",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_mul()*/
+    {OP_T_nop,  0x1, 0x1, "T_nop",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_nop()*/
+    {OP_T_orr_reg,  0x1, 0x1, "T_orr_reg",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_orr_reg()*/
+    {OP_T_pop,  0x1, 0x1, "T_pop",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_pop()*/
+    {OP_T_push,  0x1, 0x1, "T_push",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_push()*/
+    {OP_T_rev,  0x1, 0x1, "T_rev",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_rev()*/
+    {OP_T_rev16,  0x1, 0x1, "T_rev16",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_rev16()*/
+    {OP_T_revsh,  0x1, 0x1, "T_revsh",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_revsh()*/
+    {OP_T_ror_reg,  0x1, 0x1, "T_ror_reg",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_ror_reg()*/
+    {OP_T_rsb_imm,  0x1, 0x1, "T_rsb_imm",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_rsb_imm()*/
+    {OP_T_sbc_reg,  0x1, 0x1, "T_sbc_reg",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_sbc_reg()*/
+    {OP_T_setend,  0x1, 0x1, "T_setend",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_setend()*/
+    {OP_T_sev,  0x1, 0x1, "T_sev",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_sev()*/
+    {OP_T_str_imm,  0x1, 0x1, "T_str_imm",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_str_imm()*/
+    {OP_T_str_reg,  0x1, 0x1, "T_str_reg",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_str_reg()*/
+    {OP_T_str_sp,  0x1, 0x1, "T_str_sp",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_str_sp()*/
+    {OP_T_strb_imm,  0x1, 0x1, "T_strb_imm",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_strb_imm()*/
+    {OP_T_strb_reg,  0x1, 0x1, "T_strb_reg",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_strb_reg()*/
+    {OP_T_strh_imm,  0x1, 0x1, "T_strh_imm",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_strh_imm()*/
+    {OP_T_strh_reg,  0x1, 0x1, "T_strh_reg",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_strh_reg()*/
+    {OP_T_sub_sp_imm,  0x1, 0x1, "T_sub_sp_imm",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_sub_sp_imm()*/
+    {OP_T_sub_imm_8,  0x1, 0x1, "T_sub_imm_8",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_sub_imm_8()*/
+    {OP_T_sub_reg,  0x1, 0x1, "T_sub_reg",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_sub_reg()*/
+    {OP_T_sub_imm_3,  0x1, 0x1, "T_sub_imm_3",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_sub_imm_3()*/
+    {OP_T_svc,  0x1, 0x1, "T_svc",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_svc()*/
+    {OP_T_sxth,  0x1, 0x1, "T_sxth",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_sxth()*/
+    {OP_T_sxtb,  0x1, 0x1, "T_sxtb",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_sxtb()*/
+    {OP_T_tst_reg,  0x1, 0x1, "T_tst_reg",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_tst_reg()*/
+    {OP_T_uxtb,  0x1, 0x1, "T_uxtb",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_uxtb()*/
+    {OP_T_uxth,  0x1, 0x1, "T_uxth",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_uxth()*/
+    {OP_T_wfe,  0x1, 0x1, "T_wfe",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_wfe()*/
+    {OP_T_wfi,  0x1, 0x1, "T_wfi",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_wfi()*/
+    {OP_T_yield,  0x1, 0x1, "T_yield",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_yield()*/
+    {OP_T_32_and_imm,  0x1, 0x1, "T_32_and_imm",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_and_imm()*/
+    {OP_T_32_tst_imm,  0x1, 0x1, "T_32_tst_imm",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_tst_imm()*/
+    {OP_T_32_bic_imm,  0x1, 0x1, "T_32_bic_imm",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_bic_imm()*/
+    {OP_T_32_orr_imm,  0x1, 0x1, "T_32_orr_imm",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_orr_imm()*/
+    {OP_T_32_mov_imm,  0x1, 0x1, "T_32_mov_imm",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_mov_imm()*/
+    {OP_T_32_orn_imm,  0x1, 0x1, "T_32_orn_imm",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_orn_imm()*/
+    {OP_T_32_mvn_imm,  0x1, 0x1, "T_32_mvn_imm",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_mvn_imm()*/
+    {OP_T_32_eor_imm,  0x1, 0x1, "T_32_eor_imm",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_eor_imm()*/
+    {OP_T_32_teq_imm,  0x1, 0x1, "T_32_teq_imm",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_teq_imm()*/
+    {OP_T_32_add_imm,  0x1, 0x1, "T_32_add_imm",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_add_imm()*/
+    {OP_T_32_cmn_imm,  0x1, 0x1, "T_32_cmn_imm",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_cmn_imm()*/
+    {OP_T_32_adc_imm,  0x1, 0x1, "T_32_adc_imm",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_adc_imm()*/
+    {OP_T_32_sbc_imm,  0x1, 0x1, "T_32_sbc_imm",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_sbc_imm()*/
+    {OP_T_32_sub_imm,  0x1, 0x1, "T_32_sub_imm",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_sub_imm()*/
+    {OP_T_32_cmp_imm,  0x1, 0x1, "T_32_cmp_imm",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_cmp_imm()*/
+    {OP_T_32_rsb_imm,  0x1, 0x1, "T_32_rsb_imm",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_rsb_imm()*/
+    {OP_T_32_add_wide,  0x1, 0x1, "T_32_add_wide",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_add_wide()*/
+    {OP_T_32_adr,  0x1, 0x1, "T_32_adr",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_adr()*/
+    {OP_T_32_mov_wide,  0x1, 0x1, "T_32_mov_wide",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_mov_wide()*/
+    {OP_T_32_adr_2,  0x1, 0x1, "T_32_adr_2",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_adr_2()*/
+    {OP_T_32_movt_top,  0x1, 0x1, "T_32_movt_top",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_movt_top()*/
+    {OP_T_32_ssat,  0x1, 0x1, "T_32_ssat",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_ssat()*/
+    {OP_T_32_ssat16,  0x1, 0x1, "T_32_ssat16",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_ssat16()*/
+    {OP_T_32_sbfx,  0x1, 0x1, "T_32_sbfx",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_sbfx()*/
+    {OP_T_32_bfi,  0x1, 0x1, "T_32_bfi",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_bfi()*/
+    {OP_T_32_bfc,  0x1, 0x1, "T_32_bfc",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_bfc()*/
+    {OP_T_32_usat16,  0x1, 0x1, "T_32_usat16",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_usat16()*/
+    {OP_T_32_ubfx,  0x1, 0x1, "T_32_ubfx",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_ubfx()*/
+    {OP_T_32_b,  0x1, 0x1, "T_32_b",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_b()*/
+    {OP_T_32_msr_reg_app,  0x1, 0x1, "T_32_msr_reg_app",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_msr_reg_app()*/
+    {OP_T_32_msr_reg_sys,  0x1, 0x1, "T_32_msr_reg_sys",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_msr_reg_sys()*/
+    {OP_T_32_bxj,  0x1, 0x1, "T_32_bxj",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_bxj()*/
+    {OP_T_32_subs,  0x1, 0x1, "T_32_subs",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_subs()*/
+    {OP_T_32_mrs,  0x1, 0x1, "T_32_mrs",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_mrs()*/
+    {OP_T_32_smc,  0x1, 0x1, "T_32_smc",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_smc()*/
+    {OP_T_32_b_2,  0x1, 0x1, "T_32_b_2",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_b_2()*/
+    {OP_T_32_blx_imm,  0x1, 0x1, "T_32_blx_imm",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_blx_imm()*/
+    {OP_T_32_bl,  0x1, 0x1, "T_32_bl",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_bl()*/
+    {OP_T_32_cps,  0x1, 0x1, "T_32_cps",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_cps()*/
+    {OP_T_32_nop,  0x1, 0x1, "T_32_nop",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_nop()*/
+    {OP_T_32_yield,  0x1, 0x1, "T_32_yield",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_yield()*/
+    {OP_T_32_wfe,  0x1, 0x1, "T_32_wfe",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_wfe()*/
+    {OP_T_32_wfi,  0x1, 0x1, "T_32_wfi",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_wfi()*/
+    {OP_T_32_sev,  0x1, 0x1, "T_32_sev",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_sev()*/
+    {OP_T_32_dbg,  0x1, 0x1, "T_32_dbg",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_dbg()*/
+    {OP_T_32_enterx,  0x1, 0x1, "T_32_enterx",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_enterx()*/
+    {OP_T_32_leavex,  0x1, 0x1, "T_32_leavex",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_leavex()*/
+    {OP_T_32_clrex,  0x1, 0x1, "T_32_clrex",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_clrex()*/
+    {OP_T_32_dsb,  0x1, 0x1, "T_32_dsb",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_dsb()*/
+    {OP_T_32_dmb,  0x1, 0x1, "T_32_dmb",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_dmb()*/
+    {OP_T_32_isb,  0x1, 0x1, "T_32_isb",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_isb()*/
+    {OP_T_32_srs,  0x1, 0x1, "T_32_srs",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_srs()*/
+    {OP_T_32_rfe,  0x1, 0x1, "T_32_rfe",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_rfe()*/
+    {OP_T_32_stm,  0x1, 0x1, "T_32_stm",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_stm()*/
+    {OP_T_32_stmia,  0x1, 0x1, "T_32_stmia",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_stmia()*/
+    {OP_T_32_stmea,  0x1, 0x1, "T_32_stmea",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_stmea()*/
+    {OP_T_32_ldm,  0x1, 0x1, "T_32_ldm",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_ldm()*/
+    {OP_T_32_ldmia,  0x1, 0x1, "T_32_ldmia",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_ldmia()*/
+    {OP_T_32_ldmfd,  0x1, 0x1, "T_32_ldmfd",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_ldmfd()*/
+    {OP_T_32_pop,  0x1, 0x1, "T_32_pop",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_pop()*/
+    {OP_T_32_stmdb,  0x1, 0x1, "T_32_stmdb",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_stmdb()*/
+    {OP_T_32_stmfd,  0x1, 0x1, "T_32_stmfd",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_stmfd()*/
+    {OP_T_32_push,  0x1, 0x1, "T_32_push",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_push()*/
+    {OP_T_32_ldmdb,  0x1, 0x1, "T_32_ldmdb",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_ldmdb()*/
+    {OP_T_32_ldmea,  0x1, 0x1, "T_32_ldmea",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_ldmea()*/
+    {OP_T_32_strex,  0x1, 0x1, "T_32_strex",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_strex()*/
+    {OP_T_32_ldrex,  0x1, 0x1, "T_32_ldrex",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_ldrex()*/
+    {OP_T_32_strd_imm,  0x1, 0x1, "T_32_strd_imm",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_strd_imm()*/
+    {OP_T_32_ldrd_imm,  0x1, 0x1, "T_32_ldrd_imm",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_ldrd_imm()*/
+    {OP_T_32_ldrd_lit,  0x1, 0x1, "T_32_ldrd_lit",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_ldrd_lit()*/
+    {OP_T_32_strexb,  0x1, 0x1, "T_32_strexb",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_strexb()*/
+    {OP_T_32_strexh,  0x1, 0x1, "T_32_strexh",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_strexh()*/
+    {OP_T_32_strexd,  0x1, 0x1, "T_32_strexd",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_strexd()*/
+    {OP_T_32_tbb,  0x1, 0x1, "T_32_tbb",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_tbb()*/
+    {OP_T_32_tbh,  0x1, 0x1, "T_32_tbh",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_tbh()*/
+    {OP_T_32_ldrexb,  0x1, 0x1, "T_32_ldrexb",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_ldrexb()*/
+    {OP_T_32_ldrexh,  0x1, 0x1, "T_32_ldrexh",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_ldrexh()*/
+    {OP_T_32_ldrexd,  0x1, 0x1, "T_32_ldrexd",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_ldrexd()*/
+    {OP_T_32_ldr_imm,  0x1, 0x1, "T_32_ldr_imm",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_ldr_imm()*/
+    {OP_T_32_ldrt,  0x1, 0x1, "T_32_ldrt",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_ldrt()*/
+    {OP_T_32_ldr_reg,  0x1, 0x1, "T_32_ldr_reg",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_ldr_reg()*/
+    {OP_T_32_ldr_lit,  0x1, 0x1, "T_32_ldr_lit",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_ldr_lit()*/
+    {OP_T_32_ldrh_lit,  0x1, 0x1, "T_32_ldrh_lit",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_ldrh_lit()*/
+    {OP_T_32_ldrh_imm,  0x1, 0x1, "T_32_ldrh_imm",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_ldrh_imm()*/
+    {OP_T_32_ldrht,  0x1, 0x1, "T_32_ldrht",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_ldrht()*/
+    {OP_T_32_ldrh_reg,  0x1, 0x1, "T_32_ldrh_reg",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_ldrh_reg()*/
+    {OP_T_32_ldrsh_imm,  0x1, 0x1, "T_32_ldrsh_imm",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_ldrsh_imm()*/
+    {OP_T_32_ldrsht,  0x1, 0x1, "T_32_ldrsht",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_ldrsht()*/
+    {OP_T_32_ldrsh_reg,  0x1, 0x1, "T_32_ldrsh_reg",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_ldrsh_reg()*/
+    {OP_T_32_ldrb_lit,  0x1, 0x1, "T_32_ldrb_lit",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_ldrb_lit()*/
+    {OP_T_32_ldrb_imm,  0x1, 0x1, "T_32_ldrb_imm",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_ldrb_imm()*/
+    {OP_T_32_ldrbt,  0x1, 0x1, "T_32_ldrbt",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_ldrbt()*/
+    {OP_T_32_ldrb_reg,  0x1, 0x1, "T_32_ldrb_reg",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_ldrb_reg()*/
+    {OP_T_32_ldrsb_lit,  0x1, 0x1, "T_32_ldrsb_lit",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_ldrsb_lit()*/
+    {OP_T_32_ldrsb_imm,  0x1, 0x1, "T_32_ldrsb_imm",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_ldrsb_imm()*/
+    {OP_T_32_ldrsbt,  0x1, 0x1, "T_32_ldrsbt",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_ldrsbt()*/
+    {OP_T_32_ldrsb,  0x1, 0x1, "T_32_ldrsb",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_ldrsb()*/
+    {OP_T_32_pld_imm,  0x1, 0x1, "T_32_pld_imm",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_pld_imm()*/
+    {OP_T_32_pld_lit,  0x1, 0x1, "T_32_pld_lit",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_pld_lit()*/
+    {OP_T_32_pld_reg,  0x1, 0x1, "T_32_pld_reg",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_pld_reg()*/
+    {OP_T_32_pli_imm,  0x1, 0x1, "T_32_pli_imm",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_pli_imm()*/
+    {OP_T_32_pli_lit,  0x1, 0x1, "T_32_pli_lit",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_pli_lit()*/
+    {OP_T_32_pli_reg,  0x1, 0x1, "T_32_pli_reg",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_pli_reg()*/
+    {OP_T_32_strb_imm,  0x1, 0x1, "T_32_strb_imm",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_strb_imm()*/
+    {OP_T_32_strbt,  0x1, 0x1, "T_32_strbt",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_strbt()*/
+    {OP_T_32_strb_reg,  0x1, 0x1, "T_32_strb_reg",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_strb_reg()*/
+    {OP_T_32_strh_imm,  0x1, 0x1, "T_32_strh_imm",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_strh_imm()*/
+    {OP_T_32_strht,  0x1, 0x1, "T_32_strht",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_strht()*/
+    {OP_T_32_strh_reg,  0x1, 0x1, "T_32_strh_reg",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_strh_reg()*/
+    {OP_T_32_str_imm,  0x1, 0x1, "T_32_str_imm",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_str_imm()*/
+    {OP_T_32_strt,  0x1, 0x1, "T_32_strt",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_strt()*/
+    {OP_T_32_str_reg,  0x1, 0x1, "T_32_str_reg",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_str_reg()*/
+    {OP_T_32_and_reg,  0x1, 0x1, "T_32_and_reg",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_and_reg()*/
+    {OP_T_32_tst_reg,  0x1, 0x1, "T_32_tst_reg",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_tst_reg()*/
+    {OP_T_32_bic_reg,  0x1, 0x1, "T_32_bic_reg",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_bic_reg()*/
+    {OP_T_32_orr_reg,  0x1, 0x1, "T_32_orr_reg",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_orr_reg()*/
+    {OP_T_32_mov_reg,  0x1, 0x1, "T_32_mov_reg",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_mov_reg()*/
+    {OP_T_32_orn_reg,  0x1, 0x1, "T_32_orn_reg",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_orn_reg()*/
+    {OP_T_32_mvn_reg,  0x1, 0x1, "T_32_mvn_reg",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_mvn_reg()*/
+    {OP_T_32_eor_reg,  0x1, 0x1, "T_32_eor_reg",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_eor_reg()*/
+    {OP_T_32_teq_reg,  0x1, 0x1, "T_32_teq_reg",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_teq_reg()*/
+    {OP_T_32_pkh,  0x1, 0x1, "T_32_pkh",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_pkh()*/
+    {OP_T_32_add_reg,  0x1, 0x1, "T_32_add_reg",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_add_reg()*/
+    {OP_T_32_cmn_reg,  0x1, 0x1, "T_32_cmn_reg",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_cmn_reg()*/
+    {OP_T_32_adc_reg,  0x1, 0x1, "T_32_adc_reg",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_adc_reg()*/
+    {OP_T_32_sbc_reg,  0x1, 0x1, "T_32_sbc_reg",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_sbc_reg()*/
+    {OP_T_32_sub_reg,  0x1, 0x1, "T_32_sub_reg",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_sub_reg()*/
+    {OP_T_32_cmp_reg,  0x1, 0x1, "T_32_cmp_reg",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_cmp_reg()*/
+    {OP_T_32_rsb_reg,  0x1, 0x1, "T_32_rsb_reg",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_rsb_reg()*/
+    {OP_T_32_lsl_reg,  0x1, 0x1, "T_32_lsl_reg",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_lsl_reg()*/
+    {OP_T_32_lsr_reg,  0x1, 0x1, "T_32_lsr_reg",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_lsr_reg()*/
+    {OP_T_32_asr_reg,  0x1, 0x1, "T_32_asr_reg",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_asr_reg()*/
+    {OP_T_32_ror_reg,  0x1, 0x1, "T_32_ror_reg",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_ror_reg()*/
+    {OP_T_32_sxtah,  0x1, 0x1, "T_32_sxtah",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_sxtah()*/
+    {OP_T_32_sxth,  0x1, 0x1, "T_32_sxth",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_sxth()*/
+    {OP_T_32_uxtah,  0x1, 0x1, "T_32_uxtah",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_uxtah()*/
+    {OP_T_32_uxth,  0x1, 0x1, "T_32_uxth",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_uxth()*/
+    {OP_T_32_sxtab16,  0x1, 0x1, "T_32_sxtab16",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_sxtab16()*/
+    {OP_T_32_sxtb16,  0x1, 0x1, "T_32_sxtb16",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_sxtb16()*/
+    {OP_T_32_uxtab16,  0x1, 0x1, "T_32_uxtab16",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_uxtab16()*/
+    {OP_T_32_uxtb16,  0x1, 0x1, "T_32_uxtb16",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_uxtb16()*/
+    {OP_T_32_sxtab,  0x1, 0x1, "T_32_sxtab",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_sxtab()*/
+    {OP_T_32_sxtb,  0x1, 0x1, "T_32_sxtb",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_sxtb()*/
+    {OP_T_32_uxtab,  0x1, 0x1, "T_32_uxtab",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_uxtab()*/
+    {OP_T_32_uxtb,  0x1, 0x1, "T_32_uxtb",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_uxtb()*/
+    {OP_T_32_sadd16,  0x1, 0x1, "T_32_sadd16",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_sadd16()*/
+    {OP_T_32_sasx,  0x1, 0x1, "T_32_sasx",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_sasx()*/
+    {OP_T_32_ssax,  0x1, 0x1, "T_32_ssax",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_ssax()*/
+    {OP_T_32_ssub16,  0x1, 0x1, "T_32_ssub16",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_ssub16()*/
+    {OP_T_32_sadd8,  0x1, 0x1, "T_32_sadd8",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_sadd8()*/
+    {OP_T_32_ssub8,  0x1, 0x1, "T_32_ssub8",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_ssub8()*/
+    {OP_T_32_qadd16,  0x1, 0x1, "T_32_qadd16",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_qadd16()*/
+    {OP_T_32_qasx,  0x1, 0x1, "T_32_qasx",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_qasx()*/
+    {OP_T_32_qsax,  0x1, 0x1, "T_32_qsax",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_qsax()*/
+    {OP_T_32_qsub16,  0x1, 0x1, "T_32_qsub16",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_qsub16()*/
+    {OP_T_32_qadd8,  0x1, 0x1, "T_32_qadd8",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_qadd8()*/
+    {OP_T_32_qsub8,  0x1, 0x1, "T_32_qsub8",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_qsub8()*/
+    {OP_T_32_shadd16,  0x1, 0x1, "T_32_shadd16",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_shadd16()*/
+    {OP_T_32_shasx,  0x1, 0x1, "T_32_shasx",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_shasx()*/
+    {OP_T_32_shsax,  0x1, 0x1, "T_32_shsax",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_shsax()*/
+    {OP_T_32_shsub16,  0x1, 0x1, "T_32_shsub16",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_shsub16()*/
+    {OP_T_32_shadd8,  0x1, 0x1, "T_32_shadd8",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_shadd8()*/
+    {OP_T_32_shsub8,  0x1, 0x1, "T_32_shsub8",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_shsub8()*/
+    {OP_T_32_uadd16,  0x1, 0x1, "T_32_uadd16",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_uadd16()*/
+    {OP_T_32_uasx,  0x1, 0x1, "T_32_uasx",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_uasx()*/
+    {OP_T_32_usax,  0x1, 0x1, "T_32_usax",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_usax()*/
+    {OP_T_32_usub16,  0x1, 0x1, "T_32_usub16",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_usub16()*/
+    {OP_T_32_uadd8,  0x1, 0x1, "T_32_uadd8",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_uadd8()*/
+    {OP_T_32_usub8,  0x1, 0x1, "T_32_usub8",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_usub8()*/
+    {OP_T_32_uqadd16,  0x1, 0x1, "T_32_uqadd16",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_uqadd16()*/
+    {OP_T_32_uqasx,  0x1, 0x1, "T_32_uqasx",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_uqasx()*/
+    {OP_T_32_uqsax,  0x1, 0x1, "T_32_uqsax",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_uqsax()*/
+    {OP_T_32_uqsub16,  0x1, 0x1, "T_32_uqsub16",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_uqsub16()*/
+    {OP_T_32_uqadd8,  0x1, 0x1, "T_32_uqadd8",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_uqadd8()*/
+    {OP_T_32_uqsub8,  0x1, 0x1, "T_32_uqsub8",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_uqsub8()*/
+    {OP_T_32_uhadd16,  0x1, 0x1, "T_32_uhadd16",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_uhadd16()*/
+    {OP_T_32_uhasx,  0x1, 0x1, "T_32_uhasx",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_uhasx()*/
+    {OP_T_32_uhsax,  0x1, 0x1, "T_32_uhsax",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_uhsax()*/
+    {OP_T_32_uhsub16,  0x1, 0x1, "T_32_uhsub16",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_uhsub16()*/
+    {OP_T_32_uhadd8,  0x1, 0x1, "T_32_uhadd8",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_uhadd8()*/
+    {OP_T_32_uhsub8,  0x1, 0x1, "T_32_uhsub8",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_uhsub8()*/
+    {OP_T_32_qadd,  0x1, 0x1, "T_32_qadd",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_qadd()*/
+    {OP_T_32_qdadd,  0x1, 0x1, "T_32_qdadd",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_qdadd()*/
+    {OP_T_32_qsub,  0x1, 0x1, "T_32_qsub",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_qsub()*/
+    {OP_T_32_qdsub,  0x1, 0x1, "T_32_qdsub",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_qdsub()*/
+    {OP_T_32_rev,  0x1, 0x1, "T_32_rev",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_rev()*/
+    {OP_T_32_rev16,  0x1, 0x1, "T_32_rev16",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_rev16()*/
+    {OP_T_32_rbit,  0x1, 0x1, "T_32_rbit",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_rbit()*/
+    {OP_T_32_revsh,  0x1, 0x1, "T_32_revsh",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_revsh()*/
+    {OP_T_32_sel,  0x1, 0x1, "T_32_sel",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_sel()*/
+    {OP_T_32_clz,  0x1, 0x1, "T_32_clz",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_clz()*/
+    {OP_T_32_mla,  0x1, 0x1, "T_32_mla",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_mla()*/
+    {OP_T_32_mul,  0x1, 0x1, "T_32_mul",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_mul()*/
+    {OP_T_32_mls,  0x1, 0x1, "T_32_mls",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_mls()*/
+    {OP_T_32_smlabb,  0x1, 0x1, "T_32_smlabb",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_smlabb()*/
+    {OP_T_32_smlabt,  0x1, 0x1, "T_32_smlabt",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_smlabt()*/
+    {OP_T_32_smlatb,  0x1, 0x1, "T_32_smlatb",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_smlatb()*/
+    {OP_T_32_smlatt,  0x1, 0x1, "T_32_smlatt",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_smlatt()*/
+    {OP_T_32_smulbb,  0x1, 0x1, "T_32_smulbb",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_smulbb()*/
+    {OP_T_32_smulbt,  0x1, 0x1, "T_32_smulbt",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_smulbt()*/
+    {OP_T_32_smultb,  0x1, 0x1, "T_32_smultb",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_smultb()*/
+    {OP_T_32_smultt,  0x1, 0x1, "T_32_smultt",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_smultt()*/
+    {OP_T_32_smlad,  0x1, 0x1, "T_32_smlad",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_smlad()*/
+    {OP_T_32_smuad,  0x1, 0x1, "T_32_smuad",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_smuad()*/
+    {OP_T_32_smlawb,  0x1, 0x1, "T_32_smlawb",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_smlawb()*/
+    {OP_T_32_smlawt,  0x1, 0x1, "T_32_smlawt",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_smlawt()*/
+    {OP_T_32_smulwb,  0x1, 0x1, "T_32_smulwb",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_smulwb()*/
+    {OP_T_32_smulwt,  0x1, 0x1, "T_32_smulwt",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_smulwt()*/
+    {OP_T_32_smlsd,  0x1, 0x1, "T_32_smlsd",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_smlsd()*/
+    {OP_T_32_smusd,  0x1, 0x1, "T_32_smusd",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_smusd()*/
+    {OP_T_32_smmla,  0x1, 0x1, "T_32_smmla",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_smmla()*/
+    {OP_T_32_smmul,  0x1, 0x1, "T_32_smmul",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_smmul()*/
+    {OP_T_32_smmls,  0x1, 0x1, "T_32_smmls",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_smmls()*/
+    {OP_T_32_usad8,  0x1, 0x1, "T_32_usad8",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_usad8()*/
+    {OP_T_32_usada8,  0x1, 0x1, "T_32_usada8",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_usada8()*/
+    {OP_T_32_smull,  0x1, 0x1, "T_32_smull",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_smull()*/
+    {OP_T_32_sdiv,  0x1, 0x1, "T_32_sdiv",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_sdiv()*/
+    {OP_T_32_umull,  0x1, 0x1, "T_32_umull",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_umull()*/
+    {OP_T_32_udiv,  0x1, 0x1, "T_32_udiv",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_udiv()*/
+    {OP_T_32_smlal,  0x1, 0x1, "T_32_smlal",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_smlal()*/
+    {OP_T_32_smlalbb,  0x1, 0x1, "T_32_smlalbb",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_smlalbb()*/
+    {OP_T_32_smlalbt,  0x1, 0x1, "T_32_smlalbt",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_smlalbt()*/
+    {OP_T_32_smlaltb,  0x1, 0x1, "T_32_smlaltb",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_smlaltb()*/
+    {OP_T_32_smlaltt,  0x1, 0x1, "T_32_smlaltt",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_smlaltt()*/
+    {OP_T_32_smlald,  0x1, 0x1, "T_32_smlald",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_smlald()*/
+    {OP_T_32_smlsld,  0x1, 0x1, "T_32_smlsld",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_smlsld()*/
+    {OP_T_32_umlal,  0x1, 0x1, "T_32_umlal",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_umlal()*/
+    {OP_T_32_umaal,  0x1, 0x1, "T_32_umaal",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_umaal()*/
+    {OP_T_32_stc,  0x1, 0x1, "T_32_stc",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_stc()*/
+    {OP_T_32_stc2,  0x1, 0x1, "T_32_stc2",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_stc2()*/
+    {OP_T_32_ldc_imm,  0x1, 0x1, "T_32_ldc_imm",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_ldc_imm()*/
+    {OP_T_32_ldc_lit,  0x1, 0x1, "T_32_ldc_lit",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_ldc_lit()*/
+    {OP_T_32_ldc2_imm,  0x1, 0x1, "T_32_ldc2_imm",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_ldc2_imm()*/
+    {OP_T_32_ldc2_lit,  0x1, 0x1, "T_32_ldc2_lit",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_ldc2_lit()*/
+    {OP_T_32_mcrr,  0x1, 0x1, "T_32_mcrr",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_mcrr()*/
+    {OP_T_32_mcrr2,  0x1, 0x1, "T_32_mcrr2",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_mcrr2()*/
+    {OP_T_32_mrrc,  0x1, 0x1, "T_32_mrrc",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_mrrc()*/
+    {OP_T_32_mrrc2,  0x1, 0x1, "T_32_mrrc2",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_mrrc2()*/
+    {OP_T_32_cdp,  0x1, 0x1, "T_32_cdp",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_cdp()*/
+    {OP_T_32_cdp2,  0x1, 0x1, "T_32_cdp2",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_cdp2()*/
+    {OP_T_32_mcr,  0x1, 0x1, "T_32_mcr",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_mcr()*/
+    {OP_T_32_mcr2,  0x1, 0x1, "T_32_mcr2",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_mcr2()*/
+    {OP_T_32_mrc,  0x1, 0x1, "T_32_mrc",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_mrc()*/
+    {OP_T_32_mrc2,  0x1, 0x1, "T_32_mrc2",  xx, xx, xx,  xx,  xx,  0x0,  0x0, x, END_LIST}, /*T_32_mrc2()*/
+};
+
 
 /* At intruction F* page A8-100 in ARMv7-A tech manual. */
+/* All ARM instructions are fixed length at 32 bits. 
+   The opcode is split across multiple bits. TODO may need another opcode */
 const instr_info_t armv7a_instrs[] = {
     {OP_adc_imm,     dpi, 0xa, "adc_imm",  Ra, xx, Ra,  I12, xx,  0x0, 0x0,  x, END_LIST}, /*adc_imm()*/
     {OP_adc_reg,     dpe, 0xa, "adc_reg",  Ra, xx, Ra,  Ra,  I5,  0x0, 0x0,  x, END_LIST}, /*adc_reg()*/
@@ -1070,4 +1398,328 @@ const instr_info_t * const op_instr[] =
     /* OP_wfe */    &armv7a_instrs[456],
     /* OP_wfi */    &armv7a_instrs[457],
     /* OP_yield */    &armv7a_instrs[458],
+
+    /* Thumb + Thumb 32 bit instructions */
+
+    /* OP_T_add_reg */    &thumb_instrs[464],
+    /* OP_T_adc_reg */    &thumb_instrs[465],
+    /* OP_T_add_low_reg */    &thumb_instrs[466],
+    /* OP_T_add_high_reg */    &thumb_instrs[467],
+    /* OP_T_add_sp_imm */    &thumb_instrs[468],
+    /* OP_T_add_imm_3 */    &thumb_instrs[469],
+    /* OP_T_add_imm_8 */    &thumb_instrs[470],
+    /* OP_T_and_reg */    &thumb_instrs[471],
+    /* OP_T_asr_imm */    &thumb_instrs[472],
+    /* OP_T_asr_reg */    &thumb_instrs[473],
+    /* OP_T_b */    &thumb_instrs[474],
+    /* OP_T_bic_reg */    &thumb_instrs[475],
+    /* OP_T_bkpt */    &thumb_instrs[476],
+    /* OP_T_blx_ref */    &thumb_instrs[477],
+    /* OP_T_bx */    &thumb_instrs[478],
+    /* OP_T_cbnz */    &thumb_instrs[479],
+    /* OP_T_cbnz_2 */    &thumb_instrs[480],
+    /* OP_T_cbz */    &thumb_instrs[481],
+    /* OP_T_cbz_2 */    &thumb_instrs[482],
+    /* OP_T_cmn_reg */    &thumb_instrs[483],
+    /* OP_T_cmp_high_reg */    &thumb_instrs[484],
+    /* OP_T_cmp_imm */    &thumb_instrs[485],
+    /* OP_T_cmp_reg */    &thumb_instrs[486],
+    /* OP_T_cps */    &thumb_instrs[487],
+    /* OP_T_eor_reg */    &thumb_instrs[488],
+    /* OP_T_it */    &thumb_instrs[489],
+    /* OP_T_ldrb_imm */    &thumb_instrs[490],
+    /* OP_T_ldrb_reg */    &thumb_instrs[491],
+    /* OP_T_ldrh_imm */    &thumb_instrs[492],
+    /* OP_T_ldrh_reg */    &thumb_instrs[493],
+    /* OP_T_ldrsb_reg */    &thumb_instrs[494],
+    /* OP_T_ldrsh_reg */    &thumb_instrs[495],
+    /* OP_T_ldr_imm */    &thumb_instrs[496],
+    /* OP_T_ldr_reg */    &thumb_instrs[497],
+    /* OP_T_lsl_imm */    &thumb_instrs[498],
+    /* OP_T_lsl_reg */    &thumb_instrs[499],
+    /* OP_T_lsr_imm */    &thumb_instrs[500],
+    /* OP_T_lsr_reg */    &thumb_instrs[501],
+    /* OP_T_mov_imm */    &thumb_instrs[502],
+    /* OP_T_mov_high_reg */    &thumb_instrs[503],
+    /* OP_T_mov_low_reg */    &thumb_instrs[504],
+    /* OP_T_mvn_reg */    &thumb_instrs[505],
+    /* OP_T_mul */    &thumb_instrs[506],
+    /* OP_T_nop */    &thumb_instrs[507],
+    /* OP_T_orr_reg */    &thumb_instrs[508],
+    /* OP_T_pop */    &thumb_instrs[509],
+    /* OP_T_push */    &thumb_instrs[510],
+    /* OP_T_rev */    &thumb_instrs[511],
+    /* OP_T_rev16 */    &thumb_instrs[512],
+    /* OP_T_revsh */    &thumb_instrs[513],
+    /* OP_T_ror_reg */    &thumb_instrs[514],
+    /* OP_T_rsb_imm */    &thumb_instrs[515],
+    /* OP_T_sbc_reg */    &thumb_instrs[516],
+    /* OP_T_setend */    &thumb_instrs[517],
+    /* OP_T_sev */    &thumb_instrs[518],
+    /* OP_T_str_imm */    &thumb_instrs[519],
+    /* OP_T_str_reg */    &thumb_instrs[520],
+    /* OP_T_str_sp */    &thumb_instrs[521],
+    /* OP_T_strb_imm */    &thumb_instrs[522],
+    /* OP_T_strb_reg */    &thumb_instrs[523],
+    /* OP_T_strh_imm */    &thumb_instrs[524],
+    /* OP_T_strh_reg */    &thumb_instrs[525],
+    /* OP_T_sub_sp_imm */    &thumb_instrs[526],
+    /* OP_T_sub_imm_8 */    &thumb_instrs[527],
+    /* OP_T_sub_reg */    &thumb_instrs[528],
+    /* OP_T_sub_imm_3 */    &thumb_instrs[529],
+    /* OP_T_svc */    &thumb_instrs[530],
+    /* OP_T_sxth */    &thumb_instrs[531],
+    /* OP_T_sxtb */    &thumb_instrs[532],
+    /* OP_T_tst_reg */    &thumb_instrs[533],
+    /* OP_T_uxtb */    &thumb_instrs[534],
+    /* OP_T_uxth */    &thumb_instrs[535],
+    /* OP_T_wfe */    &thumb_instrs[536],
+    /* OP_T_wfi */    &thumb_instrs[537],
+    /* OP_T_yield */    &thumb_instrs[538],
+    /* OP_T_32_and_imm */    &thumb_instrs[539],
+    /* OP_T_32_tst_imm */    &thumb_instrs[540],
+    /* OP_T_32_bic_imm */    &thumb_instrs[541],
+    /* OP_T_32_orr_imm */    &thumb_instrs[542],
+    /* OP_T_32_mov_imm */    &thumb_instrs[543],
+    /* OP_T_32_orn_imm */    &thumb_instrs[544],
+    /* OP_T_32_mvn_imm */    &thumb_instrs[545],
+    /* OP_T_32_eor_imm */    &thumb_instrs[546],
+    /* OP_T_32_teq_imm */    &thumb_instrs[547],
+    /* OP_T_32_add_imm */    &thumb_instrs[548],
+    /* OP_T_32_cmn_imm */    &thumb_instrs[549],
+    /* OP_T_32_adc_imm */    &thumb_instrs[550],
+    /* OP_T_32_sbc_imm */    &thumb_instrs[551],
+    /* OP_T_32_sub_imm */    &thumb_instrs[552],
+    /* OP_T_32_cmp_imm */    &thumb_instrs[553],
+    /* OP_T_32_rsb_imm */    &thumb_instrs[554],
+    /* OP_T_32_add_wide */    &thumb_instrs[555],
+    /* OP_T_32_adr */    &thumb_instrs[556],
+    /* OP_T_32_mov_wide */    &thumb_instrs[557],
+    /* OP_T_32_adr_2 */    &thumb_instrs[558],
+    /* OP_T_32_movt_top */    &thumb_instrs[559],
+    /* OP_T_32_ssat */    &thumb_instrs[560],
+    /* OP_T_32_ssat16 */    &thumb_instrs[561],
+    /* OP_T_32_sbfx */    &thumb_instrs[562],
+    /* OP_T_32_bfi */    &thumb_instrs[563],
+    /* OP_T_32_bfc */    &thumb_instrs[564],
+    /* OP_T_32_usat16 */    &thumb_instrs[565],
+    /* OP_T_32_ubfx */    &thumb_instrs[566],
+    /* OP_T_32_b */    &thumb_instrs[567],
+    /* OP_T_32_msr_reg_app */    &thumb_instrs[568],
+    /* OP_T_32_msr_reg_sys */    &thumb_instrs[569],
+    /* OP_T_32_bxj */    &thumb_instrs[570],
+    /* OP_T_32_subs */    &thumb_instrs[571],
+    /* OP_T_32_mrs */    &thumb_instrs[572],
+    /* OP_T_32_smc */    &thumb_instrs[573],
+    /* OP_T_32_b_2 */    &thumb_instrs[574],
+    /* OP_T_32_blx_imm */    &thumb_instrs[575],
+    /* OP_T_32_bl */    &thumb_instrs[576],
+    /* OP_T_32_cps */    &thumb_instrs[577],
+    /* OP_T_32_nop */    &thumb_instrs[578],
+    /* OP_T_32_yield */    &thumb_instrs[579],
+    /* OP_T_32_wfe */    &thumb_instrs[580],
+    /* OP_T_32_wfi */    &thumb_instrs[581],
+    /* OP_T_32_sev */    &thumb_instrs[582],
+    /* OP_T_32_dbg */    &thumb_instrs[583],
+    /* OP_T_32_enterx */    &thumb_instrs[584],
+    /* OP_T_32_leavex */    &thumb_instrs[585],
+    /* OP_T_32_clrex */    &thumb_instrs[586],
+    /* OP_T_32_dsb */    &thumb_instrs[587],
+    /* OP_T_32_dmb */    &thumb_instrs[588],
+    /* OP_T_32_isb */    &thumb_instrs[589],
+    /* OP_T_32_srs */    &thumb_instrs[590],
+    /* OP_T_32_rfe */    &thumb_instrs[591],
+    /* OP_T_32_stm */    &thumb_instrs[592],
+    /* OP_T_32_stmia */    &thumb_instrs[593],
+    /* OP_T_32_stmea */    &thumb_instrs[594],
+    /* OP_T_32_ldm */    &thumb_instrs[595],
+    /* OP_T_32_ldmia */    &thumb_instrs[596],
+    /* OP_T_32_ldmfd */    &thumb_instrs[597],
+    /* OP_T_32_pop */    &thumb_instrs[598],
+    /* OP_T_32_stmdb */    &thumb_instrs[599],
+    /* OP_T_32_stmfd */    &thumb_instrs[600],
+    /* OP_T_32_push */    &thumb_instrs[601],
+    /* OP_T_32_ldmdb */    &thumb_instrs[602],
+    /* OP_T_32_ldmea */    &thumb_instrs[603],
+    /* OP_T_32_strex */    &thumb_instrs[604],
+    /* OP_T_32_ldrex */    &thumb_instrs[605],
+    /* OP_T_32_strd_imm */    &thumb_instrs[606],
+    /* OP_T_32_ldrd_imm */    &thumb_instrs[607],
+    /* OP_T_32_ldrd_lit */    &thumb_instrs[608],
+    /* OP_T_32_strexb */    &thumb_instrs[609],
+    /* OP_T_32_strexh */    &thumb_instrs[610],
+    /* OP_T_32_strexd */    &thumb_instrs[611],
+    /* OP_T_32_tbb */    &thumb_instrs[612],
+    /* OP_T_32_tbh */    &thumb_instrs[613],
+    /* OP_T_32_ldrexb */    &thumb_instrs[614],
+    /* OP_T_32_ldrexh */    &thumb_instrs[615],
+    /* OP_T_32_ldrexd */    &thumb_instrs[616],
+    /* OP_T_32_ldr_imm */    &thumb_instrs[617],
+    /* OP_T_32_ldrt */    &thumb_instrs[618],
+    /* OP_T_32_ldr_reg */    &thumb_instrs[619],
+    /* OP_T_32_ldr_lit */    &thumb_instrs[620],
+    /* OP_T_32_ldrh_lit */    &thumb_instrs[621],
+    /* OP_T_32_ldrh_imm */    &thumb_instrs[622],
+    /* OP_T_32_ldrht */    &thumb_instrs[623],
+    /* OP_T_32_ldrh_reg */    &thumb_instrs[624],
+    /* OP_T_32_ldrsh_imm */    &thumb_instrs[625],
+    /* OP_T_32_ldrsht */    &thumb_instrs[626],
+    /* OP_T_32_ldrsh_reg */    &thumb_instrs[627],
+    /* OP_T_32_ldrb_lit */    &thumb_instrs[628],
+    /* OP_T_32_ldrb_imm */    &thumb_instrs[629],
+    /* OP_T_32_ldrbt */    &thumb_instrs[630],
+    /* OP_T_32_ldrb_reg */    &thumb_instrs[631],
+    /* OP_T_32_ldrsb_lit */    &thumb_instrs[632],
+    /* OP_T_32_ldrsb_imm */    &thumb_instrs[633],
+    /* OP_T_32_ldrsbt */    &thumb_instrs[634],
+    /* OP_T_32_ldrsb */    &thumb_instrs[635],
+    /* OP_T_32_pld_imm */    &thumb_instrs[636],
+    /* OP_T_32_pld_lit */    &thumb_instrs[637],
+    /* OP_T_32_pld_reg */    &thumb_instrs[638],
+    /* OP_T_32_pli_imm */    &thumb_instrs[639],
+    /* OP_T_32_pli_lit */    &thumb_instrs[640],
+    /* OP_T_32_pli_reg */    &thumb_instrs[641],
+    /* OP_T_32_strb_imm */    &thumb_instrs[642],
+    /* OP_T_32_strbt */    &thumb_instrs[643],
+    /* OP_T_32_strb_reg */    &thumb_instrs[644],
+    /* OP_T_32_strh_imm */    &thumb_instrs[645],
+    /* OP_T_32_strht */    &thumb_instrs[646],
+    /* OP_T_32_strh_reg */    &thumb_instrs[647],
+    /* OP_T_32_str_imm */    &thumb_instrs[648],
+    /* OP_T_32_strt */    &thumb_instrs[649],
+    /* OP_T_32_str_reg */    &thumb_instrs[650],
+    /* OP_T_32_and_reg */    &thumb_instrs[651],
+    /* OP_T_32_tst_reg */    &thumb_instrs[652],
+    /* OP_T_32_bic_reg */    &thumb_instrs[653],
+    /* OP_T_32_orr_reg */    &thumb_instrs[654],
+    /* OP_T_32_mov_reg */    &thumb_instrs[655],
+    /* OP_T_32_orn_reg */    &thumb_instrs[656],
+    /* OP_T_32_mvn_reg */    &thumb_instrs[657],
+    /* OP_T_32_eor_reg */    &thumb_instrs[658],
+    /* OP_T_32_teq_reg */    &thumb_instrs[659],
+    /* OP_T_32_pkh */    &thumb_instrs[660],
+    /* OP_T_32_add_reg */    &thumb_instrs[661],
+    /* OP_T_32_cmn_reg */    &thumb_instrs[662],
+    /* OP_T_32_adc_reg */    &thumb_instrs[663],
+    /* OP_T_32_sbc_reg */    &thumb_instrs[664],
+    /* OP_T_32_sub_reg */    &thumb_instrs[665],
+    /* OP_T_32_cmp_reg */    &thumb_instrs[666],
+    /* OP_T_32_rsb_reg */    &thumb_instrs[667],
+    /* OP_T_32_lsl_reg */    &thumb_instrs[668],
+    /* OP_T_32_lsr_reg */    &thumb_instrs[669],
+    /* OP_T_32_asr_reg */    &thumb_instrs[670],
+    /* OP_T_32_ror_reg */    &thumb_instrs[671],
+    /* OP_T_32_sxtah */    &thumb_instrs[672],
+    /* OP_T_32_sxth */    &thumb_instrs[673],
+    /* OP_T_32_uxtah */    &thumb_instrs[674],
+    /* OP_T_32_uxth */    &thumb_instrs[675],
+    /* OP_T_32_sxtab16 */    &thumb_instrs[676],
+    /* OP_T_32_sxtb16 */    &thumb_instrs[677],
+    /* OP_T_32_uxtab16 */    &thumb_instrs[678],
+    /* OP_T_32_uxtb16 */    &thumb_instrs[679],
+    /* OP_T_32_sxtab */    &thumb_instrs[680],
+    /* OP_T_32_sxtb */    &thumb_instrs[681],
+    /* OP_T_32_uxtab */    &thumb_instrs[682],
+    /* OP_T_32_uxtb */    &thumb_instrs[683],
+    /* OP_T_32_sadd16 */    &thumb_instrs[684],
+    /* OP_T_32_sasx */    &thumb_instrs[685],
+    /* OP_T_32_ssax */    &thumb_instrs[686],
+    /* OP_T_32_ssub16 */    &thumb_instrs[687],
+    /* OP_T_32_sadd8 */    &thumb_instrs[688],
+    /* OP_T_32_ssub8 */    &thumb_instrs[689],
+    /* OP_T_32_qadd16 */    &thumb_instrs[690],
+    /* OP_T_32_qasx */    &thumb_instrs[691],
+    /* OP_T_32_qsax */    &thumb_instrs[692],
+    /* OP_T_32_qsub16 */    &thumb_instrs[693],
+    /* OP_T_32_qadd8 */    &thumb_instrs[694],
+    /* OP_T_32_qsub8 */    &thumb_instrs[695],
+    /* OP_T_32_shadd16 */    &thumb_instrs[696],
+    /* OP_T_32_shasx */    &thumb_instrs[697],
+    /* OP_T_32_shsax */    &thumb_instrs[698],
+    /* OP_T_32_shsub16 */    &thumb_instrs[699],
+    /* OP_T_32_shadd8 */    &thumb_instrs[700],
+    /* OP_T_32_shsub8 */    &thumb_instrs[701],
+    /* OP_T_32_uadd16 */    &thumb_instrs[702],
+    /* OP_T_32_uasx */    &thumb_instrs[703],
+    /* OP_T_32_usax */    &thumb_instrs[704],
+    /* OP_T_32_usub16 */    &thumb_instrs[705],
+    /* OP_T_32_uadd8 */    &thumb_instrs[706],
+    /* OP_T_32_usub8 */    &thumb_instrs[707],
+    /* OP_T_32_uqadd16 */    &thumb_instrs[708],
+    /* OP_T_32_uqasx */    &thumb_instrs[709],
+    /* OP_T_32_uqsax */    &thumb_instrs[710],
+    /* OP_T_32_uqsub16 */    &thumb_instrs[711],
+    /* OP_T_32_uqadd8 */    &thumb_instrs[712],
+    /* OP_T_32_uqsub8 */    &thumb_instrs[713],
+    /* OP_T_32_uhadd16 */    &thumb_instrs[714],
+    /* OP_T_32_uhasx */    &thumb_instrs[715],
+    /* OP_T_32_uhsax */    &thumb_instrs[716],
+    /* OP_T_32_uhsub16 */    &thumb_instrs[717],
+    /* OP_T_32_uhadd8 */    &thumb_instrs[718],
+    /* OP_T_32_uhsub8 */    &thumb_instrs[719],
+    /* OP_T_32_qadd */    &thumb_instrs[720],
+    /* OP_T_32_qdadd */    &thumb_instrs[721],
+    /* OP_T_32_qsub */    &thumb_instrs[722],
+    /* OP_T_32_qdsub */    &thumb_instrs[723],
+    /* OP_T_32_rev */    &thumb_instrs[724],
+    /* OP_T_32_rev16 */    &thumb_instrs[725],
+    /* OP_T_32_rbit */    &thumb_instrs[726],
+    /* OP_T_32_revsh */    &thumb_instrs[727],
+    /* OP_T_32_sel */    &thumb_instrs[728],
+    /* OP_T_32_clz */    &thumb_instrs[729],
+    /* OP_T_32_mla */    &thumb_instrs[730],
+    /* OP_T_32_mul */    &thumb_instrs[731],
+    /* OP_T_32_mls */    &thumb_instrs[732],
+    /* OP_T_32_smlabb */    &thumb_instrs[733],
+    /* OP_T_32_smlabt */    &thumb_instrs[734],
+    /* OP_T_32_smlatb */    &thumb_instrs[735],
+    /* OP_T_32_smlatt */    &thumb_instrs[736],
+    /* OP_T_32_smulbb */    &thumb_instrs[737],
+    /* OP_T_32_smulbt */    &thumb_instrs[738],
+    /* OP_T_32_smultb */    &thumb_instrs[739],
+    /* OP_T_32_smultt */    &thumb_instrs[740],
+    /* OP_T_32_smlad */    &thumb_instrs[741],
+    /* OP_T_32_smuad */    &thumb_instrs[742],
+    /* OP_T_32_smlawb */    &thumb_instrs[743],
+    /* OP_T_32_smlawt */    &thumb_instrs[744],
+    /* OP_T_32_smulwb */    &thumb_instrs[745],
+    /* OP_T_32_smulwt */    &thumb_instrs[746],
+    /* OP_T_32_smlsd */    &thumb_instrs[747],
+    /* OP_T_32_smusd */    &thumb_instrs[748],
+    /* OP_T_32_smmla */    &thumb_instrs[749],
+    /* OP_T_32_smmul */    &thumb_instrs[750],
+    /* OP_T_32_smmls */    &thumb_instrs[751],
+    /* OP_T_32_usad8 */    &thumb_instrs[752],
+    /* OP_T_32_usada8 */    &thumb_instrs[753],
+    /* OP_T_32_smull */    &thumb_instrs[754],
+    /* OP_T_32_sdiv */    &thumb_instrs[755],
+    /* OP_T_32_umull */    &thumb_instrs[756],
+    /* OP_T_32_udiv */    &thumb_instrs[757],
+    /* OP_T_32_smlal */    &thumb_instrs[758],
+    /* OP_T_32_smlalbb */    &thumb_instrs[759],
+    /* OP_T_32_smlalbt */    &thumb_instrs[760],
+    /* OP_T_32_smlaltb */    &thumb_instrs[761],
+    /* OP_T_32_smlaltt */    &thumb_instrs[762],
+    /* OP_T_32_smlald */    &thumb_instrs[763],
+    /* OP_T_32_smlsld */    &thumb_instrs[764],
+    /* OP_T_32_umlal */    &thumb_instrs[765],
+    /* OP_T_32_umaal */    &thumb_instrs[766],
+    /* OP_T_32_stc */    &thumb_instrs[767],
+    /* OP_T_32_stc2 */    &thumb_instrs[768],
+    /* OP_T_32_ldc_imm */    &thumb_instrs[769],
+    /* OP_T_32_ldc_lit */    &thumb_instrs[770],
+    /* OP_T_32_ldc2_imm */    &thumb_instrs[771],
+    /* OP_T_32_ldc2_lit */    &thumb_instrs[772],
+    /* OP_T_32_mcrr */    &thumb_instrs[773],
+    /* OP_T_32_mcrr2 */    &thumb_instrs[774],
+    /* OP_T_32_mrrc */    &thumb_instrs[775],
+    /* OP_T_32_mrrc2 */    &thumb_instrs[776],
+    /* OP_T_32_cdp */    &thumb_instrs[777],
+    /* OP_T_32_cdp2 */    &thumb_instrs[778],
+    /* OP_T_32_mcr */    &thumb_instrs[779],
+    /* OP_T_32_mcr2 */    &thumb_instrs[780],
+    /* OP_T_32_mrc */    &thumb_instrs[781],
+    /* OP_T_32_mrc2 */    &thumb_instrs[782],
+
+
 };
