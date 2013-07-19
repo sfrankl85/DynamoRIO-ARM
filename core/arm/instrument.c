@@ -4404,7 +4404,7 @@ dr_insert_clean_call_ex_varg(void *drcontext, instrlist_t *ilist, instr_t *where
         pad = ALIGN_FORWARD_UINT(dstack_offs, 16) - dstack_offs;
         IF_X64(CLIENT_ASSERT(CHECK_TRUNCATE_TYPE_int(buf_sz + pad),
                              "dr_insert_clean_call: internal truncation error"));
-        MINSERT(ilist, where, INSTR_CREATE_sub_imm(dcontext, opnd_create_reg(REG_RR13),
+        MINSERT(ilist, where, INSTR_CREATE_sub_imm(dcontext, opnd_create_reg(REG_RR13), opnd_create_reg(REG_RR13),
                                                    OPND_CREATE_INT32((int)(buf_sz + pad)), COND_ALWAYS));
         dr_insert_save_fpstate(drcontext, ilist, where,
                                opnd_create_base_disp(REG_RR13, REG_NULL, 0, 0,

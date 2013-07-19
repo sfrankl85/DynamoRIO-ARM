@@ -1567,16 +1567,12 @@ reg_overlap(reg_id_t r1, reg_id_t r2)
 {
     if (r1 == REG_NULL || r2 == REG_NULL)
         return false;
-    /* The XH registers do NOT overlap with the XL registers; else, the
-     * dr_reg_fixer is the answer.
-     */
-/* TODO SJF Removed 8 bt reg ref */
-#ifdef NO
-    if ((r1 >= REG_START_8HL && r1 <= REG_STOP_8HL) &&
-        (r2 >= REG_START_8HL && r2 <= REG_STOP_8HL) &&
-        r1 != r2)
-        return false;
-#endif
+    
+    //We shouldnt have any overlaps here as I removed all
+    //short regs. Can address short versions of regs in
+    //ARM but Ive not directly implemented it. They
+    //will show as normal size regs
+
     return (dr_reg_fixer[r1] == dr_reg_fixer[r2]);
 }
 

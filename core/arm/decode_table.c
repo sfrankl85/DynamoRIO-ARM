@@ -519,7 +519,7 @@ const instr_info_t armv7a_instrs[] = {
     {OP_ldmea,       lsm, 0x11,"ldmea",    Ma, xx, Rl,  xx,  xx,  0x0, 0x0,  x, END_LIST}, /*ldmea()*/
     {OP_ldmib,       lsm, 0x19,"ldmib",    Ma, xx, Rl,  xx,  xx,  0x0, 0x0,  x, END_LIST}, /*ldmib()*/
     {OP_ldmed,       lsm, 0x19,"ldmed",    Ma, xx, Rl,  xx,  xx,  0x0, 0x0,  x, END_LIST}, /*ldmed()*/
-    {OP_ldr_imm,     ls1, 0x1, "ldr_imm",  Ra, xx, Ra,  I12, xx,  0x0, 0x0,  x, END_LIST}, /*ldr_imm()*/
+    {OP_ldr_imm,     ls1, 0x1, "ldr_imm",  Ra, xx, Ma,  I12, xx,  0x0, 0x0,  x, END_LIST}, /*ldr_imm()*/
     {OP_ldr_lit,     ls1, 0x11,"ldr_lit",  Ra, xx, I12, xx,  xx,  0x0, 0x0,  x, END_LIST}, /*ldr_lit()*/
     {OP_ldr_reg,     ls2, 0x1, "ldr_reg",  Ra, xx, Ma,  Ra,  I5,  0x0, 0x0,  x, END_LIST}, /*ldr_reg()*/
     {OP_ldrb_imm,    ls1, 0x5, "ldrb_imm", Ra, xx, Ma,  I12, xx,  0x0, 0x0,  x, END_LIST}, /*ldrb_imm()*/

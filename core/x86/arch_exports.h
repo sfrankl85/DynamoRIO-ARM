@@ -146,6 +146,12 @@ typedef struct _local_state_extended_t {
  * accessible off of fs:.  But, the actual segment offset varies, so
  * os_tls_offset() must be used to obtain an fs: offset from a slot.
  */
+#define TLS_R0_SLOT             ((ushort)offsetof(spill_state_t, r0))
+#define TLS_R1_SLOT             ((ushort)offsetof(spill_state_t, r1))
+#define TLS_R2_SLOT             ((ushort)offsetof(spill_state_t, r2))
+#define TLS_R3_SLOT             ((ushort)offsetof(spill_state_t, r3))
+
+
 #define TLS_XAX_SLOT             ((ushort)offsetof(spill_state_t, xax))
 #define TLS_XBX_SLOT             ((ushort)offsetof(spill_state_t, xbx))
 #define TLS_XCX_SLOT             ((ushort)offsetof(spill_state_t, xcx))

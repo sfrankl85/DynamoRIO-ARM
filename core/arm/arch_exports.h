@@ -48,6 +48,7 @@
 
 /* stack slot width */
 #define XSP_SZ (sizeof(reg_t))
+#define R13_SZ (sizeof(reg_t))
 
 /* PR 264138: we must preserve xmm0-5 if on a 64-bit kernel.
  * On Linux we must preserve all xmm registers.
@@ -362,15 +363,16 @@ static inline int64 atomic_add_exchange_int64(volatile int64 *var, int64 value) 
    to avoid having to change all calls to provide two temp values */
 /* INC */
 # define ATOMIC_INC_suffix(suffix, var, t, tmp) \
-   __asm__ __volatile__(                                        \
-                         "1:  ldrex   %1, %0        \n"       \
-                         "    add     %1, %1, #1      \n"       \
-                         "    strex   %2, %1, %0    \n"       \
-                         "    cmp     %2, #0          \n"       \
-                         "    bne     1b              \n"       \
-                         : "=m" (var)               \
-                         : "r" (t), "r" (tmp)                             \
+   __asm__ __volatile__(                                      \
+                         "1:  ldrex   %2, %0        \n"       \
+                         "    add     %2, %2, #1      \n"     \
+                         "    strex   %1, %2, %0    \n"       \
+                         "    cmp     %1, #0          \n"     \
+                         "    bne     1b              \n"     \
+                         : "=Q" (var), "=&r" (tmp)            \
+                         : "r" (t)                            \
                          : "cc", "memory");
+
 # define ATOMIC_INC_int(var, t, tmp) ATOMIC_INC_suffix("", var, t, tmp)
 # define ATOMIC_INC_int64(var, t, tmp) ATOMIC_INC_suffix("q", var, t, tmp)
 # define ATOMIC_INC(type, var, t, tmp) ATOMIC_INC_##type(var, t, tmp)
@@ -378,13 +380,13 @@ static inline int64 atomic_add_exchange_int64(volatile int64 *var, int64 value) 
 /* DEC */
 # define ATOMIC_DEC_suffix(suffix, var, t, tmp) \
    __asm__ __volatile__(                                        \
-                         "1:  ldrex   %1, %0        \n"       \
-                         "    sub     %1, %1, #1      \n"       \
-                         "    strex   %2, %1, %0    \n"       \
-                         "    cmp     %2, #0          \n"       \
-                         "    bne     1b              \n"       \
-                         : "=m" (var)               \
-                         : "r" (t), "r" (tmp)                              \
+                         "1:  ldrex   %2, %0        \n"       \
+                         "    sub     %2, %2, #1      \n"       \
+                         "    strex   %1, %2, %0    \n"       \
+                         "    cmp     %1, #0          \n"       \
+                         "    bne     1b             \n"       \
+                         : "=Q" (var), "=&r" (tmp)         \
+                         : "r" (t)                             \
                          : "cc", "memory");
 # define ATOMIC_DEC_int(var, t, tmp) ATOMIC_DEC_suffix("", var, t, tmp)
 # define ATOMIC_DEC_int64(var, t, tmp) ATOMIC_DEC_suffix("q", var, t, tmp)
@@ -396,13 +398,13 @@ static inline int64 atomic_add_exchange_int64(volatile int64 *var, int64 value) 
 
 /* ADD */
 # define ATOMIC_ADD_suffix(suffix, var, value, t, tmp )             \
-   __asm__ __volatile__( "l1:    ldrex" suffix " %3, %0\n"      \
-                         "       add     %1, %2, %3\n"              \
-                         "       strex   %3, %1, %0\n"          \
-                         "       cmp     %3, #0\n"              \
-                         "       bne     l1\n"                  \
-                        :  "=m" (var) \
-                        : "r" (t), "r" (value), "r" (tmp)                \
+   __asm__ __volatile__( "1:     ldrex" suffix " %2, %0\n"      \
+                         "       add     %2, %3, %2\n"              \
+                         "       strex   %1, %2, %0\n"          \
+                         "       cmp     %1, #0\n"              \
+                         "       bne     1b\n"                  \
+                        :  "=Q" (var), "=&r" (tmp) \
+                        : "r" (t), "r" (value)                \
                         : "memory", "cc")
 
 # define ATOMIC_ADD_int(var, val, t, tmp) ATOMIC_ADD_suffix("", var, val, t, tmp)
@@ -413,12 +415,12 @@ static inline int64 atomic_add_exchange_int64(volatile int64 *var, int64 value) 
 /* ADD AND XCHG */
 /* Not safe for general use, just for atomic_add_exchange(), undefed below */
 # define ATOMIC_ADD_EXCHANGE_suffix(suffix, var, value, res, tmp)             \
-   __asm__ __volatile__( "l2:    ldrex"suffix " %0, %2\n"       \
+   __asm__ __volatile__( "1:     ldrex"suffix " %0, %2\n"       \
                          "       add     %1, %0, %3\n"          \
                          "       strex   %0, %1, %2\n"          \
                          "       cmp     %0, #0\n"              \
-                         "       bne     l2\n"                  \
-                        : "=&r" (res), "=&r" (tmp), "=m" (var)  \
+                         "       bne     1b\n"                  \
+                        : "=&r" (res), "=&r" (tmp), "=Q" (var)  \
                         : "r" (value)                           \
                         : "memory", "cc")
 
@@ -428,49 +430,33 @@ static inline int64 atomic_add_exchange_int64(volatile int64 *var, int64 value) 
 # define ATOMIC_ADD_EXCHANGE_int64(var, val, res, tmp) \
     ATOMIC_ADD_EXCHANGE_suffix("q", var, val, res, tmp)
 
-#ifdef NO
 /* COMPARE AND XCHG */
-# define ATOMIC_COMPARE_EXCHANGE_suffix(suffix, var, compare, exchange, tmp, tmp2) \
-   __asm__ __volatile__( "l3:    mov     %3, %0\n"  \
-			 "       ldrex" suffix " %2, [%3]\n"      \
-                         "       teq     %2, %4\n"              \
-                         "       strexeq %2, %1, [%3]\n"          \
-                         "       movne   %2, #0\n"              \
-                         "       cmp     %2, #0\n"              \
-                         "       bne     l3\n"                  \
-                        : "=m" (var)                             \
-                        : "r" (exchange), "r" (tmp), "r" (tmp2), \
-                          "r" (compare)                       \
-                        : "memory", "cc")
-#endif
-
-/* COMPARE AND XCHG */
-# define ATOMIC_COMPARE_EXCHANGE_suffix(suffix, var, compare, exchange, tmp, tmp2) \
-   __asm__ __volatile__( "l3:    ldrex" suffix " %0, %1\n"      \
+# define ATOMIC_COMPARE_EXCHANGE_suffix(suffix, var, compare, exchange, tmp) \
+   __asm__ __volatile__( "1:  ldrex" suffix " %0, %1\n"      \
                          "       teq     %0, %3\n"              \
                          "       strexeq %0, %2, %1\n"          \
                          "       movne   %0, #0\n"              \
                          "       cmp     %0, #0\n"              \
-                         "       bne     l3\n"                  \
-                        : "=r" (tmp), "=m" (var)                \
+                         "       bne     1b\n"                  \
+                        : "=&r" (tmp), "=Q" (var)                \
                         : "r" (exchange),               \
                           "r" (compare)                  \
                         : "memory", "cc")
 
 
-# define ATOMIC_COMPARE_EXCHANGE_int(var, compare, exchange, tmp, tmp2) \
-    ATOMIC_COMPARE_EXCHANGE_suffix("", var, compare, exchange, tmp, tmp2)
+# define ATOMIC_COMPARE_EXCHANGE_int(var, compare, exchange, tmp) \
+    ATOMIC_COMPARE_EXCHANGE_suffix("", var, compare, exchange, tmp)
 # define ATOMIC_COMPARE_EXCHANGE ATOMIC_COMPARE_EXCHANGE_int
 
 # define ATOMIC_COMPARE_EXCHANGE_PTR ATOMIC_COMPARE_EXCHANGE
 
 /* EXCHANGE */
 # define ATOMIC_EXCHANGE(var, newval, result, tmp)     \
-   __asm__ __volatile__( "l4:    ldrex   %3, %2\n"      \
-                         "       strex   %1, %0, %2\n"          \
-                         "       cmp     %1, #0\n"              \
-                         "       bne     l4\n"                  \
-                        : "=&r" (newval), "=&r" (result), "=m" (var)              \
+   __asm__ __volatile__( "1:  ldrex   %3, %2\n"      \
+                         "      strex   %1, %0, %2\n"          \
+                         "      cmp     %1, #0\n"              \
+                         "      bne     1b\n"                  \
+                        : "=&r" (newval), "=&r" (result), "=Q" (var)              \
                         : "r" (tmp)        \
                         : "memory", "cc")
 
@@ -572,9 +558,9 @@ static inline void atomic_add( volatile int *var, int value)
 static inline void atomic_compare_exchange(volatile int *var,
                                            int compare, int exchange)
 {
-    int tmp, tmp2;
+    int tmp;
 
-    ATOMIC_COMPARE_EXCHANGE(var, compare, exchange, tmp, tmp2);
+    ATOMIC_COMPARE_EXCHANGE(var, compare, exchange, tmp);
 }
 
 /* exchanges *var with newval and returns original *var */
@@ -649,9 +635,9 @@ static inline bool atomic_compare_exchange_int(volatile int *var,
                                                int compare, int exchange)
 {
     unsigned char c;
-    int t, tmp, tmp2;
+    int t, tmp;
 
-    ATOMIC_COMPARE_EXCHANGE(*var, compare, exchange, tmp, tmp2);
+    ATOMIC_COMPARE_EXCHANGE(*var, compare, exchange, tmp);
     /* ZF is set if matched, all other flags are as if a normal compare happened */
     /* we convert ZF value back to C */
     SET_IF_NOT_ZERO(c);
@@ -1424,6 +1410,10 @@ enum {
 #define REL32_REACHABLE_OFFS(offs) ((offs) <= INT_MAX && (offs) >= INT_MIN)
 /* source should be the end of a rip-relative-referencing instr */
 #define REL32_REACHABLE(source, target) REL32_REACHABLE_OFFS((target) - (source))
+
+#define REL24_REACHABLE_OFFS(offs) ((offs) <= INT24_MAX && (offs) >= INT24_MIN)
+/* source should be the end of a rip-relative-referencing instr */
+#define REL24_REACHABLE(source, target) REL32_REACHABLE_OFFS((target) - (source))
 
 /* If code_buf points to a jmp rel32 returns true and returns the target of
  * the jmp in jmp_target as if was located at app_loc. */

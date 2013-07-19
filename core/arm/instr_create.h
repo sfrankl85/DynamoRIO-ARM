@@ -309,12 +309,12 @@
     instr_create_0dst_0src((dc), OP_bic_rsr)
 #define INSTR_CREATE_bkpt(dc) \
     instr_create_0dst_0src((dc), OP_bkpt)
-#define INSTR_CREATE_bl(dc) \
-    instr_create_0dst_0src((dc), OP_bl)
+#define INSTR_CREATE_bl(dc, d, c) \
+    instr_create_0dst_1src((dc), OP_bl, (d), (c))
 #define INSTR_CREATE_blx_imm(dc) \
     instr_create_0dst_0src((dc), OP_blx_imm)
-#define INSTR_CREATE_blx_reg(dc) \
-    instr_create_0dst_0src((dc), OP_blx_reg)
+#define INSTR_CREATE_blx_reg(dc, s, c) \
+    instr_create_0dst_1src((dc), OP_blx_reg, (s), (c))
 #define INSTR_CREATE_bx(dc) \
     instr_create_0dst_0src((dc), OP_bx)
 #define INSTR_CREATE_bxj(dc) \
@@ -717,8 +717,8 @@
     instr_create_0dst_0src((dc), OP_strht)
 #define INSTR_CREATE_strt(dc) \
     instr_create_0dst_0src((dc), OP_strt)
-#define INSTR_CREATE_sub_imm(dc, d, s, c) \
-    instr_create_1dst_1src((dc), OP_sub_imm, (d), (s), (c))
+#define INSTR_CREATE_sub_imm(dc, d, s1, s2, c) \
+    instr_create_1dst_2src((dc), OP_sub_imm, (d), (s1), (s2), (c))
 #define INSTR_CREATE_sub_reg(dc, d, s, c) \
     instr_create_1dst_1src((dc), OP_sub_regi, (d), (s), (c))
 #define INSTR_CREATE_sub_rsr(dc, d, s, i, c) \
@@ -1862,6 +1862,15 @@ INSTR_CREATE_branch_ind(dcontext_t *dcontext, opnd_t opnd)
       indirect branch in combination with the address being put into reg */
    return INSTR_CREATE_mov_reg(dcontext, opnd_create_reg(DR_REG_R15), opnd, COND_ALWAYS);
 }
+
+static inline instr_t *
+INSTR_CREATE_bl_ind(dcontext_t *dcontext, opnd_t opnd)
+{       
+   /* Move the value held in the reg passed into pc. This performs an
+      indirect branch in combination with the address being put into reg */
+   return INSTR_CREATE_blx_reg(dcontext, opnd, COND_ALWAYS);
+} 
+
 
 static inline instr_t* 
 INSTR_CREATE_msr_cpsr(dcontext_t *dcontext, reg_id_t reg)

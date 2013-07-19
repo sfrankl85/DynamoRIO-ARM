@@ -3351,11 +3351,6 @@ emit_fcache_enter_common(dcontext_t *dcontext, generated_code_t *code, byte *pc,
                          bool absolute, bool shared)
 {
     int len = 0;
-/* Comment out all these instructions for now. 
-   Every one needs the relevant structs in instr.h
-   and decode_table.c updating correctly.
-   I dont even have a suitable structure to store 
-   ARM instructions in yet! SJF TODO */
     instrlist_t ilist;
     patch_list_t patch;
     instr_t *post_hook = INSTR_CREATE_label(dcontext);
@@ -3391,7 +3386,7 @@ emit_fcache_enter_common(dcontext_t *dcontext, generated_code_t *code, byte *pc,
              * instead of pushing them).
              */
             APP(&ilist, INSTR_CREATE_push(dcontext, opnd_create_reg(DR_REG_R7), COND_ALWAYS));
-            APP(&ilist, INSTR_CREATE_push(dcontext, opnd_create_reg(DR_REG_R7), COND_ALWAYS));
+            APP(&ilist, INSTR_CREATE_push(dcontext, opnd_create_reg(DR_REG_R6), COND_ALWAYS));
         } 
         /* make sure to use dr_insert_call() rather than a raw OP_call instr,
          * since x64 windows requires 32 bytes of stack space even w/ no args,
@@ -3399,7 +3394,7 @@ emit_fcache_enter_common(dcontext_t *dcontext, generated_code_t *code, byte *pc,
          */
         dr_insert_call((void *)dcontext, &ilist, NULL/*append*/, (void *)EXIT_DR_HOOK, 0);
         if (!absolute) {
-            /* save edi and esi around call */
+            /* save r6 and r7 around call */
             APP(&ilist, INSTR_CREATE_pop(dcontext, opnd_create_reg(DR_REG_R6), COND_ALWAYS));
             APP(&ilist, INSTR_CREATE_pop(dcontext, opnd_create_reg(DR_REG_R7), COND_ALWAYS));
         }
