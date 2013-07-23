@@ -130,7 +130,7 @@ typedef struct _table_stat_state_t {
  */
 typedef struct _spill_state_t {
     /* Four registers are used in the indirect branch lookup routines */
-    reg_t xax, xbx, xcx, xdx;    /* general-purpose registers */
+    reg_t r0, r1, r2, r3;    /* general-purpose registers */
     /* FIXME: move this below the tables to fit more on cache line */
     dcontext_t *dcontext;
 } spill_state_t;
@@ -148,10 +148,10 @@ typedef struct _local_state_extended_t {
  * accessible off of fs:.  But, the actual segment offset varies, so
  * os_tls_offset() must be used to obtain an fs: offset from a slot.
  */
-#define TLS_R0_SLOT             ((ushort)offsetof(spill_state_t, xax))
-#define TLS_R3_SLOT             ((ushort)offsetof(spill_state_t, xbx))
-#define TLS_R1_SLOT             ((ushort)offsetof(spill_state_t, xcx))
-#define TLS_R2_SLOT             ((ushort)offsetof(spill_state_t, xdx))
+#define TLS_R0_SLOT             ((ushort)offsetof(spill_state_t, r0))
+#define TLS_R3_SLOT             ((ushort)offsetof(spill_state_t, r3))
+#define TLS_R1_SLOT             ((ushort)offsetof(spill_state_t, r1))
+#define TLS_R2_SLOT             ((ushort)offsetof(spill_state_t, r2))
 #define TLS_DCONTEXT_SLOT        ((ushort)offsetof(spill_state_t, dcontext))
 
 #define TABLE_OFFSET             (offsetof(local_state_extended_t, table_space))

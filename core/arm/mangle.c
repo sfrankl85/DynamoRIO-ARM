@@ -799,8 +799,8 @@ prepare_for_clean_call(dcontext_t *dcontext, clean_call_info_t *cci,
             (dcontext, REG_RR0, TLS_XAX_SLOT));  
     }
     else {
-        PRE(ilist, instr, instr_create_save_to_dcontext(dcontext, REG_RR13, R13_OFFSET));
-        PRE(ilist, instr, instr_create_restore_dynamo_stack(dcontext));
+        instr_create_save_to_dcontext(ilist, dcontext, REG_RR13, R13_OFFSET, INSERT_PRE, inst);
+        instr_create_restore_dynamo_stack(ilist, dcontext, INSERT_PRE, inst, absolute);
     }
 
     /* Save flags and all registers, in priv_mcontext_t order.

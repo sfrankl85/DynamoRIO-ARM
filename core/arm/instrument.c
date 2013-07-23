@@ -4523,9 +4523,10 @@ dr_swap_to_clean_stack(void *drcontext, instrlist_t *ilist, instr_t *where)
                 (dcontext, REG_RR0, TLS_R0_SLOT));
     }
     else {
-        MINSERT(ilist, where, instr_create_save_to_dcontext
-                (dcontext, REG_RR13, R13_OFFSET));
-        MINSERT(ilist, where, instr_create_restore_dynamo_stack(dcontext));
+        instr_create_save_to_dcontext
+                (ilist, dcontext, REG_RR13, R13_OFFSET, INSERT_PRE, where, true);
+        instr_create_restore_dynamo_stack(ilist, dcontext, INSERT_PRE, where, true);
+        
     }
 }
 
@@ -4543,8 +4544,8 @@ dr_restore_app_stack(void *drcontext, instrlist_t *ilist, instr_t *where)
         MINSERT(ilist, where, instr_create_restore_from_dc_via_reg
                 (dcontext, REG_RR13, REG_RR13, R13_OFFSET));
     } else {
-        MINSERT(ilist, where, instr_create_restore_from_dcontext
-                (dcontext, REG_RR13, R13_OFFSET));
+        instr_create_restore_from_dcontext
+                (ilist, dcontext, REG_RR13, R13_OFFSET, INSERT_PRE, where, true);
     }
 }
 
@@ -4606,7 +4607,7 @@ dr_save_reg(void *drcontext, instrlist_t *ilist, instr_t *where, reg_id_t reg,
             MINSERT(ilist, where, instr_create_restore_from_tls
                     (dcontext, tmp, TLS_R0_SLOT));
         } else {
-            MINSERT(ilist, where, instr_create_save_to_dcontext(dcontext, reg, offs));
+            instr_create_save_to_dcontext(ilist, dcontext, reg, offs, INSERT_PRE, where, true);
         }
     }
 #endif
@@ -4645,8 +4646,7 @@ dr_restore_reg(void *drcontext, instrlist_t *ilist, instr_t *where, reg_id_t reg
             MINSERT(ilist, where, instr_create_restore_from_dc_via_reg
                     (dcontext, reg, reg, offs));
         } else {
-            MINSERT(ilist, where,
-                    instr_create_restore_from_dcontext(dcontext, reg, offs));
+            instr_create_restore_from_dcontext(ilist, dcontext, reg, offs, INSERT_PRE, where, true);
         }
     }
 }

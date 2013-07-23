@@ -579,6 +579,20 @@ extern mutex_t bb_building_lock;
 extern volatile bool bb_lock_start;
 extern recursive_lock_t change_linking_lock;
 
+/* What type of insert is it for instr insert functions 
+   that can add instrs pre/post an instruction or just append */
+enum
+{
+  INSERT_UNKNOWN,
+
+  INSERT_PRE,
+  INSERT_POST,
+  INSERT_APPEND,
+
+  INSERT_INVALID
+};
+
+
 /* where the current app thread's control is */
 typedef enum {
     WHERE_APP=0, 

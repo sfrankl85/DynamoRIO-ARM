@@ -4533,9 +4533,11 @@ insert_restore_spilled_xcx(dcontext_t *dcontext, instrlist_t *trace, instr_t *ne
         /* We need to restore XCX from TLS for shared fragments, but from
          * mcontext for private fragments, and all traces are private
          */
+        /*SJF TODO Will have to manually add the instructions here if needed  
         added_size += tracelist_add(dcontext, trace, next,
                                     instr_create_restore_from_dcontext
                                     (dcontext, REG_RR1, R1_OFFSET));
+         */
     }
 
     return added_size;
@@ -6327,9 +6329,9 @@ decode_fragment(dcontext_t *dcontext, fragment_t *f, byte *buf, /*IN/OUT*/uint *
                         raw_start_pc = prev_pc;
                     }
                     /* now append our new xcx save */
-                    instrlist_append(ilist,
-                                     instr_create_save_to_dcontext
-                                     (dcontext, REG_RR1, R1_OFFSET));
+                    /* SJF Default to absolute */
+                    instr_create_save_to_dcontext
+                                     (ilist, dcontext, REG_RR1, R1_OFFSET, INSERT_APPEND, NULL, true);
                     /* make sure skip current instr */
                     cur_buf += (int)(pc - prev_pc);
                     raw_start_pc = pc;

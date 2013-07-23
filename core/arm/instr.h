@@ -666,6 +666,7 @@ enum {
     INSTR_kind,
     REG_kind,
     REG_LIST_kind,
+    MEM_REG_kind,   /* SJF Memory address stored in a register type(for str, ldr, etc...)*/
     BASE_DISP_kind, /* optional DR_SEG_ reg + base reg + scaled index reg + disp */
     FAR_PC_kind,    /* a segment is specified as a selector value */
     FAR_INSTR_kind, /* a segment is specified as a selector value */
@@ -740,6 +741,16 @@ DR_API
  */
 opnd_t 
 opnd_create_instr(instr_t *instr);
+
+DR_API
+/**
+ * Returns an operand whose value will be the encoded address of \p
+ * instr.  This operand can be used as an immediate integer or as a
+ * direct call or jump target.  Its size is always #OPSZ_PTR.
+ */
+opnd_t
+opnd_create_mem_reg(reg_id_t reg);
+
 
 DR_API
 /**
@@ -3717,9 +3728,13 @@ instr_create_raw_8bytes(dcontext_t *dcontext, byte byte1, byte byte2,
 opnd_t opnd_create_dcontext_field(dcontext_t *dcontext, int offs);
 opnd_t opnd_create_dcontext_field_byte(dcontext_t *dcontext, int offs);
 opnd_t opnd_create_dcontext_field_sz(dcontext_t *dcontext, int offs, opnd_size_t sz);
-instr_t * instr_create_save_to_dcontext(dcontext_t *dcontext, reg_id_t reg, int offs);
+instr_t * instr_create_save_to_dcontext(instrlist_t *ilist, dcontext_t *dcontext, 
+                                        reg_id_t reg, int offs, int where, instr_t* rel_instr, bool absolute);
 instr_t * instr_create_save_immed_to_dcontext(dcontext_t *dcontext, int immed, int offs);
-instr_t * instr_create_restore_from_dcontext(dcontext_t *dcontext, reg_id_t reg, int offs);
+void
+instr_create_restore_from_dcontext(instrlist_t *ilist, dcontext_t *dcontext, reg_id_t reg,
+                                   int offs, int where, instr_t* rel_instr, bool absolute);
+
 
 /* basereg, if left as REG_NULL, is assumed to be xdi (xsi for upcontext) */
 opnd_t
@@ -3734,8 +3749,10 @@ instr_t * instr_create_restore_from_dc_via_reg(dcontext_t *dcontext, reg_id_t ba
                                              reg_id_t reg, int offs);
 
 instr_t * instr_create_jump_via_dcontext(dcontext_t *dcontext, int offs);
-instr_t * instr_create_save_dynamo_stack(dcontext_t *dcontext);
-instr_t * instr_create_restore_dynamo_stack(dcontext_t *dcontext);
+void
+instr_create_save_dynamo_stack(instrlist_t *ilist, dcontext_t *dcontext, int where, instr_t* rel_instr);
+void
+instr_create_restore_dynamo_stack(instrlist_t *ilist, dcontext_t *dcontext, int where, instr_t* rel_instr, bool absolute);
 #ifdef RETURN_STACK
 instr_t * instr_create_restore_dynamo_return_stack(dcontext_t *dcontext);
 instr_t * instr_create_save_dynamo_return_stack(dcontext_t *dcontext);

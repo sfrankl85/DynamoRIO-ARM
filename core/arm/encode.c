@@ -437,28 +437,15 @@ opnd_type_ok(decode_info_t *di/*prefixes field is IN/OUT; x86_mode is IN*/,
         /* SJF Changed opnd_get_reg to opnd_get_size. Looks like a mistake to me */
         return (opnd_is_reg(opnd) && opnd_get_size(opnd) == opsize);
     case TYPE_FLOATMEM:
-    case TYPE_M:
-        return mem_size_ok(di, opnd, optype, opsize);
+    case TYPE_M: 
+        return opnd_is_mem_reg(opnd);
+        //return mem_size_ok(di, opnd, optype, opsize); SJF Old
     case TYPE_I:
-        /* we allow instr: it means 4/8-byte immed equal to pc of instr */
         return ((opnd_is_immed_int(opnd) &&
                  size_ok(di, opnd_get_size(opnd), opsize, false/*!addr*/) &&
                  immed_size_ok(di, opnd_get_immed_int(opnd), opsize)));
-
     case TYPE_S:
         return opnd_is_mask( opnd ) && mask_ok( opnd );
-    case TYPE_1:
-        /* FIXME (xref PR 229127): Ib vs c1: if say "1, OPSZ_1" will NOT match c1 and
-         * will get the Ib version: do we want to match c1?  What if they really want
-         * an immed byte in the encoding?  OTOH, we do match constant registers
-         * automatically w/ no control from the user.
-         * Currently, we document in instr_create.h that the user must
-         * specify OPSZ_0 in order to get c1.
-         */
-        return (opnd_is_immed_int(opnd) && opnd_get_immed_int(opnd) == 1 &&
-                size_ok(di, opnd_get_size(opnd), opsize, false/*!addr*/));
-    case TYPE_FLOATCONST:
-        return (opnd_is_immed_float(opnd)); /* FIXME: is actual float const decoded? */
     case TYPE_J:
         /* FIXME PR 225937: support 16-bit data16 immediates */
         /* FIXME: need relative pc offset to test immed_size_ok, but all we have
@@ -469,14 +456,6 @@ opnd_type_ok(decode_info_t *di/*prefixes field is IN/OUT; x86_mode is IN*/,
         return (opnd_is_near_pc(opnd) || opnd_is_near_instr(opnd));
     case TYPE_P: /* SJF Offset type */
         return false;
-    case TYPE_INDIR_REG:
-        /* far_ ok */
-        return (opnd_is_base_disp(opnd) &&
-                opnd_get_base(opnd) == opsize &&
-                opnd_get_index(opnd) == REG_NULL &&
-                opnd_get_disp(opnd) == 0 &&
-                /* FIXME: how know data size?  for now just use reg size... */
-                size_ok(di, opnd_get_size(opnd), reg_get_size(opsize), false/*!addr*/));
     default:
         CLIENT_ASSERT(false, "encode error: type ok: unknown operand type");
         return false;
@@ -1075,6 +1054,23 @@ copy_and_re_relativize_raw_instr(dcontext_t *dcontext, instr_t *instr,
                 SJF: ARM Specific encoding instructions                        *
 
 ******************************************************************************/
+
+byte* 
+write_word_to_fcache( byte* pc, byte* word )
+{
+   //Word should now be an instruction. MSB encoding
+   *((byte *)pc) = word[3];
+   pc++;
+   *((byte *)pc) = word[2];
+   pc++;
+   *((byte *)pc) = word[1];
+   pc++;
+   *((byte *)pc) = word[0];
+   pc++;
+
+   return pc;
+}
+
 /* The first 12 bits can be encoded from the cond, instr_type, opcode and
    the flag decode information. Is the same across most instructions( aprt from
    branch and special purpose ones so put in separate functions */
@@ -1093,8 +1089,7 @@ encode_bits_31_to_20(decode_info_t* di, instr_t* instr, instr_info_t* info, byte
     }
     else
     {
-        b = 0;
-        b &= instr->cond;
+        b = instr->cond;
         word[0] |= (b << 4); 
     }
 
@@ -1253,6 +1248,13 @@ encode_1dst_reg_2src_reg_1src_imm(decode_info_t* di, instr_t* instr, byte* pc)
             word[1] |= b;
             break;
 
+          case MEM_REG_kind:
+            b = opnd.value.reg;
+
+            b--; //To get actual reg number
+            word[1] |= b;
+            break;
+
           default:
             CLIENT_ASSERT(false, "instr_encode error: invalid opnd type" );
             break;
@@ -1306,15 +1308,8 @@ encode_1dst_reg_2src_reg_1src_imm(decode_info_t* di, instr_t* instr, byte* pc)
 
     encode_bits_7_to_4( di, instr, info, word );
 
-   //Word should now be an instruction. MSB encoding
-   *((byte *)pc) = word[0];
-   pc++;
-   *((byte *)pc) = word[1];
-   pc++;
-   *((byte *)pc) = word[2];
-   pc++;
-   *((byte *)pc) = word[3];
-   pc++;
+
+    pc = write_word_to_fcache(pc, word );
 
    return pc;
 }
@@ -1391,15 +1386,7 @@ encode_1dst_reg_1src_reg_0src_imm_2(decode_info_t* di, instr_t* instr, byte* pc)
 
     encode_bits_7_to_4( di, instr, info, word );
 
-   //Word should now be an instruction. MSB encoding
-   *((byte *)pc) = word[0];
-   pc++;
-   *((byte *)pc) = word[1];
-   pc++;
-   *((byte *)pc) = word[2];
-   pc++;
-   *((byte *)pc) = word[3];
-   pc++;
+    pc = write_word_to_fcache(pc, word );
 
    return pc;
 }
@@ -1476,16 +1463,7 @@ encode_1dst_reg_1src_reg_0src_imm(decode_info_t* di, instr_t* instr, byte* pc)
 
     encode_bits_7_to_4( di, instr, info, word );
 
-
-   //Word should now be an instruction. MSB encoding
-   *((byte *)pc) = word[0];
-   pc++;
-   *((byte *)pc) = word[1];
-   pc++;
-   *((byte *)pc) = word[2];
-   pc++;
-   *((byte *)pc) = word[3];
-   pc++;
+    pc = write_word_to_fcache(pc, word );
 
    return pc;
 }
@@ -1561,6 +1539,14 @@ encode_1dst_reg_2src_reg_0src_imm(decode_info_t* di, instr_t* instr, byte* pc)
             word[1] |= b;
             break;
 
+          case MEM_REG_kind:
+            b = opnd.value.reg;
+    
+            b--; //To get actual reg number
+            word[1] |= b;
+            break;
+
+
           default:
             CLIENT_ASSERT(false, "instr_encode error: invalid opnd type" );
             break;
@@ -1591,15 +1577,7 @@ encode_1dst_reg_2src_reg_0src_imm(decode_info_t* di, instr_t* instr, byte* pc)
 
     encode_bits_7_to_4( di, instr, info, word );
 
-   //Word should now be an instruction. MSB encoding
-   *((byte *)pc) = word[0];
-   pc++;
-   *((byte *)pc) = word[1];
-   pc++;
-   *((byte *)pc) = word[2];
-   pc++;
-   *((byte *)pc) = word[3];
-   pc++;
+    pc = write_word_to_fcache(pc, word );
 
    return pc;
 }
@@ -1698,15 +1676,7 @@ encode_1dst_reg_1src_reg_1src_imm_3(decode_info_t* di, instr_t* instr, byte* pc)
 
     encode_bits_7_to_4( di, instr, info, word );
 
-   //Word should now be an instruction. MSB encoding
-   *((byte *)pc) = word[0];
-   pc++;
-   *((byte *)pc) = word[1];
-   pc++;
-   *((byte *)pc) = word[2];
-   pc++;
-   *((byte *)pc) = word[3];
-   pc++;
+    pc = write_word_to_fcache(pc, word );
 
    return pc;
 }
@@ -1806,15 +1776,7 @@ encode_1dst_reg_1src_reg_1src_imm(decode_info_t* di, instr_t* instr, byte* pc)
     encode_bits_7_to_4( di, instr, info, word );
 
 
-   //Word should now be an instruction. MSB encoding
-   *((byte *)pc) = word[0];
-   pc++;
-   *((byte *)pc) = word[1];
-   pc++;
-   *((byte *)pc) = word[2];
-   pc++;
-   *((byte *)pc) = word[3];
-   pc++;
+    pc = write_word_to_fcache(pc, word );
 
    return pc;
 }
@@ -1895,15 +1857,7 @@ encode_1dst_reg_0src_reg_1src_imm_3(decode_info_t* di, instr_t* instr, byte* pc)
 
     encode_bits_7_to_4( di, instr, info, word );
 
-   //Word should now be an instruction. MSB encoding
-   *((byte *)pc) = word[0];
-   pc++;
-   *((byte *)pc) = word[1];
-   pc++;
-   *((byte *)pc) = word[2];
-   pc++;
-   *((byte *)pc) = word[3];
-   pc++;
+    pc = write_word_to_fcache(pc, word );
 
    return pc;
 }
@@ -1984,15 +1938,7 @@ encode_1dst_reg_0src_reg_1src_imm_2(decode_info_t* di, instr_t* instr, byte* pc)
 
     encode_bits_7_to_4( di, instr, info, word );
 
-   //Word should now be an instruction. MSB encoding
-   *((byte *)pc) = word[0];
-   pc++;
-   *((byte *)pc) = word[1];
-   pc++;
-   *((byte *)pc) = word[2];
-   pc++;
-   *((byte *)pc) = word[3];
-   pc++;
+    pc = write_word_to_fcache(pc, word );
 
    return pc;
 }
@@ -2072,15 +2018,7 @@ encode_1dst_reg_0src_reg_1src_imm(decode_info_t* di, instr_t* instr, byte* pc)
 
     encode_bits_7_to_4( di, instr, info, word );
 
-   //Word should now be an instruction. MSB encoding
-   *((byte *)pc) = word[0];
-   pc++;
-   *((byte *)pc) = word[1];
-   pc++;
-   *((byte *)pc) = word[2];
-   pc++;
-   *((byte *)pc) = word[3];
-   pc++;
+    pc = write_word_to_fcache(pc, word );
 
    return pc;
 }
@@ -2181,15 +2119,7 @@ encode_1dst_reg_1src_reg_1src_imm_4(decode_info_t* di, instr_t* instr, byte* pc)
 
     encode_bits_7_to_4( di, instr, info, word );
 
-   //Word should now be an instruction. MSB encoding
-   *((byte *)pc) = word[0];
-   pc++;
-   *((byte *)pc) = word[1];
-   pc++;
-   *((byte *)pc) = word[2];
-   pc++;
-   *((byte *)pc) = word[3];
-   pc++;
+    pc = write_word_to_fcache(pc, word );
 
    return pc;
 }
@@ -2252,6 +2182,7 @@ encode_1dst_reg_1src_reg_1src_imm_2(decode_info_t* di, instr_t* instr, byte* pc)
         {
           case REG_kind:
             b = opnd.value.reg;
+            b++;
             
             b &= 16;
 
@@ -2262,6 +2193,15 @@ encode_1dst_reg_1src_reg_1src_imm_2(decode_info_t* di, instr_t* instr, byte* pc)
           //TODO Recalcualte mem address??
           case BASE_DISP_kind:
             b = opnd.value.base_disp.base_reg;
+            
+            b &= 16;
+
+            word[1] |= b;
+            break;
+
+          case MEM_REG_kind:
+            b = opnd.value.reg;
+            b--;
             
             b &= 16;
 
@@ -2301,15 +2241,7 @@ encode_1dst_reg_1src_reg_1src_imm_2(decode_info_t* di, instr_t* instr, byte* pc)
 
     encode_bits_7_to_4( di, instr, info, word );
 
-   //Word should now be an instruction. MSB encoding
-   *((byte *)pc) = word[0];
-   pc++;
-   *((byte *)pc) = word[1];
-   pc++;
-   *((byte *)pc) = word[2];
-   pc++;
-   *((byte *)pc) = word[3];
-   pc++;
+    pc = write_word_to_fcache(pc, word );
 
    return pc;
 }
@@ -2391,15 +2323,7 @@ encode_0dst_reg_1src_imm_1src_mask(decode_info_t* di, instr_t* instr, byte* pc)
 
     encode_bits_7_to_4( di, instr, info, word );
 
-   //Word should now be an instruction. MSB encoding
-   *((byte *)pc) = word[0];
-   pc++;
-   *((byte *)pc) = word[1];
-   pc++;
-   *((byte *)pc) = word[2];
-   pc++;
-   *((byte *)pc) = word[3];
-   pc++;
+    pc = write_word_to_fcache(pc, word );
 
    return pc;
 }
@@ -2478,15 +2402,7 @@ encode_0dst_reg_1src_reg_1src_mask(decode_info_t* di, instr_t* instr, byte* pc)
     encode_bits_7_to_4( di, instr, info, word );
 
 
-   //Word should now be an instruction. MSB encoding
-   *((byte *)pc) = word[0];
-   pc++;
-   *((byte *)pc) = word[1];
-   pc++;
-   *((byte *)pc) = word[2];
-   pc++;
-   *((byte *)pc) = word[3];
-   pc++;
+    pc = write_word_to_fcache(pc, word );
 
    return pc;
 }
@@ -2649,15 +2565,7 @@ encode_1dst_reg_2src_reg_0src_imm_2(decode_info_t* di, instr_t* instr, byte* pc)
 
     encode_bits_7_to_4( di, instr, info, word );
 
-   //Word should now be an instruction. MSB encoding
-   *((byte *)pc) = word[0];
-   pc++;
-   *((byte *)pc) = word[1];
-   pc++;
-   *((byte *)pc) = word[2];
-   pc++;
-   *((byte *)pc) = word[3];
-   pc++;
+    pc = write_word_to_fcache(pc, word );
 
    return pc;
 }
@@ -2759,15 +2667,7 @@ encode_1dst_reg_2src_reg_0src_imm_5(decode_info_t* di, instr_t* instr, byte* pc)
 
     encode_bits_7_to_4( di, instr, info, word );
 
-   //Word should now be an instruction. MSB encoding
-   *((byte *)pc) = word[0];
-   pc++;
-   *((byte *)pc) = word[1];
-   pc++;
-   *((byte *)pc) = word[2];
-   pc++;
-   *((byte *)pc) = word[3];
-   pc++;
+    pc = write_word_to_fcache(pc, word );
 
    return pc;
 }
@@ -2869,15 +2769,7 @@ encode_1dst_reg_2src_reg_0src_imm_4(decode_info_t* di, instr_t* instr, byte* pc)
 
     encode_bits_7_to_4( di, instr, info, word );
 
-   //Word should now be an instruction. MSB encoding
-   *((byte *)pc) = word[0];
-   pc++;
-   *((byte *)pc) = word[1];
-   pc++;
-   *((byte *)pc) = word[2];
-   pc++;
-   *((byte *)pc) = word[3];
-   pc++;
+    pc = write_word_to_fcache(pc, word );
 
    return pc;
 }
@@ -2979,15 +2871,7 @@ encode_1dst_reg_2src_reg_0src_imm_3(decode_info_t* di, instr_t* instr, byte* pc)
 
     encode_bits_7_to_4( di, instr, info, word );
 
-   //Word should now be an instruction. MSB encoding
-   *((byte *)pc) = word[0];
-   pc++;
-   *((byte *)pc) = word[1];
-   pc++;
-   *((byte *)pc) = word[2];
-   pc++;
-   *((byte *)pc) = word[3];
-   pc++;
+    pc = write_word_to_fcache(pc, word );
 
    return pc;
 }
@@ -3111,15 +2995,7 @@ encode_1dst_reg_3src_reg_0src_imm(decode_info_t* di, instr_t* instr, byte* pc)
 
     encode_bits_7_to_4( di, instr, info, word );
 
-   //Word should now be an instruction. MSB encoding
-   *((byte *)pc) = word[0];
-   pc++;
-   *((byte *)pc) = word[1];
-   pc++;
-   *((byte *)pc) = word[2];
-   pc++;
-   *((byte *)pc) = word[3];
-   pc++;
+    pc = write_word_to_fcache(pc, word );
 
    return pc;
 }
@@ -3177,15 +3053,7 @@ encode_0dst_reg_1src_reglist(decode_info_t* di, instr_t* instr, byte* pc)
 
     encode_bits_7_to_4( di, instr, info, word );
 
-   //Word should now be an instruction. MSB encoding
-   *((byte *)pc) = word[0];
-   pc++;
-   *((byte *)pc) = word[1];
-   pc++;
-   *((byte *)pc) = word[2];
-   pc++;
-   *((byte *)pc) = word[3];
-   pc++;
+    pc = write_word_to_fcache(pc, word );
 
    return pc;
 }
@@ -3265,15 +3133,7 @@ encode_1dst_reg_1src_reglist(decode_info_t* di, instr_t* instr, byte* pc)
 
     encode_bits_7_to_4( di, instr, info, word );
 
-   //Word should now be an instruction. MSB encoding
-   *((byte *)pc) = word[0];
-   pc++;
-   *((byte *)pc) = word[1];
-   pc++;
-   *((byte *)pc) = word[2];
-   pc++;
-   *((byte *)pc) = word[3];
-   pc++;
+    pc = write_word_to_fcache(pc, word );
 
    return pc;
 }
@@ -3382,15 +3242,7 @@ encode_branch_instrs(decode_info_t* di, instr_t* instr, byte* pc)
 
     }
 
-   //Word should now be an instruction. MSB encoding
-   *((byte *)pc) = word[0];
-   pc++;
-   *((byte *)pc) = word[1];
-   pc++;
-   *((byte *)pc) = word[2];
-   pc++;
-   *((byte *)pc) = word[3];
-   pc++;
+    pc = write_word_to_fcache(pc, word );
 
    // Have a separate function for branch instrs to calc correct address
    // Branch instrs are pretty simple anyway

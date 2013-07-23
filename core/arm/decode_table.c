@@ -57,7 +57,7 @@
 /* from ARM document. Couldnt find a table. Is there one? */
 #define Ra  TYPE_REG,    OPSZ_4  /* 32 bit value contained in reg */
 #define Rh  TYPE_REG,    OPSZ_4 /* TODO 16 bit array of regs */
-#define Ma  TYPE_M,      OPSZ_4  /* Memory address contained in reg */
+#define Ma  TYPE_M,      OPSZ_4  /* Memory address contained in reg *///SJF For now juts leave as a reg
 #define Cr  TYPE_CO_REG, OPSZ_4
 #define Co  TYPE_CO_REG, OPSZ_4_5
 #define Rl  TYPE_S,      OPSZ_4_12 /* Register list. Bits indicate reg flag */

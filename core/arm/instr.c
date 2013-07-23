@@ -103,6 +103,7 @@ bool opnd_is_immed_float(opnd_t op) { return OPND_IS_IMMED_FLOAT(op); }
 bool opnd_is_near_pc    (opnd_t op) { return OPND_IS_NEAR_PC(op); }
 bool opnd_is_near_instr (opnd_t op) { return OPND_IS_NEAR_INSTR(op); }
 bool opnd_is_reg        (opnd_t op) { return OPND_IS_REG(op); }
+bool opnd_is_mem_reg    (opnd_t op) { return OPND_IS_MEM_REG(op); }
 bool opnd_is_mask       (opnd_t op) { return OPND_IS_MASK(op); }
 bool opnd_is_base_disp  (opnd_t op) { return OPND_IS_BASE_DISP(op); }
 bool opnd_is_far_pc     (opnd_t op) { return OPND_IS_FAR_PC(op); }
@@ -446,6 +447,17 @@ opnd_create_base_disp(reg_id_t base_reg, reg_id_t index_reg, int scale, int disp
     return opnd_create_far_base_disp_ex(REG_NULL, base_reg, index_reg, scale, disp, size,
                                         false, false, false);
 }
+
+opnd_t
+opnd_create_mem_reg(reg_id_t reg)
+{
+    opnd_t opnd;
+    opnd.kind = MEM_REG_kind;
+    CLIENT_ASSERT(reg <= REG_LAST_ENUM, "opnd_create_mem_reg: invalid reg");
+    opnd.value.reg = reg;
+    return opnd;
+}
+
 
 opnd_t
 opnd_create_far_base_disp_ex(reg_id_t seg, reg_id_t base_reg, reg_id_t index_reg,
@@ -4793,18 +4805,23 @@ instr_is_nop(instr_t *inst)
 /****************************************************************************/
 /* dcontext convenience routines */
 
+
+//SJF New opnd create functions.
+// To do a load or store to dcontext with an offset from a base address
+// Use mov_imm to get the offset into a reg then use ldr_reg to 
+// load the value
+
 static opnd_t
 dcontext_opnd_common(dcontext_t *dcontext, bool absolute, reg_id_t basereg,
                      int offs, opnd_size_t size)
 {
-    IF_X64(ASSERT_NOT_IMPLEMENTED(!absolute));
     /* offs is not raw offset, but includes upcontext size, so we
      * can tell unprotected from normal
      */
     if (TEST(SELFPROT_DCONTEXT, dynamo_options.protect_mask) &&
         offs < sizeof(unprotected_context_t)) {
         return opnd_create_base_disp(absolute ? REG_NULL :
-                                     ((basereg == REG_NULL) ? REG_RR6 : basereg),
+                                  ((basereg == REG_NULL) ? REG_RR6 : basereg),
                                      REG_NULL, 0,
                                      ((int)(ptr_int_t)(absolute ?
                                             dcontext->upcontext.separate_upcontext : 0))
@@ -4853,24 +4870,115 @@ opnd_create_dcontext_field_byte(dcontext_t *dcontext, int offs)
     return dcontext_opnd_common(dcontext, true, REG_NULL, offs, OPSZ_1);
 }
 
-instr_t *
-instr_create_restore_from_dcontext(dcontext_t *dcontext, reg_id_t reg, int offs)
+void
+instr_create_restore_from_dcontext(instrlist_t *ilist, dcontext_t *dcontext, reg_id_t reg, 
+                                   int offs, int where, instr_t* rel_instr, bool absolute)
 {
-    opnd_t memopnd = opnd_create_dcontext_field(dcontext, offs);
+    //Clobbers R8
+    reg_id_t base_reg;
 
-    return INSTR_CREATE_ldr_reg(dcontext, opnd_create_reg(reg),
-                                memopnd, opnd_create_reg(REG_NULL), OPND_CREATE_IMM5(0), COND_ALWAYS );
+    if (TEST(SELFPROT_DCONTEXT, dynamo_options.protect_mask) &&
+         offs < sizeof(unprotected_context_t)) 
+    {
+        base_reg = REG_RR6;
+    } 
+    else 
+    {
+        if (offs >= sizeof(unprotected_context_t))
+            offs -= sizeof(unprotected_context_t);
+        base_reg = REG_RR7;
+    }
+
+    if( where == INSERT_APPEND )
+    {
+      instrlist_meta_append( ilist, INSTR_CREATE_mov_imm( dcontext, opnd_create_reg(REG_RR8), 
+                                    OPND_CREATE_IMM12(((int)(ptr_int_t)(absolute ?
+                                                      dcontext->upcontext.separate_upcontext : 0))
+                                                      + offs), COND_ALWAYS ));
+
+      instrlist_meta_append( ilist, INSTR_CREATE_ldr_reg(dcontext, opnd_create_reg(reg),
+                                    opnd_create_mem_reg(base_reg), opnd_create_reg(REG_RR8), OPND_CREATE_IMM5(0), COND_ALWAYS ));
+    }
+    else if( where == INSERT_PRE )
+    {
+      instrlist_meta_preinsert( ilist, rel_instr, INSTR_CREATE_mov_imm( dcontext, opnd_create_reg(REG_RR8), 
+                                    OPND_CREATE_IMM12(((int)(ptr_int_t)(absolute ?
+                                                      dcontext->upcontext.separate_upcontext : 0))
+                                                      + offs), COND_ALWAYS ));
+
+      instrlist_meta_preinsert( ilist, rel_instr, INSTR_CREATE_ldr_reg(dcontext, opnd_create_reg(reg),
+                                    opnd_create_mem_reg(base_reg), opnd_create_reg(REG_RR8), OPND_CREATE_IMM5(0), COND_ALWAYS ));
+      
+    }
+    else if( where == INSERT_POST )
+    {
+      instrlist_meta_postinsert( ilist, rel_instr, INSTR_CREATE_mov_imm( dcontext, opnd_create_reg(REG_RR8), 
+                                    OPND_CREATE_IMM12(((int)(ptr_int_t)(absolute ?
+                                                      dcontext->upcontext.separate_upcontext : 0))
+                                                      + offs), COND_ALWAYS ));
+
+      instrlist_meta_postinsert( ilist, rel_instr, INSTR_CREATE_ldr_reg(dcontext, opnd_create_reg(reg),
+                                    opnd_create_mem_reg(base_reg), opnd_create_reg(REG_RR8), OPND_CREATE_IMM5(0), COND_ALWAYS ));
+    }
+    else
+      CLIENT_ASSERT(false,
+                    "instr_create_restore_from_dcontext: invalid insert position");
+ 
 }
 
 instr_t *
-instr_create_save_to_dcontext(dcontext_t *dcontext, reg_id_t reg, int offs)
+instr_create_save_to_dcontext(instrlist_t *ilist, dcontext_t *dcontext, reg_id_t reg, 
+                                   int offs, int where, instr_t* rel_instr, bool absolute)
 {
-    opnd_t memopnd = opnd_create_dcontext_field(dcontext, offs);
-    CLIENT_ASSERT(dcontext != GLOBAL_DCONTEXT,
-                  "instr_create_save_to_dcontext: invalid dcontext");
+    reg_id_t base_reg;
 
-    return INSTR_CREATE_str_reg(dcontext, opnd_create_reg(reg), memopnd,
-                                opnd_create_reg(REG_NULL), OPND_CREATE_IMM5(0), COND_ALWAYS);
+    if (TEST(SELFPROT_DCONTEXT, dynamo_options.protect_mask) &&
+         offs < sizeof(unprotected_context_t))
+    {
+        base_reg = REG_RR6;
+    }
+    else
+    {
+        if (offs >= sizeof(unprotected_context_t))
+            offs -= sizeof(unprotected_context_t);
+        base_reg = REG_RR7;
+    }
+
+    if( where == INSERT_APPEND )
+    {
+      instrlist_meta_append( ilist, INSTR_CREATE_mov_imm( dcontext, opnd_create_reg(REG_RR8),
+                             OPND_CREATE_IMM12(((int)(ptr_int_t)(absolute ?
+                                                      dcontext->upcontext.separate_upcontext : 0))
+                                                      + offs), COND_ALWAYS ));
+
+      instrlist_meta_append( ilist, INSTR_CREATE_str_reg(dcontext, opnd_create_reg(reg),
+                             opnd_create_mem_reg(base_reg), opnd_create_reg(REG_RR8), OPND_CREATE_IMM5(0), COND_ALWAYS ));
+    }
+    else if( where == INSERT_PRE )
+    {
+      instrlist_meta_preinsert( ilist, rel_instr, INSTR_CREATE_mov_imm( dcontext, opnd_create_reg(REG_RR8),
+                                OPND_CREATE_IMM12(((int)(ptr_int_t)(absolute ?
+                                                      dcontext->upcontext.separate_upcontext : 0))
+                                                      + offs), COND_ALWAYS ));
+
+      instrlist_meta_preinsert( ilist, rel_instr, INSTR_CREATE_str_reg(dcontext, opnd_create_reg(reg),
+                                opnd_create_mem_reg(base_reg), opnd_create_reg(REG_RR8), OPND_CREATE_IMM5(0), COND_ALWAYS ));
+
+    }
+    else if( where == INSERT_POST )
+    {
+      instrlist_meta_postinsert( ilist, rel_instr, INSTR_CREATE_mov_imm( dcontext, opnd_create_reg(REG_RR8),
+                                    OPND_CREATE_IMM12(((int)(ptr_int_t)(absolute ?
+                                                      dcontext->upcontext.separate_upcontext : 0))
+                                                      + offs), COND_ALWAYS ));
+
+      instrlist_meta_postinsert( ilist, rel_instr, INSTR_CREATE_str_reg(dcontext, opnd_create_reg(reg),
+                                 opnd_create_mem_reg(base_reg), opnd_create_reg(REG_RR8), OPND_CREATE_IMM5(0), COND_ALWAYS ));
+    }
+    else
+      CLIENT_ASSERT(false,
+                    "instr_create_save_to_dcontext: invalid insert position");
+
 }
 
 /* Use basereg==REG_NULL to get default (xdi, or xsi for upcontext) 
@@ -4880,12 +4988,16 @@ instr_t *
 instr_create_restore_from_dc_via_reg(dcontext_t *dcontext, reg_id_t basereg,
                                      reg_id_t reg, int offs)
 {
-    /* use movd for xmm/mmx, and OPSZ_PTR */
+/*  SJF Ignore this for now
     opnd_t memopnd = opnd_create_dcontext_field_via_reg_sz
         (dcontext, basereg, offs, reg_get_size(reg));
 
     return INSTR_CREATE_ldr_reg(dcontext, opnd_create_reg(reg), 
-                                memopnd, opnd_create_reg(REG_NULL), OPND_CREATE_IMM5(0), COND_ALWAYS );
+                                opnd_create_reg(basereg), opnd_create_reg(REG_NULL), 
+                                OPND_CREATE_IMM5(0), COND_ALWAYS );
+*/
+
+  CLIENT_ASSERT( false, "Unfinished function \"instr_create_restore_from_dc_via_reg\" reached" );
 }
 
 /* Use basereg==REG_NULL to get default (xdi, or xsi for upcontext) 
@@ -4895,11 +5007,13 @@ instr_t *
 instr_create_save_to_dc_via_reg(dcontext_t *dcontext, reg_id_t basereg,
                                 reg_id_t reg, int offs)
 {
-    /* use movd for xmm/mmx, and OPSZ_PTR */
+/* SJF Ignore for now 
     opnd_t memopnd = opnd_create_dcontext_field_via_reg_sz
                         (dcontext, basereg, offs, reg_get_size(reg));
     return INSTR_CREATE_str_reg(dcontext, opnd_create_reg(reg), memopnd,
                                 opnd_create_reg(REG_NULL), OPND_CREATE_IMM5(0), COND_ALWAYS);
+*/
+  CLIENT_ASSERT( false, "Unfinished function \"instr_create_save_to_dc_via_reg\" reached" );
 }
 
 instr_t *
@@ -4914,10 +5028,17 @@ instr_create_save_immed_to_dcontext(dcontext_t *dcontext, int immed, int offs)
 void
 instr_create_branch_via_dcontext(instrlist_t* ilist, dcontext_t *dcontext, int offs)
 {
-    opnd_t memopnd = opnd_create_dcontext_field(dcontext, offs);
 
+    //Calculate memory address and put into reg
+    instrlist_meta_append( ilist, INSTR_CREATE_mov_imm( dcontext, opnd_create_reg(REG_RR8),
+                                  OPND_CREATE_IMM12( (int)(dcontext->upcontext.separate_upcontext) + offs), 
+                                  COND_ALWAYS ));
+
+    //load value from mem address in reg 8 
     instrlist_meta_append(ilist, INSTR_CREATE_ldr_reg(dcontext, opnd_create_reg(REG_RR7),
-                                                      memopnd, opnd_create_reg(REG_NULL), OPND_CREATE_IMM5(0), COND_ALWAYS ));
+                                                      opnd_create_mem_reg(REG_RR8), opnd_create_reg(REG_NULL), 
+                                                      OPND_CREATE_IMM5(0), COND_ALWAYS ));
+    //Create an indirect branch. Which is just a 'mov pc, reg'
     instrlist_meta_append(ilist, INSTR_CREATE_branch_ind(dcontext, opnd_create_reg(REG_RR7)));
  
     return; 
@@ -4928,10 +5049,12 @@ instr_create_branch_via_dcontext(instrlist_t* ilist, dcontext_t *dcontext, int o
  * keeping state on the stack while code other than our own is running
  * (in the same thread)
  */
-instr_t *
-instr_create_restore_dynamo_stack(dcontext_t *dcontext)
+void
+instr_create_restore_dynamo_stack(instrlist_t *ilist, dcontext_t *dcontext, 
+                                  int where, instr_t* rel_instr, bool absolute)
 {
-    return instr_create_restore_from_dcontext(dcontext, REG_RR13, DSTACK_OFFSET);
+    return instr_create_restore_from_dcontext(ilist, dcontext, REG_RR13, 
+                                              DSTACK_OFFSET, where, rel_instr, absolute);
 }
 
 #ifdef RETURN_STACK

@@ -76,6 +76,7 @@
 #define OPND_IS_NEAR_PC(op)     ((op).kind == PC_kind)
 #define OPND_IS_NEAR_INSTR(op)  ((op).kind == INSTR_kind)
 #define OPND_IS_REG(op)         ((op).kind == REG_kind)
+#define OPND_IS_MEM_REG(op)     ((op).kind == MEM_REG_kind)
 #define OPND_IS_BASE_DISP(op)   ((op).kind == BASE_DISP_kind)
 #define OPND_IS_FAR_PC(op)      ((op).kind == FAR_PC_kind)
 #define OPND_IS_FAR_INSTR(op)   ((op).kind == FAR_INSTR_kind)
