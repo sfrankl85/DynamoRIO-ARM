@@ -2570,7 +2570,7 @@ dr_app_start_helper(priv_mcontext_t *mc)
          * See dr_app_start in x86.asm.
          */
 #ifdef ARM
-        mc->r13 += DYNAMO_START_XSP_ADJUST;
+        mc->r13 += DYNAMO_START_R13_ADJUST;
 #else
         mc->xsp += DYNAMO_START_XSP_ADJUST;
 #endif
@@ -2715,7 +2715,8 @@ dynamorio_app_take_over_helper(priv_mcontext_t *mc)
          * See dynamorio_app_take_over in x86.asm.
          */
 #ifdef ARM
-        mc->r13 += DYNAMO_START_XSP_ADJUST;
+        //TODO SJF Is 0 correct. No alignment happening in arm.asm
+        mc->r13 += DYNAMO_START_R13_ADJUST;
 #else
         mc->xsp += DYNAMO_START_XSP_ADJUST;
 #endif

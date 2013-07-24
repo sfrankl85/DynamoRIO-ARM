@@ -286,6 +286,13 @@ enum {
  */
 #define REQUIRES_VEX          0x40
 
+enum
+{
+  A1_ENCODING = 0,
+  A2_ENCODING,
+  INVALID_ENCODING
+};
+
 /* instr_info_t is used for table entries, it holds info that is constant
  * for all instances of an instruction.
  * All variable information is kept in this struct, which is used for
@@ -316,6 +323,8 @@ typedef struct decode_info_t {
     bool h_flag; //???
     bool m_flag; //For signed multiplies 
     bool r_flag; //For stm to flag to overwrite cpsr with spsr 
+
+    int  encoding;
    
     //What type of shift is it if there is one
     byte shift_type;

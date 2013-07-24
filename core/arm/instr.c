@@ -2146,7 +2146,7 @@ instr_set_instr_type(instr_t *instr, int instr_type)
 bool 
 instr_valid(instr_t *instr)
 {
-    return (instr->instr_type != OP_INVALID);
+    return (instr->opcode != OP_INVALID);
 }
 
 DR_API

@@ -2783,8 +2783,7 @@ build_bb_ilist(dcontext_t *dcontext, build_bb_t *bb)
 #endif /* RETURN_AFTER_CALL */
 
         //Removed if and changed else if to if
-        if (instr_is_mbr(bb->instr) ){ /* including indirect calls */
-                 /* far direct is treated as indirect (i#823) */
+        if (instr_is_mbr(bb->instr) ){ //Any cti instruction inclduing mov pc, lr
 
             /* Manage the case where we don't need to perform 'normal'
              * indirect branch processing.
@@ -2865,12 +2864,6 @@ build_bb_ilist(dcontext_t *dcontext, build_bb_t *bb)
             if (!bb_process_syscall(dcontext, bb))
                 break;
         } /* end syscall */
-#ifdef NO
-        else if (instr_get_opcode(bb->instr) == OP_svc) { /* non-syscall int */
-            if (!bb_process_interrupt(dcontext, bb))
-                break;
-        }
-#endif //NO
 
         if (total_instrs > DYNAMO_OPTION(max_bb_instrs)) {
             /* this could be an enormous basic block, or it could

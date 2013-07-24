@@ -1037,7 +1037,7 @@ void hashlookup_null_handler(void);
  * the mcontext and the SP of the caller of dr_app_start() and
  * dynamorio_app_take_over().
  */
-#define DYNAMO_START_XSP_ADJUST 16
+#define DYNAMO_START_R13_ADJUST 0
 
 /* x86_code.c */
 void dynamo_start(priv_mcontext_t *mc);

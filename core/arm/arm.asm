@@ -112,6 +112,9 @@ START_FILE
 #define DR_SAVED_REG_SIZE 64 /* for ymm */
 #define DR_SAVED_SIZE ((NUM_DR_SLOTS)*(DR_SAVED_REG_SIZE)) 
 
+//SJF Added a magic number to get the correct start address for the app
+#define MAGIC_SHIFT 336
+
 
 /* Should we generate all of our asm code instead of having it static?
  * As it is we're duplicating insert_push_all_registers(), dr_insert_call(), etc.,
@@ -389,15 +392,6 @@ GLOBAL_LABEL(dr_app_start:)
         ret
         END_FUNC(dr_app_start)
 
-/*
- * dr_app_take_over - For the client interface, we'll export 'dr_app_take_over'
- * for consistency with the dr_ naming convention of all exported functions.  
- * We'll keep 'dynamorio_app_take_over' for compatibility with the preinjector.
- */
-        DECLARE_EXPORTED_FUNC(dr_app_take_over)
-GLOBAL_LABEL(dr_app_take_over:  )
-        jmp      dynamorio_app_take_over 
-        END_FUNC(dr_app_take_over)
 #endif
                 
 /*
@@ -2736,7 +2730,8 @@ GLOBAL_LABEL(dynamorio_app_take_over:)
 #endif
 
         /* grab exec state and pass as param in a priv_mcontext_t struct */
-        add    REG_R4, REG_R13, immediate(PUSH_PRIV_MCXT_PRE_PC_SHIFT)
+        add    REG_R5, REG_R13, immediate(PUSH_PRIV_MCXT_PRE_PC_SHIFT+MAGIC_SHIFT)
+        ldr    REG_R4, [REG_R5]
         PUSH_PRIV_MCXT( REG_R4 ) /* return address as pc */
 
         /* do the rest in C */

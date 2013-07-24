@@ -664,29 +664,6 @@ decode_cti(dcontext_t *dcontext, byte *pc, instr_t *instr)
     byte0 = *pc;
     byte1 = *(pc + 1);
 
-#ifdef NO
-/*TODO SJF Maybe convert the interesting table to some ARM equiv
-           not really needed for now as opcode needs proper decode 
-           cant just grab the first byte
- */
-    if (interesting[byte0] == 0) {
-        /* assumption: opcode already OP_UNDECODED */
-        /* assumption: operands are already marked invalid (instr was reset) */
-        instr_set_raw_bits(instr, start_pc, sz);
-        return (start_pc + sz);
-    }
-#endif
-
-    /* SJF No prefixes for ARM. May need to do a full decode 
-           in some instances. So maybe readd this? 
-    if (prefixes > 0) {
-        if (decode(dcontext, start_pc, instr) == NULL)
-            return NULL;
-        else
-            return (start_pc + sz);
-    }
-    */
-
 /* TODO SJF 
    decode the instruction opcode. 
    If it is a cti or a syscall then decode it fully.
@@ -694,43 +671,14 @@ decode_cti(dcontext_t *dcontext, byte *pc, instr_t *instr)
  */
 
     pc = decode_opcode( dcontext, pc, instr );
-/*
-    pc = read_instruction(pc, pc, &info, &di, true  
-                          _IF_DEBUG(!TEST(INSTR_IGNORE_INVALID, instr->flags)),
-                          dsts, srcs, &instr_num_dsts, &instr_num_srcs);
-*/
 
     if( opcode_is_cti( instr->opcode ))
     {
-       //decode fully only call decode_common.
-       pc = decode( dcontext, pc, instr );
-/*
-      pc = read_instruction(start_pc, start_pc, &info, &di, false  //SJF Everything 
-                            _IF_DEBUG(!TEST(INSTR_IGNORE_INVALID, instr->flags)),
-                            dsts, srcs, &instr_num_dsts, &instr_num_srcs);
+      //Reset the instr to allow a full decode
+      instr_reset( dcontext, instr );
 
-      instr_set_opcode(instr, info.type);
-      instr_set_operands_valid(instr, true);
-      di.len = (int) (pc - start_pc);
-
-      instr_set_num_opnds(dcontext, instr, instr_num_dsts, instr_num_srcs);
-      if (instr_num_dsts > 0) {
-          memcpy(instr->dsts, dsts, ((instr_num_dsts)*(sizeof(opnd_t))));
-      }
-      if (instr_num_srcs > 0) {
-          instr->src0 = srcs[0];
-          if (instr_num_srcs > 1) {
-              memcpy(instr->srcs, &(srcs[1]), (instr_num_srcs-1)*sizeof(opnd_t));
-          }
-      }
-
-      if (start_pc != pc) {
-          instr_set_raw_bits_valid(instr, false);
-          instr_set_translation(instr, start_pc);
-      } else {
-          instr_set_raw_bits(instr, pc, (uint)(pc - start_pc));
-      }
-*/
+      //decode fully only call decode_common.
+      pc = decode( dcontext, pc, instr );
 
       CLIENT_ASSERT( (pc == (start_pc + sz)), "decode_cti: pc != (start_pc + sz)" );
 
@@ -742,8 +690,9 @@ decode_cti(dcontext_t *dcontext, byte *pc, instr_t *instr)
       /* assumption: opcode already OP_UNDECODED */
       instr_set_raw_bits(instr, start_pc, sz);
 
-      /* assumption: operands are already marked invalid (instr was reset) */
-      return (start_pc + sz);
+      CLIENT_ASSERT( (pc == (start_pc + sz)), "decode_cti: pc != (start_pc + sz)" );
+
+      return pc;
     }
 }
 
