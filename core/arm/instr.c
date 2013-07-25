@@ -3641,7 +3641,23 @@ instr_branch_type(instr_t *cti_instr)
 {
     switch (instr_get_opcode(cti_instr)) {
     case OP_b:
-        return LINK_DIRECT|LINK_JMP;     /* unconditional */
+    case OP_blx_imm:
+        return LINK_DIRECT|LINK_JMP;   
+    case OP_blx_reg:
+    case OP_bx:
+    case OP_bxj:
+        return LINK_INDIRECT;
+    case OP_bl:
+        //Class bl's as a call as it saves the pc to lr
+        return LINK_DIRECT|LINK_CALL; 
+    case OP_mov_reg:
+    case OP_mov_imm:
+        if( instr_is_return( cti_instr ))
+          return LINK_INDIRECT|LINK_RETURN;
+        //We know the opc is mov_reg/imm so can use this to just check the dest
+        else if( instr_is_mbr( cti_instr ))
+          return LINK_INDIRECT;
+        //No break so falls through to error state if not mov cti
 
     default:
         LOG(THREAD_GET, LOG_ALL, 0, "branch_type: unknown opcode: %d\n",
@@ -3824,7 +3840,8 @@ opcode_is_cti(int opc)
    //A move instr to r15 is a control transfer instr.
    // Caller needs to verify that instr dst 1 is r15
    if( opc == OP_b || opc == OP_bl || opc == OP_blx_imm ||
-       opc == OP_blx_reg || opc == OP_bx || opc == OP_mov_reg )
+       opc == OP_blx_reg || opc == OP_bx || 
+       opc == OP_bxj || opc == OP_mov_reg )
      return true;
    else
      return false;
@@ -3903,12 +3920,6 @@ instr_is_mov(instr_t *instr)
 }
 
 
-bool
-opcode_is_mbr(int opc)
-{
-    return (opc == OP_b);
-}
-
 bool 
 opcode_is_call(int opc)
 {
@@ -3926,6 +3937,31 @@ instr_is_call(instr_t *instr)
     return opcode_is_call(opc);
 }
 
+//Returns true if instr is a mov_reg/imm that writes to the pc
+DR_API
+bool
+instr_is_mov_br(instr_t* instr)
+{
+   int opc = instr_get_opcode(instr);
+   opnd_t opnd;
+
+   if( opc == OP_mov_reg || opc == OP_mov_imm )
+   {
+       //Make sure there are dsts
+       if( instr->dsts != NULL )
+       {
+         opnd = instr->dsts[0];
+
+         if( opnd.kind == REG_kind )
+         {
+           if( opnd.value.reg == REG_R15 )
+             return true;
+         }
+      }
+   }
+
+   return false;
+}
 
 
 DR_API
@@ -3938,46 +3974,18 @@ instr_get_cond(instr_t *instr)
      return -1;
 }
 
-
 DR_API
 bool
 instr_is_mbr(instr_t *instr)    /* Multi path??? branch */
 {
    int opc = instr_get_opcode(instr);
    opnd_t opnd;
-   bool retval;
 
    /* Only branch instruction that allows reg as target */
-   if( opc == OP_blx_reg )
-     retval = true;
+   if( opc == OP_blx_reg || opc == OP_bx | opc == OP_bxj )
+     return true;
    else
-   {
-       if( opc == OP_mov_reg || opc == OP_mov_imm )
-       {
-           //Make sure there are dsts
-           if( instr->dsts != NULL )
-           {
-             opnd = instr->dsts[0];
- 
-             if( opnd.kind == REG_kind )
-             {
-               if( opnd.value.reg == REG_R15 )
-                 retval = true;
-               else
-                 retval = false;
-             }
-             else
-               retval = false;
-          }
-          else
-            retval = false;
-       }
-       else
-         retval = false;
-        
-   }
-
-   return retval;
+     return instr_is_mov_br( instr );
 }
 
 
@@ -3988,9 +3996,12 @@ instr_is_cbr(instr_t *instr)    /* Conditional branch */
    int cond = instr_get_cond(instr);
    int opc = instr_get_opcode(instr);
 
-   if( opc != OP_b && opc != OP_bl && opc != OP_bx &&
-       opc != OP_blx_imm && opc != OP_blx_reg )
-     return false;
+   if( opc != OP_b       && opc != OP_bl      && opc != OP_bx  &&
+       opc != OP_blx_imm && opc != OP_blx_reg && opc != OP_bxj )
+   {
+     if( !instr_is_mov_br( instr ))
+       return false;
+   }
 
    return (cond != COND_ALWAYS);
 }
@@ -4001,9 +4012,12 @@ instr_is_ubr(instr_t *instr)      /* unconditional branch */
    int cond = instr_get_cond(instr);
    int opc = instr_get_opcode(instr);
 
-   if( opc != OP_b && opc != OP_bl && 
+   if( opc != OP_b && opc != OP_bl && opc != OP_bx &&
        opc != OP_blx_imm && opc != OP_blx_reg )
-     return false;
+   {
+     if( !instr_is_mov_br( instr ))
+       return false;
+   }
 
    return (cond == COND_ALWAYS);
 }
@@ -4012,10 +4026,7 @@ instr_is_ubr(instr_t *instr)      /* unconditional branch */
 bool
 instr_is_cti(instr_t *instr)      /* any control-transfer instruction */
 {
-    int opc = instr_get_opcode(instr);
-    return ( opc == OP_b || opc == OP_bl || 
-             opc == OP_blx_imm || opc == OP_blx_reg ||
-             opc == OP_bx );
+    return (instr_is_ubr(instr) || instr_is_cbr(instr) || instr_is_mbr(instr));
 }
 
 
@@ -5028,13 +5039,14 @@ instr_create_save_immed_to_dcontext(dcontext_t *dcontext, int immed, int offs)
 void
 instr_create_branch_via_dcontext(instrlist_t* ilist, dcontext_t *dcontext, int offs)
 {
+ //SJF Clobbers r7 and r8
 
     //Calculate memory address and put into reg
     instrlist_meta_append( ilist, INSTR_CREATE_mov_imm( dcontext, opnd_create_reg(REG_RR8),
                                   OPND_CREATE_IMM12( (int)(dcontext->upcontext.separate_upcontext) + offs), 
                                   COND_ALWAYS ));
 
-    //load value from mem address in reg 8 
+    //load value from mem address in reg 8 into reg 7
     instrlist_meta_append(ilist, INSTR_CREATE_ldr_reg(dcontext, opnd_create_reg(REG_RR7),
                                                       opnd_create_mem_reg(REG_RR8), opnd_create_reg(REG_NULL), 
                                                       OPND_CREATE_IMM5(0), COND_ALWAYS ));

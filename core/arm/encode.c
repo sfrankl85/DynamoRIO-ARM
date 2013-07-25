@@ -447,13 +447,9 @@ opnd_type_ok(decode_info_t *di/*prefixes field is IN/OUT; x86_mode is IN*/,
     case TYPE_S:
         return opnd_is_mask( opnd ) && mask_ok( opnd );
     case TYPE_J:
-        /* FIXME PR 225937: support 16-bit data16 immediates */
-        /* FIXME: need relative pc offset to test immed_size_ok, but all we have
-         * here is absolute pc or instr: but we don't auto-select opcode, and opcode
-         * selects immed size (except for data16 which we don't support),
-         * so we don't need to choose among templates now: we'll complain
-         * at emit time if we have reachability issues. */
-        return (opnd_is_near_pc(opnd) || opnd_is_near_instr(opnd));
+        /* SJF This is the type used to store a branch target in an
+               immed value. Need to rewrite to correct addr */
+        return (opnd_is_near_pc(opnd));
     case TYPE_P: /* SJF Offset type */
         return false;
     default:

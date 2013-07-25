@@ -2783,7 +2783,7 @@ build_bb_ilist(dcontext_t *dcontext, build_bb_t *bb)
 #endif /* RETURN_AFTER_CALL */
 
         //Removed if and changed else if to if
-        if (instr_is_mbr(bb->instr) ){ //Any cti instruction inclduing mov pc, lr
+        if (instr_is_mbr(bb->instr) ){ //Any indirect(from reg) cti instruction inclduing mov pc, lr
 
             /* Manage the case where we don't need to perform 'normal'
              * indirect branch processing.
@@ -2852,7 +2852,7 @@ build_bb_ilist(dcontext_t *dcontext, build_bb_t *bb)
                 /* fall through for -max_bb_instrs check */
             }
         }
-        else if (instr_is_cti(bb->instr) && !instr_is_call(bb->instr)) {
+        else if (instr_is_cti(bb->instr)) {  //All other branches. Should be only direct 
             total_branches++;
             if (total_branches >= BRANCH_LIMIT) {
                 /* set type of 1st exit cti for cbr (bb->exit_type is for fall-through) */

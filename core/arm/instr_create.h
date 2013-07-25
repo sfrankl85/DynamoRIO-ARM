@@ -1875,16 +1875,12 @@ INSTR_CREATE_bl_ind(dcontext_t *dcontext, opnd_t opnd)
 static inline instr_t* 
 INSTR_CREATE_msr_cpsr(dcontext_t *dcontext, reg_id_t reg)
 {
-   /* Move the value held in the reg passed into pc. This performs an
-      indirect branch in combination with the address being put into reg */
    return INSTR_CREATE_msr_reg(dcontext, opnd_create_reg(reg), opnd_create_mask(MASK_WRITE_ALL), COND_ALWAYS);
 }
 
 static inline instr_t* 
 INSTR_CREATE_mrs_cpsr(dcontext_t *dcontext, reg_id_t reg)
 {
-   /* Move the value held in the reg passed into pc. This performs an
-      indirect branch in combination with the address being put into reg */
    return INSTR_CREATE_mrs(dcontext, opnd_create_reg(reg), COND_ALWAYS);
 }
 

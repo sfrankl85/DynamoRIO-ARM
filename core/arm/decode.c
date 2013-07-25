@@ -321,7 +321,7 @@ decode_1dst_reg_1src_reg_0src_imm_1( decode_info_t* di, byte* instr_word, opnd_t
     (*numdsts)++;
 
     //1st src
-    reg = (instr_word[1] & 0xf);
+    reg = (instr_word[3] & 0xf);
 
     srcs[*numsrcs] = opnd_create_reg((reg_id_t)(++reg)); //Increment to get correct REG_XX value;
     (*numsrcs)++;
@@ -1467,6 +1467,11 @@ instr_info_t* decode_extra_load_store_unpriv_1(byte* instr_word,
       di->p_flag  = ((instr_word[0] & 0x1) == 0 ) ? false : true;
       di->u_flag  = ((instr_word[1] & 0x80) == 0 ) ? false : true;
       di->w_flag  = ((instr_word[1] & 0x20) == 0 ) ? false : true;
+
+      if( (instr_word[1] & 0x40) == 0x40 )
+        di->encoding = A1_ENCODING;
+      else
+        di->encoding = A2_ENCODING;
    }
    else //op == 1
    {
@@ -2190,6 +2195,7 @@ instr_info_t* decode_load_store_word_and_ubyte1(byte* instr_word,
                 ((instr_word[1] & 0x70 ) == 0x20 ))
         {
           di->opcode = OP_strt; 
+          di->encoding = A1_ENCODING;
         }
         else if(((instr_word[1] & 0x50) == 0x10 ) && //op1 == xx0x1 not 0x011
                 (((instr_word[0] & 0x1) != 0 ) ||
@@ -2206,6 +2212,7 @@ instr_info_t* decode_load_store_word_and_ubyte1(byte* instr_word,
           {
             di->opcode = OP_pop;
             di->encoding = A1_ENCODING;
+          }
           else
           {
             if( (instr_word[1] & 0xf) == 0xf)
@@ -2260,6 +2267,7 @@ instr_info_t* decode_load_store_word_and_ubyte1(byte* instr_word,
                 ((instr_word[1] & 0x70 ) == 0x20 ))
         {
           di->opcode = OP_strt;
+          di->encoding = A2_ENCODING;
         }
         else if(((instr_word[1] & 0x50) == 0x10 ) && //op1 == xx0x1 not 0x011
                 (((instr_word[0] & 0x1) != 0 ) ||
@@ -3363,7 +3371,7 @@ decode_opcode(dcontext_t *dcontext, byte *pc, instr_t *instr)
     read_instruction(pc, pc, &info, &di, true /* just opcode */
                      _IF_DEBUG(!TEST(INSTR_IGNORE_INVALID, instr->flags)),
                      NULL, NULL, NULL, NULL);
-    sz = decode_sizeof(dcontext, pc, NULL _IF_X64(&rip_rel_pos));
+    sz = decode_sizeof(dcontext, pc, NULL );
     instr_set_opcode(instr, info->type);
     /* read_instruction sets opcode to OP_INVALID for illegal instr.
      * decode_sizeof will return 0 for _some_ illegal instrs, so we

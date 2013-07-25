@@ -109,7 +109,7 @@ mixed_mode_enabled(void)
   #define R15_OFFSET       ((MC_OFFS) + (offsetof(priv_mcontext_t, r15)))
   #define PC_OFFSET        ((MC_OFFS) + (offsetof(priv_mcontext_t, r15))) /* Define both pc and r15 even though the same */
 
-  #define CPSR_OFFSET      ((MC_OFFS) + (offsetof(priv_mcontext_t, cpsr))) /* Define both pc and r15 even though the same */
+  #define CPSR_OFFSET      ((MC_OFFS) + (offsetof(priv_mcontext_t, cpsr)))
 
 #else
   #define XAX_OFFSET        ((MC_OFFS) + (offsetof(priv_mcontext_t, xax)))
@@ -258,10 +258,6 @@ typedef enum {
 static inline ibl_entry_point_type_t
 get_ibl_entry_type(uint link_or_instr_flags)
 {
-#ifdef X64
-    if (TEST(LINK_TRACE_CMP, link_or_instr_flags))
-        return IBL_TRACE_CMP;
-#endif
     if (TEST(LINK_FAR, link_or_instr_flags))
         return IBL_FAR;
     else

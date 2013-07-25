@@ -290,7 +290,7 @@ enum
 {
   A1_ENCODING = 0,
   A2_ENCODING,
-  INVALID_ENCODING
+  UNUSED_ENCODING
 };
 
 /* instr_info_t is used for table entries, it holds info that is constant
@@ -730,5 +730,24 @@ extern const instr_info_t * const op_instr[];
 /* for debugging: printing out types and sizes */
 extern const char * const type_names[];
 extern const char * const size_names[];
+
+instr_info_t* decode_parallel_unsigned_arith(byte* instr_word,
+                                             decode_info_t* di, bool just_opcode,
+                                             opnd_t* dsts, opnd_t* srcs, int* numdsts, int* numsrcs);
+
+instr_info_t* decode_parallel_signed_arith(byte* instr_word,
+                                           decode_info_t* di, bool just_opcode,
+                                           opnd_t* dsts, opnd_t* srcs, int* numdsts, int* numsrcs);
+
+instr_info_t* decode_signed_mul(byte* instr_word,
+                                decode_info_t* di, bool just_opcode,
+                                opnd_t* dsts, opnd_t* srcs, int* numdsts, int* numsrcs);
+
+instr_info_t* decode_parallel_pack_unpack(byte* instr_word,
+                                           decode_info_t* di, bool just_opcode,
+                                           opnd_t* dsts, opnd_t* srcs, int* numdsts, int* numsrcs);
+
+
+
 
 #endif /* DECODE_H */

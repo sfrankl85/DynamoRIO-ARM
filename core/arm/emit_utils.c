@@ -242,6 +242,7 @@ int
 exit_stub_size(dcontext_t *dcontext, cache_pc target, uint flags)
 {
 #ifdef NO
+//TODO SJF What???
     if (TEST(FRAG_COARSE_GRAIN, flags)) {
         /* For coarse: bb building points at bb ibl, and then insert_exit_stub
          * changes that to the appropriate coarse prefix.  So the emit() calls to
@@ -255,6 +256,8 @@ exit_stub_size(dcontext_t *dcontext, cache_pc target, uint flags)
          */
         target = coarse_deref_ibl_prefix(dcontext, target);
     }
+#endif
+
     if (is_indirect_branch_lookup_routine(dcontext, target)) {
         /* indirect branch */
 
@@ -311,7 +314,6 @@ exit_stub_size(dcontext_t *dcontext, cache_pc target, uint flags)
         }
 #endif
     }
-#endif //NO
 }
 
 /* The write that inserts the relative target is done atomically so this
@@ -753,12 +755,12 @@ remove_nops_from_ilist(dcontext_t *dcontext, instrlist_t *ilist _IF_DEBUG(bool r
 uint
 nop_pad_ilist(dcontext_t *dcontext, fragment_t *f, instrlist_t *ilist, bool emitting)
 {
+    uint start_shift = 0;
 #ifdef NO
-//TODO SJF
+//TODO SJF Dont do any padding for now.
     instr_t *inst;
     uint offset = 0;
     int first_patch_offset = -1;
-    uint start_shift = 0;
     /* if emitting prefix_size isn't set up yet */
     cache_pc starting_pc = f->start_pc + fragment_prefix_size(f->flags);
     ASSERT(emitting || f->prefix_size == fragment_prefix_size(f->flags));
@@ -856,8 +858,8 @@ nop_pad_ilist(dcontext_t *dcontext, fragment_t *f, instrlist_t *ilist, bool emit
 #ifdef CUSTOM_EXIT_STUBS
     ASSERT_NOT_IMPLEMENTED(false);
 #endif
-    return start_shift;
 #endif //NO
+    return start_shift;
 }
 
 /* for the hashtable lookup inlined into exit stubs, the
@@ -3105,113 +3107,66 @@ build_profile_call_buffer()
  *
  * fcache_enter(dcontext_t *dcontext)
  *   Used by dispatch to begin execution in fcache at dcontext->next_tag
+ *
+ * SJF: Edited to ARM version. Keeping it simple for now. 
+ *      Hook? Dont know what it is so remove
 
     if (!absolute)
-        mov    ARG1,%xdi # dcontext param
+        mov    ARG1,%r7 # dcontext param
       if (TEST(SELFPROT_DCONTEXT, dynamo_options.protect_mask))
-        RESTORE_FROM_UPCONTEXT PROT_OFFSET,%xsi
+        RESTORE_FROM_UPCONTEXT PROT_OFFSET,%r6
       endif
     endif  
 
     if (!absolute)
         # put target somewhere we can be absolute about
-        RESTORE_FROM_UPCONTEXT next_tag_OFFSET,%xax
-      if (shared)
-        mov  %xax,fs:xax_OFFSET
-      endif
+        RESTORE_FROM_UPCONTEXT next_tag_OFFSET,%r0
     endif
-
-    if (EXIT_DR_HOOK != NULL && !dcontext->ignore_enterexit)
-      if (!absolute)
-        push    %xdi
-        push    %xsi
-      else
-        # support for skipping the hook
-        RESTORE_FROM_UPCONTEXT ignore_enterexit_OFFSET,%edi
-        cmpl    %edi,0
-        jnz     post_hook
-      endif
-        call    EXIT_DR_HOOK # for x64 windows, reserve 32 bytes stack space for call
-      if (!absolute)
-        pop    %xsi
-        pop    %xdi
-      endif
-    endif
-
-    post_hook:        
 
         # restore the original register state
-        RESTORE_FROM_UPCONTEXT xflags_OFFSET,%xax
-        push    %xax
-        popf            # restore eflags temporarily using dstack
-    if preserve_xmm_caller_saved
-        RESTORE_FROM_UPCONTEXT xmm_OFFSET+0*16,%xmm0
-        RESTORE_FROM_UPCONTEXT xmm_OFFSET+1*16,%xmm1
-        RESTORE_FROM_UPCONTEXT xmm_OFFSET+2*16,%xmm2
-        RESTORE_FROM_UPCONTEXT xmm_OFFSET+3*16,%xmm3
-        RESTORE_FROM_UPCONTEXT xmm_OFFSET+4*16,%xmm4
-        RESTORE_FROM_UPCONTEXT xmm_OFFSET+5*16,%xmm5
-        RESTORE_FROM_UPCONTEXT xmm_OFFSET+6*16,%xmm6  # 32-bit Linux
-        RESTORE_FROM_UPCONTEXT xmm_OFFSET+7*16,%xmm7  # 32-bit Linux
-    endif
-    ifdef X64
-        RESTORE_FROM_UPCONTEXT r8_OFFSET,%r8
-        RESTORE_FROM_UPCONTEXT r9_OFFSET,%r9
-        RESTORE_FROM_UPCONTEXT r10_OFFSET,%r10
-        RESTORE_FROM_UPCONTEXT r11_OFFSET,%r11
-        RESTORE_FROM_UPCONTEXT r12_OFFSET,%r12
-        RESTORE_FROM_UPCONTEXT r13_OFFSET,%r13
-        RESTORE_FROM_UPCONTEXT r14_OFFSET,%r14
-        RESTORE_FROM_UPCONTEXT r15_OFFSET,%r15
-    endif
-        RESTORE_FROM_UPCONTEXT xax_OFFSET,%xax
-        RESTORE_FROM_UPCONTEXT xbx_OFFSET,%xbx
-        RESTORE_FROM_UPCONTEXT xcx_OFFSET,%xcx
-        RESTORE_FROM_UPCONTEXT xdx_OFFSET,%xdx
+        RESTORE_FROM_UPCONTEXT cpsr_OFFSET, %r0
+        msr    %r0   #restore cpsr
+        RESTORE_FROM_UPCONTEXT r0_OFFSET,%r0
+        RESTORE_FROM_UPCONTEXT r3_OFFSET,%r3
+        RESTORE_FROM_UPCONTEXT r1_OFFSET,%r1
+        RESTORE_FROM_UPCONTEXT r2_OFFSET,%r2
     if (absolute || !TEST(SELFPROT_DCONTEXT, dynamo_options.protect_mask))
-        RESTORE_FROM_UPCONTEXT xsi_OFFSET,%xsi
+        RESTORE_FROM_UPCONTEXT r6_OFFSET,%r6
     endif
     if (absolute || TEST(SELFPROT_DCONTEXT, dynamo_options.protect_mask))
-        RESTORE_FROM_UPCONTEXT xdi_OFFSET,%xdi
+        RESTORE_FROM_UPCONTEXT R7_OFFSET,%r7
     endif
-        RESTORE_FROM_UPCONTEXT xbp_OFFSET,%xbp
-        RESTORE_FROM_UPCONTEXT xsp_OFFSET,%xsp
+        RESTORE_FROM_UPCONTEXT r5_OFFSET,%r5
+        RESTORE_FROM_UPCONTEXT r13_OFFSET,%r13
     if (!absolute)
       if (TEST(SELFPROT_DCONTEXT, dynamo_options.protect_mask))
-        RESTORE_FROM_UPCONTEXT xsi_OFFSET,%xsi
+        RESTORE_FROM_UPCONTEXT r6_OFFSET,%r6
       else
-        RESTORE_FROM_UPCONTEXT xdi_OFFSET,%xdi
+        RESTORE_FROM_UPCONTEXT r7_OFFSET,%r7
       endif
-    endif
-
-    ifdef X64 and (target is x86 mode)    
-        # we can't indirect through a register since we couldn't restore
-        # the high bits (PR 283152)
-        mov gencode-jmp86-value, fs:xbx_OFFSET
-        far jmp to next instr, stored w/ 32-bit cs selector in fs:xbx_OFFSET
     endif
 
         # jump indirect through dcontext->next_tag, set by dispatch()
     if (absolute)    
-        JUMP_VIA_DCONTEXT next_tag_OFFSET
+        BRANCH_VIA_DCONTEXT next_tag_OFFSET
     else
       if (shared)
-        jmp *fs:xax_OFFSET
+        b r0_OFFSET
       else
-        JUMP_VIA_DCONTEXT nonswapped_scratch_OFFSET
+        BRANCH_VIA_DCONTEXT nonswapped_scratch_OFFSET
       endif
     endif
 
-        # now executing in fcache
+    # now executing in fcache
  */
 static byte*
 emit_fcache_enter_common(dcontext_t *dcontext, generated_code_t *code, byte *pc,
                          bool absolute, bool shared)
 {
+    /*SJF For now Im commenting out all SAVE/RESTORE_TO/FROM/_TLS as Im not 
+          sure its going to work and I dont need it for now */
     int len = 0;
-#ifdef NO
-//TODO Get this working and back in. Just checking that encoding and reading of source 
-// binary is correct
+
     instrlist_t ilist;
     patch_list_t patch;
     instr_t *post_hook = INSTR_CREATE_label(dcontext);
@@ -3219,59 +3174,24 @@ emit_fcache_enter_common(dcontext_t *dcontext, generated_code_t *code, byte *pc,
     init_patch_list(&patch, absolute ? PATCH_TYPE_ABSOLUTE : PATCH_TYPE_INDIRECT_XDI);
     instrlist_init(&ilist);
 
-    if (!absolute) {
-        //TODO SJF load from invalid reg here
-        /* grab gen routine's parameter dcontext and put it into R7 */
-
-        /* SJF TODO +4 offset */
-        APP(&ilist, INSTR_CREATE_ldr_reg(dcontext, opnd_create_reg(REG_RR7), 
-                                         opnd_create_mem_reg(REG_RR13), 
-                                         opnd_create_reg(REG_NULL), OPND_CREATE_IMM5(0), COND_ALWAYS ));
-        if (TEST(SELFPROT_DCONTEXT, dynamo_options.protect_mask))
-            RESTORE_FROM_DC(&ilist, dcontext, REG_RR6, PROT_OFFS, INSERT_APPEND, NULL);
-    }
-
+    //Get the next_tag ptr to allow fcache_enter to enter
     if (!absolute) {
         /* put target into special slot that we can be absolute about */
         RESTORE_FROM_DC(&ilist, dcontext, REG_RR0, NEXT_TAG_OFFSET, INSERT_APPEND, NULL);
+/*
         if (shared) {
             APP(&ilist, SAVE_TO_TLS(dcontext, REG_RR0, FCACHE_ENTER_TARGET_SLOT));
         } else {
-            /* no special scratch slot! */
             ASSERT_NOT_IMPLEMENTED(false);
         }
-    }
-
-    if (EXIT_DR_HOOK != NULL) {
-        /* if absolute, don't bother to save any regs around the call */ 
-        if (!absolute) {
-            /* save r7 and r6 around call.
-             * for x64, they're supposed to be callee-saved on windows,
-             * but not linux (though we could move to r12-r15 on linux
-             * instead of pushing them).
-             */
-            APP(&ilist, INSTR_CREATE_push(dcontext, opnd_create_reg(DR_REG_R7), COND_ALWAYS));
-            APP(&ilist, INSTR_CREATE_push(dcontext, opnd_create_reg(DR_REG_R6), COND_ALWAYS));
-        } 
-        /* make sure to use dr_insert_call() rather than a raw OP_call instr,
-         * since x64 windows requires 32 bytes of stack space even w/ no args,
-         * and we don't want anyone clobbering our pushed registers!
-         */
-        dr_insert_call((void *)dcontext, &ilist, NULL/*append*/, (void *)EXIT_DR_HOOK, 0);
-        if (!absolute) {
-            /* save r6 and r7 around call */
-            APP(&ilist, INSTR_CREATE_pop(dcontext, opnd_create_reg(DR_REG_R6), COND_ALWAYS));
-            APP(&ilist, INSTR_CREATE_pop(dcontext, opnd_create_reg(DR_REG_R7), COND_ALWAYS));
-        }
+*/
     }
 
     /* restore the original register state */
-
-    APP(&ilist, post_hook/*label*/);
-    RESTORE_FROM_DC(&ilist, dcontext, DR_REG_R0, R0_OFFSET, INSERT_APPEND, NULL);
-    /*APP(&ilist, INSTR_CREATE_push(dcontext, opnd_create_reg(REG_RR0))); 
-        Do not push R1 onto stack as we can just restore it to cpsr directly. */
-    /* restore eflags temporarily using dstack */
+    //APP(&ilist, post_hook/*label*/); SJF Dont need a lable as 
+    //    nothing jumps to here anymore
+    RESTORE_FROM_DC(&ilist, dcontext, DR_REG_R0, CPSR_OFFSET, INSERT_APPEND, NULL);
+    /* restore cpsr temporarily using dstack */
     APP(&ilist, INSTR_CREATE_msr_cpsr(dcontext, DR_REG_R0));
 
     RESTORE_FROM_DC(&ilist, dcontext, REG_RR0, R0_OFFSET, INSERT_APPEND, NULL);
@@ -3279,16 +3199,13 @@ emit_fcache_enter_common(dcontext_t *dcontext, generated_code_t *code, byte *pc,
     RESTORE_FROM_DC(&ilist, dcontext, REG_RR1, R1_OFFSET, INSERT_APPEND, NULL);
     RESTORE_FROM_DC(&ilist, dcontext, REG_RR2, R2_OFFSET, INSERT_APPEND, NULL);
 
-    /* must restore esi last */
     if (absolute || !TEST(SELFPROT_DCONTEXT, dynamo_options.protect_mask))
         RESTORE_FROM_DC(&ilist, dcontext, REG_RR6, R6_OFFSET, INSERT_APPEND, NULL);
-    /* must restore edi last */
     if (absolute || TEST(SELFPROT_DCONTEXT, dynamo_options.protect_mask))
         RESTORE_FROM_DC(&ilist, dcontext, REG_RR7, R7_OFFSET, INSERT_APPEND, NULL);
     RESTORE_FROM_DC(&ilist, dcontext, REG_RR5, R5_OFFSET, INSERT_APPEND, NULL);
     RESTORE_FROM_DC(&ilist, dcontext, REG_RR13, R13_OFFSET, INSERT_APPEND, NULL);
 
-    /* must restore esi last */
     if (!absolute) {
         if (TEST(SELFPROT_DCONTEXT, dynamo_options.protect_mask))
             RESTORE_FROM_DC(&ilist, dcontext, REG_RR6, R6_OFFSET, INSERT_APPEND, NULL);
@@ -3303,8 +3220,10 @@ emit_fcache_enter_common(dcontext_t *dcontext, generated_code_t *code, byte *pc,
         instr_create_branch_via_dcontext(&ilist, dcontext, NEXT_TAG_OFFSET);
     } else {
         if (shared) {
+            ASSERT_NOT_IMPLEMENTED(false);
             /* next_tag placed into tls slot earlier in this routine */
-            /* SJF How to do indirect branches on ARM. Hop it uses branch_via_dc above */
+/*          SJF If this is needed then SAVE_TO_TLS needs fixing to store the value at
+                the beginning of this func.
             APP(&ilist, INSTR_CREATE_mov_imm(dcontext, opnd_create_reg(REG_RR8),
                                              opnd_create_immed_int(FCACHE_ENTER_TARGET_SLOT, OPSZ_4_12),
                                              COND_ALWAYS ));
@@ -3312,6 +3231,7 @@ emit_fcache_enter_common(dcontext_t *dcontext, generated_code_t *code, byte *pc,
                                              opnd_create_mem_reg(REG_RR8),
                                              opnd_create_reg(REG_NULL), OPND_CREATE_IMM5(0), COND_ALWAYS ));
             APP(&ilist, INSTR_CREATE_branch_ind(dcontext, opnd_create_reg(REG_RR7)));
+*/
         } else {
             /* no special scratch slot! */
             ASSERT_NOT_IMPLEMENTED(false);
@@ -3325,7 +3245,6 @@ emit_fcache_enter_common(dcontext_t *dcontext, generated_code_t *code, byte *pc,
     /* free the instrlist_t elements */
     instrlist_clear(dcontext, &ilist);
 
-#endif
     return pc + len;
 }
 

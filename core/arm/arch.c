@@ -1990,12 +1990,6 @@ get_ibl_routine_ex(dcontext_t *dcontext, ibl_entry_point_type_t entry_type,
         return (cache_pc) ibl_code->far_ibl;
     case IBL_FAR_UNLINKED:
         return (cache_pc) ibl_code->far_ibl_unlinked;
-#ifdef X64
-    case IBL_TRACE_CMP:
-        return (cache_pc) ibl_code->trace_cmp_entry;
-    case IBL_TRACE_CMP_UNLINKED:
-        return (cache_pc) ibl_code->trace_cmp_unlinked;
-#endif
     default:
         ASSERT_NOT_REACHED();
     }

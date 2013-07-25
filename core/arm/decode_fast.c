@@ -677,6 +677,9 @@ decode_cti(dcontext_t *dcontext, byte *pc, instr_t *instr)
       //Reset the instr to allow a full decode
       instr_reset( dcontext, instr );
 
+      //Roll back the pc to get the same instruction again
+      pc -= sz;
+
       //decode fully only call decode_common.
       pc = decode( dcontext, pc, instr );
 
