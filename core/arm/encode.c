@@ -616,169 +616,6 @@ instr_info_opnd_type(const instr_info_t *info, bool src, int num)
  * Actual encoding
  */
 
-static byte *
-encode_immed(decode_info_t * di, byte *pc)
-{
-    /* 1st or 2nd immed? */
-    ptr_int_t val;
-    opnd_size_t size;
-    if (di->size_immed != OPSZ_NA) {
-        /* do we need to pc-relativize a target pc? */
-        if (di->size_immed == OPSZ_512) { /* special code */
-            int len;
-            size = di->size_immed2; /* TYPE_J put real size there */
-            di->size_immed2 = OPSZ_NA;
-            if ( size == OPSZ_4)
-                len = 4;
-            else if (size == OPSZ_1)
-                len = 1;
-            else if (size == OPSZ_4_3)
-                len = 1;
-            else if (size == OPSZ_4_5)
-                len = 1;
-            else if (size == OPSZ_4_6)
-                len = 1;
-            else if (size == OPSZ_4_10 )
-                len = 2;
-            else if (size == OPSZ_4_12 )
-                len = 2;
-            else if (size == OPSZ_4_16 )
-                len = 2;
-            else if (size == OPSZ_4_24 )
-                len = 3;
-            else {
-                len = 0; /* avoid compiler warning */
-                CLIENT_ASSERT(false, "encode error: immediate has unknown size");
-            }
-            /* offset is from start of next instruction */
-            val = di->immed - ((ptr_int_t)pc + len);
-        } else if (di->size_immed == OPSZ_10) { /* another code */
-            /* this code means that the immed holds not the absolute pc but
-             * the offset not counting the instruction length
-             */
-            int len;
-            size = di->size_immed2; /* TYPE_J put real size there */
-            di->size_immed2 = OPSZ_NA;
-            if ( size == OPSZ_4)
-                len = 4;
-            else if (size == OPSZ_1)
-                len = 1;
-            else {
-                len = 0; /* avoid compiler warning */
-                CLIENT_ASSERT(false, "encode error: immediate has unknown size");
-            }
-            /* just need to subtract the total instr length from the offset */
-            /* HACK: di->modrm was set with the number of instruction bytes
-             * prior to this immed. SJF No it wasnt -> REMOVED 
-             */
-            val = di->immed - (len);
-        } else {
-            val = di->immed;
-            size = di->size_immed;
-        }
-        di->size_immed = OPSZ_NA; /* mark as used */
-    } else {
-        CLIENT_ASSERT(di->size_immed2 != OPSZ_NA,
-                      "encode error: immediate has invalid size");
-        val = di->immed2;
-        size = di->size_immed2;
-        di->size_immed2 = OPSZ_NA; /* mark as used */
-    }
-
-    /* variable-sized */
-    size = resolve_variable_size(di, size, false);
-
-    switch (size) {
-    case OPSZ_1:
-    case OPSZ_4_8:
-        *pc = (byte) (val);
-        pc += 1;
-        break;
-    case OPSZ_2:
-    case OPSZ_4_16:
-        *((short *)pc) = (short) (val);
-        pc += 2;
-        break;
-    case OPSZ_4:
-        *((int *)pc) = (int) val;
-        pc += 4;
-        break;
-    case OPSZ_4_3:
-        *((int *)pc) = (char) val & 0x7;
-        pc += 0;
-        break;
-    case OPSZ_4_4:
-        *((int *)pc) = (char) val & 0xf;
-        pc += 0;
-        break;
-    case OPSZ_4_5:
-        *((int *)pc) = (char) val & 0x1f;
-        pc += 0;
-        break;
-    case OPSZ_4_6:
-        *((int *)pc) = (char) val & 0x3f;
-        pc += 0;
-        break;
-    case OPSZ_4_10:
-        *((int *)pc) = (char) val & 0x3ff;
-        pc += 1;
-        break;
-    case OPSZ_4_12:
-        *((int *)pc) = (char) val & 0xfff;
-        pc += 1;
-        break;
-    case OPSZ_4_24:
-        *((int *)pc) = (char) val & 0xffffff;
-        pc += 3;
-        break;
-
-    default:
-        LOG(THREAD_GET, LOG_EMIT, 1, "ERROR: encode_immed: unhandled size: %d\n", size);
-        CLIENT_ASSERT(false, "encode error: immediate has unknown size");
-    }
-    return pc;
-}
-
-static void
-encode_reg_ext_prefixes(decode_info_t *di, reg_id_t reg, uint which_rex)
-{
-#ifdef X64
-    reg_set_ext_prefixes(di, reg, which_rex);
-#endif
-}
-
-#ifdef X64
-static void
-encode_rel_addr(decode_info_t * di, opnd_t opnd)
-{
-    /* Unlike TYPE_J and TYPE_I, who use immed values, can assume
-     * there are no other immeds, and have encode_immed complete
-     * the pc relativization once the final pc is known, we have
-     * to use a different mechanism as we're dealing with a disp
-     * and can have other immeds.
-     * We simply have instr_encode check for this exact modrrm
-     * and use a new field disp_abs to store our target.
-     */
-    CLIENT_ASSERT(opnd_is_rel_addr(opnd),
-                  "encode error: invalid type for pc-relativization");
-    di->has_sib = false;
-    di->mod = 0;
-    di->rm = 5;
-    di->has_disp = true;
-    di->disp_abs = (byte *) opnd_get_addr(opnd);
-    /* PR 253327: since we have no explicit request for addr32, we
-     * deduce it here, w/ a conservative range estimate of instr length.
-     * However, we consult use_addr_prefix_on_short_disp() first, which will
-     * probably disallow for most x64 processors for performance reasons.
-     */
-    if (use_addr_prefix_on_short_disp() &&
-        (ptr_uint_t)di->disp_abs <= INT_MAX &&
-        (!REL32_REACHABLE(di->final_pc + MAX_INSTR_LENGTH, di->disp_abs) ||
-         !REL32_REACHABLE(di->final_pc + 4, di->disp_abs)))
-        di->prefixes |= PREFIX_ADDR;
-}
-#endif
-
 static void
 encode_base_disp(decode_info_t * di, opnd_t opnd)
 {
@@ -1112,37 +949,37 @@ encode_bits_31_to_20(decode_info_t* di, instr_t* instr, instr_info_t* info, byte
     /**************** Encode flags is necessary for instr *************/
 
     //Add s bit if necessary
-    if( instr_has_s_bit( instr ))
+    if( instr_has_s_flag( instr ))
     {
-      t = di->s_flag ? 0x10 : 0 ;
+      t = instr->s_flag ? 0x10 : 0 ;
       word[1] |= t; 
     }
 
     //Add w bit if necessary
-    if( instr_has_w_bit( instr ))
+    if( instr_has_w_flag( instr ))
     {
-      t = di->w_flag ? 0x20 : 0 ;
+      t = instr->w_flag ? 0x20 : 0 ;
       word[1] |= t;
     }
 
     //Add d bit if necessary
-    if( instr_has_d_bit( instr ))
+    if( instr_has_d_flag( instr ))
     {
-      t = di->d_flag ? 0x40 : 0 ;
+      t = instr->d_flag ? 0x40 : 0 ;
       word[1] |= t;
     }
 
     //Add u bit if necessary
-    if( instr_has_u_bit( instr ))
+    if( instr_has_u_flag( instr ))
     {
-      t = di->u_flag ? 0x80 : 0 ;
+      t = instr->u_flag ? 0x80 : 0 ;
       word[1] |= t;
     }
 
     //Add p bit if necessary
-    if( instr_has_p_bit( instr ))
+    if( instr_has_p_flag( instr ))
     {
-      t = di->p_flag ? 0x1 : 0 ;
+      t = instr->p_flag ? 0x1 : 0 ;
       word[0] |= t;
     }
 }
@@ -3219,14 +3056,13 @@ encode_branch_instrs(decode_info_t* di, instr_t* instr, byte* pc)
             case PC_kind:
               /* TODO Calc offset */
 
-              b = (opnd.value.immed_int >> 16);
+              b = (byte)(opnd.value.immed_int >> 16);
               word[1] = b;
 
-              b = (opnd.value.immed_int >> 8);
+              b = (byte)(opnd.value.immed_int >> 8);
               word[2] = b;
 
-              b = opnd.value.immed_int;
-              b &= 0xff;
+              b = (byte)(opnd.value.immed_int & 0xff);
 
               word[3] = b;
               break;

@@ -107,22 +107,31 @@ static const uint BLOCK_SIZES[] = {
     /* we have a lot of size 16 requests for IR but they are transient */
     24, /* fcache empties and vm_area_t are now 20, vm area extras still 24 */
     ALIGN_FORWARD(sizeof(fragment_t) + sizeof(indirect_linkstub_t), HEAP_ALIGNMENT), /* 40 dbg / 36 rel */
+
 #if defined(X64) || defined(PROFILE_LINKCOUNT) || defined(CUSTOM_EXIT_STUBS)
     sizeof(instr_t), /* 64 (104 x64) */
+
+    //SJF I have moved this to here to stop. Not sure if this will break anything
+    ALIGN_FORWARD(sizeof(fragment_t) + 2*sizeof(direct_linkstub_t), 
+                  HEAP_ALIGNMENT), /* 68 dbg / 64 rel (128 x64) */
+
     sizeof(fragment_t) + sizeof(direct_linkstub_t)
         + sizeof(cbr_fallthrough_linkstub_t), /* 68 dbg / 64 rel, 112 x64 */
     /* all other bb/trace buckets are 8 larger but in same order */
 #else
     sizeof(fragment_t) + sizeof(direct_linkstub_t)
         + sizeof(cbr_fallthrough_linkstub_t), /* 60 dbg / 56 rel */
-    sizeof(instr_t), /* 64 */
+
+    //SJF I have moved this to here to stop. Not sure if this will break anything
+    ALIGN_FORWARD(sizeof(fragment_t) + 2*sizeof(direct_linkstub_t), 
+                  HEAP_ALIGNMENT), /* 68 dbg / 64 rel (128 x64) */
+
+    sizeof(instr_t), /* 78 *//* SJF added flags */
 #endif
     /* we keep this bucket even though only 10% or so of normal bbs
      * hit this.
      * FIXME: release == instr_t here so a small waste when walking buckets 
      */
-    ALIGN_FORWARD(sizeof(fragment_t) + 2*sizeof(direct_linkstub_t),
-                  HEAP_ALIGNMENT), /* 68 dbg / 64 rel (128 x64) */
     ALIGN_FORWARD(sizeof(trace_t) + 2*sizeof(direct_linkstub_t) + sizeof(uint),
                   HEAP_ALIGNMENT), /* 80 dbg / 76 rel (148 x64 => 152) */
     /* FIXME: measure whether should put in indirect mixes as well */

@@ -1951,6 +1951,19 @@ struct _instr_t {
     instr_t   *prev;
     instr_t   *next;
 
+    /*SJF Need the flags to be set in here as well 
+          so they can be corectly encoded out to the fcache */
+    bool p_flag; // Post indexed?
+    bool u_flag; // plus/minus offset?
+    bool s_flag; // set cpsr flags?
+    bool w_flag; // write back?
+    bool l_flag; //load/store
+    bool b_flag; //word or byte?
+    bool d_flag; //???
+    bool h_flag; //???
+    bool m_flag; //For signed multiplies 
+    bool r_flag; //For stm to flag to overwrite cpsr with spsr 
+
 }; /* instr_t */
 #endif /* DR_FAST_IR */
 
@@ -1963,6 +1976,89 @@ struct _instr_t {
  */
 
 /* DR_API EXPORT END */
+
+/*** New instr flag functions ***/
+
+DR_API
+bool
+instr_set_p_flag( dcontext_t* dcontext, instr_t* instr, bool val );
+
+DR_API
+bool
+instr_set_u_flag( dcontext_t* dcontext, instr_t* instr, bool val );
+
+DR_API
+bool
+instr_set_s_flag( dcontext_t* dcontext, instr_t* instr, bool val );
+
+DR_API
+bool
+instr_set_w_flag( dcontext_t* dcontext, instr_t* instr, bool val );
+
+DR_API
+bool
+instr_set_l_flag( dcontext_t* dcontext, instr_t* instr, bool val );
+
+DR_API
+bool
+instr_set_b_flag( dcontext_t* dcontext, instr_t* instr, bool val );
+
+DR_API
+bool
+instr_set_d_flag( dcontext_t* dcontext, instr_t* instr, bool val );
+
+DR_API
+bool
+instr_set_h_flag( dcontext_t* dcontext, instr_t* instr, bool val );
+
+DR_API
+bool
+instr_set_m_flag( dcontext_t* dcontext, instr_t* instr, bool val );
+
+DR_API
+bool
+instr_set_r_flag( dcontext_t* dcontext, instr_t* instr, bool val );
+
+DR_API
+bool
+instr_has_p_flag( instr_t* instr );
+
+DR_API
+bool
+instr_has_u_flag( instr_t* instr );
+
+DR_API
+bool
+instr_has_s_flag( instr_t* instr );
+
+DR_API
+bool
+instr_has_w_flag( instr_t* instr );
+
+DR_API
+bool
+instr_has_l_flag( instr_t* instr );
+
+DR_API
+bool
+instr_has_b_flag( instr_t* instr );
+
+DR_API
+bool
+instr_has_d_flag( instr_t* instr );
+
+DR_API
+bool
+instr_has_h_flag( instr_t* instr );
+
+DR_API
+bool
+instr_has_m_flag( instr_t* instr );
+
+DR_API
+bool
+instr_has_r_flag( instr_t* instr );
+
 
 DR_API
 /**

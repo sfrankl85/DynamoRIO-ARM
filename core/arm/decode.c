@@ -3458,6 +3458,9 @@ decode_common(dcontext_t *dcontext, byte *pc, byte *orig_pc, instr_t *instr)
         }
     }
 
+    //SJF Copy the flags across
+    instr_set_flags_from_di( instr, &di );
+
     if (orig_pc != pc) {
         /* We do not want to copy when encoding and condone an invalid
          * relative target

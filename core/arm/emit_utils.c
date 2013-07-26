@@ -3167,6 +3167,11 @@ emit_fcache_enter_common(dcontext_t *dcontext, generated_code_t *code, byte *pc,
           sure its going to work and I dont need it for now */
     int len = 0;
 
+/* SJF For now I am only getting this to jump to the required pc. Should be the 
+       target fragment. Going to do the same for exit so it just jumps back to 
+       DR. For the future this and exit need to restore/save the gen regs and 
+       the cpsr state.
+ */
     instrlist_t ilist;
     patch_list_t patch;
     instr_t *post_hook = INSTR_CREATE_label(dcontext);
@@ -3174,6 +3179,7 @@ emit_fcache_enter_common(dcontext_t *dcontext, generated_code_t *code, byte *pc,
     init_patch_list(&patch, absolute ? PATCH_TYPE_ABSOLUTE : PATCH_TYPE_INDIRECT_XDI);
     instrlist_init(&ilist);
 
+#if 0
     //Get the next_tag ptr to allow fcache_enter to enter
     if (!absolute) {
         /* put target into special slot that we can be absolute about */
@@ -3212,6 +3218,8 @@ emit_fcache_enter_common(dcontext_t *dcontext, generated_code_t *code, byte *pc,
         else
             RESTORE_FROM_DC(&ilist, dcontext, REG_RR7, R7_OFFSET, INSERT_APPEND, NULL);
     }
+
+#endif //0
 
     /* Jump indirect through next_tag.  Dispatch set this value with
      * where we want to go next in the fcache_t.

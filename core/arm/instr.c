@@ -3091,6 +3091,7 @@ instrlist_decode_cti(dcontext_t *dcontext, instrlist_t *ilist)
 /**************** SJF flags functions *******************/
 /* Just checks to see if opcode is one that allows the bit to be set. */
 
+DR_API
 bool
 instr_is_shift_type( instr_t* instr )
 {
@@ -3122,8 +3123,50 @@ instr_is_shift_type( instr_t* instr )
         return false;
 }
 
+DR_API
 bool
-instr_has_s_bit( instr_t* instr )
+instr_has_l_flag( instr_t* instr )
+{
+    //TODO SJF Do this
+    return false;
+}
+
+DR_API
+bool
+instr_has_b_flag( instr_t* instr )
+{
+    //TODO SJF Do this
+    return false;
+}
+
+DR_API
+bool
+instr_has_h_flag( instr_t* instr )
+{
+    //TODO SJF Do this
+    return false;
+}
+
+DR_API
+bool
+instr_has_m_flag( instr_t* instr )
+{
+    //TODO SJF Do this
+    return false;
+}
+
+DR_API
+bool
+instr_has_r_flag( instr_t* instr )
+{
+    //TODO SJF Do this
+    return false;
+}
+
+
+DR_API
+bool
+instr_has_s_flag( instr_t* instr )
 {
     int opc = instr_get_opcode(instr);
 
@@ -3159,8 +3202,9 @@ instr_has_s_bit( instr_t* instr )
       return false;
 }
 
+DR_API
 bool
-instr_has_w_bit( instr_t* instr )
+instr_has_w_flag( instr_t* instr )
 {
     int opc = instr_get_opcode(instr);
 
@@ -3190,8 +3234,9 @@ instr_has_w_bit( instr_t* instr )
       return false;
 }
 
+DR_API
 bool
-instr_has_d_bit( instr_t* instr )
+instr_has_d_flag( instr_t* instr )
 {
     int opc = instr_get_opcode(instr);
 
@@ -3203,8 +3248,9 @@ instr_has_d_bit( instr_t* instr )
       return false;
 }
 
+DR_API
 bool
-instr_has_u_bit( instr_t* instr )
+instr_has_u_flag( instr_t* instr )
 {
     int opc = instr_get_opcode(instr);
 
@@ -3236,8 +3282,9 @@ instr_has_u_bit( instr_t* instr )
       return false;
 }
 
+DR_API
 bool
-instr_has_p_bit( instr_t* instr )
+instr_has_p_flag( instr_t* instr )
 {
     int opc = instr_get_opcode(instr);
 
@@ -3257,6 +3304,185 @@ instr_has_p_bit( instr_t* instr )
       return false;
 }
 
+
+/************ SJF: Functions to allow setting of flags against an instr type ***********/
+
+DR_API
+bool
+instr_set_p_flag( dcontext_t* dcontext, instr_t* instr, bool val )
+{
+  if( !instr_has_p_flag( instr ))
+  {
+    LOG(THREAD, LOG_INTERP, 3,
+        "decode: attempt to set p flag for invalid instr '%d' \n",
+        instr->opcode );
+    /*SJF: Exit process here? Might be worthwhile as should not 
+           try to set a value that shouldnt be set */
+  }
+
+  instr->p_flag = val;
+}
+
+DR_API
+bool
+instr_set_u_flag( dcontext_t* dcontext, instr_t* instr, bool val )
+{
+  if( !instr_has_u_flag( instr ))
+  {
+    LOG(THREAD, LOG_INTERP, 3,
+        "decode: attempt to set u flag for invalid instr '%d' \n",
+        instr->opcode );
+    /*SJF: Exit process here? Might be worthwhile as should not 
+           try to set a value that shouldnt be set */
+  }
+
+  instr->u_flag = val;
+}
+
+DR_API
+bool
+instr_set_s_flag( dcontext_t* dcontext, instr_t* instr, bool val )
+{
+  if( !instr_has_s_flag( instr ))
+  {
+    LOG(THREAD, LOG_INTERP, 1,
+        "decode: attempt to set s flag for invalid instr '%d' \n",
+        instr->opcode );
+    /*SJF: Exit process here? Might be worthwhile as should not 
+           try to set a value that shouldnt be set */
+  }
+
+  instr->s_flag = val;
+}
+
+DR_API
+bool
+instr_set_w_flag( dcontext_t* dcontext, instr_t* instr, bool val )
+{
+  if( !instr_has_w_flag( instr ))
+  {
+    LOG(THREAD, LOG_INTERP, 1,
+        "decode: attempt to set w flag for invalid instr '%d' \n",
+        instr->opcode );
+    /*SJF: Exit process here? Might be worthwhile as should not 
+           try to set a value that shouldnt be set */
+  }
+
+  instr->w_flag = val;
+}
+
+DR_API
+bool
+instr_set_l_flag( dcontext_t* dcontext, instr_t* instr, bool val )
+{
+  if( !instr_has_l_flag( instr ))
+  {
+    LOG(THREAD, LOG_INTERP, 1,
+        "decode: attempt to set l flag for invalid instr '%d' \n",
+        instr->opcode );
+    /*SJF: Exit process here? Might be worthwhile as should not 
+           try to set a value that shouldnt be set */
+  }
+
+  instr->l_flag = val;
+}
+
+DR_API
+bool
+instr_set_b_flag( dcontext_t* dcontext, instr_t* instr, bool val )
+{
+  if( !instr_has_b_flag( instr ))
+  {
+    LOG(THREAD, LOG_INTERP, 1,
+        "decode: attempt to set b flag for invalid instr '%d' \n",
+        instr->opcode );
+    /*SJF: Exit process here? Might be worthwhile as should not 
+           try to set a value that shouldnt be set */
+  }
+
+  instr->b_flag = val;
+}
+
+DR_API
+bool
+instr_set_d_flag( dcontext_t* dcontext, instr_t* instr, bool val )
+{
+  if( !instr_has_d_flag( instr ))
+  {
+    LOG(THREAD, LOG_INTERP, 1,
+        "decode: attempt to set d flag for invalid instr '%d' \n",
+        instr->opcode );
+    /*SJF: Exit process here? Might be worthwhile as should not 
+           try to set a value that shouldnt be set */
+  }
+
+  instr->d_flag = val;
+}
+
+DR_API
+bool
+instr_set_h_flag( dcontext_t* dcontext, instr_t* instr, bool val )
+{
+  if( !instr_has_h_flag( instr ))
+  {
+    LOG(THREAD, LOG_INTERP, 1,
+        "decode: attempt to set h flag for invalid instr '%d' \n",
+        instr->opcode );
+    /*SJF: Exit process here? Might be worthwhile as should not 
+           try to set a value that shouldnt be set */
+  }
+
+  instr->h_flag = val;
+}
+
+DR_API
+bool
+instr_set_m_flag( dcontext_t* dcontext, instr_t* instr, bool val )
+{
+  if( !instr_has_m_flag( instr ))
+  {
+    LOG(THREAD, LOG_INTERP, 1,
+        "decode: attempt to set m flag for invalid instr '%d' \n",
+        instr->opcode );
+    /*SJF: Exit process here? Might be worthwhile as should not 
+           try to set a value that shouldnt be set */
+  }
+
+  instr->m_flag = val;
+}
+
+DR_API
+bool
+instr_set_r_flag( dcontext_t* dcontext, instr_t* instr, bool val )
+{
+  if( !instr_has_r_flag( instr ))
+  {
+    LOG(THREAD, LOG_INTERP, 1,
+        "decode: attempt to set r flag for invalid instr '%d' \n",
+        instr->opcode );
+    /*SJF: Exit process here? Might be worthwhile as should not 
+           try to set a value that shouldnt be set */
+  }
+
+  instr->r_flag = val;
+}
+
+void
+instr_set_flags_from_di( instr_t* instr, decode_info_t* di )
+{
+    ASSERT(instr != NULL && di != NULL );
+
+    instr->p_flag = di->p_flag;
+    instr->u_flag = di->u_flag;
+    instr->s_flag = di->s_flag;
+    instr->w_flag = di->w_flag;
+    instr->l_flag = di->l_flag;
+    instr->b_flag = di->b_flag;
+    instr->d_flag = di->d_flag;
+    instr->h_flag = di->h_flag;
+    instr->m_flag = di->m_flag;
+    instr->r_flag = di->r_flag;
+}
 
 void 
 loginst(dcontext_t *dcontext, uint level, instr_t *instr, const char *string)
@@ -3878,7 +4104,7 @@ instr_is_exit_cti(instr_t *instr)
         !instr_ok_to_mangle(instr))
         return false;
 
-    if (instr_is_branch(instr) ) {
+    if (instr_is_cti(instr) ) {
         /* far pc should only happen for mangle's call to here */
         return opnd_is_pc(instr_get_target(instr));
     }
@@ -5047,9 +5273,9 @@ instr_create_branch_via_dcontext(instrlist_t* ilist, dcontext_t *dcontext, int o
                                   COND_ALWAYS ));
 
     //load value from mem address in reg 8 into reg 7
-    instrlist_meta_append(ilist, INSTR_CREATE_ldr_reg(dcontext, opnd_create_reg(REG_RR7),
-                                                      opnd_create_mem_reg(REG_RR8), opnd_create_reg(REG_NULL), 
-                                                      OPND_CREATE_IMM5(0), COND_ALWAYS ));
+    instrlist_meta_append(ilist, INSTR_CREATE_ldr_imm(dcontext, opnd_create_reg(REG_RR7),
+                                                      opnd_create_mem_reg(REG_RR8),  
+                                                      OPND_CREATE_IMM12(0), COND_ALWAYS ));
     //Create an indirect branch. Which is just a 'mov pc, reg'
     instrlist_meta_append(ilist, INSTR_CREATE_branch_ind(dcontext, opnd_create_reg(REG_RR7)));
  

@@ -772,8 +772,6 @@ check_new_page_jmp(dcontext_t *dcontext, build_bb_t *bb, app_pc new_pc)
 static inline void
 bb_process_invalid_instr(dcontext_t *dcontext, build_bb_t *bb)
 {
-    #ifdef NO
-    // TODO SJF 
     /* invalid instr: end bb BEFORE the instr, we'll throw exception if we
      * reach the instr itself
      */
@@ -788,31 +786,6 @@ bb_process_invalid_instr(dcontext_t *dcontext, build_bb_t *bb)
          * A benefit of being first instr is that the state is easy
          * to translate.
          */
-#ifdef WINDOWS
-        /* Copying the invalid bytes and having the processor generate
-         * the exception would be cleaner in every way except our fear
-         * of a new processor making those bytes valid and us inadvertently
-         * executing the unexamined instructions afterward, since we do not
-         * know the proper amount of bytes to copy.  Copying is cleaner
-         * since Windows splits invalid instructions into different cases,
-         * an invalid lock prefix and maybe some other distinctions
-         * (it's all interrupt 6 to the processor), and it is hard to
-         * duplicate Windows' behavior in our forged exception.
-         */
-        /* FIXME case 10672: provide a runtime option to specify new
-         * instruction formats to avoid this app exception */
-        ASSERT(dcontext->bb_build_info == bb);
-        bb_build_abort(dcontext, true/*clean vm area*/);
-        /* FIXME : we use illegal instruction here, even though we 
-         * know windows uses different exception codes for different
-         * types of invalid instructions (for ex. STATUS_INVALID_LOCK
-         * _SEQUENCE for lock prefix on a jmp instruction)
-         */
-        if (TEST(DUMPCORE_FORGE_ILLEGAL_INST, DYNAMO_OPTION(dumpcore_mask)))
-            os_dump_core("Warning: Encountered Illegal Instruction");
-        os_forge_exception(bb->instr_start, ILLEGAL_INSTRUCTION_EXCEPTION);
-        ASSERT_NOT_REACHED();
-#else
         /* FIXME: Linux hack until we have a real os_forge_exception implementation:
          * copy the bytes and have the process generate the exception.
          * Once remove this, also disable check at top of insert_selfmod_sandbox
@@ -838,12 +811,10 @@ bb_process_invalid_instr(dcontext_t *dcontext, build_bb_t *bb)
         ASSERT(bb->cur_pc > bb->instr_start); /* else still a self target */
         instr_set_raw_bits(bb->instr, bb->instr_start, sz);
         bb->invalid_instr_hack = true;
-#endif
     } else {
         instr_destroy(dcontext, bb->instr);
         bb->instr = NULL;
     }
-   #endif
 }
 
 /* returns true to indicate "elide and continue" and false to indicate "end bb now"
@@ -881,8 +852,6 @@ follow_direct_jump(dcontext_t *dcontext, build_bb_t *bb,
 static inline bool
 bb_process_ubr(dcontext_t *dcontext, build_bb_t *bb)
 {
-#ifdef NO
-//TODO SJF
     app_pc tgt = (byte *) opnd_get_pc(instr_get_target(bb->instr));
     BBPRINT(bb, 4, "interp: direct jump at "PFX"\n", bb->instr_start);
     if (must_not_be_elided(tgt)) {
@@ -965,7 +934,6 @@ bb_process_ubr(dcontext_t *dcontext, build_bb_t *bb)
         return false; /* end bb */
     }
     return true; /* keep bb going */
-#endif
 }
 
 
@@ -1394,17 +1362,7 @@ bb_process_syscall(dcontext_t *dcontext, build_bb_t *bb)
      * we let bb keep going, else we end bb and flag it
      */
     sysnum = find_syscall_num(dcontext, bb->ilist, bb->instr);
-#ifdef VMX86_SERVER
-#ifdef NO
-    DOSTATS({
-        if (instr_get_opcode(bb->instr) == OP_int &&
-            instr_get_interrupt_number(bb->instr) == VMKUW_SYSCALL_GATEWAY) {
-            STATS_INC(vmkuw_syscall_sites);
-            LOG(THREAD, LOG_SYSCALLS, 2, "vmkuw system call site: #=%d\n", sysnum);
-        }
-    });
-#endif//NO
-#endif
+
     BBPRINT(bb, 3, "syscall # is %d\n", sysnum);
 #ifdef CLIENT_INTERFACE 
     if (sysnum > -1 && instrument_filter_syscall(dcontext, sysnum)) {
@@ -2772,6 +2730,20 @@ build_bb_ilist(dcontext_t *dcontext, build_bb_t *bb)
             bb_stop_prior_to_instr(dcontext, bb, false/*not appended*/);
             break;
         }
+
+        /* far direct is treated as indirect (i#823) */
+        //SJF For direct branches
+        if (instr_is_cti(bb->instr) && !instr_is_mbr(bb->instr)) {
+            if (bb_process_ubr(dcontext, bb))
+                continue;
+            else {
+                if (bb->instr != NULL) /* else, bb_process_ubr() set exit_type */
+                    bb->exit_type |= instr_branch_type(bb->instr);
+                break;
+            }
+        } else
+            instrlist_append(bb->ilist, bb->instr);
+
 
 #ifdef RETURN_AFTER_CALL
         if (bb->app_interp && dynamo_options.ret_after_call) {
