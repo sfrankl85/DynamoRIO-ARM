@@ -888,6 +888,51 @@ copy_and_re_relativize_raw_instr(dcontext_t *dcontext, instr_t *instr,
 
 ******************************************************************************/
 
+
+int
+convert_immed_to_shifted_immed( int immed_int, int sz )
+{
+  bool fin = false;
+  int  shifts=0;
+  int  shift_int = 0;
+
+  switch( sz )
+  {
+    case OPSZ_4_12:
+      //SJF TODO Check if immed cannot fit in 8 bits. If not then shift it
+      if( immed_int > INT8_MAX || immed_int < INT8_MIN )
+      {
+        do
+        {
+          if( ( immed_int & 0x3 ) == 0x0 ) //Ok to shift
+          {
+            immed_int = (immed_int >> 2);
+
+            if( immed_int <= INT8_MAX && immed_int >= INT8_MIN )
+              fin = true;
+
+            shifts++;
+          }
+        } while( !fin );
+
+        shift_int |= (shifts<<8);  
+
+        shift_int |= (immed_int&0xff);
+
+        return shift_int;
+      }
+      else
+        return immed_int;
+      break;
+
+    default:
+      //FAIL
+      break;
+  }
+}
+
+
+
 byte* 
 write_word_to_fcache( byte* pc, byte* word )
 {
@@ -1007,7 +1052,9 @@ encode_bits_7_to_4(decode_info_t* di, instr_t* instr, instr_info_t* info, byte* 
   }
 
   //Just add the opcode here. If not needed and 0 will make no difference
-  word[3] |= info->opcode2;
+  if( word[3] != 0x0 )
+    word[3] |= info->opcode2;
+
 }
 
 
@@ -1104,8 +1151,7 @@ encode_1dst_reg_2src_reg_1src_imm(decode_info_t* di, instr_t* instr, byte* pc)
           case REG_kind:
             b = opnd.value.reg;
             
-            b &= 16;
-
+            b--; //To get actual reg number
             word[3] |= b;
             break;
 
@@ -1124,11 +1170,11 @@ encode_1dst_reg_2src_reg_1src_imm(decode_info_t* di, instr_t* instr, byte* pc)
         {
           //For _reg opcodes
           case IMMED_INTEGER_kind:
-            b = opnd.value.immed_int;
+            b = convert_immed_to_shifted_immed( opnd.value.immed_int, OPSZ_4_12 );
 
             word[2] |= (b >> 1);
 
-            b = (opnd.value.immed_int >> 4);
+            b = (convert_immed_to_shifted_immed( opnd.value.immed_int, OPSZ_4_12 ) & 0x1);
 
             word[3] |= (b << 7 );
             break;
@@ -1205,7 +1251,7 @@ encode_1dst_reg_1src_reg_0src_imm_2(decode_info_t* di, instr_t* instr, byte* pc)
           case REG_kind:
             b = opnd.value.reg;
 
-            b &= 16;
+            b--; //To get actual reg number
 
             word[1] |= b;
             break;
@@ -1282,7 +1328,7 @@ encode_1dst_reg_1src_reg_0src_imm(decode_info_t* di, instr_t* instr, byte* pc)
           case REG_kind:
             b = opnd.value.reg;
 
-            b &= 16;
+            b--; //To get actual reg number
 
             word[3] |= b;
             break;
@@ -1359,8 +1405,7 @@ encode_1dst_reg_2src_reg_0src_imm(decode_info_t* di, instr_t* instr, byte* pc)
           case REG_kind:
             b = opnd.value.reg;
             
-            b &= 16;
-
+            b--; //To get actual reg number
             word[2] |= b;
             break;
 
@@ -1396,8 +1441,7 @@ encode_1dst_reg_2src_reg_0src_imm(decode_info_t* di, instr_t* instr, byte* pc)
           case REG_kind:
             b = opnd.value.reg;
             
-            b &= 16;
-
+            b--; //To get actual reg number
             word[2] |= b;
             break;
 
@@ -1472,8 +1516,7 @@ encode_1dst_reg_1src_reg_1src_imm_3(decode_info_t* di, instr_t* instr, byte* pc)
           case REG_kind:
             b = opnd.value.reg;
             
-            b &= 16;
-
+            b--; //To get actual reg number
             word[3] |= b;
             break;
 
@@ -1496,7 +1539,6 @@ encode_1dst_reg_1src_reg_1src_imm_3(decode_info_t* di, instr_t* instr, byte* pc)
             word[2] |= b;
 
             b = (opnd.value.immed_int);
-            b &= 0x3;
 
             word[3] = (b << 7);
             break;
@@ -1571,8 +1613,8 @@ encode_1dst_reg_1src_reg_1src_imm(decode_info_t* di, instr_t* instr, byte* pc)
           case REG_kind:
             b = opnd.value.reg;
             
-            b &= 16;
 
+            b--; //To get actual reg number
             word[3] |= b;
             break;
 
@@ -1915,8 +1957,7 @@ encode_1dst_reg_1src_reg_1src_imm_4(decode_info_t* di, instr_t* instr, byte* pc)
           case REG_kind:
             b = opnd.value.reg;
             
-            b &= 16;
-
+            b--; //To get actual reg number
             word[1] |= b;
             break;
 
@@ -2015,10 +2056,8 @@ encode_1dst_reg_1src_reg_1src_imm_2(decode_info_t* di, instr_t* instr, byte* pc)
         {
           case REG_kind:
             b = opnd.value.reg;
-            b++;
             
-            b &= 16;
-
+            b--; //To get actual reg number
             word[1] |= b;
             break;
 
@@ -2027,17 +2066,14 @@ encode_1dst_reg_1src_reg_1src_imm_2(decode_info_t* di, instr_t* instr, byte* pc)
           case BASE_DISP_kind:
             b = opnd.value.base_disp.base_reg;
             
-            b &= 16;
-
+            b--; //To get actual reg number
             word[1] |= b;
             break;
 
           case MEM_REG_kind:
             b = opnd.value.reg;
-            b--;
             
-            b &= 16;
-
+            b--; //To get actual reg number
             word[1] |= b;
             break;
             
@@ -2056,11 +2092,13 @@ encode_1dst_reg_1src_reg_1src_imm_2(decode_info_t* di, instr_t* instr, byte* pc)
         switch( opnd.kind )
         {
           case IMMED_INTEGER_kind:
-            b = (opnd.value.immed_int>>9);
+            b = convert_immed_to_shifted_immed( opnd.value.immed_int, OPSZ_4_12 );
+
+            b = (b >> 8);
             
             word[2] |= b;
 
-            b = (opnd.value.immed_int);
+            b = convert_immed_to_shifted_immed( opnd.value.immed_int, OPSZ_4_12 );
             b &= 0xff;
 
             word[3] = b;
@@ -2363,8 +2401,7 @@ encode_1dst_reg_2src_reg_0src_imm_2(decode_info_t* di, instr_t* instr, byte* pc)
           case REG_kind:
             b = opnd.value.reg;
             
-            b &= 16;
-
+            b--; //To get actual reg number
             word[2] |= b;
             break;
 
@@ -2384,8 +2421,7 @@ encode_1dst_reg_2src_reg_0src_imm_2(decode_info_t* di, instr_t* instr, byte* pc)
           case REG_kind:
             b = opnd.value.reg;
             
-            b &= 16;
-
+            b--; //To get actual reg number
             word[3] |= b;
             break;
 
@@ -3642,6 +3678,7 @@ instr_encode_common(dcontext_t *dcontext, instr_t *instr, byte *copy_pc, byte *f
 {
     const instr_info_t * info;
     decode_info_t di;
+    int sz=0;
 
     /* pointer to and into the instruction binary */
     byte *cache_pc = copy_pc;
@@ -3720,6 +3757,16 @@ instr_encode_common(dcontext_t *dcontext, instr_t *instr, byte *copy_pc, byte *f
 
     /* instr_t* operand support */
     di.cur_note = (ptr_int_t) instr->note;
+    
+    //SJF Should be 4
+    sz = decode_sizeof(dcontext, di.start_pc, 0);
+
+    if( field_ptr == di.start_pc + sz )//Success
+    {
+        LOG(THREAD, LOG_EMIT, ENC_LEVEL, "\nwritten instruction '%x' at addr '%x'\n",
+                   (int*)*(field_ptr-4), (int)(field_ptr-4) );
+    }
+
 
 #ifdef NO
 /* TODO SJF Eh? */

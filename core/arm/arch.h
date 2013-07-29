@@ -111,6 +111,9 @@ mixed_mode_enabled(void)
 
   #define CPSR_OFFSET      ((MC_OFFS) + (offsetof(priv_mcontext_t, cpsr)))
 
+  #define ERRNO_OFFSET      (offsetof(unprotected_context_t, errno))
+  #define AT_SYSCALL_OFFSET (offsetof(unprotected_context_t, at_syscall))
+
 #else
   #define XAX_OFFSET        ((MC_OFFS) + (offsetof(priv_mcontext_t, xax)))
   #define XBX_OFFSET        ((MC_OFFS) + (offsetof(priv_mcontext_t, xbx)))
@@ -133,16 +136,17 @@ mixed_mode_enabled(void)
   # define R15_OFFSET       ((MC_OFFS) + (offsetof(priv_mcontext_t, r15)))
   #endif
 
+  #define ERRNO_OFFSET      (offsetof(unprotected_context_t, errno))
+  #define AT_SYSCALL_OFFSET (offsetof(unprotected_context_t, at_syscall))
+
 #endif
-
-#define XMM_OFFSET        ((MC_OFFS) + (offsetof(priv_mcontext_t, ymm)))
-
-#define ERRNO_OFFSET      (offsetof(unprotected_context_t, errno))
-#define AT_SYSCALL_OFFSET (offsetof(unprotected_context_t, at_syscall))
 
 #define NEXT_TAG_OFFSET        ((PROT_OFFS)+offsetof(dcontext_t, next_tag))
 #define LAST_EXIT_OFFSET       ((PROT_OFFS)+offsetof(dcontext_t, last_exit))
 #define DSTACK_OFFSET          ((PROT_OFFS)+offsetof(dcontext_t, dstack))
+
+#define XMM_OFFSET        ((MC_OFFS) + (offsetof(priv_mcontext_t, ymm)))
+
 #ifdef RETURN_STACK
 # define RSTACK_OFFSET         ((PROT_OFFS)+offsetof(dcontext_t, rstack))
 # define TOP_OF_RSTACK_OFFSET  ((PROT_OFFS)+offsetof(dcontext_t, top_of_rstack))

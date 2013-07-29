@@ -3179,51 +3179,30 @@ emit_fcache_enter_common(dcontext_t *dcontext, generated_code_t *code, byte *pc,
     init_patch_list(&patch, absolute ? PATCH_TYPE_ABSOLUTE : PATCH_TYPE_INDIRECT_XDI);
     instrlist_init(&ilist);
 
-#if 0
-    //Get the next_tag ptr to allow fcache_enter to enter
-    if (!absolute) {
-        /* put target into special slot that we can be absolute about */
-        RESTORE_FROM_DC(&ilist, dcontext, REG_RR0, NEXT_TAG_OFFSET, INSERT_APPEND, NULL);
-/*
-        if (shared) {
-            APP(&ilist, SAVE_TO_TLS(dcontext, REG_RR0, FCACHE_ENTER_TARGET_SLOT));
-        } else {
-            ASSERT_NOT_IMPLEMENTED(false);
-        }
-*/
-    }
-
-    /* restore the original register state */
-    //APP(&ilist, post_hook/*label*/); SJF Dont need a lable as 
-    //    nothing jumps to here anymore
-    RESTORE_FROM_DC(&ilist, dcontext, DR_REG_R0, CPSR_OFFSET, INSERT_APPEND, NULL);
-    /* restore cpsr temporarily using dstack */
-    APP(&ilist, INSTR_CREATE_msr_cpsr(dcontext, DR_REG_R0));
-
-    RESTORE_FROM_DC(&ilist, dcontext, REG_RR0, R0_OFFSET, INSERT_APPEND, NULL);
-    RESTORE_FROM_DC(&ilist, dcontext, REG_RR3, R3_OFFSET, INSERT_APPEND, NULL);
-    RESTORE_FROM_DC(&ilist, dcontext, REG_RR1, R1_OFFSET, INSERT_APPEND, NULL);
-    RESTORE_FROM_DC(&ilist, dcontext, REG_RR2, R2_OFFSET, INSERT_APPEND, NULL);
-
-    if (absolute || !TEST(SELFPROT_DCONTEXT, dynamo_options.protect_mask))
-        RESTORE_FROM_DC(&ilist, dcontext, REG_RR6, R6_OFFSET, INSERT_APPEND, NULL);
-    if (absolute || TEST(SELFPROT_DCONTEXT, dynamo_options.protect_mask))
-        RESTORE_FROM_DC(&ilist, dcontext, REG_RR7, R7_OFFSET, INSERT_APPEND, NULL);
-    RESTORE_FROM_DC(&ilist, dcontext, REG_RR5, R5_OFFSET, INSERT_APPEND, NULL);
-    RESTORE_FROM_DC(&ilist, dcontext, REG_RR13, R13_OFFSET, INSERT_APPEND, NULL);
-
-    if (!absolute) {
-        if (TEST(SELFPROT_DCONTEXT, dynamo_options.protect_mask))
-            RESTORE_FROM_DC(&ilist, dcontext, REG_RR6, R6_OFFSET, INSERT_APPEND, NULL);
-        else
-            RESTORE_FROM_DC(&ilist, dcontext, REG_RR7, R7_OFFSET, INSERT_APPEND, NULL);
-    }
-
-#endif //0
+//SJF Custom entry function
 
     /* Jump indirect through next_tag.  Dispatch set this value with
      * where we want to go next in the fcache_t.
      */
+    //dcontext is in r0 so just add offset to it and get entry point 
+
+    int offset = offsetof(dcontext_t, next_tag);
+     
+    APP(&ilist, INSTR_CREATE_add_imm(dcontext, opnd_create_reg(REG_RR6),
+                                     opnd_create_reg(REG_RR0),
+                                     opnd_create_immed_int(offset, OPSZ_4_12),
+                                     COND_ALWAYS ));
+
+    APP(&ilist, INSTR_CREATE_ldr_imm(dcontext, opnd_create_reg(REG_RR7),
+                                     opnd_create_mem_reg(REG_RR6),
+                                     OPND_CREATE_IMM12(0), COND_ALWAYS ));
+
+    APP(&ilist, INSTR_CREATE_branch_ind(dcontext, opnd_create_reg(REG_RR7)));
+
+ 
+    //SJF TODO Backup all context. R0-R12 + cpsr
+
+#if 0
     if (absolute) {
         instr_create_branch_via_dcontext(&ilist, dcontext, NEXT_TAG_OFFSET);
     } else {
@@ -3245,6 +3224,7 @@ emit_fcache_enter_common(dcontext_t *dcontext, generated_code_t *code, byte *pc,
             ASSERT_NOT_IMPLEMENTED(false);
         }
     }
+#endif
 
     /* now encode the instructions */
     len = encode_with_patch_list(dcontext, &patch, &ilist, pc);

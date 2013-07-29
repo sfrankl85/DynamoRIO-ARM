@@ -5269,13 +5269,15 @@ instr_create_branch_via_dcontext(instrlist_t* ilist, dcontext_t *dcontext, int o
 
     //Calculate memory address and put into reg
     instrlist_meta_append( ilist, INSTR_CREATE_mov_imm( dcontext, opnd_create_reg(REG_RR8),
-                                  OPND_CREATE_IMM12( (int)(dcontext->upcontext.separate_upcontext) + offs), 
+                                  OPND_CREATE_IMM12(offs), 
                                   COND_ALWAYS ));
 
     //load value from mem address in reg 8 into reg 7
-    instrlist_meta_append(ilist, INSTR_CREATE_ldr_imm(dcontext, opnd_create_reg(REG_RR7),
-                                                      opnd_create_mem_reg(REG_RR8),  
-                                                      OPND_CREATE_IMM12(0), COND_ALWAYS ));
+    instrlist_meta_append(ilist, INSTR_CREATE_ldr_reg(dcontext, opnd_create_reg(REG_RR7),
+                                                      opnd_create_mem_reg(REG_RR13),  
+                                                      opnd_create_reg(REG_RR8),
+                                                      OPND_CREATE_IMM5(0), COND_ALWAYS ));
+
     //Create an indirect branch. Which is just a 'mov pc, reg'
     instrlist_meta_append(ilist, INSTR_CREATE_branch_ind(dcontext, opnd_create_reg(REG_RR7)));
  
