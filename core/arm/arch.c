@@ -1932,17 +1932,6 @@ get_ibl_routine_code_internal(dcontext_t *dcontext,
                               ibl_branch_type_t branch_type
                               _IF_X64(gencode_mode_t mode))
 {
-#ifdef X64
-    if (((mode == GENCODE_X86 ||
-          (mode == GENCODE_FROM_DCONTEXT && dcontext != GLOBAL_DCONTEXT &&
-           dcontext->x86_mode && !X64_CACHE_MODE_DC(dcontext))) &&
-         shared_code_x86 == NULL) ||
-        ((mode == GENCODE_X86_TO_X64 ||
-          (mode == GENCODE_FROM_DCONTEXT && dcontext != GLOBAL_DCONTEXT &&
-           dcontext->x86_mode && X64_CACHE_MODE_DC(dcontext))) &&
-         shared_code_x86_to_x64 == NULL))
-        return NULL;
-#endif
     switch (source_fragment_type) {
     case IBL_BB_SHARED:
         if (!USE_SHARED_BB_IBL())

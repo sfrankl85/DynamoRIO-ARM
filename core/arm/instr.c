@@ -287,8 +287,8 @@ opnd_create_immed_int(ptr_int_t i, opnd_size_t size)
             CLIENT_ASSERT(CHECK_TRUNCATE_TYPE_10bit(i),
                           "opnd_create_immed_int: value too large for 10-bit size");
         } else if (sz == 12){
-            CLIENT_ASSERT(CHECK_TRUNCATE_TYPE_12bit(i),
-                          "opnd_create_immed_int: value too large for 12-bit size");
+            CLIENT_ASSERT(CHECK_TRUNCATE_TYPE_32bit(i),// 32 bits allowed in 12 bits
+                          "opnd_create_immed_int: value too large for 12-bit size(allows 32 bits using shift)");
         } else if (sz == 24){
             CLIENT_ASSERT(CHECK_TRUNCATE_TYPE_24bit(i),
                           "opnd_create_immed_int: value too large for 24-bit size");
@@ -5112,50 +5112,33 @@ instr_create_restore_from_dcontext(instrlist_t *ilist, dcontext_t *dcontext, reg
                                    int offs, int where, instr_t* rel_instr, bool absolute)
 {
     //Clobbers R8
-    reg_id_t base_reg;
-
-    if (TEST(SELFPROT_DCONTEXT, dynamo_options.protect_mask) &&
-         offs < sizeof(unprotected_context_t)) 
-    {
-        base_reg = REG_RR6;
-    } 
-    else 
-    {
-        if (offs >= sizeof(unprotected_context_t))
-            offs -= sizeof(unprotected_context_t);
-        base_reg = REG_RR7;
-    }
-
     if( where == INSERT_APPEND )
     {
       instrlist_meta_append( ilist, INSTR_CREATE_mov_imm( dcontext, opnd_create_reg(REG_RR8), 
-                                    OPND_CREATE_IMM12(((int)(ptr_int_t)(absolute ?
-                                                      dcontext->upcontext.separate_upcontext : 0))
+                                    OPND_CREATE_IMM12(((int)(ptr_int_t)(absolute ? dcontext : 0))
                                                       + offs), COND_ALWAYS ));
 
       instrlist_meta_append( ilist, INSTR_CREATE_ldr_reg(dcontext, opnd_create_reg(reg),
-                                    opnd_create_mem_reg(base_reg), opnd_create_reg(REG_RR8), OPND_CREATE_IMM5(0), COND_ALWAYS ));
+                                    opnd_create_mem_reg(REG_RR8), opnd_create_reg(REG_NULL), OPND_CREATE_IMM5(0), COND_ALWAYS ));
     }
     else if( where == INSERT_PRE )
     {
       instrlist_meta_preinsert( ilist, rel_instr, INSTR_CREATE_mov_imm( dcontext, opnd_create_reg(REG_RR8), 
-                                    OPND_CREATE_IMM12(((int)(ptr_int_t)(absolute ?
-                                                      dcontext->upcontext.separate_upcontext : 0))
+                                    OPND_CREATE_IMM12(((int)(ptr_int_t)(absolute ? dcontext : 0))
                                                       + offs), COND_ALWAYS ));
 
       instrlist_meta_preinsert( ilist, rel_instr, INSTR_CREATE_ldr_reg(dcontext, opnd_create_reg(reg),
-                                    opnd_create_mem_reg(base_reg), opnd_create_reg(REG_RR8), OPND_CREATE_IMM5(0), COND_ALWAYS ));
+                                    opnd_create_mem_reg(REG_RR8), opnd_create_reg(REG_NULL), OPND_CREATE_IMM5(0), COND_ALWAYS ));
       
     }
     else if( where == INSERT_POST )
     {
       instrlist_meta_postinsert( ilist, rel_instr, INSTR_CREATE_mov_imm( dcontext, opnd_create_reg(REG_RR8), 
-                                    OPND_CREATE_IMM12(((int)(ptr_int_t)(absolute ?
-                                                      dcontext->upcontext.separate_upcontext : 0))
+                                    OPND_CREATE_IMM12(((int)(ptr_int_t)(absolute ? dcontext : 0))
                                                       + offs), COND_ALWAYS ));
 
       instrlist_meta_postinsert( ilist, rel_instr, INSTR_CREATE_ldr_reg(dcontext, opnd_create_reg(reg),
-                                    opnd_create_mem_reg(base_reg), opnd_create_reg(REG_RR8), OPND_CREATE_IMM5(0), COND_ALWAYS ));
+                                    opnd_create_mem_reg(REG_RR8), opnd_create_reg(REG_NULL), OPND_CREATE_IMM5(0), COND_ALWAYS ));
     }
     else
       CLIENT_ASSERT(false,
@@ -5167,50 +5150,33 @@ instr_t *
 instr_create_save_to_dcontext(instrlist_t *ilist, dcontext_t *dcontext, reg_id_t reg, 
                                    int offs, int where, instr_t* rel_instr, bool absolute)
 {
-    reg_id_t base_reg;
-
-    if (TEST(SELFPROT_DCONTEXT, dynamo_options.protect_mask) &&
-         offs < sizeof(unprotected_context_t))
-    {
-        base_reg = REG_RR6;
-    }
-    else
-    {
-        if (offs >= sizeof(unprotected_context_t))
-            offs -= sizeof(unprotected_context_t);
-        base_reg = REG_RR7;
-    }
-
     if( where == INSERT_APPEND )
     {
       instrlist_meta_append( ilist, INSTR_CREATE_mov_imm( dcontext, opnd_create_reg(REG_RR8),
-                             OPND_CREATE_IMM12(((int)(ptr_int_t)(absolute ?
-                                                      dcontext->upcontext.separate_upcontext : 0))
-                                                      + offs), COND_ALWAYS ));
+                             OPND_CREATE_IMM12(((int)(ptr_int_t)(absolute ? dcontext : 0))
+                                                      + offs-4), COND_ALWAYS ));  //SJF Need -4 for some reason
 
       instrlist_meta_append( ilist, INSTR_CREATE_str_reg(dcontext, opnd_create_reg(reg),
-                             opnd_create_mem_reg(base_reg), opnd_create_reg(REG_RR8), OPND_CREATE_IMM5(0), COND_ALWAYS ));
+                             opnd_create_mem_reg(REG_RR8), opnd_create_reg(REG_NULL), OPND_CREATE_IMM5(0), COND_ALWAYS ));
     }
     else if( where == INSERT_PRE )
     {
       instrlist_meta_preinsert( ilist, rel_instr, INSTR_CREATE_mov_imm( dcontext, opnd_create_reg(REG_RR8),
-                                OPND_CREATE_IMM12(((int)(ptr_int_t)(absolute ?
-                                                      dcontext->upcontext.separate_upcontext : 0))
-                                                      + offs), COND_ALWAYS ));
+                                OPND_CREATE_IMM12(((int)(ptr_int_t)(absolute ? dcontext : 0))
+                                                      + offs - 4), COND_ALWAYS ));
 
       instrlist_meta_preinsert( ilist, rel_instr, INSTR_CREATE_str_reg(dcontext, opnd_create_reg(reg),
-                                opnd_create_mem_reg(base_reg), opnd_create_reg(REG_RR8), OPND_CREATE_IMM5(0), COND_ALWAYS ));
+                                opnd_create_mem_reg(REG_RR8), opnd_create_reg(REG_NULL), OPND_CREATE_IMM5(0), COND_ALWAYS ));
 
     }
     else if( where == INSERT_POST )
     {
       instrlist_meta_postinsert( ilist, rel_instr, INSTR_CREATE_mov_imm( dcontext, opnd_create_reg(REG_RR8),
-                                    OPND_CREATE_IMM12(((int)(ptr_int_t)(absolute ?
-                                                      dcontext->upcontext.separate_upcontext : 0))
-                                                      + offs), COND_ALWAYS ));
+                                    OPND_CREATE_IMM12(((int)(ptr_int_t)(absolute ? dcontext : 0))
+                                                      + offs - 4), COND_ALWAYS ));
 
       instrlist_meta_postinsert( ilist, rel_instr, INSTR_CREATE_str_reg(dcontext, opnd_create_reg(reg),
-                                 opnd_create_mem_reg(base_reg), opnd_create_reg(REG_RR8), OPND_CREATE_IMM5(0), COND_ALWAYS ));
+                                 opnd_create_mem_reg(REG_RR8), opnd_create_reg(REG_NULL), OPND_CREATE_IMM5(0), COND_ALWAYS ));
     }
     else
       CLIENT_ASSERT(false,

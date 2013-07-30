@@ -357,6 +357,26 @@ static inline int64 atomic_add_exchange_int64(volatile int64 *var, int64 value) 
   } while (0)
   //From macro above __asm__ __volatile__("swp (%0), (%0), %1" : : "r" (target), "r" (value) : "memory"); 
 
+//SJF Forget about atomicity fo now. ldrex doesnt want to work so fuck it
+# define ATOMIC_3BYTE_WRITE(target, value, hot_patch) do {          \
+    byte write;                                                     \
+                                                                    \
+    target += cnt;                                                  \
+    write = (value >> (cnt*8)) & 0xff;                              \
+    __asm__ __volatile__("1:     strb %0, %1   \n"                   \
+                         :: "r" (write), "m" (target) : "memory");      \
+    cnt++;                                                          \
+  } while (cnt<=3)
+
+/* Old ASM for ATOMIC_3BYTE_WRITE
+    __asm__ __volatile__("1:     ldrexb %2, %0   \n"                   \
+                         "       strexb %2, %1, %0   \n"               \
+                         "       cmp    %2, #0  \n"                   \
+                         "       bne    1b   \n"                       \
+                         : "=Q" (target)                            \
+                         : "r" (write), "r" (tmp) : "memory");      \
+*/
+
 /* SJF Changed all the atomic functions to use ARM syntax/instructions */
 /* May still be an issue due to adding new variables needed by ARM.
    Would be nice to be able to declare the temp vairables inside the asm
@@ -1304,7 +1324,7 @@ enum {
     NOT_HOT_PATCHABLE=false,
     HOT_PATCHABLE=true
 };
-void patch_branch(cache_pc branch_pc, cache_pc target_pc, bool hot_patch);
+void patch_branch(dcontext_t* dcontext, cache_pc branch_pc, cache_pc target_pc, bool hot_patch);
 bool link_direct_exit(dcontext_t *dcontext, fragment_t *f, linkstub_t *l,
                       fragment_t *targetf, bool hot_patch);
 void unlink_direct_exit(dcontext_t *dcontext, fragment_t *f, linkstub_t *l);
@@ -1354,7 +1374,7 @@ void
 unlink_entrance_stub(dcontext_t *dcontext, cache_pc stub, uint flags,
                      coarse_info_t *info /*OPTIONAL*/);
 cache_pc
-entrance_stub_from_cti(cache_pc cti);
+entrance_stub_from_cti(dcontext_t* dcontext, cache_pc cti);
 
 uint
 coarse_exit_prefix_size(coarse_info_t *info);

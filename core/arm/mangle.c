@@ -1073,7 +1073,7 @@ insert_parameter_preparation(dcontext_t *dcontext, instrlist_t *ilist, instr_t *
                 if (opnd_is_immed_int(arg) || opnd_is_instr(arg))
                 {
                     //SJF Converted this to a store to push the value onto the stack
-                    POST(ilist, mark, INSTR_CREATE_str_imm(dcontext, opnd_create_reg(REG_RR13), arg, COND_ALWAYS));
+                    POST(ilist, mark, INSTR_CREATE_str_imm(dcontext, opnd_create_mem_reg(REG_RR13), arg, COND_ALWAYS));
                     /*SJF Increment the stack pointer here. Bit of a hack until I implement
                           post indexed flag setting in INSTR_CREATE. */
                     POST(ilist, mark, INSTR_CREATE_add_imm(dcontext, opnd_create_reg(REG_RR13), 
@@ -1178,10 +1178,11 @@ insert_meta_call_vargs(dcontext_t *dcontext, instrlist_t *ilist, instr_t *instr,
 {
     instr_t *in = (instr == NULL) ? instrlist_last(ilist) : instr_get_prev(instr);
     bool direct;
-    uint stack_for_params = 
+    uint stack_for_params = 0;
+/* SJF Ignore this
         insert_parameter_preparation(dcontext, ilist, instr, 
                                      clean_call, num_args, args);
-    IF_X64(ASSERT(ALIGNED(stack_for_params, 16)));
+*/
     /* If we need an indirect call, we use r11 as the last of the scratch regs.
      * We document this to clients using dr_insert_call_ex() or DR_CLEANCALL_INDIRECT.
      */

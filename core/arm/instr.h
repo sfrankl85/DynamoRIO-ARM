@@ -556,8 +556,8 @@ extern const reg_id_t dr_reg_fixer[];
 # define INT5_MAX   16 
 # define INT6_MIN   -32
 # define INT6_MAX   32 
-# define INT8_MIN   SCHAR_MIN
-# define INT8_MAX   SCHAR_MAX
+# define INT8_MIN   0 
+# define INT8_MAX   256 
 # define INT10_MIN  -512
 # define INT10_MAX  512 
 # define INT12_MIN  -2048

@@ -240,6 +240,29 @@ lookup_opcode_from_opc( uint opc )
  * Reading all bytes of instruction
  */
 
+uint
+convert_shifted_immed_to_immed( uint immed_int, int sz )
+{
+  int shifts = 0;
+  int ret_immed=0;
+
+  switch( sz )
+  {
+    case OPSZ_4_12:
+      shifts = ((immed_int & 0xf00) >> 8);
+      ret_immed = immed_int;
+
+      for( int i=0; i<shifts; i++ )
+      {
+        ret_immed = (ret_immed << 30 ) | (ret_immed >> 2);
+      }
+      return ret_immed;
+
+    default:
+      return immed_int;
+  }
+}
+
 instr_info_t* decode_data_processing_and_els(byte* instr_word, 
                                              decode_info_t* di, bool just_opcode,
                                              opnd_t* dsts, opnd_t* srcs, 
@@ -298,6 +321,8 @@ decode_1dst_reg_2src_reg_1src_imm( decode_info_t* di, byte* instr_word, opnd_t* 
     immed = immed << 1;
 
     immed |= (instr_word[3] >> 7);
+
+    immed = convert_shifted_immed_to_immed( immed, OPSZ_4_5 );
 
     srcs[*numsrcs] = opnd_create_immed_int((ptr_int_t)(immed), OPSZ_4_5);
     (*numsrcs)++;
@@ -493,6 +518,8 @@ decode_1dst_reg_0src_reg_1src_imm_1( decode_info_t* di, byte* instr_word, opnd_t
 
     immed |= (instr_word[3]);
 
+    immed = convert_shifted_immed_to_immed( immed, OPSZ_4_12 );
+
     srcs[*numsrcs] = opnd_create_immed_int((ptr_int_t)(immed), OPSZ_4_12);
     (*numsrcs)++;
 }
@@ -514,6 +541,8 @@ decode_1dst_reg_0src_reg_1src_imm_2( decode_info_t* di, byte* instr_word, opnd_t
     immed = immed << 8;
 
     immed |= (instr_word[3]);
+
+    immed = convert_shifted_immed_to_immed( immed, OPSZ_4_12 );
 
     srcs[*numsrcs] = opnd_create_immed_int((ptr_int_t)(immed), OPSZ_4_12);
     (*numsrcs)++;
@@ -537,6 +566,8 @@ decode_1dst_reg_0src_reg_1src_imm_3( decode_info_t* di, byte* instr_word, opnd_t
     immed = immed << 4;
 
     immed |= (instr_word[3] & 0xf);
+
+    immed = convert_shifted_immed_to_immed( immed, OPSZ_4_8 );
 
     srcs[*numsrcs] = opnd_create_immed_int((ptr_int_t)(immed), OPSZ_4_8);
     (*numsrcs)++;
@@ -565,6 +596,8 @@ decode_1dst_reg_1src_reg_1src_imm_1( decode_info_t* di, byte* instr_word, opnd_t
     immed = immed << 1;
 
     immed |= (instr_word[3] >> 7);
+
+    immed = convert_shifted_immed_to_immed( immed, OPSZ_4_5 );
 
     srcs[*numsrcs] = opnd_create_immed_int((ptr_int_t)(immed), OPSZ_4_5);
     (*numsrcs)++;
@@ -597,6 +630,8 @@ decode_1dst_reg_1src_reg_1src_imm_2( decode_info_t* di, byte* instr_word, opnd_t
 
     immed |= (instr_word[3]);
 
+    immed = convert_shifted_immed_to_immed( immed, OPSZ_4_12 );
+
     srcs[*numsrcs] = opnd_create_immed_int((ptr_int_t)(immed), OPSZ_4_12);
     (*numsrcs)++;
 }
@@ -624,6 +659,8 @@ decode_1dst_reg_1src_reg_1src_imm_3( decode_info_t* di, byte* instr_word, opnd_t
     immed = immed << 4;
 
     immed |= ((instr_word[3] & 0x80) >> 7);
+
+    immed = convert_shifted_immed_to_immed( immed, OPSZ_4_5 );
 
     srcs[*numsrcs] = opnd_create_immed_int((ptr_int_t)(immed), OPSZ_4_5);
     (*numsrcs)++;
@@ -656,6 +693,8 @@ decode_1dst_reg_1src_reg_1src_imm_4( decode_info_t* di, byte* instr_word, opnd_t
 
     immed |= (instr_word[3] & 0xf);
 
+    immed = convert_shifted_immed_to_immed( immed, OPSZ_4_8 );
+
     srcs[*numsrcs] = opnd_create_immed_int((ptr_int_t)(immed), OPSZ_4_8);
     (*numsrcs)++;
 }
@@ -671,6 +710,8 @@ decode_0dst_reg_1src_imm_1src_mask( decode_info_t* di, byte* instr_word, opnd_t*
     immed = immed << 8;
 
     immed |= (instr_word[3]);
+
+    immed = convert_shifted_immed_to_immed( immed, OPSZ_4_12 );
 
     srcs[*numsrcs] = opnd_create_immed_int((ptr_int_t)(immed), OPSZ_4_12);
     (*numsrcs)++;

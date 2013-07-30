@@ -1233,7 +1233,7 @@ common_disassemble_fragment(dcontext_t *dcontext,
                     CLIENT_ASSERT(pc == end_pc, "disassemble_fragment: invalid end");
                     next_stop_pc = end_pc;
                 } else {
-                    pc = entrance_stub_from_cti(cti_pc);
+                    pc = entrance_stub_from_cti(dcontext, cti_pc);
                     if (coarse_is_entrance_stub(pc)) {
                         next_stop_pc = pc + linkstub_size(dcontext, f, l);
                     } else {

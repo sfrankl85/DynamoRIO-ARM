@@ -331,8 +331,8 @@ immed_size_ok(decode_info_t *di/*prefixes field is IN/OUT; x86_mode is IN*/,
         return (immed >= INT6_MIN && immed <= INT6_MAX);
     case OPSZ_4_10:
         return (immed >= INT10_MIN && immed <= INT10_MAX);
-    case OPSZ_4_12:
-        return (immed >= INT12_MIN && immed <= INT12_MAX);
+    case OPSZ_4_12://32 bits allowed in 12 bit value
+        return (immed >= INT_MIN && immed <= INT_MAX);
     case OPSZ_4_24:
         return (immed >= INT24_MIN && immed <= INT24_MAX);
     default:
@@ -890,11 +890,12 @@ copy_and_re_relativize_raw_instr(dcontext_t *dcontext, instr_t *instr,
 
 
 int
-convert_immed_to_shifted_immed( int immed_int, int sz )
+convert_immed_to_shifted_immed( uint immed_int, int sz )
 {
+  #define MAX_SHIFTS  16
   bool fin = false;
   int  shifts=0;
-  int  shift_int = 0;
+  uint  shift_int = 0;
 
   switch( sz )
   {
@@ -904,20 +905,22 @@ convert_immed_to_shifted_immed( int immed_int, int sz )
       {
         do
         {
-          if( ( immed_int & 0x3 ) == 0x0 ) //Ok to shift
-          {
-            immed_int = (immed_int >> 2);
+          immed_int = (immed_int << 2) | (immed_int >> 30);
 
-            if( immed_int <= INT8_MAX && immed_int >= INT8_MIN )
-              fin = true;
+          if( immed_int <= INT8_MAX && immed_int >= INT8_MIN )
+            fin = true;
 
-            shifts++;
-          }
-        } while( !fin );
+          shifts++;
+        } while( !fin && shifts < MAX_SHIFTS );
 
-        shift_int |= (shifts<<8);  
+        if( fin )//Succeeded 
+        {
+          shift_int |= (shifts<<8);  
 
-        shift_int |= (immed_int&0xff);
+          shift_int |= (immed_int&0xff);
+        }
+        else
+          shift_int = immed_int; //SJF TODO Fail here???
 
         return shift_int;
       }
@@ -926,8 +929,7 @@ convert_immed_to_shifted_immed( int immed_int, int sz )
       break;
 
     default:
-      //FAIL
-      break;
+      return immed_int;
   }
 }
 
@@ -2092,10 +2094,8 @@ encode_1dst_reg_1src_reg_1src_imm_2(decode_info_t* di, instr_t* instr, byte* pc)
         switch( opnd.kind )
         {
           case IMMED_INTEGER_kind:
-            b = convert_immed_to_shifted_immed( opnd.value.immed_int, OPSZ_4_12 );
+            b = (convert_immed_to_shifted_immed( opnd.value.immed_int, OPSZ_4_12 ) >> 8 );
 
-            b = (b >> 8);
-            
             word[2] |= b;
 
             b = convert_immed_to_shifted_immed( opnd.value.immed_int, OPSZ_4_12 );

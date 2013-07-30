@@ -241,8 +241,8 @@ also see emit_inline_ibl_stub() below
 int
 exit_stub_size(dcontext_t *dcontext, cache_pc target, uint flags)
 {
-#ifdef NO
 //TODO SJF What???
+#if 0
     if (TEST(FRAG_COARSE_GRAIN, flags)) {
         /* For coarse: bb building points at bb ibl, and then insert_exit_stub
          * changes that to the appropriate coarse prefix.  So the emit() calls to
@@ -329,9 +329,10 @@ insert_relative_target(byte *pc, cache_pc target, bool hot_patch)
     /* insert 4-byte pc-relative offset from the beginning of the next instruction
      */
     int value = (int)(ptr_int_t)(target - pc - 4);
-    IF_X64(ASSERT(CHECK_TRUNCATE_TYPE_int(target - pc - 4)));
-    ATOMIC_4BYTE_WRITE(pc, value, hot_patch);
-    pc += 4;
+    int cnt=0;                                                      \
+
+    ATOMIC_3BYTE_WRITE(pc, value, hot_patch);
+    pc += 3;
     return pc;
 }
 
@@ -722,8 +723,6 @@ pad_for_exitstub_alignment(dcontext_t *dcontext, linkstub_t *l, fragment_t *f, b
 void
 remove_nops_from_ilist(dcontext_t *dcontext, instrlist_t *ilist _IF_DEBUG(bool recreating))
 {
-#ifdef NO
-//TODO SJF
     instr_t *inst, *next_inst;
 
     for (inst = instrlist_first(ilist); inst != NULL; inst = next_inst) {
@@ -742,7 +741,6 @@ remove_nops_from_ilist(dcontext_t *dcontext, instrlist_t *ilist _IF_DEBUG(bool r
             instr_destroy(dcontext, inst);
         }
     }
-#endif //NO
 }
 
 
@@ -873,8 +871,6 @@ static byte *
 insert_inlined_ibl(dcontext_t *dcontext, fragment_t *f, linkstub_t *l, byte *pc,
                    cache_pc unlinked_exit_target, uint flags)
 {
-#ifdef NO
-//TODO SJF
     ibl_code_t *ibl_code = 
         get_ibl_routine_code(dcontext, 
                              extract_branchtype(l->flags), f->flags);
@@ -882,16 +878,13 @@ insert_inlined_ibl(dcontext_t *dcontext, fragment_t *f, linkstub_t *l, byte *pc,
     cache_pc linked_exit_target = 
         get_linked_entry(dcontext, unlinked_exit_target);
 
-    /* PR 248207: haven't updated the inlining to be x64-compliant yet */
-    IF_X64(ASSERT_NOT_IMPLEMENTED(false));
-
     ASSERT(linkstub_owned_by_fragment(dcontext, f, l));
     ASSERT(ibl_code->ibl_head_is_inlined);
     ASSERT(EXIT_HAS_STUB(l->flags, f->flags));
     memcpy(start_pc, ibl_code->inline_ibl_stub_template, ibl_code->inline_stub_length);
 
     /* exit should be unlinked initially */
-    patch_branch(EXIT_CTI_PC(f, l), start_pc + ibl_code->inline_unlink_offs,
+    patch_branch(dcontext, EXIT_CTI_PC(f, l), (start_pc + ibl_code->inline_unlink_offs),
                  NOT_HOT_PATCHABLE);
 
     if (DYNAMO_OPTION(indirect_stubs)) {
@@ -907,11 +900,9 @@ insert_inlined_ibl(dcontext_t *dcontext, fragment_t *f, linkstub_t *l, byte *pc,
         }
         /* set the linkstub ptr */
         pc = start_pc + ibl_code->inline_linkstub_first_offs;
-        IF_X64(ASSERT_NOT_IMPLEMENTED(false));
         *((uint *)pc) = (uint)(ptr_uint_t)l;
         if (DYNAMO_OPTION(atomic_inlined_linking)) {
             pc = start_pc + ibl_code->inline_linkstub_second_offs;
-            IF_X64(ASSERT_NOT_IMPLEMENTED(false));
             *((uint *)pc) = (uint)(ptr_uint_t)l;
         }
     } else {
@@ -923,7 +914,6 @@ insert_inlined_ibl(dcontext_t *dcontext, fragment_t *f, linkstub_t *l, byte *pc,
     }
 
     return start_pc + ibl_code->inline_stub_length;
-#endif //NO
 }
 
 static cache_pc
@@ -1096,50 +1086,26 @@ insert_exit_stub(dcontext_t *dcontext, fragment_t *f,
 }
 
 static cache_pc
-exit_cti_disp_pc(cache_pc branch_pc)
+exit_cti_disp_pc(dcontext_t* dcontext, cache_pc branch_pc)
 {
-#ifdef NO
-//TODO SJF
-    cache_pc byte_ptr = branch_pc;
-    byte opcode = *byte_ptr;
+    int opcode = OP_UNDECODED;
     uint length = 0;
+    byte* new_pc;
+    instr_t instr;
+    cache_pc byte_ptr = branch_pc;
 
-    if (opcode == RAW_PREFIX_jcc_taken || opcode == RAW_PREFIX_jcc_not_taken) {
-        length++;
-        byte_ptr++;
-        opcode = *byte_ptr;
-        /* branch hints are only valid with jcc instrs, and if present on
-         * other ctis we strip them out during mangling (i#435)
-         */
-        ASSERT(opcode == RAW_OPCODE_jcc_byte1);
-    }
-    if (opcode == ADDR_PREFIX_OPCODE) { /* used w/ jecxz/loop* */
-        length++;
-        byte_ptr++;
-        opcode = *byte_ptr;
+    instr_init(dcontext, &instr);
+
+    new_pc = decode_cti(dcontext, branch_pc, &instr);
+
+    if( instr.opcode == OP_b || instr.opcode == OP_bl || instr.opcode == OP_blx_imm )
+    {
+      //Return addr is in the last 24 bits/3 words
+      byte_ptr++;      
+      length = 3;
     }
 
-    if (opcode >= RAW_OPCODE_loop_start && opcode <= RAW_OPCODE_loop_end) {
-        /* assume that this is a mangled jcxz/loop*
-         * target pc is in last 4 bytes of "9-byte instruction"
-         */
-        length += CTI_SHORT_REWRITE_LENGTH;
-    } else if (opcode == RAW_OPCODE_jcc_byte1) {
-        /* 2-byte opcode, 6-byte instruction, except for branch hint */
-        ASSERT(*(byte_ptr+1) >= RAW_OPCODE_jcc_byte2_start &&
-               *(byte_ptr+1) <= RAW_OPCODE_jcc_byte2_end);
-        length += CBR_LONG_LENGTH;
-    } else {
-        /* 1-byte opcode, 5-byte instruction */
-#if (defined(RETURN_STACK) || defined(HOT_PATCHING_INTERFACE))
-        ASSERT(opcode == RAW_OPCODE_jmp || opcode == RAW_OPCODE_call);
-#else
-        ASSERT(opcode == RAW_OPCODE_jmp);
-#endif
-        length += JMP_LONG_LENGTH;
-    }
-    return branch_pc + length - 4; /* disp is 4 even on x64 */
-#endif //NO
+    return new_pc - length; //SJF point to beginning of addr
 }
 
 /* Patch the (direct) branch at branch_pc so it branches to target_pc 
@@ -1149,9 +1115,9 @@ exit_cti_disp_pc(cache_pc branch_pc)
  * not cross a cache line.
  */
 void
-patch_branch(cache_pc branch_pc, cache_pc target_pc, bool hot_patch)
+patch_branch(dcontext_t* dcontext, cache_pc branch_pc, cache_pc target_pc, bool hot_patch)
 {
-    cache_pc byte_ptr = exit_cti_disp_pc(branch_pc);
+    cache_pc byte_ptr = exit_cti_disp_pc(dcontext, branch_pc);
     insert_relative_target(byte_ptr, target_pc, hot_patch);
 }
 
@@ -1370,7 +1336,7 @@ link_direct_exit(dcontext_t *dcontext, fragment_t *f, linkstub_t *l, fragment_t 
              * For now we assume only when unlinked:
              */
             /* skip custom code */
-            patch_branch(EXIT_CTI_PC(f, l), stub_pc,
+            patch_branch(dcontext, EXIT_CTI_PC(f, l), stub_pc,
                          TEST(FRAG_SHARED, f->flags) ? hot_patch : NOT_HOT_PATCHABLE);
 # endif
         } else {
@@ -1380,7 +1346,7 @@ link_direct_exit(dcontext_t *dcontext, fragment_t *f, linkstub_t *l, fragment_t 
              * For now we assume only when unlinked:
              */
             /* skip custom code */
-            patch_branch(EXIT_CTI_PC(f, l), stub_pc, hot_patch);
+            patch_branch(dcontext, EXIT_CTI_PC(f, l), stub_pc, hot_patch);
 # endif
             change_linkcount_target(stub_pc, FCACHE_ENTRY_PC(targetf));
         }
@@ -1398,7 +1364,7 @@ link_direct_exit(dcontext_t *dcontext, fragment_t *f, linkstub_t *l, fragment_t 
             LOG(THREAD, LOG_LINKS, 4,
                 "\tlinking F%d."PFX" to incr routine b/c F%d is trace head\n",
                 f->id, EXIT_CTI_PC(f, l), targetf->id);
-            patch_branch(stub_pc + LINKCOUNT_UNLINKED_ENTRY(f->flags) + 10,
+            patch_branch(dcontext, stub_pc + LINKCOUNT_UNLINKED_ENTRY(f->flags) + 10,
                          trace_head_incr_routine(dcontext), hot_patch);
         }
 # endif
@@ -1413,7 +1379,7 @@ link_direct_exit(dcontext_t *dcontext, fragment_t *f, linkstub_t *l, fragment_t 
             f->id, EXIT_CTI_PC(f, l), targetf->id);
         /* FIXME: more efficient way than multiple calls to get size-5? */
         ASSERT(linkstub_size(dcontext, f, l) == DIRECT_EXIT_STUB_SIZE(f->flags));
-        patch_branch(stub_pc + DIRECT_EXIT_STUB_SIZE(f->flags) - 5,
+        patch_branch(dcontext, stub_pc + DIRECT_EXIT_STUB_SIZE(f->flags) - 5,
                      trace_head_incr_routine(dcontext), hot_patch);
         return false; /* going through stub */
     }
@@ -1425,11 +1391,11 @@ link_direct_exit(dcontext_t *dcontext, fragment_t *f, linkstub_t *l, fragment_t 
         /* want to target just the xcx restore, not the eflags restore
          * (only ibl targets eflags restore)
          */
-        patch_branch(EXIT_CTI_PC(f, l), FCACHE_PREFIX_ENTRY_PC(targetf), 
+        patch_branch(dcontext, EXIT_CTI_PC(f, l), FCACHE_PREFIX_ENTRY_PC(targetf), 
                      hot_patch);
     } else
 #endif
-        patch_branch(EXIT_CTI_PC(f, l), FCACHE_ENTRY_PC(targetf), hot_patch);
+        patch_branch(dcontext, EXIT_CTI_PC(f, l), FCACHE_ENTRY_PC(targetf), hot_patch);
     return true; /* do not need stub anymore */
 }
 
@@ -1461,14 +1427,14 @@ unlink_direct_exit(dcontext_t *dcontext, fragment_t *f, linkstub_t *l)
          * For now we assume only when unlinked.
          */
         /* go through custom code again */
-        patch_branch(EXIT_CTI_PC(f, l), stub_pc, HOT_PATCHABLE);
+        patch_branch(dcontext, EXIT_CTI_PC(f, l), stub_pc, HOT_PATCHABLE);
 # else
         pc = (byte *) stub_pc;
 # endif
 # ifdef TRACE_HEAD_CACHE_INCR
         if (dl->target_fragment != NULL) { /* HACK to tell if targeted trace head */
             /* make unlinked jmp go back to fcache_return */
-            patch_branch(pc + LINKCOUNT_UNLINKED_ENTRY(f->flags) + 10,
+            patch_branch(dcontext, pc + LINKCOUNT_UNLINKED_ENTRY(f->flags) + 10,
                          get_direct_exit_target(dcontext, f->flags),
                          HOT_PATCHABLE);
         } else
@@ -1488,14 +1454,14 @@ unlink_direct_exit(dcontext_t *dcontext, fragment_t *f, linkstub_t *l)
 # endif
         /* FIXME: more efficient way than multiple calls to get size-5? */
         ASSERT(linkstub_size(dcontext, f, l) == DIRECT_EXIT_STUB_SIZE(f->flags));
-        patch_branch(pc + DIRECT_EXIT_STUB_SIZE(f->flags) - 5,
+        patch_branch(dcontext, pc + DIRECT_EXIT_STUB_SIZE(f->flags) - 5,
                      get_direct_exit_target(dcontext, f->flags),
                      HOT_PATCHABLE);
     }
 #endif
 
     /* change jmp target to point to top of exit stub */
-    patch_branch(EXIT_CTI_PC(f, l), stub_pc, HOT_PATCHABLE);
+    patch_branch(dcontext, EXIT_CTI_PC(f, l), stub_pc, HOT_PATCHABLE);
 }
 
 /* NOTE : for inlined indirect branches linking is !NOT! atomic with respect
@@ -1578,7 +1544,7 @@ link_indirect_exit(dcontext_t *dcontext, fragment_t *f, linkstub_t *l, bool hot_
 
         if (ibl_code->ibl_head_is_inlined) {
             /* need to make branch target the top of the exit stub */
-            patch_branch(EXIT_CTI_PC(f, l), stub_pc, hot_patch);
+            patch_branch(dcontext, EXIT_CTI_PC(f, l), stub_pc, hot_patch);
             if (DYNAMO_OPTION(atomic_inlined_linking)) {
                 return;
             }
@@ -1646,30 +1612,22 @@ linkstub_unlink_entry_offset(dcontext_t *dcontext, fragment_t *f, linkstub_t *l)
 cache_pc
 indirect_linkstub_stub_pc(dcontext_t *dcontext, fragment_t *f, linkstub_t *l)
 {
+#if 0
     cache_pc cti = EXIT_CTI_PC(f, l);
     /* decode the cti: it should be a relative jmp to the stub */
     cache_pc stub;
     if (!EXIT_HAS_STUB(l->flags, f->flags))
         return NULL;
-#ifdef NO
-    /* for x64, or -unsafe_ignore_eflags_trace, a trace may have a jne to the stub */
-    if (*cti == JNE_OPCODE_1) {
-        ASSERT(TEST(FRAG_IS_TRACE, f->flags));
-#ifndef X64
-        ASSERT(INTERNAL_OPTION(unsafe_ignore_eflags_trace));
-#endif
-        stub = (cache_pc) PC_RELATIVE_TARGET(cti+2/*opcode bytes*/);
+
+    if (*cti == JMP_OPCODE) {
+        stub = (cache_pc) PC_RELATIVE_TARGET(cti+1/*opcode byte*/);
     } else {
-        if (*cti == JMP_OPCODE) {
-            stub = (cache_pc) PC_RELATIVE_TARGET(cti+1/*opcode byte*/);
-        } else {
-            /* case 6532/10987: frozen coarse has no jmp to stub */
-            ASSERT(TEST(FRAG_COARSE_GRAIN, f->flags));
-            ASSERT(coarse_is_indirect_stub(cti));
-            stub = cti;
-        }
+        /* case 6532/10987: frozen coarse has no jmp to stub */
+        ASSERT(TEST(FRAG_COARSE_GRAIN, f->flags));
+        ASSERT(coarse_is_indirect_stub(cti));
+        stub = cti;
     }
-#endif
+
     ASSERT(stub >= cti && (stub - cti) <= MAX_FRAGMENT_SIZE);
     if (!TEST(LINK_LINKED, l->flags)) {
         /* the unlink target is not always the start of the stub */
@@ -1681,6 +1639,7 @@ indirect_linkstub_stub_pc(dcontext_t *dcontext, fragment_t *f, linkstub_t *l)
          */
     }
     return stub;
+#endif
 }
 
 cache_pc
@@ -1861,7 +1820,7 @@ unlink_indirect_exit(dcontext_t *dcontext, fragment_t *f, linkstub_t *l)
 
             /* now add offset of unlinked entry */
             target += ibl_code->inline_unlink_offs;
-            patch_branch(EXIT_CTI_PC(f, l), target, HOT_PATCHABLE);
+            patch_branch(dcontext, EXIT_CTI_PC(f, l), target, HOT_PATCHABLE);
         }
     }
 }
@@ -2076,7 +2035,7 @@ entrance_stub_linked(cache_pc stub, coarse_info_t *info /*OPTIONAL*/)
 
 /* Returns whether it had to change page protections */
 static bool
-patch_coarse_branch(cache_pc stub, cache_pc tgt, bool hot_patch,
+patch_coarse_branch(dcontext_t* dcontext, cache_pc stub, cache_pc tgt, bool hot_patch,
                     coarse_info_t *info /*OPTIONAL*/)
 {
     bool stubs_readonly = false;
@@ -2107,7 +2066,7 @@ patch_coarse_branch(cache_pc stub, cache_pc tgt, bool hot_patch,
             }
         }
     }
-    patch_branch(entrance_stub_jmp(stub), tgt, HOT_PATCHABLE);
+    patch_branch(dcontext, entrance_stub_jmp(stub), tgt, HOT_PATCHABLE);
     if (stubs_restore)
         make_unwritable((byte *)PAGE_START(entrance_stub_jmp(stub)), PAGE_SIZE);
     return stubs_readonly;
@@ -2121,7 +2080,7 @@ link_entrance_stub(dcontext_t *dcontext, cache_pc stub, cache_pc tgt,
     ASSERT(DYNAMO_OPTION(coarse_units));
     ASSERT(self_owns_recursive_lock(&change_linking_lock));
     LOG(THREAD, LOG_LINKS, 5, "link_entrance_stub "PFX"\n", stub);
-    if (patch_coarse_branch(stub, tgt, hot_patch, info))
+    if (patch_coarse_branch(dcontext, stub, tgt, hot_patch, info))
         STATS_INC(pcache_unprot_link);
     /* We check this afterward since this link may be what makes it consistent
      * FIXME: pass in arg to not check target?  Then call before and after */
@@ -2143,14 +2102,14 @@ unlink_entrance_stub(dcontext_t *dcontext, cache_pc stub, uint flags,
         tgt = trace_head_return_coarse_prefix(stub, info);
     else
         tgt = fcache_return_coarse_prefix(stub, info);
-    if (patch_coarse_branch(stub, tgt, HOT_PATCHABLE, info))
+    if (patch_coarse_branch(dcontext, stub, tgt, HOT_PATCHABLE, info))
         STATS_INC(pcache_unprot_unlink);
 }
 
 cache_pc
-entrance_stub_from_cti(cache_pc cti)
+entrance_stub_from_cti(dcontext_t* dcontext, cache_pc cti)
 {
-    cache_pc disp = exit_cti_disp_pc(cti);
+    cache_pc disp = exit_cti_disp_pc(dcontext, cti);
     cache_pc tgt = (cache_pc) PC_RELATIVE_TARGET(disp);
     return tgt;
 }
@@ -3314,23 +3273,6 @@ append_shared_restore_dcontext_reg(dcontext_t *dcontext, instrlist_t *ilist)
         far direct jmp to next instr w/ 64-bit switch
     endif
 
-    if (!absolute)
-        mov  %xdi,fs:xdx_OFFSET
-        mov  fs:dcontext,%xdi
-      if (TEST(SELFPROT_DCONTEXT, dynamo_options.protect_mask))
-        RESTORE_FROM_DCONTEXT PROT_OFFSET,%xdi
-        xchg   %xsi,%xdi
-        SAVE_TO_UPCONTEXT %xdi,xsi_OFFSET
-        mov    fs:dcontext,%xdi
-      endif
-        # get xax and xdi into their real slots, via xbx
-        SAVE_TO_UPCONTEXT %xbx,xbx_OFFSET
-        mov    fs:xax_OFFSET,%xbx
-        SAVE_TO_UPCONTEXT %xbx,xax_OFFSET
-        mov    fs:xdx_OFFSET,%xbx
-        SAVE_TO_UPCONTEXT %xbx,xdi_OFFSET
-    endif
-
         # save the current register state to context->regs
         # xax already in context
 
@@ -3445,14 +3387,10 @@ append_fcache_return_common(dcontext_t *dcontext, generated_code_t *code,
                             bool coarse_info)
 {
     bool instr_targets = false;
-#ifdef NO
-
-    /* no support for absolute addresses on x64: we always use tls */
-    IF_X64(ASSERT_NOT_IMPLEMENTED(!absolute && shared));
 
     /* currently linkstub is only used for coarse-grain exits */
     ASSERT(linkstub == NULL || !absolute);
-
+#if 0
     if (!absolute) {
         /* only support non-absolute w/ shared cache */
         ASSERT_NOT_IMPLEMENTED(shared);
@@ -3575,24 +3513,24 @@ append_fcache_return_common(dcontext_t *dcontext, generated_code_t *code,
             SAVE_TO_DC(ilist, dcontext, REG_RR1, NEXT_TAG_OFFSET, INSERT_APPEND, NULL);
         }
     }
+#endif
 
     /* save last_exit, currently in xax, into dcontext->last_exit */
     SAVE_TO_DC(ilist, dcontext, REG_RR0, LAST_EXIT_OFFSET, INSERT_APPEND, NULL);
 
+#if 0
 #ifdef SIDELINE
     if (dynamo_options.sideline) {
         /* clear cur-trace field so we don't think cur trace is still running */
-        /* PR 248210: unsupported feature on x64 */
-        IF_X64(ASSERT_NOT_IMPLEMENTED(false)); /* PR 244737: fix abs address */
         APP(ilist,
             INSTR_CREATE_str_imm(dcontext,
                                 OPND_CREATE_MEM32(REG_NULL, (int)&sideline_trace),
                                 OPND_CREATE_INT32(0), COND_ALWAYS));
     }
 #endif
+#endif //0
 
     /* call central dispatch routine */
-    /* for x64 linux we could optimize and avoid the "mov rdi, rdi" */
     dr_insert_call((void *)dcontext, ilist, NULL/*append*/,
                    (void *)dispatch, 1,
                    absolute ?
@@ -3603,7 +3541,6 @@ append_fcache_return_common(dcontext_t *dcontext, generated_code_t *code,
                          (byte *)unexpected_return, true/*jmp*/, false/*!precise*/,
                          DR_REG_R11/*scratch*/, NULL);
 
-#endif
     return instr_targets;
 }
 
