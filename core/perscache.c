@@ -1722,7 +1722,11 @@ coarse_merge_without_dups(dcontext_t *dcontext, coarse_freeze_info_t *freeze_inf
                     "\tadding jmp @"PFX" to "PFX" for fall-through tag "PFX"\n",
                     freeze_info->cache_cur_pc, fallthrough_body, fallthrough_tag);
                 freeze_info->cache_cur_pc =
+#ifdef ARM
+                    insert_relative_branch(freeze_info->cache_cur_pc, fallthrough_body,
+#else
                     insert_relative_jump(freeze_info->cache_cur_pc, fallthrough_body,
+#endif
                                          NOT_HOT_PATCHABLE);
             }
         } else {

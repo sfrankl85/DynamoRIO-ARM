@@ -782,7 +782,7 @@ byte *
 insert_relative_target(byte *pc, cache_pc target, bool hot_patch);
 
 byte *
-insert_relative_jump(byte *pc, cache_pc target, bool hot_patch);
+insert_relative_branch(byte *pc, cache_pc target, bool hot_patch);
 
 /* in arch.c */
 

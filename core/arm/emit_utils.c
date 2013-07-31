@@ -330,30 +330,71 @@ insert_relative_target(byte *pc, cache_pc target, bool hot_patch)
      */
     int value = (int)(ptr_int_t)(target - pc - 4);
     int cnt=0;                                                      \
+    byte b;
+    
+    //Insert backwords
+    b = (value & 0xff); 
+    *((byte *)pc) = b;
+    pc++;
 
-    ATOMIC_3BYTE_WRITE(pc, value, hot_patch);
-    pc += 3;
+    b = (value >> 8) & 0xff;
+    *((byte *)pc) = b;
+    pc++;
+
+    b = (value >> 16) & 0xff;
+    *((byte *)pc) = b;
+    pc++;
+
+    //Push past branch "opcode"
+    pc++;
+    
+    //ATOMIC_3BYTE_WRITE(pc, value, hot_patch); Not workign os ignore
     return pc;
 }
 
 byte *
-insert_relative_jump(byte *pc, cache_pc target, bool hot_patch)
+insert_relative_branch(byte *pc, cache_pc target, bool hot_patch)
 {
-#ifdef NO
     int value;
     ASSERT(pc != NULL);
-    *pc = JMP_OPCODE;
-    pc++;
+    byte        word[4] = {0};
+    byte        b;
 
     /* test that we aren't crossing a cache line boundary */
-    CHECK_JMP_TARGET_ALIGNMENT(pc, 4, hot_patch);
+    //CHECK_JMP_TARGET_ALIGNMENT(pc, 4, hot_patch); SJF Ignore
     /* We don't need to be atomic, so don't use insert_relative_target. */
     value = (int)(ptr_int_t)(target - pc - 4);
-    IF_X64(ASSERT(CHECK_TRUNCATE_TYPE_int(target - pc - 4)));
-    *(int *)pc = value;
-    pc += 4;
+
+    //SJF Manually insert branch here
+
+    b = 0xe0;
+    word[0] |= b;
+
+    //Opcode
+    word[0] |= 0xa;
+
+    b = (value >> 16);
+    word[1] = b;
+
+    b = (value >> 8);
+    word[2] = b;
+
+    b = value;
+    b &= 0xff;
+
+    word[3] = b;
+
+    //Word should now be an instruction. MSB encoding
+    *((byte *)pc) = word[3];
+    pc++;
+    *((byte *)pc) = word[2];
+    pc++;
+    *((byte *)pc) = word[1];
+    pc++;
+    *((byte *)pc) = word[0];
+    pc++;
+
     return pc;
-#endif
 }
 
 /* make sure to keep in sync w/ instr_raw_is_tls_spill() */
@@ -458,7 +499,7 @@ insert_jmp_to_ibl(byte *pc, fragment_t *f, linkstub_t *l, cache_pc exit_target,
     if (INTERNAL_OPTION(shared_syscalls_fastpath)
         && is_shared_syscall_routine(dcontext, exit_target)) {
         /* jmp <exit_target> */
-        pc = insert_relative_jump(pc, exit_target, NOT_HOT_PATCHABLE);
+        pc = insert_relative_branch(pc, exit_target, NOT_HOT_PATCHABLE);
         return pc;
     } else
 #endif
@@ -504,7 +545,7 @@ insert_jmp_to_ibl(byte *pc, fragment_t *f, linkstub_t *l, cache_pc exit_target,
         *((ptr_uint_t *)pc) = (ptr_uint_t)l; pc += sizeof(l);
     }
     /* jmp <exit_target> */
-    pc = insert_relative_jump(pc, exit_target, NOT_HOT_PATCHABLE);
+    pc = insert_relative_branch(pc, exit_target, NOT_HOT_PATCHABLE);
 #endif //NO
     return pc;
 }
@@ -1031,15 +1072,15 @@ insert_exit_stub_other_flags(dcontext_t *dcontext, fragment_t *f,
         *((ushort *)pc) = os_tls_offset(DIRECT_STUB_SPILL_SLOT); pc+=2;
         *((uint *)pc) = (uint)(ptr_uint_t) EXIT_TARGET_TAG(dcontext, f, l); pc += 4;
         /* jmp to exit target */
-        pc = insert_relative_jump(pc, exit_target, NOT_HOT_PATCHABLE);
+        pc = insert_relative_branch(pc, exit_target, NOT_HOT_PATCHABLE);
 #endif
     } else {
         /* direct branch */
 
         /* we use XAX to hold the linkstub pointer before we get to fcache_return, 
            note that indirect stubs use XBX for linkstub pointer */
-        pc = insert_save_xax(dcontext, pc, f->flags, FRAG_DB_SHARED(f->flags),
-                             DIRECT_STUB_SPILL_SLOT, true);
+       // pc = insert_save_xax(dcontext, pc, f->flags, FRAG_DB_SHARED(f->flags),
+       //                      DIRECT_STUB_SPILL_SLOT, true);
 
 #ifdef PROFILE_LINKCOUNT
         if (linkcount) {
@@ -1048,15 +1089,9 @@ insert_exit_stub_other_flags(dcontext_t *dcontext, fragment_t *f,
             pc = insert_linkcount_restoreflags(pc, dcontext, f->flags);
         }
 #endif
-        /* mov $linkstub_ptr,%xax */
-#ifdef NO
-        /* shared w/ 32-bit and 64-bit !FRAG_IS_32 */
-        *pc = MOV_IMM2XAX_OPCODE; pc++;
-        *((ptr_uint_t *)pc) = (ptr_uint_t)l; pc += sizeof(l);
 
         /* jmp to exit target */
-        pc = insert_relative_jump(pc, exit_target, NOT_HOT_PATCHABLE);
-#endif
+        pc = insert_relative_branch(pc, exit_target, NOT_HOT_PATCHABLE);
 
 #ifdef PROFILE_LINKCOUNT
         if (linkcount) {
@@ -1100,12 +1135,10 @@ exit_cti_disp_pc(dcontext_t* dcontext, cache_pc branch_pc)
 
     if( instr.opcode == OP_b || instr.opcode == OP_bl || instr.opcode == OP_blx_imm )
     {
-      //Return addr is in the last 24 bits/3 words
-      byte_ptr++;      
       length = 3;
     }
 
-    return new_pc - length; //SJF point to beginning of addr
+    return branch_pc; //SJF point to beginning of instr
 }
 
 /* Patch the (direct) branch at branch_pc so it branches to target_pc 
@@ -1182,7 +1215,7 @@ optimize_linkcount_stub(dcontext_t *dcontext, fragment_t *f,
          * faster to not have the nops, so redo the increment:
          */
         pc = insert_linkcount_inc(pc, l);
-        pc = insert_relative_jump(pc, FCACHE_ENTRY_PC(targetf),
+        pc = insert_relative_branch(pc, FCACHE_ENTRY_PC(targetf),
                                   NOT_HOT_PATCHABLE);
         /* Fill out with nops till the unlinked entry point so disassembles
          * nicely for logfile (we're profile linkcount so presumably going
@@ -1205,7 +1238,7 @@ optimize_linkcount_stub(dcontext_t *dcontext, fragment_t *f,
                                 DIRECT_STUB_SPILL_SLOT, true);
         ASSERT(pc == stub_pc + LINKCOUNT_DIRECT_EXTRA(f->flags) - 5);
         /* now add jmp */
-        pc = insert_relative_jump(pc, FCACHE_ENTRY_PC(targetf),
+        pc = insert_relative_branch(pc, FCACHE_ENTRY_PC(targetf),
                                   NOT_HOT_PATCHABLE);
     }
 
@@ -1222,7 +1255,7 @@ optimize_linkcount_stub(dcontext_t *dcontext, fragment_t *f,
     IF_X64(ASSERT_NOT_IMPLEMENTED(false));
     *((uint *)pc) = (uint)l; pc += 4;
     /* jmp to target */
-    pc = insert_relative_jump(pc, get_direct_exit_target(dcontext, f->flags),
+    pc = insert_relative_branch(pc, get_direct_exit_target(dcontext, f->flags),
                               NOT_HOT_PATCHABLE);
 #endif //NO
 }
@@ -1612,10 +1645,10 @@ linkstub_unlink_entry_offset(dcontext_t *dcontext, fragment_t *f, linkstub_t *l)
 cache_pc
 indirect_linkstub_stub_pc(dcontext_t *dcontext, fragment_t *f, linkstub_t *l)
 {
-#if 0
     cache_pc cti = EXIT_CTI_PC(f, l);
-    /* decode the cti: it should be a relative jmp to the stub */
     cache_pc stub;
+#if 0
+    /* decode the cti: it should be a relative jmp to the stub */
     if (!EXIT_HAS_STUB(l->flags, f->flags))
         return NULL;
 
@@ -1640,6 +1673,8 @@ indirect_linkstub_stub_pc(dcontext_t *dcontext, fragment_t *f, linkstub_t *l)
     }
     return stub;
 #endif
+    stub = cti;
+    return stub;
 }
 
 cache_pc
@@ -1700,12 +1735,8 @@ linkstub_cbr_disambiguate(dcontext_t *dcontext, fragment_t *f,
 cache_pc
 cbr_fallthrough_exit_cti(cache_pc prev_cti_pc)
 {
-#ifdef NO
-    if (*prev_cti_pc == RAW_PREFIX_jcc_taken ||
-        *prev_cti_pc == RAW_PREFIX_jcc_not_taken)
-        prev_cti_pc++;
-    return (prev_cti_pc + CBR_LONG_LENGTH);
-#endif
+// SJF Removed x86 specific stuff
+    return (prev_cti_pc + CTI_IND3_LENGTH);
 }
 
 /* This is an atomic operation with respect to a thread executing in the
@@ -7310,6 +7341,7 @@ emit_new_thread_dynamo_start(dcontext_t *dcontext, byte *pc)
 
     return pc;
 #endif //NO
+    return pc;
 }
 #endif /* LINUX */
 

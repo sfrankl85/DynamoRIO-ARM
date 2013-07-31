@@ -829,32 +829,11 @@ encode_cti(instr_t *instr, byte *copy_pc, byte *final_pc, bool check_reachable
         CLIENT_ASSERT(false, "encode_cti error: opnd must be near pc or near instr");
     }
 
-    if (instr_is_cti_short(instr)) {
-        /* 8-bit offset */
-        ptr_int_t offset;
-        /* offset is from start of next instr */
-        offset = target - ((ptr_int_t)(pc + 1 - copy_pc + final_pc));
-        if (check_reachable && !(offset >= INT8_MIN && offset <= INT8_MAX)) {
-            CLIENT_ASSERT(!assert_reachable,
-                          "encode_cti error: target beyond 8-bit reach");
-            return NULL;
-        }
-        *((char *)pc) = (char) offset;
-        pc++;
-    } else {
-        /* 32-bit offset */
-        /* offset is from start of next instr */
-        ptr_int_t offset = target - ((ptr_int_t)(pc + 4 - copy_pc + final_pc));
-#ifdef X64
-        if (check_reachable && !REL32_REACHABLE_OFFS(offset)) {
-            CLIENT_ASSERT(!assert_reachable,
-                          "encode_cti error: target beyond 32-bit reach");
-            return NULL;
-        }
-#endif
-        *((int *)pc) = (int) offset;
-        pc += 4;
-    }
+    /* 32-bit offset */
+    /* offset is from start of next instr */
+    ptr_int_t offset = target - ((ptr_int_t)(pc + 4 - copy_pc + final_pc));
+    *((int *)pc) = (int) offset;
+    pc += 4;
 #endif//NO
     return pc;
 }
@@ -3090,15 +3069,13 @@ encode_branch_instrs(decode_info_t* di, instr_t* instr, byte* pc)
           switch( opnd.kind )
           {
             case PC_kind:
-              /* TODO Calc offset */
-
-              b = (byte)(opnd.value.immed_int >> 16);
+              b = (byte)((int)opnd.value.pc >> 16);
               word[1] = b;
 
-              b = (byte)(opnd.value.immed_int >> 8);
+              b = (byte)((int)opnd.value.pc >> 8);
               word[2] = b;
 
-              b = (byte)(opnd.value.immed_int & 0xff);
+              b = (byte)((int)opnd.value.pc & 0xff);
 
               word[3] = b;
               break;
