@@ -1201,8 +1201,10 @@ use_addr_prefix_on_short_disp(void)
  * SIZE32_MOV_XAX_TO_TLS == SIZE32_MOV_XAX_TO_ABS, and that
  * x64 always uses tls
  */
+// SJF Changed this to Only have the branch instruction as a size
+//SJF Had to add 4 to this to stop special_heap_init_internal from complaining
 #define DIRECT_EXIT_STUB_SIZE32 \
-    (SIZE32_MOV_XAX_TO_TLS + SIZE32_MOV_PTR_IMM_TO_XAX + JMP_LONG_LENGTH)
+    (BRANCH_LENGTH+4)
 #define DIRECT_EXIT_STUB_SIZE64 \
     (SIZE64_MOV_XAX_TO_TLS + SIZE64_MOV_PTR_IMM_TO_XAX + JMP_LONG_LENGTH)
 #define DIRECT_EXIT_STUB_SIZE(flags) \
@@ -1422,7 +1424,7 @@ enum {
                             /* 07                                              */
 
     SVC_LENGTH = 4,
-    INT_LENGTH = 2,
+    BRANCH_LENGTH = 4,
     SYSCALL_LENGTH = 2,
     SYSENTER_LENGTH = 2,
 };

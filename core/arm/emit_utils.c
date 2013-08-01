@@ -328,20 +328,22 @@ insert_relative_target(byte *pc, cache_pc target, bool hot_patch)
 {
     /* insert 4-byte pc-relative offset from the beginning of the next instruction
      */
-    int value = (int)(ptr_int_t)(target - pc - 4);
+    int value = (int)(ptr_int_t)(target - pc - 8); 
     int cnt=0;                                                      \
     byte b;
+
+    int shifted_val = convert_immed_to_shifted_immed( value, OPSZ_4_24 );
     
     //Insert backwords
-    b = (value & 0xff); 
+    b = (shifted_val & 0xff); 
     *((byte *)pc) = b;
     pc++;
 
-    b = (value >> 8) & 0xff;
+    b = (shifted_val >> 8) & 0xff;
     *((byte *)pc) = b;
     pc++;
 
-    b = (value >> 16) & 0xff;
+    b = (shifted_val >> 16) & 0xff;
     *((byte *)pc) = b;
     pc++;
 
@@ -363,20 +365,37 @@ insert_relative_branch(byte *pc, cache_pc target, bool hot_patch)
     /* test that we aren't crossing a cache line boundary */
     //CHECK_JMP_TARGET_ALIGNMENT(pc, 4, hot_patch); SJF Ignore
     /* We don't need to be atomic, so don't use insert_relative_target. */
-    value = (int)(ptr_int_t)(target - pc - 4);
+    value = (int)(ptr_int_t)(target - pc - 8);
 
-    //SJF Manually insert branch here
+    int shifted_val = convert_immed_to_shifted_immed( value, OPSZ_4_24 );
 
-    b = 0xe0;
+    //Insert backwords
+    b = (shifted_val & 0xff);
+    *((byte *)pc) = b;
+    pc++;
+
+    b = (shifted_val >> 8) & 0xff;
+    *((byte *)pc) = b;
+    pc++;
+
+    b = (shifted_val >> 16) & 0xff;
+    *((byte *)pc) = b;
+    pc++;
+
+    //Write opcode
+    b = 0xea;
+    *((byte *)pc) = b;
+    pc++;
+
+/*
+    //cond + opcode
+    b = 0xea;
     word[0] |= b;
 
-    //Opcode
-    word[0] |= 0xa;
-
-    b = (value >> 16);
+    b = (value >> 16) & 0xff;
     word[1] = b;
 
-    b = (value >> 8);
+    b = (value >> 8) & 0xff;
     word[2] = b;
 
     b = value;
@@ -393,6 +412,7 @@ insert_relative_branch(byte *pc, cache_pc target, bool hot_patch)
     pc++;
     *((byte *)pc) = word[0];
     pc++;
+*/
 
     return pc;
 }

@@ -542,7 +542,7 @@ extern const reg_id_t dr_reg_fixer[];
 
 #endif /* DR_REG_ENUM_COMPATIBILITY */
 
-/* ^^^^^ SJF renamed all the R E G_ R x to D R E D_Rx as compiler was 
+/* ^^^^^ SJF renamed all the R E G_Rx to R E G_RRx as compiler was 
              complaining about duplicates in ucontext.h */
 
 /* DR_API EXPORT END */
@@ -564,8 +564,10 @@ extern const reg_id_t dr_reg_fixer[];
 # define INT12_MAX  2048 
 # define INT16_MIN  SHRT_MIN
 # define INT16_MAX  SHRT_MAX
-# define INT24_MIN  -8388608
-# define INT24_MAX  8388607
+# define INT22_MIN  -2097152
+# define INT22_MAX  2097152 
+# define INT24_MIN  0 
+# define INT24_MAX  16777216 
 # define INT32_MIN  INT_MIN
 # define INT32_MAX  INT_MAX
 #endif

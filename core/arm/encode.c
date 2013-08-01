@@ -871,10 +871,11 @@ copy_and_re_relativize_raw_instr(dcontext_t *dcontext, instr_t *instr,
 int
 convert_immed_to_shifted_immed( uint immed_int, int sz )
 {
-  #define MAX_SHIFTS  16
+  #define MAX_12_SHIFTS  16
+  #define MAX_24_SHIFTS  4
   bool fin = false;
   int  shifts=0;
-  uint  shift_int = 0;
+  int  shift_int = 0;
 
   switch( sz )
   {
@@ -890,7 +891,7 @@ convert_immed_to_shifted_immed( uint immed_int, int sz )
             fin = true;
 
           shifts++;
-        } while( !fin && shifts < MAX_SHIFTS );
+        } while( !fin && shifts < MAX_12_SHIFTS );
 
         if( fin )//Succeeded 
         {
@@ -905,6 +906,21 @@ convert_immed_to_shifted_immed( uint immed_int, int sz )
       }
       else
         return immed_int;
+      break;
+
+    case OPSZ_4_24:
+      /* Shrink to 26 bits
+         and the shift to the left by 2 */  
+      shift_int = (immed_int & 0x3ffffff);
+      shift_int = (shift_int >> 2);
+
+      if( shift_int <= INT24_MAX && shift_int >= INT24_MIN )
+      {
+        return shift_int;
+      }
+      else
+        return immed_int;//FAIL
+
       break;
 
     default:
@@ -3069,13 +3085,13 @@ encode_branch_instrs(decode_info_t* di, instr_t* instr, byte* pc)
           switch( opnd.kind )
           {
             case PC_kind:
-              b = (byte)((int)opnd.value.pc >> 16);
+              b = (byte)(convert_immed_to_shifted_immed( opnd.value.pc, OPSZ_4_24 ) >> 16);
               word[1] = b;
 
-              b = (byte)((int)opnd.value.pc >> 8);
+              b = (byte)(convert_immed_to_shifted_immed( opnd.value.pc, OPSZ_4_24 ) >> 8);
               word[2] = b;
 
-              b = (byte)((int)opnd.value.pc & 0xff);
+              b = (byte)(convert_immed_to_shifted_immed( opnd.value.pc, OPSZ_4_24 ) & 0xff);
 
               word[3] = b;
               break;

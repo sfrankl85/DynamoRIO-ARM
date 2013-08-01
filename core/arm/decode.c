@@ -249,13 +249,22 @@ convert_shifted_immed_to_immed( uint immed_int, int sz )
   switch( sz )
   {
     case OPSZ_4_12:
-      shifts = ((immed_int & 0xf00) >> 8);
-      ret_immed = immed_int;
+      shifts = ((immed_int & 0xf00) >> 8); //Top 4 bits
+      ret_immed = (immed_int * 0xff);// Only want last 8 bits
 
       for( int i=0; i<shifts; i++ )
       {
         ret_immed = (ret_immed << 30 ) | (ret_immed >> 2);
       }
+      return ret_immed;
+
+    case OPSZ_4_24:
+      ret_immed = (immed_int & 0xffffff) << 2; //Only want last 24 bits. Shift by two right
+
+      //Sign extend
+      if(( ret_immed & 0x800000 ) == 1 )
+        ret_immed |= 0xff000000; //Set top bits
+
       return ret_immed;
 
     default:
@@ -840,6 +849,8 @@ decode_branch_instrs( decode_info_t* di, byte* instr_word, opnd_t* dsts,
       addr =  (instr_word[1] << 16);
       addr |= (instr_word[2] << 8 );
       addr |= (instr_word[3]);
+
+      addr = convert_shifted_immed_to_immed( addr, OPSZ_4_24 );
 
       srcs[*numsrcs] = opnd_create_pc((app_pc)(addr));
       (*numsrcs)++;
