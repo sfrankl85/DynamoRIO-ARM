@@ -4048,7 +4048,7 @@ opcode_is_unconditional(int opc)
        opc == OP_pld_lit || opc == OP_clrex   || opc == OP_dsb      ||
        opc == OP_dmb     || opc == OP_isb     || opc == OP_pli_reg  ||
        opc == OP_pld_reg || opc == OP_pldw_reg|| opc == OP_srs      ||
-       opc == OP_rfe     || opc == OP_bl      || opc == OP_blx_imm  ||
+       opc == OP_rfe     || opc == OP_blx_imm  ||
        opc == OP_ldc_imm || opc == OP_ldc2_imm|| opc == OP_ldc_lit  ||
        opc == OP_ldc2_lit || opc == OP_stc    || opc == OP_stc2     ||
        opc == OP_mcrr    || opc == OP_mcrr2   || opc == OP_mrrc     ||
@@ -5156,8 +5156,8 @@ instr_create_save_to_dcontext(instrlist_t *ilist, dcontext_t *dcontext, reg_id_t
                              OPND_CREATE_IMM12(((int)(ptr_int_t)(absolute ? dcontext : 0))
                                                       + offs-4), COND_ALWAYS ));  //SJF Need -4 for some reason
 
-      instrlist_meta_append( ilist, INSTR_CREATE_str_reg(dcontext, opnd_create_reg(reg),
-                             opnd_create_mem_reg(REG_RR8), opnd_create_reg(REG_NULL), OPND_CREATE_IMM5(0), COND_ALWAYS ));
+      instrlist_meta_append( ilist, INSTR_CREATE_str_imm(dcontext, opnd_create_reg(reg),
+                             opnd_create_mem_reg(REG_RR8), OPND_CREATE_IMM12(0), COND_ALWAYS ));
     }
     else if( where == INSERT_PRE )
     {
@@ -5165,8 +5165,8 @@ instr_create_save_to_dcontext(instrlist_t *ilist, dcontext_t *dcontext, reg_id_t
                                 OPND_CREATE_IMM12(((int)(ptr_int_t)(absolute ? dcontext : 0))
                                                       + offs - 4), COND_ALWAYS ));
 
-      instrlist_meta_preinsert( ilist, rel_instr, INSTR_CREATE_str_reg(dcontext, opnd_create_reg(reg),
-                                opnd_create_mem_reg(REG_RR8), opnd_create_reg(REG_NULL), OPND_CREATE_IMM5(0), COND_ALWAYS ));
+      instrlist_meta_preinsert( ilist, rel_instr, INSTR_CREATE_str_imm(dcontext, opnd_create_reg(reg),
+                                opnd_create_mem_reg(REG_RR8), OPND_CREATE_IMM12(0), COND_ALWAYS ));
 
     }
     else if( where == INSERT_POST )
@@ -5175,8 +5175,8 @@ instr_create_save_to_dcontext(instrlist_t *ilist, dcontext_t *dcontext, reg_id_t
                                     OPND_CREATE_IMM12(((int)(ptr_int_t)(absolute ? dcontext : 0))
                                                       + offs - 4), COND_ALWAYS ));
 
-      instrlist_meta_postinsert( ilist, rel_instr, INSTR_CREATE_str_reg(dcontext, opnd_create_reg(reg),
-                                 opnd_create_mem_reg(REG_RR8), opnd_create_reg(REG_NULL), OPND_CREATE_IMM5(0), COND_ALWAYS ));
+      instrlist_meta_postinsert( ilist, rel_instr, INSTR_CREATE_str_imm(dcontext, opnd_create_reg(reg),
+                                 opnd_create_mem_reg(REG_RR8), OPND_CREATE_IMM12(0), COND_ALWAYS ));
     }
     else
       CLIENT_ASSERT(false,
@@ -5225,7 +5225,7 @@ instr_create_save_immed_to_dcontext(dcontext_t *dcontext, int immed, int offs)
     opnd_t memopnd = opnd_create_dcontext_field(dcontext, offs);
     /* PR 244737: thread-private scratch space needs to fixed for x64 */
     IF_X64(ASSERT_NOT_IMPLEMENTED(false));
-    return INSTR_CREATE_str_imm(dcontext, memopnd, OPND_CREATE_INT32(immed), COND_ALWAYS);
+    return INSTR_CREATE_str_imm(dcontext, memopnd, opnd_create_reg(REG_NULL), OPND_CREATE_INT32(immed), COND_ALWAYS);
 }
 
 void

@@ -3566,10 +3566,11 @@ append_fcache_return_common(dcontext_t *dcontext, generated_code_t *code,
     }
 #endif
 
+#if 0
+    //TODO Restore this saving here SJF
     /* save last_exit, currently in xax, into dcontext->last_exit */
     SAVE_TO_DC(ilist, dcontext, REG_RR0, LAST_EXIT_OFFSET, INSERT_APPEND, NULL);
 
-#if 0
 #ifdef SIDELINE
     if (dynamo_options.sideline) {
         /* clear cur-trace field so we don't think cur trace is still running */
@@ -5595,6 +5596,7 @@ emit_indirect_branch_lookup(dcontext_t *dcontext, generated_code_t *code, byte *
 
     return pc + ibl_code->ibl_routine_length;
 #endif //NO
+    return pc;
 }
 
 static inline void

@@ -685,8 +685,8 @@
     instr_create_0dst_0src((dc), OP_stmib)
 #define INSTR_CREATE_stmfa(dc) \
     instr_create_0dst_0src((dc), OP_stmfa)
-#define INSTR_CREATE_str_imm(dc, d, s, c) \
-    instr_create_1dst_1src((dc), OP_str_imm, (d), (s), (c))
+#define INSTR_CREATE_str_imm(dc, d, s1, s2, c) \
+    instr_create_1dst_2src((dc), OP_str_imm, (d), (s1), (s2), (c))
 #define INSTR_CREATE_str_reg(dc, d, s1, s2, i, c) \
     instr_create_1dst_3src((dc), OP_str_reg, (d), (s1), (s2), (i), (c))
 #define INSTR_CREATE_strb_imm(dc, d, s, i, c) \
