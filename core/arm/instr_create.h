@@ -493,8 +493,8 @@
     instr_create_0dst_0src((dc), OP_orn_reg)
 #define INSTR_CREATE_orr_imm(dc, d, s, i, c) \
     instr_create_1dst_2src((dc), OP_orr_imm, (d), (s), (i), (c))
-#define INSTR_CREATE_orr_reg(dc, d, s, i, c) \
-    instr_create_1dst_2src((dc), OP_orr_reg, (d), (s), (i), (c))
+#define INSTR_CREATE_orr_reg(dc, d, s1, s2, i, c) \
+    instr_create_1dst_3src((dc), OP_orr_reg, (d), (s1), (s2), (i), (c))
 #define INSTR_CREATE_orr_rsr(dc, d, s, i, c) \
     instr_create_1dst_2src((dc), OP_orr_rsr, (d), (s), (i), (c))
 #define INSTR_CREATE_pkh(dc) \

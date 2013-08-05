@@ -1435,7 +1435,11 @@ enum {
 
 #define REL24_REACHABLE_OFFS(offs) ((offs) <= INT24_MAX && (offs) >= INT24_MIN)
 /* source should be the end of a rip-relative-referencing instr */
-#define REL24_REACHABLE(source, target) REL32_REACHABLE_OFFS((target) - (source))
+#define REL24_REACHABLE(source, target) REL24_REACHABLE_OFFS((target) - (source))
+
+#define REL26_REACHABLE_OFFS(offs) ((offs) <= INT26_MAX && (offs) >= INT26_MIN)
+/* source should be the end of a rip-relative-referencing instr */
+#define REL26_REACHABLE(source, target) REL26_REACHABLE_OFFS((target) - (source))
 
 /* If code_buf points to a jmp rel32 returns true and returns the target of
  * the jmp in jmp_target as if was located at app_loc. */

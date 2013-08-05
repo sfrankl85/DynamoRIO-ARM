@@ -3309,6 +3309,15 @@ instr_has_p_flag( instr_t* instr )
 
 DR_API
 bool
+instr_set_shift_type( dcontext_t* dcontext, instr_t* instr, int val )
+{
+  ASSERT( instr != NULL );
+
+  instr->shift_type = val;
+}
+
+DR_API
+bool
 instr_set_p_flag( dcontext_t* dcontext, instr_t* instr, bool val )
 {
   if( !instr_has_p_flag( instr ))
@@ -3482,6 +3491,8 @@ instr_set_flags_from_di( instr_t* instr, decode_info_t* di )
     instr->h_flag = di->h_flag;
     instr->m_flag = di->m_flag;
     instr->r_flag = di->r_flag;
+
+    instr->shift_type = di->shift_type;
 }
 
 void 

@@ -981,6 +981,11 @@ insert_parameter_preparation(dcontext_t *dcontext, instrlist_t *ilist, instr_t *
     bool push = true;
     bool restore_r0  = false;
     bool restore_r13 = false;
+    int  scratch2;
+    int  reg_args = 0;
+    int  target_reg = 0;
+    int  target=0;
+    int  value=0;
     /* we need two passes for PR 250976 optimization */
     /* Push/mov in reverse order.  We need a label so we can also add
      * instrs prior to the regular param prep.  So params are POST-mark, while
@@ -1072,14 +1077,14 @@ insert_parameter_preparation(dcontext_t *dcontext, instrlist_t *ilist, instr_t *
             if (push) {
                 if (opnd_is_immed_int(arg) || opnd_is_instr(arg))
                 {
-                    //SJF Converted this to a store to push the value onto the stack
+                    //SJF Only need to move the arg into a target reg or stack if needed
+/*
                     POST(ilist, mark, INSTR_CREATE_str_imm(dcontext, opnd_create_mem_reg(REG_RR13), 
                                                            opnd_create_reg(REG_NULL), arg, COND_ALWAYS));
-                    /*SJF Increment the stack pointer here. Bit of a hack until I implement
-                          post indexed flag setting in INSTR_CREATE. */
                     POST(ilist, mark, INSTR_CREATE_add_imm(dcontext, opnd_create_reg(REG_RR13), 
                                                            opnd_create_reg(REG_RR13), opnd_create_immed_int(1, OPSZ_4_12),
                                                            COND_ALWAYS ));
+*/
                 }
                 else {
                     if (clean_call && opnd_uses_reg(arg, REG_RR13)) {
@@ -1102,7 +1107,98 @@ insert_parameter_preparation(dcontext_t *dcontext, instrlist_t *ilist, instr_t *
                         POST(ilist, mark, instr_create_save_to_tls
                              (dcontext, scratch, TLS_R0_SLOT));
                     } else
+                    {
+                      target = args[i].value.pc;  //SJF TODO Other types
+
+                      if( reg_args < 4 ) //Max num of args in regs
+                      {
+                        switch( reg_args )
+                        {
+                          case 0:
+                            target_reg = REG_RR0;
+                            break;
+                          case 1:
+                            target_reg = REG_RR1;
+                            break;
+                          case 2:
+                            target_reg = REG_RR2;
+                            break;
+                          case 3:
+                            target_reg = REG_RR3;
+                            break;
+                        }
+                        scratch2 = REG_RR9;
+
+                        POST(ilist, mark, INSTR_CREATE_mov_imm
+                            (dcontext, opnd_create_reg(target_reg), OPND_CREATE_IMM12(0), COND_ALWAYS));
+
+                        //Add the value bit by bit
+                        //Top 8 bits
+                        value = ((int)target & 0xff000000) >> 24;
+
+                        POST(ilist, mark, INSTR_CREATE_mov_imm
+                            (dcontext, opnd_create_reg(scratch2), OPND_CREATE_IMM12(value), COND_ALWAYS));
+
+                        //Rotate right by 8 to get top bits back in place
+                        instr = INSTR_CREATE_orr_reg
+                                    (dcontext, opnd_create_reg(target_reg), opnd_create_reg(target_reg),
+                                     opnd_create_reg(scratch2),
+                                     OPND_CREATE_IMM5(8), COND_ALWAYS);
+                        instr_set_shift_type(dcontext, instr, ROTATE_RIGHT); //Shift it by 8
+
+                        POST(ilist, mark, instr);
+
+                        //Second 8 bits
+                        value = ((int)target & 0x00ff0000) >> 16;
+
+                        POST(ilist, mark, INSTR_CREATE_mov_imm
+                            (dcontext, opnd_create_reg(scratch2), OPND_CREATE_IMM12(value), COND_ALWAYS));
+
+                        //Rotate right by 8 to get top bits back in place
+                        instr = INSTR_CREATE_orr_reg
+                                    (dcontext, opnd_create_reg(target_reg), opnd_create_reg(target_reg),
+                                     opnd_create_reg(scratch2),
+                                     OPND_CREATE_IMM5(16), COND_ALWAYS);
+                        instr_set_shift_type(dcontext, instr, ROTATE_RIGHT); //Shift it by 16
+
+                        POST(ilist, mark, instr);
+
+                        //Third 8 bits
+                        value = ((int)target & 0x0000ff00) >> 8;
+
+                        POST(ilist, mark, INSTR_CREATE_mov_imm
+                            (dcontext, opnd_create_reg(scratch2), OPND_CREATE_IMM12(value), COND_ALWAYS));
+
+                          //Rotate right by 8 to get top bits back in place
+                        instr = INSTR_CREATE_orr_reg
+                                    (dcontext, opnd_create_reg(target_reg), opnd_create_reg(target_reg),
+                                     opnd_create_reg(scratch2),
+                                     OPND_CREATE_IMM5(24), COND_ALWAYS);
+                        instr_set_shift_type(dcontext, instr, ROTATE_RIGHT); //Shift it by 24 
+
+                        POST(ilist, mark, instr);
+
+                        //Last 8 bits
+                        value = ((int)target & 0x000000ff);
+
+                        POST(ilist, mark, INSTR_CREATE_mov_imm
+                            (dcontext, opnd_create_reg(scratch2), OPND_CREATE_IMM12(value), COND_ALWAYS));
+
+                        //Rotate right by 8 to get top bits back in place
+                        instr = INSTR_CREATE_orr_reg
+                                    (dcontext, opnd_create_reg(target_reg), opnd_create_reg(target_reg),
+                                     opnd_create_reg(scratch2),
+                                     OPND_CREATE_IMM5(0), COND_ALWAYS);
+                        instr_set_shift_type(dcontext, instr, LOGICAL_LEFT); //Shift it by 0
+
+                        POST(ilist, mark, instr);
+                      }
+                      else
+                      {
+                        //Push onto stack
                         POST(ilist, mark, INSTR_CREATE_push(dcontext, arg, COND_ALWAYS));
+                      }
+                    }
                 }
             } else {
                 /* r13 was adjusted up above; we simply store to r13 offsets */
@@ -1180,15 +1276,16 @@ insert_meta_call_vargs(dcontext_t *dcontext, instrlist_t *ilist, instr_t *instr,
     instr_t *in = (instr == NULL) ? instrlist_last(ilist) : instr_get_prev(instr);
     bool direct;
     uint stack_for_params = 0;
-/* SJF Ignore this
-        insert_parameter_preparation(dcontext, ilist, instr, 
-                                     clean_call, num_args, args);
-*/
+
+    insert_parameter_preparation(dcontext, ilist, instr, 
+                                 clean_call, num_args, args);
+
     /* If we need an indirect call, we use r11 as the last of the scratch regs.
      * We document this to clients using dr_insert_call_ex() or DR_CLEANCALL_INDIRECT.
      */
     direct = insert_reachable_cti(dcontext, ilist, instr, encode_pc, (byte *)callee,
-                                  false/*call*/, false/*!precise*/, DR_REG_R11, NULL);
+                                  false/*call*/, false/*!precise*/, DR_REG_R10, NULL);
+
     if (stack_for_params > 0) {
         /* FIXME PR 245936: let user decide whether to clean up?
          * i.e., support calling a stdcall routine?
@@ -1275,6 +1372,10 @@ insert_reachable_cti(dcontext_t *dcontext, instrlist_t *ilist, instr_t *where,
 {
     byte *encode_start;
     byte *encode_end;
+    int value=0;
+    int scratch2;
+    instr_t* instr;
+
     if (precise) {
         encode_start = target + JMP_LONG_LENGTH;
         encode_end = encode_start;
@@ -1286,9 +1387,9 @@ insert_reachable_cti(dcontext_t *dcontext, instrlist_t *ilist, instr_t *where,
         encode_start = (byte *) PAGE_START(encode_pc - PAGE_SIZE);
         encode_end = (byte *) ALIGN_FORWARD(encode_pc + PAGE_SIZE, PAGE_SIZE);
     }
-    //SJF Change to rel24_reachable as b/bl have a 24 bit imm
-    if (REL24_REACHABLE(encode_start, target) &&
-        REL24_REACHABLE(encode_end, target)) {
+    //SJF Change to rel26_reachable as b/bl have a 24 bit imm shifted left by 2
+    if (REL26_REACHABLE(encode_start, target) &&
+        REL26_REACHABLE(encode_end, target)) {
         /* For precise, we could consider a short cti, but so far no
          * users are precise so we'll leave that for i#56.
          */
@@ -1316,8 +1417,77 @@ insert_reachable_cti(dcontext_t *dcontext, instrlist_t *ilist, instr_t *where,
             if (inlined_tgt_instr != NULL)
                 *inlined_tgt_instr = inlined_tgt;
         } else {
+            //Move entire 32 bit absolute target into a reg and then use branch indirect
+            //Move 0 into the scratch reg
+            if( scratch == REG_RR8 )
+              scratch2 = REG_RR9;
+            else
+              scratch2 = REG_RR8;
+
             PRE(ilist, where, INSTR_CREATE_mov_imm
-                (dcontext, opnd_create_reg(scratch), OPND_CREATE_IMM12(target), COND_ALWAYS));
+                (dcontext, opnd_create_reg(scratch), OPND_CREATE_IMM12(0), COND_ALWAYS));
+
+            //Add the value bit by bit
+            //Top 8 bits
+            value = ((int)target & 0xff000000) >> 24;
+
+            PRE(ilist, where, INSTR_CREATE_mov_imm
+                (dcontext, opnd_create_reg(scratch2), OPND_CREATE_IMM12(value), COND_ALWAYS));
+
+            //Rotate right by 8 to get top bits back in place
+            instr = INSTR_CREATE_orr_reg
+                          (dcontext, opnd_create_reg(scratch), opnd_create_reg(scratch), 
+                           opnd_create_reg(scratch2),
+                           OPND_CREATE_IMM5(8), COND_ALWAYS);
+            instr_set_shift_type(dcontext, instr, ROTATE_RIGHT); //Shift it by 8
+
+            PRE(ilist, where, instr);
+
+            //Second 8 bits
+            value = ((int)target & 0x00ff0000) >> 16;
+
+            PRE(ilist, where, INSTR_CREATE_mov_imm
+                (dcontext, opnd_create_reg(scratch2), OPND_CREATE_IMM12(value), COND_ALWAYS));
+
+            //Rotate right by 8 to get top bits back in place
+            instr = INSTR_CREATE_orr_reg
+                          (dcontext, opnd_create_reg(scratch), opnd_create_reg(scratch), 
+                           opnd_create_reg(scratch2),
+                           OPND_CREATE_IMM5(16), COND_ALWAYS);
+            instr_set_shift_type(dcontext, instr, ROTATE_RIGHT); //Shift it by 16
+
+            PRE(ilist, where, instr);
+
+            //Third 8 bits
+            value = ((int)target & 0x0000ff00) >> 8;
+
+            PRE(ilist, where, INSTR_CREATE_mov_imm
+                (dcontext, opnd_create_reg(scratch2), OPND_CREATE_IMM12(value), COND_ALWAYS));
+
+            //Rotate right by 8 to get top bits back in place
+            instr = INSTR_CREATE_orr_reg
+                          (dcontext, opnd_create_reg(scratch), opnd_create_reg(scratch),
+                           opnd_create_reg(scratch2),
+                           OPND_CREATE_IMM5(24), COND_ALWAYS);
+            instr_set_shift_type(dcontext, instr, ROTATE_RIGHT); //Shift it by 24 
+
+            PRE(ilist, where, instr);
+
+            //Last 8 bits
+            value = ((int)target & 0x000000ff);
+
+            PRE(ilist, where, INSTR_CREATE_mov_imm
+                (dcontext, opnd_create_reg(scratch2), OPND_CREATE_IMM12(value), COND_ALWAYS));
+
+            //Rotate right by 8 to get top bits back in place
+            instr = INSTR_CREATE_orr_reg
+                          (dcontext, opnd_create_reg(scratch), opnd_create_reg(scratch),
+                           opnd_create_reg(scratch2),
+                           OPND_CREATE_IMM5(0), COND_ALWAYS);
+            instr_set_shift_type(dcontext, instr, LOGICAL_LEFT); //Shift it by 0
+
+            PRE(ilist, where, instr);
+            
             ind_tgt = opnd_create_reg(scratch);
             if (inlined_tgt_instr != NULL)
                 *inlined_tgt_instr = NULL;

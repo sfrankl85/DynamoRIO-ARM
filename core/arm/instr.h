@@ -552,8 +552,8 @@ extern const reg_id_t dr_reg_fixer[];
 # define INT3_MAX   4
 # define INT4_MIN   -8
 # define INT4_MAX   8
-# define INT5_MIN   -16
-# define INT5_MAX   16 
+# define INT5_MIN   0 
+# define INT5_MAX   32 
 # define INT6_MIN   -32
 # define INT6_MAX   32 
 # define INT8_MIN   0 
@@ -566,8 +566,10 @@ extern const reg_id_t dr_reg_fixer[];
 # define INT16_MAX  SHRT_MAX
 # define INT22_MIN  -2097152
 # define INT22_MAX  2097152 
-# define INT24_MIN  0 
-# define INT24_MAX  16777216 
+# define INT24_MIN  -8388607 
+# define INT24_MAX  8388608 
+# define INT26_MIN  -67108863
+# define INT26_MAX  67108864
 # define INT32_MIN  INT_MIN
 # define INT32_MAX  INT_MAX
 #endif
@@ -1965,6 +1967,8 @@ struct _instr_t {
     bool h_flag; //???
     bool m_flag; //For signed multiplies 
     bool r_flag; //For stm to flag to overwrite cpsr with spsr 
+
+    int  shift_type;
 
 }; /* instr_t */
 #endif /* DR_FAST_IR */

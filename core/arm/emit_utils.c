@@ -3586,7 +3586,7 @@ append_fcache_return_common(dcontext_t *dcontext, generated_code_t *code,
     dr_insert_call((void *)dcontext, ilist, NULL/*append*/,
                    (void *)dispatch, 1,
                    absolute ?
-                   OPND_CREATE_INTPTR((ptr_int_t)dcontext) : opnd_create_reg(REG_RR7));
+                   opnd_create_pc((ptr_int_t)dcontext) : opnd_create_reg(REG_RR7));
 
     /* dispatch() shouldn't return! */
     insert_reachable_cti(dcontext, ilist, NULL, vmcode_get_start(),
@@ -3608,6 +3608,7 @@ emit_fcache_return(dcontext_t *dcontext, generated_code_t *code, byte *pc)
                                                 NULL, false/*not coarse*/);
     /* now encode the instructions */
     pc = instrlist_encode(dcontext, &ilist, pc, instr_targets);
+
     ASSERT(pc != NULL);
     /* free the instrlist_t elements */
     instrlist_clear(dcontext, &ilist);

@@ -126,7 +126,7 @@ static const uint BLOCK_SIZES[] = {
     ALIGN_FORWARD(sizeof(fragment_t) + 2*sizeof(direct_linkstub_t), 
                   HEAP_ALIGNMENT), /* 68 dbg / 64 rel (128 x64) */
 
-    sizeof(instr_t), /* 78 *//* SJF added flags */
+    sizeof(instr_t), /* 80 *//* SJF added flags */
 #endif
     /* we keep this bucket even though only 10% or so of normal bbs
      * hit this.
@@ -1446,7 +1446,7 @@ heap_init()
     ASSERT(BLOCK_SIZES[0] >= sizeof(heap_pc*));
     /* since sizes depend on size of structs, make sure they're in order */
     for (i = 0; i < BLOCK_TYPES; i++) {
-        ASSERT(BLOCK_SIZES[i] > prev_sz);
+        ASSERT(BLOCK_SIZES[i] >= prev_sz);
         /* we assume all of our heap allocs are aligned */
         ASSERT(i == BLOCK_TYPES-1 || ALIGNED(BLOCK_SIZES[i], HEAP_ALIGNMENT));
         prev_sz = BLOCK_SIZES[i];
