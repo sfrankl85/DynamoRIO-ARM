@@ -974,6 +974,9 @@ static uint
 insert_parameter_preparation(dcontext_t *dcontext, instrlist_t *ilist, instr_t *instr,
                              bool clean_call, uint num_args, opnd_t *args)
 {
+
+#define APP  instrlist_append
+
     uint i;
     int r;
     uint preparm_padding = 0;
@@ -1086,7 +1089,7 @@ insert_parameter_preparation(dcontext_t *dcontext, instrlist_t *ilist, instr_t *
                                                            COND_ALWAYS ));
 */
                 }
-                else {
+                else if (opnd_is_pc(arg)){
                     if (clean_call && opnd_uses_reg(arg, REG_RR13)) {
                         /* We do a purely local expansion:
                          * spill eax, mc->eax, esp->eax, arg->eax, push eax, restore eax
@@ -1129,14 +1132,14 @@ insert_parameter_preparation(dcontext_t *dcontext, instrlist_t *ilist, instr_t *
                         }
                         scratch2 = REG_RR9;
 
-                        POST(ilist, mark, INSTR_CREATE_mov_imm
+                        APP(ilist, INSTR_CREATE_mov_imm
                             (dcontext, opnd_create_reg(target_reg), OPND_CREATE_IMM12(0), COND_ALWAYS));
 
                         //Add the value bit by bit
                         //Top 8 bits
                         value = ((int)target & 0xff000000) >> 24;
 
-                        POST(ilist, mark, INSTR_CREATE_mov_imm
+                        APP(ilist, INSTR_CREATE_mov_imm
                             (dcontext, opnd_create_reg(scratch2), OPND_CREATE_IMM12(value), COND_ALWAYS));
 
                         //Rotate right by 8 to get top bits back in place
@@ -1146,12 +1149,12 @@ insert_parameter_preparation(dcontext_t *dcontext, instrlist_t *ilist, instr_t *
                                      OPND_CREATE_IMM5(8), COND_ALWAYS);
                         instr_set_shift_type(dcontext, instr, ROTATE_RIGHT); //Shift it by 8
 
-                        POST(ilist, mark, instr);
+                        APP(ilist, instr);
 
                         //Second 8 bits
                         value = ((int)target & 0x00ff0000) >> 16;
 
-                        POST(ilist, mark, INSTR_CREATE_mov_imm
+                        APP(ilist, INSTR_CREATE_mov_imm
                             (dcontext, opnd_create_reg(scratch2), OPND_CREATE_IMM12(value), COND_ALWAYS));
 
                         //Rotate right by 8 to get top bits back in place
@@ -1161,12 +1164,12 @@ insert_parameter_preparation(dcontext_t *dcontext, instrlist_t *ilist, instr_t *
                                      OPND_CREATE_IMM5(16), COND_ALWAYS);
                         instr_set_shift_type(dcontext, instr, ROTATE_RIGHT); //Shift it by 16
 
-                        POST(ilist, mark, instr);
+                        APP(ilist, instr);
 
                         //Third 8 bits
                         value = ((int)target & 0x0000ff00) >> 8;
 
-                        POST(ilist, mark, INSTR_CREATE_mov_imm
+                        APP(ilist, INSTR_CREATE_mov_imm
                             (dcontext, opnd_create_reg(scratch2), OPND_CREATE_IMM12(value), COND_ALWAYS));
 
                           //Rotate right by 8 to get top bits back in place
@@ -1176,12 +1179,12 @@ insert_parameter_preparation(dcontext_t *dcontext, instrlist_t *ilist, instr_t *
                                      OPND_CREATE_IMM5(24), COND_ALWAYS);
                         instr_set_shift_type(dcontext, instr, ROTATE_RIGHT); //Shift it by 24 
 
-                        POST(ilist, mark, instr);
+                        APP(ilist, instr);
 
                         //Last 8 bits
                         value = ((int)target & 0x000000ff);
 
-                        POST(ilist, mark, INSTR_CREATE_mov_imm
+                        APP(ilist, INSTR_CREATE_mov_imm
                             (dcontext, opnd_create_reg(scratch2), OPND_CREATE_IMM12(value), COND_ALWAYS));
 
                         //Rotate right by 8 to get top bits back in place
@@ -1191,7 +1194,10 @@ insert_parameter_preparation(dcontext_t *dcontext, instrlist_t *ilist, instr_t *
                                      OPND_CREATE_IMM5(0), COND_ALWAYS);
                         instr_set_shift_type(dcontext, instr, LOGICAL_LEFT); //Shift it by 0
 
-                        POST(ilist, mark, instr);
+                        APP(ilist, instr);
+
+                        //Increment num of registers args
+                        reg_args++;
                       }
                       else
                       {
@@ -1200,6 +1206,8 @@ insert_parameter_preparation(dcontext_t *dcontext, instrlist_t *ilist, instr_t *
                       }
                     }
                 }
+                else
+                  POST(ilist, mark, INSTR_CREATE_push(dcontext, arg, COND_ALWAYS));
             } else {
                 /* r13 was adjusted up above; we simply store to r13 offsets */
                 uint offs = REGPARM_MINSTACK + R13_SZ * (i - NUM_REGPARM);

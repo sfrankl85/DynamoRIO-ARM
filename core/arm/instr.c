@@ -4182,7 +4182,8 @@ instr_is_mov_br(instr_t* instr)
    int opc = instr_get_opcode(instr);
    opnd_t opnd;
 
-   if( opc == OP_mov_reg || opc == OP_mov_imm )
+   if( opc == OP_mov_reg || opc == OP_mov_imm || 
+       ( opc >= OP_ldr_imm && opc <= OP_ldrt ) )
    {
        //Make sure there are dsts
        if( instr->dsts != NULL )
@@ -4218,8 +4219,8 @@ instr_is_mbr(instr_t *instr)    /* Multi path??? branch */
    int opc = instr_get_opcode(instr);
    opnd_t opnd;
 
-   /* Only branch instruction that allows reg as target */
-   if( opc == OP_blx_reg || opc == OP_bx | opc == OP_bxj )
+   /* Only branch instruction that allows reg as src */
+   if( opc == OP_blx_reg || opc == OP_bx || opc == OP_bxj  )
      return true;
    else
      return instr_is_mov_br( instr );
@@ -5118,38 +5119,300 @@ opnd_create_dcontext_field_byte(dcontext_t *dcontext, int offs)
     return dcontext_opnd_common(dcontext, true, REG_NULL, offs, OPSZ_1);
 }
 
+void 
+instrlist_postinsert_move_32bits_to_reg(instrlist_t *ilist, dcontext_t *dcontext, 
+                                reg_id_t target_reg, reg_id_t scratch, int target, instr_t* rel_instr )
+{
+    int value=0;
+
+    ASSERT(( ilist != NULL ));
+
+    instrlist_meta_postinsert(ilist, rel_instr, INSTR_CREATE_mov_imm
+            (dcontext, opnd_create_reg(target_reg), OPND_CREATE_IMM12(0), COND_ALWAYS));
+
+    //Add the value bit by bit
+    //Top 8 bits
+    value = ((int)target & 0xff000000) >> 24;
+
+    instrlist_meta_postinsert(ilist, rel_instr, INSTR_CREATE_mov_imm
+        (dcontext, opnd_create_reg(scratch), OPND_CREATE_IMM12(value), COND_ALWAYS));
+
+    //Rotate right by 8 to get top bits back in place
+    instr = INSTR_CREATE_orr_reg
+                (dcontext, opnd_create_reg(target_reg), opnd_create_reg(target_reg),
+                 opnd_create_reg(scratch),
+                 OPND_CREATE_IMM5(8), COND_ALWAYS);
+    instr_set_shift_type(dcontext, instr, ROTATE_RIGHT); //Shift it by 8
+
+    instrlist_meta_postinsert(ilist, rel_instr, instr);
+
+    //Second 8 bits
+    value = ((int)target & 0x00ff0000) >> 16;
+
+    instrlist_meta_postinsert(ilist, rel_instr, INSTR_CREATE_mov_imm
+        (dcontext, opnd_create_reg(scratch), OPND_CREATE_IMM12(value), COND_ALWAYS));
+
+    //Rotate right by 8 to get top bits back in place
+    instr = INSTR_CREATE_orr_reg
+                (dcontext, opnd_create_reg(target_reg), opnd_create_reg(target_reg),
+                 opnd_create_reg(scratch),
+                 OPND_CREATE_IMM5(16), COND_ALWAYS);
+    instr_set_shift_type(dcontext, instr, ROTATE_RIGHT); //Shift it by 16
+
+    instrlist_meta_postinsert(ilist, rel_instr, instr);
+    //Third 8 bits
+    value = ((int)target & 0x0000ff00) >> 8;
+
+    instrlist_meta_postinsert(ilist, rel_instr, INSTR_CREATE_mov_imm
+        (dcontext, opnd_create_reg(scratch), OPND_CREATE_IMM12(value), COND_ALWAYS));
+
+      //Rotate right by 8 to get top bits back in place
+    instr = INSTR_CREATE_orr_reg
+                (dcontext, opnd_create_reg(target_reg), opnd_create_reg(target_reg),
+                 opnd_create_reg(scratch),
+                 OPND_CREATE_IMM5(24), COND_ALWAYS);
+    instr_set_shift_type(dcontext, instr, ROTATE_RIGHT); //Shift it by 24
+
+    instrlist_meta_postinsert(ilist, rel_instr, instr);
+
+    //Last 8 bits
+    value = ((int)target & 0x000000ff);
+
+    instrlist_meta_postinsert(ilist, rel_instr, INSTR_CREATE_mov_imm
+        (dcontext, opnd_create_reg(scratch), OPND_CREATE_IMM12(value), COND_ALWAYS));
+
+    //Rotate right by 8 to get top bits back in place
+    instr = INSTR_CREATE_orr_reg
+                (dcontext, opnd_create_reg(target_reg), opnd_create_reg(target_reg),
+                 opnd_create_reg(scratch),
+                 OPND_CREATE_IMM5(0), COND_ALWAYS);
+    instr_set_shift_type(dcontext, instr, LOGICAL_LEFT); //Shift it by 0
+
+    instrlist_meta_postinsert(ilist, rel_instr, instr);
+}
+
+void 
+instrlist_preinsert_move_32bits_to_reg(instrlist_t *ilist, dcontext_t *dcontext, 
+                                reg_id_t target_reg, reg_id_t scratch, int target, instr_t* rel_instr )
+{
+    int value=0;
+
+    ASSERT(( ilist != NULL ));
+
+    instrlist_meta_preinsert(ilist, rel_instr, INSTR_CREATE_mov_imm
+            (dcontext, opnd_create_reg(target_reg), OPND_CREATE_IMM12(0), COND_ALWAYS));
+
+    //Add the value bit by bit
+    //Top 8 bits
+    value = ((int)target & 0xff000000) >> 24;
+
+    instrlist_meta_preinsert(ilist, rel_instr, INSTR_CREATE_mov_imm
+        (dcontext, opnd_create_reg(scratch), OPND_CREATE_IMM12(value), COND_ALWAYS));
+
+    //Rotate right by 8 to get top bits back in place
+    instr = INSTR_CREATE_orr_reg
+                (dcontext, opnd_create_reg(target_reg), opnd_create_reg(target_reg),
+                 opnd_create_reg(scratch),
+                 OPND_CREATE_IMM5(8), COND_ALWAYS);
+    instr_set_shift_type(dcontext, instr, ROTATE_RIGHT); //Shift it by 8
+
+    instrlist_meta_preinsert(ilist, rel_instr, instr);
+
+    //Second 8 bits
+    value = ((int)target & 0x00ff0000) >> 16;
+
+    instrlist_meta_preinsert(ilist, rel_instr, INSTR_CREATE_mov_imm
+        (dcontext, opnd_create_reg(scratch), OPND_CREATE_IMM12(value), COND_ALWAYS));
+
+    //Rotate right by 8 to get top bits back in place
+    instr = INSTR_CREATE_orr_reg
+                (dcontext, opnd_create_reg(target_reg), opnd_create_reg(target_reg),
+                 opnd_create_reg(scratch),
+                 OPND_CREATE_IMM5(16), COND_ALWAYS);
+    instr_set_shift_type(dcontext, instr, ROTATE_RIGHT); //Shift it by 16
+
+    instrlist_meta_preinsert(ilist, rel_instr, instr);
+    //Third 8 bits
+    value = ((int)target & 0x0000ff00) >> 8;
+
+    instrlist_meta_preinsert(ilist, rel_instr, INSTR_CREATE_mov_imm
+        (dcontext, opnd_create_reg(scratch), OPND_CREATE_IMM12(value), COND_ALWAYS));
+
+      //Rotate right by 8 to get top bits back in place
+    instr = INSTR_CREATE_orr_reg
+                (dcontext, opnd_create_reg(target_reg), opnd_create_reg(target_reg),
+                 opnd_create_reg(scratch),
+                 OPND_CREATE_IMM5(24), COND_ALWAYS);
+    instr_set_shift_type(dcontext, instr, ROTATE_RIGHT); //Shift it by 24
+
+    instrlist_meta_preinsert(ilist, rel_instr, instr);
+
+    //Last 8 bits
+    value = ((int)target & 0x000000ff);
+
+    instrlist_meta_preinsert(ilist, rel_instr, INSTR_CREATE_mov_imm
+        (dcontext, opnd_create_reg(scratch), OPND_CREATE_IMM12(value), COND_ALWAYS));
+
+    //Rotate right by 8 to get top bits back in place
+    instr = INSTR_CREATE_orr_reg
+                (dcontext, opnd_create_reg(target_reg), opnd_create_reg(target_reg),
+                 opnd_create_reg(scratch),
+                 OPND_CREATE_IMM5(0), COND_ALWAYS);
+    instr_set_shift_type(dcontext, instr, LOGICAL_LEFT); //Shift it by 0
+
+    instrlist_meta_preinsert(ilist, rel_instr, instr);
+}
+
+void 
+instrlist_append_move_32bits_to_reg(instrlist_t *ilist, dcontext_t *dcontext, 
+                                reg_id_t target_reg, reg_id_t scratch, int target )
+{
+    int value=0;
+
+    ASSERT(( ilist != NULL ));
+
+    instrlist_meta_append(ilist, INSTR_CREATE_mov_imm
+            (dcontext, opnd_create_reg(target_reg), OPND_CREATE_IMM12(0), COND_ALWAYS));
+
+    //Add the value bit by bit
+    //Top 8 bits
+    value = ((int)target & 0xff000000) >> 24;
+
+    instrlist_meta_append(ilist, INSTR_CREATE_mov_imm
+        (dcontext, opnd_create_reg(scratch), OPND_CREATE_IMM12(value), COND_ALWAYS));
+
+    //Rotate right by 8 to get top bits back in place
+    instr = INSTR_CREATE_orr_reg
+                (dcontext, opnd_create_reg(target_reg), opnd_create_reg(target_reg),
+                 opnd_create_reg(scratch),
+                 OPND_CREATE_IMM5(8), COND_ALWAYS);
+    instr_set_shift_type(dcontext, instr, ROTATE_RIGHT); //Shift it by 8
+
+    instrlist_meta_append(ilist, instr);
+
+    //Second 8 bits
+    value = ((int)target & 0x00ff0000) >> 16;
+
+    instrlist_meta_append(ilist, INSTR_CREATE_mov_imm
+        (dcontext, opnd_create_reg(scratch), OPND_CREATE_IMM12(value), COND_ALWAYS));
+
+    //Rotate right by 8 to get top bits back in place
+    instr = INSTR_CREATE_orr_reg
+                (dcontext, opnd_create_reg(target_reg), opnd_create_reg(target_reg),
+                 opnd_create_reg(scratch),
+                 OPND_CREATE_IMM5(16), COND_ALWAYS);
+    instr_set_shift_type(dcontext, instr, ROTATE_RIGHT); //Shift it by 16
+
+    instrlist_meta_append(ilist, instr);
+    //Third 8 bits
+    value = ((int)target & 0x0000ff00) >> 8;
+
+    instrlist_meta_append(ilist, INSTR_CREATE_mov_imm
+        (dcontext, opnd_create_reg(scratch), OPND_CREATE_IMM12(value), COND_ALWAYS));
+
+      //Rotate right by 8 to get top bits back in place
+    instr = INSTR_CREATE_orr_reg
+                (dcontext, opnd_create_reg(target_reg), opnd_create_reg(target_reg),
+                 opnd_create_reg(scratch),
+                 OPND_CREATE_IMM5(24), COND_ALWAYS);
+    instr_set_shift_type(dcontext, instr, ROTATE_RIGHT); //Shift it by 24
+
+    instrlist_meta_append(ilist, instr);
+
+    //Last 8 bits
+    value = ((int)target & 0x000000ff);
+
+    instrlist_meta_append(ilist, INSTR_CREATE_mov_imm
+        (dcontext, opnd_create_reg(scratch), OPND_CREATE_IMM12(value), COND_ALWAYS));
+
+    //Rotate right by 8 to get top bits back in place
+    instr = INSTR_CREATE_orr_reg
+                (dcontext, opnd_create_reg(target_reg), opnd_create_reg(target_reg),
+                 opnd_create_reg(scratch),
+                 OPND_CREATE_IMM5(0), COND_ALWAYS);
+    instr_set_shift_type(dcontext, instr, LOGICAL_LEFT); //Shift it by 0
+
+    instrlist_meta_append(ilist, instr);
+}
+
 void
 instr_create_restore_from_dcontext(instrlist_t *ilist, dcontext_t *dcontext, reg_id_t reg, 
                                    int offs, int where, instr_t* rel_instr, bool absolute)
 {
+    int scratch  = REG_RR8;
+    int scratch2 = REG_RR9;
+
     //Clobbers R8
     if( where == INSERT_APPEND )
     {
-      instrlist_meta_append( ilist, INSTR_CREATE_mov_imm( dcontext, opnd_create_reg(REG_RR8), 
-                                    OPND_CREATE_IMM12(((int)(ptr_int_t)(absolute ? dcontext : 0))
-                                                      + offs), COND_ALWAYS ));
+      instrlist_append_move_32bits_to_reg( ilist, dcontext, scratch, scratch2, 
+                                           (((int)(ptr_int_t)(absolute ? dcontext : 0)) + offs) );
 
-      instrlist_meta_append( ilist, INSTR_CREATE_ldr_reg(dcontext, opnd_create_reg(reg),
-                                    opnd_create_mem_reg(REG_RR8), opnd_create_reg(REG_NULL), OPND_CREATE_IMM5(0), COND_ALWAYS ));
+      if( reg >= REG_RR0 && reg <= REG_RR15 )
+      {
+        instrlist_meta_append( ilist, INSTR_CREATE_ldr_imm(dcontext, opnd_create_reg(reg),
+                                        opnd_create_mem_reg(scratch),  
+                                        OPND_CREATE_IMM12(0), COND_ALWAYS ));
+      }
+      else if( reg == REG_CPSR )
+      {
+        instrlist_meta_append( ilist, INSTR_CREATE_ldr_imm(dcontext, opnd_create_reg(scratch2),
+                                        opnd_create_mem_reg(scratch),  
+                                        OPND_CREATE_IMM12(0), COND_ALWAYS ));
+
+        instrlist_meta_append( ilist, INSTR_CREATE_msr_cpsr(dcontext, scratch2); 
+      }
+      else
+        CLIENT_ASSERT(false,
+                    "instr_create_restore_from_dcontext: invalid reg");
     }
     else if( where == INSERT_PRE )
     {
-      instrlist_meta_preinsert( ilist, rel_instr, INSTR_CREATE_mov_imm( dcontext, opnd_create_reg(REG_RR8), 
-                                    OPND_CREATE_IMM12(((int)(ptr_int_t)(absolute ? dcontext : 0))
-                                                      + offs), COND_ALWAYS ));
+      instrlist_preinsert_move_32bits_to_reg( ilist, dcontext, scratch, scratch2, 
+                                           (((int)(ptr_int_t)(absolute ? dcontext : 0)) + offs), rel_instr );
 
-      instrlist_meta_preinsert( ilist, rel_instr, INSTR_CREATE_ldr_reg(dcontext, opnd_create_reg(reg),
-                                    opnd_create_mem_reg(REG_RR8), opnd_create_reg(REG_NULL), OPND_CREATE_IMM5(0), COND_ALWAYS ));
-      
+      if( reg >= REG_RR0 && reg <= REG_RR15 )
+      {
+        instrlist_meta_preinsert( ilist, rel_instr, INSTR_CREATE_ldr_imm(dcontext, opnd_create_reg(reg),
+                                        opnd_create_mem_reg(REG_RR8),
+                                        OPND_CREATE_IMM12(0), COND_ALWAYS ));
+      }
+      else if( reg == REG_CPSR )
+      {
+        instrlist_meta_preinsert( ilist, rel_instr, INSTR_CREATE_ldr_imm(dcontext, opnd_create_reg(scratch2),
+                                        opnd_create_mem_reg(scratch),
+                                        OPND_CREATE_IMM12(0), COND_ALWAYS ));
+
+        instrlist_meta_preinsert( ilist, rel_instr, INSTR_CREATE_msr_cpsr(dcontext, scratch2);
+      }
+      else
+        CLIENT_ASSERT(false,
+                    "instr_create_restore_from_dcontext: invalid reg");
+
     }
     else if( where == INSERT_POST )
     {
-      instrlist_meta_postinsert( ilist, rel_instr, INSTR_CREATE_mov_imm( dcontext, opnd_create_reg(REG_RR8), 
-                                    OPND_CREATE_IMM12(((int)(ptr_int_t)(absolute ? dcontext : 0))
-                                                      + offs), COND_ALWAYS ));
+      instrlist_postinsert_move_32bits_to_reg( ilist, dcontext, scratch, scratch2, 
+                                           (((int)(ptr_int_t)(absolute ? dcontext : 0)) + offs), rel_instr );
 
-      instrlist_meta_postinsert( ilist, rel_instr, INSTR_CREATE_ldr_reg(dcontext, opnd_create_reg(reg),
-                                    opnd_create_mem_reg(REG_RR8), opnd_create_reg(REG_NULL), OPND_CREATE_IMM5(0), COND_ALWAYS ));
+
+      if( reg >= REG_RR0 && reg <= REG_RR15 )
+      {
+        instrlist_meta_postinsert( ilist, rel_instr, INSTR_CREATE_ldr_imm(dcontext, opnd_create_reg(reg),
+                                        opnd_create_mem_reg(REG_RR8),
+                                        OPND_CREATE_IMM12(0), COND_ALWAYS ));
+      }
+      else if( reg == REG_CPSR )
+      {
+        instrlist_meta_postinsert( ilist, rel_instr, INSTR_CREATE_ldr_imm(dcontext, opnd_create_reg(scratch2),
+                                        opnd_create_mem_reg(scratch),
+                                        OPND_CREATE_IMM12(0), COND_ALWAYS ));
+
+        instrlist_meta_postinsert( ilist, rel_instr, INSTR_CREATE_msr_cpsr(dcontext, scratch2);
+      }
+      else
+        CLIENT_ASSERT(false,
+                    "instr_create_restore_from_dcontext: invalid reg");
     }
     else
       CLIENT_ASSERT(false,
@@ -5161,33 +5424,84 @@ instr_t *
 instr_create_save_to_dcontext(instrlist_t *ilist, dcontext_t *dcontext, reg_id_t reg, 
                                    int offs, int where, instr_t* rel_instr, bool absolute)
 {
+    int target = (int)(ptr_int_t)(absolute ? dcontext : 0) + offs;
+    int value=0;
+    int target_reg = REG_RR8;
+    int scratch = REG_RR9;
+    instr_t* instr;
+
     if( where == INSERT_APPEND )
     {
-      instrlist_meta_append( ilist, INSTR_CREATE_mov_imm( dcontext, opnd_create_reg(REG_RR8),
-                             OPND_CREATE_IMM12(((int)(ptr_int_t)(absolute ? dcontext : 0))
-                                                      + offs-4), COND_ALWAYS ));  //SJF Need -4 for some reason
+      instrlist_append_move_32bits_to_reg( ilist, dcontext, target_reg, scratch, 
+                                           (((int)(ptr_int_t)(absolute ? dcontext : 0)) + offs) );
 
-      instrlist_meta_append( ilist, INSTR_CREATE_str_imm(dcontext, opnd_create_reg(reg),
-                             opnd_create_mem_reg(REG_RR8), OPND_CREATE_IMM12(0), COND_ALWAYS ));
+      if( reg >= REG_RR0 && reg <= REG_RR15 )
+      {
+        //Save reg to the correct address calced above
+        instrlist_meta_append( ilist, INSTR_CREATE_str_imm(dcontext, opnd_create_reg(reg),
+                               opnd_create_mem_reg(target_reg), OPND_CREATE_IMM12(0), COND_ALWAYS ));
+      }
+      else if( reg == REG_CPSR )
+      {
+        instrlist_meta_append( ilist, INSTR_CREATE_mrs_cpsr(dcontext, scratch2);
+
+        instrlist_meta_append( ilist, INSTR_CREATE_str_imm(dcontext, opnd_create_reg(scratch2),
+                                        opnd_create_mem_reg(scratch),
+                                        OPND_CREATE_IMM12(0), COND_ALWAYS ));
+      }
+      else
+        CLIENT_ASSERT(false,
+                      "instr_create_save_to_dcontext: invalid insert position");
+     
+
     }
     else if( where == INSERT_PRE )
     {
-      instrlist_meta_preinsert( ilist, rel_instr, INSTR_CREATE_mov_imm( dcontext, opnd_create_reg(REG_RR8),
-                                OPND_CREATE_IMM12(((int)(ptr_int_t)(absolute ? dcontext : 0))
-                                                      + offs - 4), COND_ALWAYS ));
+      instrlist_preinsert_move_32bits_to_reg( ilist, dcontext, target_reg, scratch, 
+                                           (((int)(ptr_int_t)(absolute ? dcontext : 0)) + offs), rel_instr );
 
-      instrlist_meta_preinsert( ilist, rel_instr, INSTR_CREATE_str_imm(dcontext, opnd_create_reg(reg),
-                                opnd_create_mem_reg(REG_RR8), OPND_CREATE_IMM12(0), COND_ALWAYS ));
+
+      if( reg >= REG_RR0 && reg <= REG_RR15 )
+      {
+        //Save reg to the correct address calced above
+        instrlist_meta_preinsert( ilist, rel_instr, INSTR_CREATE_str_imm(dcontext, opnd_create_reg(reg),
+                               opnd_create_mem_reg(target_reg), OPND_CREATE_IMM12(0), COND_ALWAYS ));
+      }
+      else if( reg == REG_CPSR )
+      {
+        instrlist_meta_preinsert( ilist, rel_instr, INSTR_CREATE_mrs_cpsr(dcontext, scratch2);
+
+        instrlist_meta_preinsert( ilist, rel_instr, INSTR_CREATE_str_imm(dcontext, opnd_create_reg(scratch2),
+                                        opnd_create_mem_reg(scratch),
+                                        OPND_CREATE_IMM12(0), COND_ALWAYS ));
+      }
+      else
+        CLIENT_ASSERT(false,
+                      "instr_create_save_to_dcontext: invalid insert position");
 
     }
     else if( where == INSERT_POST )
     {
-      instrlist_meta_postinsert( ilist, rel_instr, INSTR_CREATE_mov_imm( dcontext, opnd_create_reg(REG_RR8),
-                                    OPND_CREATE_IMM12(((int)(ptr_int_t)(absolute ? dcontext : 0))
-                                                      + offs - 4), COND_ALWAYS ));
+      instrlist_postinsert_move_32bits_to_reg( ilist, dcontext, target_reg, scratch, 
+                                           (((int)(ptr_int_t)(absolute ? dcontext : 0)) + offs), rel_instr );
 
-      instrlist_meta_postinsert( ilist, rel_instr, INSTR_CREATE_str_imm(dcontext, opnd_create_reg(reg),
-                                 opnd_create_mem_reg(REG_RR8), OPND_CREATE_IMM12(0), COND_ALWAYS ));
+      if( reg >= REG_RR0 && reg <= REG_RR15 )
+      {
+        //Save reg to the correct address calced above
+        instrlist_meta_postinsert( ilist, rel_instr, INSTR_CREATE_str_imm(dcontext, opnd_create_reg(reg),
+                               opnd_create_mem_reg(target_reg), OPND_CREATE_IMM12(0), COND_ALWAYS ));
+      }
+      else if( reg == REG_CPSR )
+      {
+        instrlist_meta_postinsert( ilist, rel_instr, INSTR_CREATE_mrs_cpsr(dcontext, scratch2);
+
+        instrlist_meta_postinsert( ilist, rel_instr, INSTR_CREATE_str_imm(dcontext, opnd_create_reg(scratch2),
+                                        opnd_create_mem_reg(scratch),
+                                        OPND_CREATE_IMM12(0), COND_ALWAYS ));
+      }
+      else
+        CLIENT_ASSERT(false,
+                      "instr_create_save_to_dcontext: invalid insert position");
     }
     else
       CLIENT_ASSERT(false,

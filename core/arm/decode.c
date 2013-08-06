@@ -262,8 +262,8 @@ convert_shifted_immed_to_immed( uint immed_int, int sz )
       ret_immed = (immed_int & 0xffffff) << 2; //Only want last 24 bits. Shift by two right
 
       //Sign extend
-      if(( ret_immed & 0x800000 ) == 1 )
-        ret_immed |= 0xff000000; //Set top bits
+      if(( ret_immed & 0x2000000 ) == 0x2000000 )
+        ret_immed |= 0xfc000000; //Set top bits
 
       return ret_immed;
 
@@ -829,7 +829,7 @@ decode_1dst_reg_1src_reglist( decode_info_t* di, byte* instr_word, opnd_t* dsts,
 
 void
 decode_branch_instrs( decode_info_t* di, byte* instr_word, opnd_t* dsts,
-                                   opnd_t* srcs, int *numdsts, int *numsrcs )
+                                   opnd_t* srcs, int *numdsts, int *numsrcs, byte* pc )
 {
     /* OP_b, OP_bl, OP_blx_imm, OP_blx_reg */
     int  reg =0, addr = 0;
@@ -852,6 +852,9 @@ decode_branch_instrs( decode_info_t* di, byte* instr_word, opnd_t* dsts,
 
       addr = convert_shifted_immed_to_immed( addr, OPSZ_4_24 );
 
+      //Convert the relative address to an absolute one here(+8 for actual pc pos)
+      addr += pc + 8;
+
       srcs[*numsrcs] = opnd_create_pc((app_pc)(addr));
       (*numsrcs)++;
     }
@@ -859,7 +862,7 @@ decode_branch_instrs( decode_info_t* di, byte* instr_word, opnd_t* dsts,
 
 void
 decode_operands( decode_info_t* di, int encoding, byte* instr_word, opnd_t* dsts, 
-                 opnd_t* srcs, int *numdsts, int *numsrcs )
+                 opnd_t* srcs, int *numdsts, int *numsrcs, byte* pc )
 {
     switch( encoding )
     {
@@ -949,7 +952,7 @@ decode_operands( decode_info_t* di, int encoding, byte* instr_word, opnd_t* dsts
         break;
       case BRANCH_INSTR:
         decode_branch_instrs(di, instr_word, dsts, 
-                             srcs, numdsts, numsrcs );
+                             srcs, numdsts, numsrcs, pc );
         break;
 
       default:
@@ -1096,7 +1099,7 @@ instr_info_t* decode_data_processing_register_shifted_register(byte* instr_word,
 
 
     decode_operands( di, encoding, instr_word,
-                     dsts, srcs, numdsts, numsrcs );
+                     dsts, srcs, numdsts, numsrcs, NULL );
 
 
     return op_instr[di->opcode];
@@ -1244,7 +1247,7 @@ instr_info_t* decode_data_processing_imm(byte* instr_word,
 
 
     decode_operands( di, encoding, instr_word,
-                     dsts, srcs, numdsts, numsrcs );
+                     dsts, srcs, numdsts, numsrcs, NULL );
 
     return op_instr[di->opcode];
 }
@@ -1351,7 +1354,7 @@ instr_info_t* decode_misc(byte* instr_word,
 
 
     decode_operands( di, encoding, instr_word,
-                     dsts, srcs, numdsts, numsrcs );
+                     dsts, srcs, numdsts, numsrcs, NULL );
 
     return op_instr[di->opcode];
 }
@@ -1431,7 +1434,7 @@ instr_info_t* decode_halfword_mul_and_mla(byte* instr_word,
 
 
     decode_operands( di, encoding, instr_word,
-                     dsts, srcs, numdsts, numsrcs );
+                     dsts, srcs, numdsts, numsrcs, NULL );
 
     return op_instr[di->opcode];
 }
@@ -1500,7 +1503,7 @@ instr_info_t* decode_mul_and_mla(byte* instr_word,
 
 
     decode_operands( di, encoding, instr_word,
-                     dsts, srcs, numdsts, numsrcs );
+                     dsts, srcs, numdsts, numsrcs, NULL );
 
     return op_instr[di->opcode];
 
@@ -1552,7 +1555,7 @@ instr_info_t* decode_extra_load_store_unpriv_1(byte* instr_word,
 
 
     decode_operands( di, encoding, instr_word,
-                     dsts, srcs, numdsts, numsrcs );
+                     dsts, srcs, numdsts, numsrcs, NULL );
 
     return op_instr[di->opcode];
  
@@ -1616,7 +1619,7 @@ instr_info_t* decode_extra_load_store_unpriv_2(byte* instr_word,
 
 
     decode_operands( di, encoding, instr_word,
-                     dsts, srcs, numdsts, numsrcs );
+                     dsts, srcs, numdsts, numsrcs, NULL );
 
     return op_instr[di->opcode];
 }
@@ -1739,7 +1742,7 @@ instr_info_t* decode_extra_load_store_2(byte* instr_word,
 
 
     decode_operands( di, encoding, instr_word,
-                     dsts, srcs, numdsts, numsrcs );
+                     dsts, srcs, numdsts, numsrcs, NULL );
 
     return op_instr[di->opcode];
 }
@@ -1807,7 +1810,7 @@ instr_info_t* decode_extra_load_store_1(byte* instr_word,
 
 
     decode_operands( di, encoding, instr_word,
-                     dsts, srcs, numdsts, numsrcs );
+                     dsts, srcs, numdsts, numsrcs, NULL );
 
     return op_instr[di->opcode];
 }
@@ -1875,7 +1878,7 @@ instr_info_t* decode_syncro_prims(byte* instr_word,
 
 
     decode_operands( di, encoding, instr_word,
-                     dsts, srcs, numdsts, numsrcs );
+                     dsts, srcs, numdsts, numsrcs, NULL );
 
     return op_instr[di->opcode];
 }
@@ -1950,7 +1953,7 @@ instr_info_t* decode_msr_and_hints(byte* instr_word,
     ASSERT( srcs != NULL && dsts != NULL );
 
     decode_operands( di, encoding, instr_word,
-                     dsts, srcs, numdsts, numsrcs );
+                     dsts, srcs, numdsts, numsrcs, NULL );
 
     return op_instr[di->opcode];
 }
@@ -2114,7 +2117,7 @@ instr_info_t* decode_data_processing_register(byte* instr_word,
 
 
     decode_operands( di, encoding, instr_word, 
-                     dsts, srcs, numdsts, numsrcs );
+                     dsts, srcs, numdsts, numsrcs, NULL );
 
     return op_instr[di->opcode];
 }
@@ -2431,7 +2434,7 @@ instr_info_t* decode_load_store_word_and_ubyte1(byte* instr_word,
 
 
     decode_operands( di, encoding, instr_word,
-                     dsts, srcs, numdsts, numsrcs );
+                     dsts, srcs, numdsts, numsrcs, NULL );
 
     return op_instr[di->opcode];
 }
@@ -2522,7 +2525,7 @@ instr_info_t* decode_parallel_unsigned_arith(byte* instr_word,
 
 
     decode_operands( di, encoding, instr_word,
-                     dsts, srcs, numdsts, numsrcs );
+                     dsts, srcs, numdsts, numsrcs, NULL );
 
     return op_instr[di->opcode];
 
@@ -2598,7 +2601,7 @@ instr_info_t* decode_parallel_signed_arith(byte* instr_word,
 
 
     decode_operands( di, encoding, instr_word,
-                     dsts, srcs, numdsts, numsrcs );
+                     dsts, srcs, numdsts, numsrcs, NULL );
 
     return op_instr[di->opcode];
 
@@ -2722,7 +2725,7 @@ instr_info_t* decode_signed_mul(byte* instr_word,
 
 
     decode_operands( di, encoding, instr_word,
-                     dsts, srcs, numdsts, numsrcs );
+                     dsts, srcs, numdsts, numsrcs, NULL );
 
     return op_instr[di->opcode];
 
@@ -2866,7 +2869,7 @@ instr_info_t* decode_parallel_pack_unpack(byte* instr_word,
 
 
     decode_operands( di, encoding, instr_word,
-                     dsts, srcs, numdsts, numsrcs );
+                     dsts, srcs, numdsts, numsrcs, NULL );
 
     return op_instr[di->opcode];
 
@@ -2952,7 +2955,7 @@ instr_info_t* decode_media(byte* instr_word,
 
 
     decode_operands( di, encoding, instr_word,
-                     dsts, srcs, numdsts, numsrcs );
+                     dsts, srcs, numdsts, numsrcs, NULL );
 
     return op_instr[di->opcode];
 }
@@ -3097,7 +3100,7 @@ instr_info_t* decode_system_call_and_coprocessor(byte* instr_word,
 
 
     decode_operands( di, encoding, instr_word,
-                     dsts, srcs, numdsts, numsrcs );
+                     dsts, srcs, numdsts, numsrcs, NULL );
 
     return op_instr[di->opcode];
 }
@@ -3105,7 +3108,7 @@ instr_info_t* decode_system_call_and_coprocessor(byte* instr_word,
 
 instr_info_t* decode_branch(byte* instr_word,
                             decode_info_t* di, bool just_opcode,
-                            opnd_t* dsts, opnd_t* srcs, int* numdsts, int* numsrcs)
+                            opnd_t* dsts, opnd_t* srcs, int* numdsts, int* numsrcs, byte* pc)
 {
     // | cond | 10 | op |   Rn    |  R   |          |
     int encoding;
@@ -3189,7 +3192,7 @@ instr_info_t* decode_branch(byte* instr_word,
 
 
     decode_operands( di, encoding, instr_word,
-                     dsts, srcs, numdsts, numsrcs );
+                     dsts, srcs, numdsts, numsrcs, pc );
 
     return op_instr[di->opcode];
 }
@@ -3268,7 +3271,7 @@ read_instruction(byte *pc, byte *orig_pc,
 */
     else if ( (instr_type & 0x6) == 0x4) //10x
           info = decode_branch(instr_word, di, just_opcode,
-                               dsts, srcs, numdsts, numsrcs); 
+                               dsts, srcs, numdsts, numsrcs, pc-4); 
     else if ( (instr_type & 0x6) == 0x6) //11x
           info = decode_system_call_and_coprocessor(instr_word, di, just_opcode, 
                                                     dsts, srcs, numdsts, numsrcs); 

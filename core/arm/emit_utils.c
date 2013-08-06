@@ -429,27 +429,6 @@ insert_spill_or_restore(dcontext_t *dcontext, cache_pc pc, uint flags, bool spil
     byte opcode = ((reg == REG_RR0) ?
                    (spill ? MOV_XAX2MEM_OPCODE : MOV_MEM2XAX_OPCODE) :
                    (spill ? MOV_REG2MEM_OPCODE : MOV_MEM2REG_OPCODE));
-#ifdef X64
-    /* for x64, shared and private fragments all use tls, even for 32-bit code */
-    shared = true;
-    if (!FRAG_IS_32(flags)) {
-        /* mov %rbx, gs:os_tls_offset(tls_offs) */
-        if (reg == REG_RR0) {
-            /* shorter to use 0xa3 w/ addr32 prefix than 0x89/0x8b w/ sib byte */
-            /* FIXME: PR 209709: test perf and remove if outweighs space */
-            *pc = ADDR_PREFIX_OPCODE; pc++;
-        }
-        *pc = TLS_SEG_OPCODE; pc++;
-        *pc = REX_PREFIX_BASE_OPCODE | REX_PREFIX_W_OPFLAG; pc++;
-        *pc = opcode; pc++;
-        if (reg != REG_RR0) {
-            /* 0x1c for rbx, 0x0c for rcx, 0x04 for rax */
-            *pc = MODRM_BYTE(0/*mod*/, reg_get_bits(reg), 4/*rm*/); pc++;
-            *pc = SIB_DISP32; pc++;   /* sib byte: abs addr */
-        }
-        *((uint *)pc) = (uint) os_tls_offset(tls_offs); pc+=4;
-    } else
-#endif /* X64 */
     if (shared) {
         /* mov %ebx, fs:os_tls_offset(tls_offs) */
         /* trying hard to keep the size of the stub 5 for eax, 6 else */
@@ -1012,6 +991,87 @@ insert_restore_xax(dcontext_t *dcontext, cache_pc pc, uint flags,
                                    require_addr16);
 }
 
+
+/* Insert a 32 bit addr into a register */
+byte*
+insert_addr_into_reg( dcontext_t* dcontext, byte* pc, int reg, int scratch, void* target )
+{
+  instr_t* instr;
+  instrlist_t ilist;
+  instrlist_init(&ilist);
+  int value=0;
+
+  ASSERT( (reg != scratch) );
+
+  APP(&ilist, INSTR_CREATE_mov_imm
+      (dcontext, opnd_create_reg(reg), OPND_CREATE_IMM12(0), COND_ALWAYS));
+
+  //Add the value byte by byte
+  //Top byte 
+  value = ((int)target & 0xff000000) >> 24;
+
+  APP(&ilist, INSTR_CREATE_mov_imm
+      (dcontext, opnd_create_reg(scratch), OPND_CREATE_IMM12(value), COND_ALWAYS));
+
+  instr = INSTR_CREATE_orr_reg
+              (dcontext, opnd_create_reg(reg), opnd_create_reg(reg),
+               opnd_create_reg(scratch),
+               OPND_CREATE_IMM5(8), COND_ALWAYS);
+  instr_set_shift_type(dcontext, instr, ROTATE_RIGHT); //Shift it by 8
+
+  APP(&ilist, instr);
+
+  //Second byte 
+  value = ((int)target & 0x00ff0000) >> 16;
+
+  APP(&ilist, INSTR_CREATE_mov_imm
+      (dcontext, opnd_create_reg(scratch), OPND_CREATE_IMM12(value), COND_ALWAYS));
+
+  instr = INSTR_CREATE_orr_reg
+              (dcontext, opnd_create_reg(reg), opnd_create_reg(reg),
+               opnd_create_reg(scratch),
+               OPND_CREATE_IMM5(16), COND_ALWAYS);
+  instr_set_shift_type(dcontext, instr, ROTATE_RIGHT); //Shift it by 16
+
+  APP(&ilist, instr);
+
+  //Third byte 
+  value = ((int)target & 0x0000ff00) >> 8;
+
+  APP(&ilist, INSTR_CREATE_mov_imm
+      (dcontext, opnd_create_reg(scratch), OPND_CREATE_IMM12(value), COND_ALWAYS));
+
+  instr = INSTR_CREATE_orr_reg
+              (dcontext, opnd_create_reg(reg), opnd_create_reg(reg),
+               opnd_create_reg(scratch),
+               OPND_CREATE_IMM5(24), COND_ALWAYS);
+  instr_set_shift_type(dcontext, instr, ROTATE_RIGHT); //Shift it by 24
+
+  APP(&ilist, instr);
+
+  //Last byte 
+  value = ((int)target & 0x000000ff);
+
+  APP(&ilist, INSTR_CREATE_mov_imm
+      (dcontext, opnd_create_reg(scratch), OPND_CREATE_IMM12(value), COND_ALWAYS));
+
+  instr = INSTR_CREATE_orr_reg
+              (dcontext, opnd_create_reg(reg), opnd_create_reg(reg),
+               opnd_create_reg(scratch),
+               OPND_CREATE_IMM5(0), COND_ALWAYS);
+  instr_set_shift_type(dcontext, instr, LOGICAL_LEFT); //Shift it by 0
+
+  APP(&ilist, instr);
+
+  /* now encode the instructions */
+  pc = instrlist_encode(dcontext, &ilist, pc, true /* instr targets */);
+  ASSERT(pc != NULL);
+
+  return pc;
+
+}
+
+
 /* Emit code for the exit stub at stub_pc.  Return the size of the
  * emitted code in bytes.  This routine assumes that the caller will
  * take care of any cache synchronization necessary (though none is
@@ -1099,8 +1159,11 @@ insert_exit_stub_other_flags(dcontext_t *dcontext, fragment_t *f,
 
         /* we use XAX to hold the linkstub pointer before we get to fcache_return, 
            note that indirect stubs use XBX for linkstub pointer */
-       // pc = insert_save_xax(dcontext, pc, f->flags, FRAG_DB_SHARED(f->flags),
+       //SJF TODO Need to get last_exit into r0 for fcache_return
+       //pc = insert_save_xax(dcontext, pc, f->flags, FRAG_DB_SHARED(f->flags),
        //                      DIRECT_STUB_SPILL_SLOT, true);
+       //Get the linkstub addr into R0 for fcache_return
+       pc = insert_addr_into_reg( dcontext, pc, REG_RR0, REG_RR7, l );
 
 #ifdef PROFILE_LINKCOUNT
         if (linkcount) {
@@ -3121,42 +3184,22 @@ build_profile_call_buffer()
  * SJF: Edited to ARM version. Keeping it simple for now. 
  *      Hook? Dont know what it is so remove
 
-    if (!absolute)
-        mov    ARG1,%r7 # dcontext param
-      if (TEST(SELFPROT_DCONTEXT, dynamo_options.protect_mask))
-        RESTORE_FROM_UPCONTEXT PROT_OFFSET,%r6
-      endif
-    endif  
+    # restore the original register state
+    RESTORE_FROM_UPCONTEXT cpsr_OFFSET, %r0
+    msr    %r0   #restore cpsr
+    RESTORE_FROM_UPCONTEXT r0_OFFSET,%r0
+    RESTORE_FROM_UPCONTEXT r1_OFFSET,%r1
+    RESTORE_FROM_UPCONTEXT r2_OFFSET,%r2
+    RESTORE_FROM_UPCONTEXT r3_OFFSET,%r3
+    RESTORE_FROM_UPCONTEXT r4_OFFSET,%r4
+    RESTORE_FROM_UPCONTEXT r5_OFFSET,%r5
+    RESTORE_FROM_UPCONTEXT r6_OFFSET,%r6
+    RESTORE_FROM_UPCONTEXT r7_OFFSET,%r7
+    RESTORE_FROM_UPCONTEXT r8_OFFSET,%r8
+    RESTORE_FROM_UPCONTEXT r9_OFFSET,%r9
+    RESTORE_FROM_UPCONTEXT r10_OFFSET,%r10
 
-    if (!absolute)
-        # put target somewhere we can be absolute about
-        RESTORE_FROM_UPCONTEXT next_tag_OFFSET,%r0
-    endif
-
-        # restore the original register state
-        RESTORE_FROM_UPCONTEXT cpsr_OFFSET, %r0
-        msr    %r0   #restore cpsr
-        RESTORE_FROM_UPCONTEXT r0_OFFSET,%r0
-        RESTORE_FROM_UPCONTEXT r3_OFFSET,%r3
-        RESTORE_FROM_UPCONTEXT r1_OFFSET,%r1
-        RESTORE_FROM_UPCONTEXT r2_OFFSET,%r2
-    if (absolute || !TEST(SELFPROT_DCONTEXT, dynamo_options.protect_mask))
-        RESTORE_FROM_UPCONTEXT r6_OFFSET,%r6
-    endif
-    if (absolute || TEST(SELFPROT_DCONTEXT, dynamo_options.protect_mask))
-        RESTORE_FROM_UPCONTEXT R7_OFFSET,%r7
-    endif
-        RESTORE_FROM_UPCONTEXT r5_OFFSET,%r5
-        RESTORE_FROM_UPCONTEXT r13_OFFSET,%r13
-    if (!absolute)
-      if (TEST(SELFPROT_DCONTEXT, dynamo_options.protect_mask))
-        RESTORE_FROM_UPCONTEXT r6_OFFSET,%r6
-      else
-        RESTORE_FROM_UPCONTEXT r7_OFFSET,%r7
-      endif
-    endif
-
-        # jump indirect through dcontext->next_tag, set by dispatch()
+    # jump indirect through dcontext->next_tag, set by dispatch()
     if (absolute)    
         BRANCH_VIA_DCONTEXT next_tag_OFFSET
     else
@@ -3191,6 +3234,20 @@ emit_fcache_enter_common(dcontext_t *dcontext, generated_code_t *code, byte *pc,
 
 //SJF Custom entry function
 
+    //Restore cpsr and regs
+    RESTORE_FROM_DC(ilist, dcontext, REG_CPSR,CPSR_OFFSET, INSERT_APPEND, NULL);
+    RESTORE_FROM_DC(ilist, dcontext, REG_RR0, R0_OFFSET, INSERT_APPEND, NULL);
+    RESTORE_FROM_DC(ilist, dcontext, REG_RR1, R1_OFFSET, INSERT_APPEND, NULL);
+    RESTORE_FROM_DC(ilist, dcontext, REG_RR2, R2_OFFSET, INSERT_APPEND, NULL);
+    RESTORE_FROM_DC(ilist, dcontext, REG_RR3, R3_OFFSET, INSERT_APPEND, NULL);
+    RESTORE_FROM_DC(ilist, dcontext, REG_RR4, R4_OFFSET, INSERT_APPEND, NULL)
+    RESTORE_FROM_DC(ilist, dcontext, REG_RR5, R5_OFFSET, INSERT_APPEND, NULL);
+    RESTORE_FROM_DC(ilist, dcontext, REG_RR6, R6_OFFSET, INSERT_APPEND, NULL);
+    RESTORE_FROM_DC(ilist, dcontext, REG_RR7, R7_OFFSET, INSERT_APPEND, NULL);
+    RESTORE_FROM_DC(ilist, dcontext, REG_RR8, R8_OFFSET, INSERT_APPEND, NULL);
+    RESTORE_FROM_DC(ilist, dcontext, REG_RR9, R9_OFFSET, INSERT_APPEND, NULL);
+    RESTORE_FROM_DC(ilist, dcontext, REG_RR10,R10_OFFSET, INSERT_APPEND, NULL);
+
     /* Jump indirect through next_tag.  Dispatch set this value with
      * where we want to go next in the fcache_t.
      */
@@ -3210,31 +3267,6 @@ emit_fcache_enter_common(dcontext_t *dcontext, generated_code_t *code, byte *pc,
     APP(&ilist, INSTR_CREATE_branch_ind(dcontext, opnd_create_reg(REG_RR7)));
 
  
-    //SJF TODO Backup all context. R0-R12 + cpsr
-
-#if 0
-    if (absolute) {
-        instr_create_branch_via_dcontext(&ilist, dcontext, NEXT_TAG_OFFSET);
-    } else {
-        if (shared) {
-            ASSERT_NOT_IMPLEMENTED(false);
-            /* next_tag placed into tls slot earlier in this routine */
-/*          SJF If this is needed then SAVE_TO_TLS needs fixing to store the value at
-                the beginning of this func.
-            APP(&ilist, INSTR_CREATE_mov_imm(dcontext, opnd_create_reg(REG_RR8),
-                                             opnd_create_immed_int(FCACHE_ENTER_TARGET_SLOT, OPSZ_4_12),
-                                             COND_ALWAYS ));
-            APP(&ilist, INSTR_CREATE_ldr_reg(dcontext, opnd_create_reg(REG_RR7), 
-                                             opnd_create_mem_reg(REG_RR8),
-                                             opnd_create_reg(REG_NULL), OPND_CREATE_IMM5(0), COND_ALWAYS ));
-            APP(&ilist, INSTR_CREATE_branch_ind(dcontext, opnd_create_reg(REG_RR7)));
-*/
-        } else {
-            /* no special scratch slot! */
-            ASSERT_NOT_IMPLEMENTED(false);
-        }
-    }
-#endif
 
     /* now encode the instructions */
     len = encode_with_patch_list(dcontext, &patch, &ilist, pc);
@@ -3320,53 +3352,28 @@ append_shared_restore_dcontext_reg(dcontext_t *dcontext, instrlist_t *ilist)
 #     1) app's value in xax already saved in dcontext.
 #     2) xax holds the linkstub ptr 
 
-    ifdef X64 and (source is x86 mode)    
-        far direct jmp to next instr w/ 64-bit switch
-    endif
-
-        # save the current register state to context->regs
-        # xax already in context
-
-    if (absolute)
-        SAVE_TO_UPCONTEXT %xbx,xbx_OFFSET
-    endif
-        SAVE_TO_UPCONTEXT %xcx,xcx_OFFSET
-        SAVE_TO_UPCONTEXT %xdx,xdx_OFFSET
-    if (absolute || !TEST(SELFPROT_DCONTEXT, dynamo_options.protect_mask))
-        SAVE_TO_UPCONTEXT %xsi,xsi_OFFSET
-    endif
-    if (absolute)
-        SAVE_TO_UPCONTEXT %xdi,xdi_OFFSET
-    endif
-        SAVE_TO_UPCONTEXT %xbp,xbp_OFFSET
-        SAVE_TO_UPCONTEXT %xsp,xsp_OFFSET
-    ifdef X64
-        SAVE_TO_UPCONTEXT %r8,r8_OFFSET
-        SAVE_TO_UPCONTEXT %r9,r9_OFFSET
-        SAVE_TO_UPCONTEXT %r10,r10_OFFSET
-        SAVE_TO_UPCONTEXT %r11,r11_OFFSET
-        SAVE_TO_UPCONTEXT %r12,r12_OFFSET
-        SAVE_TO_UPCONTEXT %r13,r13_OFFSET
-        SAVE_TO_UPCONTEXT %r14,r14_OFFSET
-        SAVE_TO_UPCONTEXT %r15,r15_OFFSET
-    endif
-    if preserve_xmm_caller_saved
-        SAVE_TO_UPCONTEXT %xmm0,xmm_OFFSET+0*16
         SAVE_TO_UPCONTEXT %xmm1,xmm_OFFSET+1*16
         SAVE_TO_UPCONTEXT %xmm2,xmm_OFFSET+2*16
         SAVE_TO_UPCONTEXT %xmm3,xmm_OFFSET+3*16
         SAVE_TO_UPCONTEXT %xmm4,xmm_OFFSET+4*16
-        SAVE_TO_UPCONTEXT %xmm5,xmm_OFFSET+5*16
-        SAVE_TO_UPCONTEXT %xmm6,xmm_OFFSET+6*16  # 32-bit Linux
-        SAVE_TO_UPCONTEXT %xmm7,xmm_OFFSET+7*16  # 32-bit Linux
-    endif
+
+    APP(ilist, RESTORE_FROM_DC(dcontext, REG_CPSR,CPSR_OFFSET));
+    APP(ilist, RESTORE_FROM_DC(dcontext, REG_RR0, R0_OFFSET));
+    APP(ilist, RESTORE_FROM_DC(dcontext, REG_RR1, R1_OFFSET));
+    APP(ilist, RESTORE_FROM_DC(dcontext, REG_RR2, R2_OFFSET));
+    APP(ilist, RESTORE_FROM_DC(dcontext, REG_RR3, R3_OFFSET));
+    APP(ilist, RESTORE_FROM_DC(dcontext, REG_RR4, R4_OFFSET));
+    APP(ilist, RESTORE_FROM_DC(dcontext, REG_RR5, R5_OFFSET));
+    APP(ilist, RESTORE_FROM_DC(dcontext, REG_RR6, R6_OFFSET));
+    APP(ilist, RESTORE_FROM_DC(dcontext, REG_RR7, R7_OFFSET));
+    APP(ilist, RESTORE_FROM_DC(dcontext, REG_RR8, R8_OFFSET));
+    APP(ilist, RESTORE_FROM_DC(dcontext, REG_RR9, R9_OFFSET));
+    APP(ilist, RESTORE_FROM_DC(dcontext, REG_RR10,R10_OFFSET));
+
 
         # switch to clean dstack
         RESTORE_FROM_DCONTEXT dstack_OFFSET,%xsp
 
-        # now save eflags -- too hard to do without a stack!
-        pushf           # push eflags on stack
-        pop     %xbx    # grab eflags value
         SAVE_TO_UPCONTEXT %xbx,xflags_OFFSET # save eflags value
 
         # clear eflags now to avoid app's eflags messing up our ENTER_DR_HOOK
@@ -3374,49 +3381,12 @@ append_shared_restore_dcontext_reg(dcontext_t *dcontext, instrlist_t *ilist)
         push  0
         popf
 
-    if (ENTER_DR_HOOK != NULL && !dcontext->ignore_enterexit)
-        # don't bother to save any registers around call except for xax
-        # and xcx, which holds next_tag
-        push    %xcx
-      if (!absolute)
-        push    %xdi
-        push    %xsi
-      endif
-        push    %xax
-      if (absolute)
-        # support for skipping the hook (note: 32-bits even on x64)
-        RESTORE_FROM_UPCONTEXT ignore_enterexit_OFFSET,%edi
-        cmp     %edi,0
-        jnz     post_hook
-      endif
-        # for x64 windows, reserve 32 bytes stack space for call prior to call
-        call    ENTER_DR_HOOK
-    post_hook:
-        pop     %xax
-      if (!absolute)
-        pop     %xsi
-        pop     %xdi
-      endif
-        pop     %xcx
-    endif
-        
-        # save last_exit, currently in eax, into dcontext->last_exit
-        SAVE_TO_DCONTEXT %xax,last_exit_OFFSET
+    # save last_exit, currently in eax, into dcontext->last_exit
+    SAVE_TO_DCONTEXT %r0,last_exit_OFFSET
 
-    .ifdef SIDELINE
-        # clear cur-trace field so we don't think cur trace is still running
-        movl    $0, _sideline_trace
-    .endif
-
-        # call central dispatch routine w/ dcontext as an argument
-    if (absolute)
-        push    <dcontext>
-    else
-        push     %xdi  # for x64, mov %xdi, ARG1
-    endif
-        call    dispatch # for x64 windows, reserve 32 bytes stack space for call
-        # dispatch() shouldn't return!
-        jmp     unexpected_return
+    branch    dispatch 
+    # dispatch() shouldn't return!
+    branch     unexpected_return
 */
 /* N.B.: this routine is used to generate both the regular fcache_return
  * and a slightly different copy that is used for the miss/unlinked paths
@@ -3441,146 +3411,22 @@ append_fcache_return_common(dcontext_t *dcontext, generated_code_t *code,
 
     /* currently linkstub is only used for coarse-grain exits */
     ASSERT(linkstub == NULL || !absolute);
-#if 0
-    if (!absolute) {
-        /* only support non-absolute w/ shared cache */
-        ASSERT_NOT_IMPLEMENTED(shared);
-        /* xax is in 1 scratch slot, so we have to use a 2nd scratch
-         * slot in order to get dcontext into xdi
-         */
-        APP(ilist, SAVE_TO_TLS(dcontext, REG_RR7, DCONTEXT_BASE_SPILL_SLOT));
-        APP(ilist, RESTORE_FROM_TLS(dcontext, REG_RR7, TLS_DCONTEXT_SLOT));
-        if (TEST(SELFPROT_DCONTEXT, dynamo_options.protect_mask)) {
-            /* we'd need a 3rd slot in order to nicely get unprot ptr into xsi
-             * we can do it w/ only 2 slots by clobbering dcontext ptr
-             * (we could add base reg info to RESTORE_FROM_DC/SAVE_TO_DC and go
-             * straight through xsi to begin w/ and subtract one instr (xchg)
-             */
-            ASSERT_NOT_TESTED();
-            RESTORE_FROM_DC(ilist, dcontext, REG_RR7, PROT_OFFS, INSERT_APPEND, NULL);
-            APP(ilist, INSTR_CREATE_swp(dcontext, opnd_create_reg(REG_RR6),
-                                         opnd_create_reg(REG_RR7), COND_ALWAYS));
-            SAVE_TO_DC(ilist, dcontext, REG_RR7, R6_OFFSET, INSERT_APPEND, NULL);
-            APP(ilist, RESTORE_FROM_TLS(dcontext, REG_RR7, TLS_DCONTEXT_SLOT));
-        }
-        /* get xax and xdi into their real slots, via xbx */
-        SAVE_TO_DC(ilist, dcontext, REG_RR3, R3_OFFSET, INSERT_APPEND, NULL);
-        APP(ilist, RESTORE_FROM_TLS(dcontext, REG_RR3, DIRECT_STUB_SPILL_SLOT));
-        if (linkstub != NULL) {
-            /* app xax is still in %xax, src info is in %xcx, while target pc
-             * is now in %xbx
-             */
-            SAVE_TO_DC(ilist, dcontext, REG_RR0, R0_OFFSET, INSERT_APPEND, NULL);
-            SAVE_TO_DC(ilist, dcontext, REG_RR3, NEXT_TAG_OFFSET, INSERT_APPEND, NULL);
-            APP(ilist, INSTR_CREATE_mov_imm(dcontext, opnd_create_reg(REG_RR0),
-                                            OPND_CREATE_IMM12((ptr_int_t)linkstub), COND_ALWAYS));
-            if (coarse_info) {
-                SAVE_TO_DC(ilist, dcontext, REG_RR1, COARSE_DIR_EXIT_OFFSET, INSERT_APPEND, NULL);
-                APP(ilist, RESTORE_FROM_TLS(dcontext, REG_RR1, MANGLE_XCX_SPILL_SLOT));
-            }
-        } else {
-            SAVE_TO_DC(ilist, dcontext, REG_RR3, R0_OFFSET, INSERT_APPEND, NULL);
-        }
-        APP(ilist, RESTORE_FROM_TLS(dcontext, REG_RR3, DCONTEXT_BASE_SPILL_SLOT));
-        SAVE_TO_DC(ilist, dcontext, REG_RR3, R7_OFFSET, INSERT_APPEND, NULL);
-    }
 
-    /* save the current register state to context->regs
-     * xax already in context
-     */
-    if (!ibl_end) {
-        /* for ibl_end, xbx and xcx are already in their dcontext slots */
-        if (absolute) /* else xbx saved above */
-            SAVE_TO_DC(ilist, dcontext, REG_RR3, R3_OFFSET, INSERT_APPEND, NULL);
-        SAVE_TO_DC(ilist, dcontext, REG_RR2, R2_OFFSET, INSERT_APPEND, NULL);
-    }
+    SAVE_TO_DC(ilist, dcontext, REG_CPSR,CPSR_OFFSET, INSERT_APPEND, NULL);
+    SAVE_TO_DC(ilist, dcontext, REG_RR0, R0_OFFSET, INSERT_APPEND, NULL);
+    SAVE_TO_DC(ilist, dcontext, REG_RR1, R1_OFFSET, INSERT_APPEND, NULL);
     SAVE_TO_DC(ilist, dcontext, REG_RR2, R2_OFFSET, INSERT_APPEND, NULL);
-    if (absolute || !TEST(SELFPROT_DCONTEXT, dynamo_options.protect_mask))
-        SAVE_TO_DC(ilist, dcontext, REG_RR6, R6_OFFSET, INSERT_APPEND, NULL);
-    if (absolute) /* else xdi saved above */
-        SAVE_TO_DC(ilist, dcontext, REG_RR7, R7_OFFSET, INSERT_APPEND, NULL);
+    SAVE_TO_DC(ilist, dcontext, REG_RR3, R3_OFFSET, INSERT_APPEND, NULL);
+    SAVE_TO_DC(ilist, dcontext, REG_RR4, R4_OFFSET, INSERT_APPEND, NULL);
     SAVE_TO_DC(ilist, dcontext, REG_RR5, R5_OFFSET, INSERT_APPEND, NULL);
-    SAVE_TO_DC(ilist, dcontext, REG_RR13, R13_OFFSET, INSERT_APPEND, NULL);
+    SAVE_TO_DC(ilist, dcontext, REG_RR6, R6_OFFSET, INSERT_APPEND, NULL);
+    SAVE_TO_DC(ilist, dcontext, REG_RR7, R7_OFFSET, INSERT_APPEND, NULL);
+    SAVE_TO_DC(ilist, dcontext, REG_RR8, R8_OFFSET, INSERT_APPEND, NULL);
+    SAVE_TO_DC(ilist, dcontext, REG_RR9, R9_OFFSET, INSERT_APPEND, NULL);
+    SAVE_TO_DC(ilist, dcontext, REG_RR10,R10_OFFSET, INSERT_APPEND, NULL);
 
-    /* Switch to a clean dstack as part of our scheme to avoid state kept
-     * unprotected across cache executions.
-     * FIXME: this isn't perfect: we switch to the dstack BEFORE we call
-     * the entrance hook that will be used to coordinate other threads,
-     * so if our hook suspends all other threads to protect vs cross-thread
-     * attacks, the dstack is not perfectly protected.
-     */
-    RESTORE_FROM_DC(ilist, dcontext, REG_RR13, DSTACK_OFFSET, INSERT_APPEND, NULL);
-
-    /* now save eflags -- too hard to do without a stack! */    
-/*
-    APP(ilist, INSTR_CREATE_RAW_pushf(dcontext));
-    APP(ilist, INSTR_CREATE_pop(dcontext, opnd_create_reg(REG_RR3)));
-*/
-    APP(ilist, INSTR_CREATE_mrs_cpsr( dcontext, DR_REG_R3 ));
-    SAVE_TO_DC(ilist, dcontext, REG_RR3, CPSR_OFFSET, INSERT_APPEND, NULL);
-                
-    /* clear eflags now to avoid app's eflags (namely an app std)
-     * messing up our ENTER_DR_HOOK
-     */
-    APP(ilist, INSTR_CREATE_mov_imm( dcontext, opnd_create_reg(DR_REG_R7), OPND_CREATE_IMM12(0), COND_ALWAYS ));
-    APP(ilist, INSTR_CREATE_msr_cpsr( dcontext, DR_REG_R7 ));
-/*
-    APP(ilist, INSTR_CREATE_push_imm(dcontext, OPND_CREATE_INT8(0)));
-    APP(ilist, INSTR_CREATE_RAW_popf(dcontext));
-*/
-
-    if (ENTER_DR_HOOK != NULL) {
-        /* xax is only reg we need to save around the call.
-         * we could move to a callee-saved register instead of pushing.
-         */
-        instr_t *post_hook = INSTR_CREATE_label(dcontext);
-        if (ibl_end) {
-            /* also save xcx, which holds next_tag */
-            APP(ilist, INSTR_CREATE_push(dcontext, opnd_create_reg(DR_REG_R1), COND_ALWAYS));
-        }
-        if (!absolute) {
-            /* save xdi and xsi around call */
-            APP(ilist, INSTR_CREATE_push(dcontext, opnd_create_reg(DR_REG_R7), COND_ALWAYS));
-            APP(ilist, INSTR_CREATE_push(dcontext, opnd_create_reg(DR_REG_R6), COND_ALWAYS));
-        }
-        APP(ilist, INSTR_CREATE_push(dcontext, opnd_create_reg(DR_REG_R0), COND_ALWAYS));
-        /* make sure to use dr_insert_call() rather than a raw OP_call instr,
-         * since x64 windows requires 32 bytes of stack space even w/ no args,
-         * and we don't want anyone clobbering our pushed registers!
-         */
-        dr_insert_call((void *)dcontext, ilist, NULL/*append*/,
-                       (void *)ENTER_DR_HOOK, 0);
-        APP(ilist, post_hook/*label*/);
-        APP(ilist, INSTR_CREATE_pop(dcontext, opnd_create_reg(DR_REG_R0), COND_ALWAYS));
-        if (!absolute) {
-            /* save xdi and xsi around call */
-            APP(ilist, INSTR_CREATE_pop(dcontext, opnd_create_reg(DR_REG_R6), COND_ALWAYS));
-            APP(ilist, INSTR_CREATE_pop(dcontext, opnd_create_reg(DR_REG_R7), COND_ALWAYS));
-        }
-        if (ibl_end) {
-            APP(ilist, INSTR_CREATE_pop(dcontext, opnd_create_reg(DR_REG_R1), COND_ALWAYS));
-            
-            /* now we can store next tag */
-            SAVE_TO_DC(ilist, dcontext, REG_RR1, NEXT_TAG_OFFSET, INSERT_APPEND, NULL);
-        }
-    }
-#endif
-
-#if 0
-    //TODO Restore this saving here SJF
     /* save last_exit, currently in xax, into dcontext->last_exit */
     SAVE_TO_DC(ilist, dcontext, REG_RR0, LAST_EXIT_OFFSET, INSERT_APPEND, NULL);
-
-#ifdef SIDELINE
-    if (dynamo_options.sideline) {
-        /* clear cur-trace field so we don't think cur trace is still running */
-        APP(ilist,
-            INSTR_CREATE_str_imm(dcontext,
-                                OPND_CREATE_MEM32(REG_NULL, (int)&sideline_trace),
-                                OPND_CREATE_INT32(0), COND_ALWAYS));
-    }
-#endif
-#endif //0
 
     /* call central dispatch routine */
     dr_insert_call((void *)dcontext, ilist, NULL/*append*/,
