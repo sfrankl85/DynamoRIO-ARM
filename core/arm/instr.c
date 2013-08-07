@@ -103,6 +103,7 @@ bool opnd_is_immed_float(opnd_t op) { return OPND_IS_IMMED_FLOAT(op); }
 bool opnd_is_near_pc    (opnd_t op) { return OPND_IS_NEAR_PC(op); }
 bool opnd_is_near_instr (opnd_t op) { return OPND_IS_NEAR_INSTR(op); }
 bool opnd_is_reg        (opnd_t op) { return OPND_IS_REG(op); }
+bool opnd_is_reglist    (opnd_t op) { return OPND_IS_REGLIST(op); }
 bool opnd_is_mem_reg    (opnd_t op) { return OPND_IS_MEM_REG(op); }
 bool opnd_is_mask       (opnd_t op) { return OPND_IS_MASK(op); }
 bool opnd_is_base_disp  (opnd_t op) { return OPND_IS_BASE_DISP(op); }
@@ -5124,6 +5125,7 @@ instrlist_postinsert_move_32bits_to_reg(instrlist_t *ilist, dcontext_t *dcontext
                                 reg_id_t target_reg, reg_id_t scratch, int target, instr_t* rel_instr )
 {
     int value=0;
+    instr_t* instr;
 
     ASSERT(( ilist != NULL ));
 
@@ -5196,6 +5198,7 @@ instrlist_preinsert_move_32bits_to_reg(instrlist_t *ilist, dcontext_t *dcontext,
                                 reg_id_t target_reg, reg_id_t scratch, int target, instr_t* rel_instr )
 {
     int value=0;
+    instr_t* instr;
 
     ASSERT(( ilist != NULL ));
 
@@ -5268,6 +5271,7 @@ instrlist_append_move_32bits_to_reg(instrlist_t *ilist, dcontext_t *dcontext,
                                 reg_id_t target_reg, reg_id_t scratch, int target )
 {
     int value=0;
+    instr_t* instr;
 
     ASSERT(( ilist != NULL ));
 
@@ -5342,7 +5346,54 @@ instr_create_restore_from_dcontext(instrlist_t *ilist, dcontext_t *dcontext, reg
     int scratch  = REG_RR8;
     int scratch2 = REG_RR9;
 
-    //Clobbers R8
+    //Backup up scratch regs
+    if( reg != REG_RR8 && reg != REG_RR9 )
+    {
+      switch( where )
+      {
+        case INSERT_APPEND:
+          instrlist_meta_append( ilist, INSTR_CREATE_push(dcontext,
+                                                opnd_create_reg_list(REGLIST_R8|REGLIST_R9),
+                                                COND_ALWAYS ));
+          break;
+        case INSERT_PRE:
+          instrlist_meta_preinsert( ilist, rel_instr, INSTR_CREATE_push(dcontext,
+                                                opnd_create_reg_list(REGLIST_R8|REGLIST_R9),
+                                                COND_ALWAYS ));
+          break;
+        case INSERT_POST:
+          instrlist_meta_postinsert( ilist, rel_instr, INSTR_CREATE_push(dcontext,
+                                                opnd_create_reg_list(REGLIST_R8|REGLIST_R9),
+                                                COND_ALWAYS ));
+          break;
+      }
+    }
+    else
+    {
+      scratch  = REG_RR6;
+      scratch2 = REG_RR7;
+
+      switch( where )
+      {
+        case INSERT_APPEND:
+          instrlist_meta_append( ilist, INSTR_CREATE_push(dcontext,
+                                                opnd_create_reg_list(REGLIST_R6|REGLIST_R7),
+                                                COND_ALWAYS ));
+          break;
+        case INSERT_PRE:
+          instrlist_meta_preinsert( ilist, rel_instr, INSTR_CREATE_push(dcontext,
+                                                opnd_create_reg_list(REGLIST_R6|REGLIST_R7),
+                                                COND_ALWAYS ));
+          break;
+        case INSERT_POST:
+          instrlist_meta_postinsert( ilist, rel_instr, INSTR_CREATE_push(dcontext,
+                                                opnd_create_reg_list(REGLIST_R6|REGLIST_R7),
+                                                COND_ALWAYS ));
+          break;
+      }
+    }
+
+    //Clobbers R8/R9 or R6/R7 
     if( where == INSERT_APPEND )
     {
       instrlist_append_move_32bits_to_reg( ilist, dcontext, scratch, scratch2, 
@@ -5360,7 +5411,7 @@ instr_create_restore_from_dcontext(instrlist_t *ilist, dcontext_t *dcontext, reg
                                         opnd_create_mem_reg(scratch),  
                                         OPND_CREATE_IMM12(0), COND_ALWAYS ));
 
-        instrlist_meta_append( ilist, INSTR_CREATE_msr_cpsr(dcontext, scratch2); 
+        instrlist_meta_append( ilist, INSTR_CREATE_msr_cpsr(dcontext, scratch2));
       }
       else
         CLIENT_ASSERT(false,
@@ -5383,7 +5434,7 @@ instr_create_restore_from_dcontext(instrlist_t *ilist, dcontext_t *dcontext, reg
                                         opnd_create_mem_reg(scratch),
                                         OPND_CREATE_IMM12(0), COND_ALWAYS ));
 
-        instrlist_meta_preinsert( ilist, rel_instr, INSTR_CREATE_msr_cpsr(dcontext, scratch2);
+        instrlist_meta_preinsert( ilist, rel_instr, INSTR_CREATE_msr_cpsr(dcontext, scratch2));
       }
       else
         CLIENT_ASSERT(false,
@@ -5408,7 +5459,7 @@ instr_create_restore_from_dcontext(instrlist_t *ilist, dcontext_t *dcontext, reg
                                         opnd_create_mem_reg(scratch),
                                         OPND_CREATE_IMM12(0), COND_ALWAYS ));
 
-        instrlist_meta_postinsert( ilist, rel_instr, INSTR_CREATE_msr_cpsr(dcontext, scratch2);
+        instrlist_meta_postinsert( ilist, rel_instr, INSTR_CREATE_msr_cpsr(dcontext, scratch2));
       }
       else
         CLIENT_ASSERT(false,
@@ -5417,7 +5468,50 @@ instr_create_restore_from_dcontext(instrlist_t *ilist, dcontext_t *dcontext, reg
     else
       CLIENT_ASSERT(false,
                     "instr_create_restore_from_dcontext: invalid insert position");
- 
+
+   //Restore scratch regs
+   if( reg != REG_RR8 && reg != REG_RR9 )
+    {
+      switch( where )
+      {
+        case INSERT_APPEND:
+          instrlist_meta_append( ilist, INSTR_CREATE_pop(dcontext,
+                                                opnd_create_reg_list(REGLIST_R8|REGLIST_R9),
+                                                COND_ALWAYS ));
+          break;
+        case INSERT_PRE:
+          instrlist_meta_preinsert( ilist, rel_instr, INSTR_CREATE_pop(dcontext,
+                                                opnd_create_reg_list(REGLIST_R8|REGLIST_R9),
+                                                COND_ALWAYS ));
+          break;
+        case INSERT_POST:
+          instrlist_meta_postinsert( ilist, rel_instr, INSTR_CREATE_pop(dcontext,
+                                                opnd_create_reg_list(REGLIST_R8|REGLIST_R9),
+                                                COND_ALWAYS ));
+          break;
+      }
+    }
+    else
+    {
+      switch( where )
+      {
+        case INSERT_APPEND:
+          instrlist_meta_append( ilist, INSTR_CREATE_pop(dcontext,
+                                                opnd_create_reg_list(REGLIST_R6|REGLIST_R7),
+                                                COND_ALWAYS ));
+          break;
+        case INSERT_PRE:
+          instrlist_meta_preinsert( ilist, rel_instr, INSTR_CREATE_pop(dcontext,
+                                                opnd_create_reg_list(REGLIST_R6|REGLIST_R7),
+                                                COND_ALWAYS ));
+          break;
+        case INSERT_POST:
+          instrlist_meta_postinsert( ilist, rel_instr, INSTR_CREATE_pop(dcontext,
+                                                opnd_create_reg_list(REGLIST_R6|REGLIST_R7),
+                                                COND_ALWAYS ));
+          break;
+      }
+    }
 }
 
 instr_t *
@@ -5429,6 +5523,54 @@ instr_create_save_to_dcontext(instrlist_t *ilist, dcontext_t *dcontext, reg_id_t
     int target_reg = REG_RR8;
     int scratch = REG_RR9;
     instr_t* instr;
+
+    //Backup up scratch regs
+    if( reg != REG_RR8 && reg != REG_RR9 )
+    {
+      switch( where )
+      {
+        case INSERT_APPEND:
+          instrlist_meta_append( ilist, INSTR_CREATE_push(dcontext, 
+                                                opnd_create_reg_list(REGLIST_R8|REGLIST_R9),
+                                                COND_ALWAYS ));
+          break;
+        case INSERT_PRE:
+          instrlist_meta_preinsert( ilist, rel_instr, INSTR_CREATE_push(dcontext, 
+                                                opnd_create_reg_list(REGLIST_R8|REGLIST_R9),
+                                                COND_ALWAYS ));
+          break;
+        case INSERT_POST:
+          instrlist_meta_postinsert( ilist, rel_instr, INSTR_CREATE_push(dcontext, 
+                                                opnd_create_reg_list(REGLIST_R8|REGLIST_R9),
+                                                COND_ALWAYS ));
+          break;
+      }
+    }
+    else
+    {
+      target_reg = REG_RR6;
+      scratch = REG_RR7;
+
+      switch( where )
+      {
+        case INSERT_APPEND:
+          instrlist_meta_append( ilist, INSTR_CREATE_push(dcontext,
+                                                opnd_create_reg_list(REGLIST_R6|REGLIST_R7),
+                                                COND_ALWAYS ));
+          break;
+        case INSERT_PRE:
+          instrlist_meta_preinsert( ilist, rel_instr, INSTR_CREATE_push(dcontext,
+                                                opnd_create_reg_list(REGLIST_R6|REGLIST_R7),
+                                                COND_ALWAYS ));
+          break;
+        case INSERT_POST:
+          instrlist_meta_postinsert( ilist, rel_instr, INSTR_CREATE_push(dcontext,
+                                                opnd_create_reg_list(REGLIST_R6|REGLIST_R7),
+                                                COND_ALWAYS ));
+          break;
+      }
+
+    }
 
     if( where == INSERT_APPEND )
     {
@@ -5443,10 +5585,10 @@ instr_create_save_to_dcontext(instrlist_t *ilist, dcontext_t *dcontext, reg_id_t
       }
       else if( reg == REG_CPSR )
       {
-        instrlist_meta_append( ilist, INSTR_CREATE_mrs_cpsr(dcontext, scratch2);
+        instrlist_meta_append( ilist, INSTR_CREATE_mrs_cpsr(dcontext, scratch));
 
-        instrlist_meta_append( ilist, INSTR_CREATE_str_imm(dcontext, opnd_create_reg(scratch2),
-                                        opnd_create_mem_reg(scratch),
+        instrlist_meta_append( ilist, INSTR_CREATE_str_imm(dcontext, opnd_create_reg(scratch),
+                                        opnd_create_mem_reg(target_reg),
                                         OPND_CREATE_IMM12(0), COND_ALWAYS ));
       }
       else
@@ -5469,10 +5611,10 @@ instr_create_save_to_dcontext(instrlist_t *ilist, dcontext_t *dcontext, reg_id_t
       }
       else if( reg == REG_CPSR )
       {
-        instrlist_meta_preinsert( ilist, rel_instr, INSTR_CREATE_mrs_cpsr(dcontext, scratch2);
+        instrlist_meta_preinsert( ilist, rel_instr, INSTR_CREATE_mrs_cpsr(dcontext, scratch));
 
-        instrlist_meta_preinsert( ilist, rel_instr, INSTR_CREATE_str_imm(dcontext, opnd_create_reg(scratch2),
-                                        opnd_create_mem_reg(scratch),
+        instrlist_meta_preinsert( ilist, rel_instr, INSTR_CREATE_str_imm(dcontext, opnd_create_reg(scratch),
+                                        opnd_create_mem_reg(target_reg),
                                         OPND_CREATE_IMM12(0), COND_ALWAYS ));
       }
       else
@@ -5493,10 +5635,10 @@ instr_create_save_to_dcontext(instrlist_t *ilist, dcontext_t *dcontext, reg_id_t
       }
       else if( reg == REG_CPSR )
       {
-        instrlist_meta_postinsert( ilist, rel_instr, INSTR_CREATE_mrs_cpsr(dcontext, scratch2);
+        instrlist_meta_postinsert( ilist, rel_instr, INSTR_CREATE_mrs_cpsr(dcontext, scratch));
 
-        instrlist_meta_postinsert( ilist, rel_instr, INSTR_CREATE_str_imm(dcontext, opnd_create_reg(scratch2),
-                                        opnd_create_mem_reg(scratch),
+        instrlist_meta_postinsert( ilist, rel_instr, INSTR_CREATE_str_imm(dcontext, opnd_create_reg(scratch),
+                                        opnd_create_mem_reg(target_reg),
                                         OPND_CREATE_IMM12(0), COND_ALWAYS ));
       }
       else
@@ -5507,6 +5649,50 @@ instr_create_save_to_dcontext(instrlist_t *ilist, dcontext_t *dcontext, reg_id_t
       CLIENT_ASSERT(false,
                     "instr_create_save_to_dcontext: invalid insert position");
 
+
+   //Restore scratch regs
+   if( reg != REG_RR8 && reg != REG_RR9 )
+    {
+      switch( where )
+      {
+        case INSERT_APPEND:
+          instrlist_meta_append( ilist, INSTR_CREATE_pop(dcontext,
+                                                opnd_create_reg_list(REGLIST_R8|REGLIST_R9),
+                                                COND_ALWAYS ));
+          break;
+        case INSERT_PRE:
+          instrlist_meta_preinsert( ilist, rel_instr, INSTR_CREATE_pop(dcontext,
+                                                opnd_create_reg_list(REGLIST_R8|REGLIST_R9),
+                                                COND_ALWAYS ));
+          break;
+        case INSERT_POST:
+          instrlist_meta_postinsert( ilist, rel_instr, INSTR_CREATE_pop(dcontext,
+                                                opnd_create_reg_list(REGLIST_R8|REGLIST_R9),
+                                                COND_ALWAYS ));
+          break;
+      }
+    }
+    else
+    {
+      switch( where )
+      {
+        case INSERT_APPEND:
+          instrlist_meta_append( ilist, INSTR_CREATE_pop(dcontext,
+                                                opnd_create_reg_list(REGLIST_R6|REGLIST_R7),
+                                                COND_ALWAYS ));
+          break;
+        case INSERT_PRE:
+          instrlist_meta_preinsert( ilist, rel_instr, INSTR_CREATE_pop(dcontext,
+                                                opnd_create_reg_list(REGLIST_R6|REGLIST_R7),
+                                                COND_ALWAYS ));
+          break;
+        case INSERT_POST:
+          instrlist_meta_postinsert( ilist, rel_instr, INSTR_CREATE_pop(dcontext,
+                                                opnd_create_reg_list(REGLIST_R6|REGLIST_R7),
+                                                COND_ALWAYS ));
+          break;
+      }
+    }
 }
 
 /* Use basereg==REG_NULL to get default (xdi, or xsi for upcontext) 

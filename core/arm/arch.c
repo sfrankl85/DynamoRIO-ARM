@@ -354,10 +354,10 @@ shared_gencode_init(IF_X64_ELSE(gencode_mode_t gencode_mode, void))
     pc = gencode->gen_start_pc;
     pc = check_size_and_cache_line(gencode, pc);
     gencode->fcache_enter = pc;
-    pc = emit_fcache_enter_shared(GLOBAL_DCONTEXT, gencode, pc);
+    pc = emit_fcache_enter_shared(GLOBAL_DCONTEXT, gencode, pc);//C
     pc = check_size_and_cache_line(gencode, pc);
     gencode->fcache_return = pc;
-    pc = emit_fcache_return_shared(GLOBAL_DCONTEXT, gencode, pc);
+    pc = emit_fcache_return_shared(GLOBAL_DCONTEXT, gencode, pc);//C
     if (DYNAMO_OPTION(coarse_units)) {
         pc = check_size_and_cache_line(gencode, pc);
         gencode->fcache_return_coarse = pc;

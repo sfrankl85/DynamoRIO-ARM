@@ -1679,8 +1679,8 @@ bb_process_convertible_indcall(dcontext_t *dcontext, build_bb_t *bb)
             });
         }
     });;
-    return false; /* stop bb */
 #endif
+    return false; /* stop bb */
 }
 
 /* if we make the IAT sections unreadable we will need to map to proper location */
@@ -2027,6 +2027,7 @@ bb_process_IAT_convertible_indcall(dcontext_t *dcontext, build_bb_t *bb,
     *elide_continue = false;    /* matching, but should stop bb */
     return true;                /* converted indirect to direct */
 #endif //NO
+    return false;
 }
 
 static bool
@@ -2790,10 +2791,6 @@ build_bb_ilist(dcontext_t *dcontext, build_bb_t *bb)
                     && bb_process_convertible_indcall(dcontext, bb)) {
                     normal_indirect_processing = false;
                     elide_and_continue_if_converted = true;
-                } else if (DYNAMO_OPTION(IAT_convert)
-                           && bb_process_IAT_convertible_indcall(dcontext, bb, 
-                                                                 &elide_and_continue_if_converted)) {
-                    normal_indirect_processing = false;
                 }
                 else if (bb_process_indcall_syscall(dcontext, bb,
                                                     &elide_and_continue_if_converted)) {

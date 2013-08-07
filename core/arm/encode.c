@@ -372,6 +372,16 @@ reg_rm_selectable(reg_id_t reg)
 }
 
 static bool
+reglist_value_ok(int rl)
+{
+  if( rl <= DR_REG_LIST_MAX && rl >= DR_REG_LIST_MIN ) 
+    return true;
+  else
+    return false;
+}
+
+
+static bool
 mask_value_ok(int mask)
 {
   if( mask >= UNKNOWN_MASK && mask <= WRITE_ALL_MASK )
@@ -444,8 +454,8 @@ opnd_type_ok(decode_info_t *di/*prefixes field is IN/OUT; x86_mode is IN*/,
         return ((opnd_is_immed_int(opnd) &&
                  size_ok(di, opnd_get_size(opnd), opsize, false/*!addr*/) &&
                  immed_size_ok(di, opnd_get_immed_int(opnd), opsize)));
-    case TYPE_S:
-        return opnd_is_mask( opnd ) && mask_ok( opnd );
+    case TYPE_S://Reglist type
+        return opnd_is_reglist( opnd ) && reglist_value_ok( opnd.value.reg_list );
     case TYPE_J:
         /* SJF This is the type used to store a branch target in an
                immed value. Need to rewrite to correct addr */
@@ -2264,6 +2274,8 @@ encode_0dst_reg_1src_reg_1src_mask(decode_info_t* di, instr_t* instr, byte* pc)
 
         }
     }
+    //Add the 1s to the correct position
+    word[2] |= ( 0xf0 );
 
 
     //TODO Need to write to bits[7,4] if mul(1001)
@@ -2324,6 +2336,8 @@ encode_0dst_reg_1src_reg_0src_imm(decode_info_t* di, instr_t* instr, byte* pc)
             
         }    
     }
+    //Add the 1s to the correct position
+    word[1] |= ( 0xf );
 
     encode_bits_7_to_4( di, instr, info, word );
 
@@ -2468,7 +2482,7 @@ encode_1dst_reg_2src_reg_0src_imm_5(decode_info_t* di, instr_t* instr, byte* pc)
 
     // DST 1
     {
-        opnd = instr_get_dst(instr, 1);
+        opnd = instr_get_dst(instr, 0);
 
         switch( opnd.kind )
         {
@@ -2490,7 +2504,7 @@ encode_1dst_reg_2src_reg_0src_imm_5(decode_info_t* di, instr_t* instr, byte* pc)
 
     // SRC 1
     {
-        opnd = instr_get_src(instr, 1);
+        opnd = instr_get_src(instr, 0);
 
         switch( opnd.kind )
         {
@@ -2512,7 +2526,7 @@ encode_1dst_reg_2src_reg_0src_imm_5(decode_info_t* di, instr_t* instr, byte* pc)
 
     // SRC 2 
     {
-        opnd = instr_get_src(instr, 2);
+        opnd = instr_get_src(instr, 1);
 
         switch( opnd.kind )
         {
@@ -2570,7 +2584,7 @@ encode_1dst_reg_2src_reg_0src_imm_4(decode_info_t* di, instr_t* instr, byte* pc)
 
     // DST 1
     {
-        opnd = instr_get_dst(instr, 1);
+        opnd = instr_get_dst(instr, 0);
 
         switch( opnd.kind )
         {
@@ -2592,7 +2606,7 @@ encode_1dst_reg_2src_reg_0src_imm_4(decode_info_t* di, instr_t* instr, byte* pc)
 
     // SRC 1
     {
-        opnd = instr_get_src(instr, 1);
+        opnd = instr_get_src(instr, 0);
 
         switch( opnd.kind )
         {
@@ -2614,7 +2628,7 @@ encode_1dst_reg_2src_reg_0src_imm_4(decode_info_t* di, instr_t* instr, byte* pc)
 
     // SRC 2 
     {
-        opnd = instr_get_src(instr, 2);
+        opnd = instr_get_src(instr, 1);
 
         switch( opnd.kind )
         {
@@ -2672,7 +2686,7 @@ encode_1dst_reg_2src_reg_0src_imm_3(decode_info_t* di, instr_t* instr, byte* pc)
 
     // DST 1
     {
-        opnd = instr_get_dst(instr, 1);
+        opnd = instr_get_dst(instr, 0);
 
         switch( opnd.kind )
         {
@@ -2694,7 +2708,7 @@ encode_1dst_reg_2src_reg_0src_imm_3(decode_info_t* di, instr_t* instr, byte* pc)
 
     // SRC 1
     {
-        opnd = instr_get_src(instr, 1);
+        opnd = instr_get_src(instr, 0);
 
         switch( opnd.kind )
         {
@@ -2716,7 +2730,7 @@ encode_1dst_reg_2src_reg_0src_imm_3(decode_info_t* di, instr_t* instr, byte* pc)
 
     // SRC 2 
     {
-        opnd = instr_get_src(instr, 2);
+        opnd = instr_get_src(instr, 1);
 
         switch( opnd.kind )
         {
@@ -2774,7 +2788,7 @@ encode_1dst_reg_3src_reg_0src_imm(decode_info_t* di, instr_t* instr, byte* pc)
 
     // DST 1
     {
-        opnd = instr_get_dst(instr, 1);
+        opnd = instr_get_dst(instr, 0);
 
         switch( opnd.kind )
         {
@@ -2796,7 +2810,7 @@ encode_1dst_reg_3src_reg_0src_imm(decode_info_t* di, instr_t* instr, byte* pc)
 
     // SRC 1
     {
-        opnd = instr_get_src(instr, 1);
+        opnd = instr_get_src(instr, 0);
 
         switch( opnd.kind )
         {
@@ -2818,7 +2832,7 @@ encode_1dst_reg_3src_reg_0src_imm(decode_info_t* di, instr_t* instr, byte* pc)
 
     // SRC 2 
     {
-        opnd = instr_get_src(instr, 2);
+        opnd = instr_get_src(instr, 1);
 
         switch( opnd.kind )
         {
@@ -2840,7 +2854,7 @@ encode_1dst_reg_3src_reg_0src_imm(decode_info_t* di, instr_t* instr, byte* pc)
 
     // SRC 3
     {
-        opnd = instr_get_src(instr, 3);
+        opnd = instr_get_src(instr, 2);
 
         switch( opnd.kind )
         {
@@ -2897,16 +2911,16 @@ encode_0dst_reg_1src_reglist(decode_info_t* di, instr_t* instr, byte* pc)
 
     // SRC 1
     {
-        opnd = instr_get_src(instr, 1);
+        opnd = instr_get_src(instr, 0);
 
         switch( opnd.kind )
         {
-          case REG_kind:
-            b = (opnd.value.reg >> 8);
+          case REG_LIST_kind:
+            b = (opnd.value.reg_list >> 8);
 
             word[2] |= b;
 
-            b = opnd.value.reg;
+            b = opnd.value.reg_list;
             /* Last byte is all the reg list */
             word[3] |= b;
             break;
@@ -2915,8 +2929,12 @@ encode_0dst_reg_1src_reglist(decode_info_t* di, instr_t* instr, byte* pc)
             CLIENT_ASSERT(false, "instr_encode error: invalid opnd type" );
             break;
         }
-
     }
+
+    //Add 1101 to correct pos
+
+    word[1] |= 0xd;
+
 
     encode_bits_7_to_4( di, instr, info, word );
 
@@ -2955,7 +2973,7 @@ encode_1dst_reg_1src_reglist(decode_info_t* di, instr_t* instr, byte* pc)
 
     // DST 1
     {
-        opnd = instr_get_dst(instr, 1);
+        opnd = instr_get_dst(instr, 0);
 
         switch( opnd.kind )
         {
@@ -2977,7 +2995,7 @@ encode_1dst_reg_1src_reglist(decode_info_t* di, instr_t* instr, byte* pc)
 
     // SRC 1
     {
-        opnd = instr_get_src(instr, 1);
+        opnd = instr_get_src(instr, 0);
 
         switch( opnd.kind )
         {

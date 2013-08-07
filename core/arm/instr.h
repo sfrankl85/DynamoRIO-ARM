@@ -336,6 +336,23 @@ enum {
 };
 
 /* we avoid typedef-ing the enum, as its storage size is compiler-specific */
+#define REGLIST_R0   0x1
+#define REGLIST_R1   0x2
+#define REGLIST_R2   0x4
+#define REGLIST_R3   0x8
+#define REGLIST_R4   0x10
+#define REGLIST_R5   0x20
+#define REGLIST_R6   0x40
+#define REGLIST_R7   0x80
+#define REGLIST_R8   0x100
+#define REGLIST_R9   0x200
+#define REGLIST_R10  0x400
+#define REGLIST_R11  0x800
+#define REGLIST_R12  0x1000
+#define REGLIST_R13  0x2000
+#define REGLIST_R14  0x4000
+#define REGLIST_R15  0x8000
+
 /* TODO SJF Changed back to byte again as increase of instr_t struct was causing issues.
             I dont think I need all the debug regs anyway so a byte should be good enough */
 typedef byte reg_id_t; /* contains a DR_REG_ enum value */
@@ -385,8 +402,8 @@ extern const reg_id_t dr_reg_fixer[];
  */
 #define DR_REG_LAST_VALID_ENUM  DR_REG_CPSR 
 #define DR_REG_LAST_ENUM        DR_REG_CPSR /**< Last value of register enums */
-#define DR_REG_LIST_MIN         0     //0000 0000 0000 0000
-#define DR_REG_LIST_MAX         0xff  //1111 1111 1111 1111
+#define DR_REG_LIST_MIN         0       //0000 0000 0000 0000
+#define DR_REG_LIST_MAX         0xffff  //1111 1111 1111 1111
 /* DR_API EXPORT END */
 #define REG_START_SPILL   DR_REG_R7
 #define REG_STOP_SPILL    DR_REG_R14

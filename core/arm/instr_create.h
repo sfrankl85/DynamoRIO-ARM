@@ -248,17 +248,8 @@
 #define INSTR_CREATE_push(dc, s, c) \
   instr_create_0dst_1src((dc), OP_push, (s), c)
 
-/* 2 destinations: 1 implicit, 2 sources */
-/**
- * This INSTR_CREATE_xxx macro creates an instr_t with opcode OP_xxx and the given
- * explicit operands, automatically supplying any implicit operands.
- * \param dc The void * dcontext used to allocate memory for the instr_t.
- * \param d The opnd_t explicit destination operand for the instruction.
- */
-#define INSTR_CREATE_pop(dc, d, c) \
-  instr_create_2dst_2src((dc), OP_pop, (d), opnd_create_reg(DR_REG_R13), \
-    opnd_create_reg(DR_REG_R13), \
-    opnd_create_base_disp(DR_REG_R13, DR_REG_NULL, 0, 0, OPSZ_VARSTACK), c)
+#define INSTR_CREATE_pop(dc, s, c) \
+  instr_create_0dst_1src((dc), OP_pop, (s), c)
 
 
 

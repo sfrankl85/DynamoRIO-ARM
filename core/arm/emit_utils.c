@@ -316,6 +316,85 @@ exit_stub_size(dcontext_t *dcontext, cache_pc target, uint flags)
     }
 }
 
+/* Insert a 32 bit addr into a register */
+byte*
+insert_addr_into_reg( dcontext_t* dcontext, byte* pc, int reg, int scratch, void* target )
+{
+  instr_t* instr;
+  instrlist_t ilist;
+  instrlist_init(&ilist);
+  int value=0;
+
+  ASSERT( (reg != scratch) );
+
+  APP(&ilist, INSTR_CREATE_mov_imm
+      (dcontext, opnd_create_reg(reg), OPND_CREATE_IMM12(0), COND_ALWAYS));
+
+  //Add the value byte by byte
+  //Top byte 
+  value = ((int)target & 0xff000000) >> 24;
+
+  APP(&ilist, INSTR_CREATE_mov_imm
+      (dcontext, opnd_create_reg(scratch), OPND_CREATE_IMM12(value), COND_ALWAYS));
+
+  instr = INSTR_CREATE_orr_reg
+              (dcontext, opnd_create_reg(reg), opnd_create_reg(reg),
+               opnd_create_reg(scratch),
+               OPND_CREATE_IMM5(8), COND_ALWAYS);
+  instr_set_shift_type(dcontext, instr, ROTATE_RIGHT); //Shift it by 8
+
+  APP(&ilist, instr);
+
+  //Second byte 
+  value = ((int)target & 0x00ff0000) >> 16;
+
+  APP(&ilist, INSTR_CREATE_mov_imm
+      (dcontext, opnd_create_reg(scratch), OPND_CREATE_IMM12(value), COND_ALWAYS));
+
+  instr = INSTR_CREATE_orr_reg
+              (dcontext, opnd_create_reg(reg), opnd_create_reg(reg),
+               opnd_create_reg(scratch),
+               OPND_CREATE_IMM5(16), COND_ALWAYS);
+  instr_set_shift_type(dcontext, instr, ROTATE_RIGHT); //Shift it by 16
+
+  APP(&ilist, instr);
+
+  //Third byte 
+  value = ((int)target & 0x0000ff00) >> 8;
+
+  APP(&ilist, INSTR_CREATE_mov_imm
+      (dcontext, opnd_create_reg(scratch), OPND_CREATE_IMM12(value), COND_ALWAYS));
+
+  instr = INSTR_CREATE_orr_reg
+              (dcontext, opnd_create_reg(reg), opnd_create_reg(reg),
+               opnd_create_reg(scratch),
+               OPND_CREATE_IMM5(24), COND_ALWAYS);
+  instr_set_shift_type(dcontext, instr, ROTATE_RIGHT); //Shift it by 24
+
+  APP(&ilist, instr);
+
+  //Last byte 
+  value = ((int)target & 0x000000ff);
+
+  APP(&ilist, INSTR_CREATE_mov_imm
+      (dcontext, opnd_create_reg(scratch), OPND_CREATE_IMM12(value), COND_ALWAYS));
+
+  instr = INSTR_CREATE_orr_reg
+              (dcontext, opnd_create_reg(reg), opnd_create_reg(reg),
+               opnd_create_reg(scratch),
+               OPND_CREATE_IMM5(0), COND_ALWAYS);
+  instr_set_shift_type(dcontext, instr, LOGICAL_LEFT); //Shift it by 0
+
+  APP(&ilist, instr);
+
+  /* now encode the instructions */
+  pc = instrlist_encode(dcontext, &ilist, pc, true /* instr targets */);
+  ASSERT(pc != NULL);
+
+  return pc;
+
+}
+
 /* The write that inserts the relative target is done atomically so this
  * function is safe with respect to a thread executing the code containing 
  * this target, presuming that the code in both the before and after states
@@ -481,71 +560,16 @@ static byte *
 insert_jmp_to_ibl(byte *pc, fragment_t *f, linkstub_t *l, cache_pc exit_target,
                   dcontext_t *dcontext)
 {
-#ifdef NO
-//TODO SJF INSTR
-#ifdef WINDOWS
-    bool spill_xbx_to_fs =
-        FRAG_DB_SHARED(f->flags) ||
-        (is_shared_syscall_routine(dcontext, exit_target) &&
-         DYNAMO_OPTION(shared_fragment_shared_syscalls));
-#else
     bool spill_xbx_to_fs = FRAG_DB_SHARED(f->flags);
-#endif
     ASSERT(linkstub_owned_by_fragment(dcontext, f, l));
-    /* we use XBX to hold the linkstub pointer for IBL routines, 
-       note that direct stubs use XAX for linkstub pointer */
-#ifdef WINDOWS
-    if (INTERNAL_OPTION(shared_syscalls_fastpath)
-        && is_shared_syscall_routine(dcontext, exit_target)) {
-        /* jmp <exit_target> */
-        pc = insert_relative_branch(pc, exit_target, NOT_HOT_PATCHABLE);
-        return pc;
-    } else
-#endif
-        pc = insert_spill_or_restore(dcontext, pc, f->flags, true/*spill*/,
-                                     spill_xbx_to_fs, REG_RR3,
-                                     INDIRECT_STUB_SPILL_SLOT, R3_OFFSET,
-                                     true);
 
-    /* mov $linkstub_ptr,%xbx */
-#ifdef X64
-    if (!FRAG_IS_32(f->flags))
-        *pc = REX_PREFIX_BASE_OPCODE | REX_PREFIX_W_OPFLAG; pc++;
-#endif
-    *pc = MOV_IMM2XBX_OPCODE; pc++;
-#ifdef WINDOWS
-    if (DYNAMO_OPTION(shared_syscalls)
-        && is_shared_syscall_routine(dcontext, exit_target)) {
-        /* FIXME We could reduce mem usage by not allocating a linkstub for
-         * this exit since it's never referenced.
-         */
-        LOG(THREAD, LOG_LINKS, 4,
-            "\tF%d using %s shared syscalls link stub\n",
-            f->id, TEST(FRAG_IS_TRACE, f->flags) ? "trace" :
-            "bb");
-        l = (linkstub_t *) (TEST(FRAG_IS_TRACE, f->flags) ?
-                          get_shared_syscalls_trace_linkstub() :
-                          get_shared_syscalls_bb_linkstub());
-    }
-#endif
-    if (TEST(FRAG_COARSE_GRAIN, f->flags)) {
-        /* FIXME: once we separate these we should switch to 15-byte w/
-         * store-to-mem instead of in a spilled xbx, to use same
-         * slots as coarse direct stubs
-         */
-        /* There is no linkstub_t so we store source tag instead */
-        *((ptr_uint_t *)pc) = (ptr_uint_t)f->tag; pc += sizeof(f->tag);
-        /* FIXME: once we separate the indirect stubs out we will need
-         * a 15-byte stub .  For that we should simply store the
-         * source cti directly into a tls slot.  For now though we inline
-         * the stubs and spill xbx.
-         */
-    } else {
-        *((ptr_uint_t *)pc) = (ptr_uint_t)l; pc += sizeof(l);
-    }
-    /* jmp <exit_target> */
+    /* we use R1 to hold the linkstub pointer for IBL routines, 
+       note that direct stubs use R0 for linkstub pointer */
+    pc = insert_addr_into_reg( dcontext, pc, REG_RR1, REG_RR7, l );
+
+    /* b <exit_target> */
     pc = insert_relative_branch(pc, exit_target, NOT_HOT_PATCHABLE);
-#endif //NO
+
     return pc;
 }
 
@@ -617,6 +641,7 @@ insert_linkcount_restoreflags(byte *pc, dcontext_t *dcontext, uint flags)
     return pc;
 }
 #endif /* PROFILE_LINKCOUNT **************************************/
+
 
 static bool
 is_patchable_exit_stub_helper(dcontext_t *dcontext, cache_pc ltarget,
@@ -992,84 +1017,6 @@ insert_restore_xax(dcontext_t *dcontext, cache_pc pc, uint flags,
 }
 
 
-/* Insert a 32 bit addr into a register */
-byte*
-insert_addr_into_reg( dcontext_t* dcontext, byte* pc, int reg, int scratch, void* target )
-{
-  instr_t* instr;
-  instrlist_t ilist;
-  instrlist_init(&ilist);
-  int value=0;
-
-  ASSERT( (reg != scratch) );
-
-  APP(&ilist, INSTR_CREATE_mov_imm
-      (dcontext, opnd_create_reg(reg), OPND_CREATE_IMM12(0), COND_ALWAYS));
-
-  //Add the value byte by byte
-  //Top byte 
-  value = ((int)target & 0xff000000) >> 24;
-
-  APP(&ilist, INSTR_CREATE_mov_imm
-      (dcontext, opnd_create_reg(scratch), OPND_CREATE_IMM12(value), COND_ALWAYS));
-
-  instr = INSTR_CREATE_orr_reg
-              (dcontext, opnd_create_reg(reg), opnd_create_reg(reg),
-               opnd_create_reg(scratch),
-               OPND_CREATE_IMM5(8), COND_ALWAYS);
-  instr_set_shift_type(dcontext, instr, ROTATE_RIGHT); //Shift it by 8
-
-  APP(&ilist, instr);
-
-  //Second byte 
-  value = ((int)target & 0x00ff0000) >> 16;
-
-  APP(&ilist, INSTR_CREATE_mov_imm
-      (dcontext, opnd_create_reg(scratch), OPND_CREATE_IMM12(value), COND_ALWAYS));
-
-  instr = INSTR_CREATE_orr_reg
-              (dcontext, opnd_create_reg(reg), opnd_create_reg(reg),
-               opnd_create_reg(scratch),
-               OPND_CREATE_IMM5(16), COND_ALWAYS);
-  instr_set_shift_type(dcontext, instr, ROTATE_RIGHT); //Shift it by 16
-
-  APP(&ilist, instr);
-
-  //Third byte 
-  value = ((int)target & 0x0000ff00) >> 8;
-
-  APP(&ilist, INSTR_CREATE_mov_imm
-      (dcontext, opnd_create_reg(scratch), OPND_CREATE_IMM12(value), COND_ALWAYS));
-
-  instr = INSTR_CREATE_orr_reg
-              (dcontext, opnd_create_reg(reg), opnd_create_reg(reg),
-               opnd_create_reg(scratch),
-               OPND_CREATE_IMM5(24), COND_ALWAYS);
-  instr_set_shift_type(dcontext, instr, ROTATE_RIGHT); //Shift it by 24
-
-  APP(&ilist, instr);
-
-  //Last byte 
-  value = ((int)target & 0x000000ff);
-
-  APP(&ilist, INSTR_CREATE_mov_imm
-      (dcontext, opnd_create_reg(scratch), OPND_CREATE_IMM12(value), COND_ALWAYS));
-
-  instr = INSTR_CREATE_orr_reg
-              (dcontext, opnd_create_reg(reg), opnd_create_reg(reg),
-               opnd_create_reg(scratch),
-               OPND_CREATE_IMM5(0), COND_ALWAYS);
-  instr_set_shift_type(dcontext, instr, LOGICAL_LEFT); //Shift it by 0
-
-  APP(&ilist, instr);
-
-  /* now encode the instructions */
-  pc = instrlist_encode(dcontext, &ilist, pc, true /* instr targets */);
-  ASSERT(pc != NULL);
-
-  return pc;
-
-}
 
 
 /* Emit code for the exit stub at stub_pc.  Return the size of the
@@ -1138,30 +1085,12 @@ insert_exit_stub_other_flags(dcontext_t *dcontext, fragment_t *f,
          * so we store target info to memory instead of a register.
          * The exact bytes used here are assumed by entrance_stub_target_tag().
          */
-        /* We must be at or below 15 bytes so we require addr16. 
-         * Both entrance_stub_target_tag() and coarse_indirect_stub_jmp_target()
-         * assume that the addr prefix is present for 32-bit but not 64-bit.
-         */
-        /* addr16 mov <target>, fs:<dir-stub-spill> */
-        /* FIXME: PR 209709: test perf and remove if outweighs space */
-#ifdef NO
-        *pc = ADDR_PREFIX_OPCODE; pc++;
-        *pc = TLS_SEG_OPCODE; pc++;
-        *pc = MOV_IMM2MEM_OPCODE; pc++;
-        *pc = MODRM16_DISP16; pc++;
-        *((ushort *)pc) = os_tls_offset(DIRECT_STUB_SPILL_SLOT); pc+=2;
-        *((uint *)pc) = (uint)(ptr_uint_t) EXIT_TARGET_TAG(dcontext, f, l); pc += 4;
-        /* jmp to exit target */
-        pc = insert_relative_branch(pc, exit_target, NOT_HOT_PATCHABLE);
-#endif
+        /* SJF Dont know what this is */
     } else {
         /* direct branch */
 
         /* we use XAX to hold the linkstub pointer before we get to fcache_return, 
            note that indirect stubs use XBX for linkstub pointer */
-       //SJF TODO Need to get last_exit into r0 for fcache_return
-       //pc = insert_save_xax(dcontext, pc, f->flags, FRAG_DB_SHARED(f->flags),
-       //                      DIRECT_STUB_SPILL_SLOT, true);
        //Get the linkstub addr into R0 for fcache_return
        pc = insert_addr_into_reg( dcontext, pc, REG_RR0, REG_RR7, l );
 
@@ -3235,18 +3164,16 @@ emit_fcache_enter_common(dcontext_t *dcontext, generated_code_t *code, byte *pc,
 //SJF Custom entry function
 
     //Restore cpsr and regs
-    RESTORE_FROM_DC(ilist, dcontext, REG_CPSR,CPSR_OFFSET, INSERT_APPEND, NULL);
-    RESTORE_FROM_DC(ilist, dcontext, REG_RR0, R0_OFFSET, INSERT_APPEND, NULL);
-    RESTORE_FROM_DC(ilist, dcontext, REG_RR1, R1_OFFSET, INSERT_APPEND, NULL);
-    RESTORE_FROM_DC(ilist, dcontext, REG_RR2, R2_OFFSET, INSERT_APPEND, NULL);
-    RESTORE_FROM_DC(ilist, dcontext, REG_RR3, R3_OFFSET, INSERT_APPEND, NULL);
-    RESTORE_FROM_DC(ilist, dcontext, REG_RR4, R4_OFFSET, INSERT_APPEND, NULL)
-    RESTORE_FROM_DC(ilist, dcontext, REG_RR5, R5_OFFSET, INSERT_APPEND, NULL);
-    RESTORE_FROM_DC(ilist, dcontext, REG_RR6, R6_OFFSET, INSERT_APPEND, NULL);
-    RESTORE_FROM_DC(ilist, dcontext, REG_RR7, R7_OFFSET, INSERT_APPEND, NULL);
-    RESTORE_FROM_DC(ilist, dcontext, REG_RR8, R8_OFFSET, INSERT_APPEND, NULL);
-    RESTORE_FROM_DC(ilist, dcontext, REG_RR9, R9_OFFSET, INSERT_APPEND, NULL);
-    RESTORE_FROM_DC(ilist, dcontext, REG_RR10,R10_OFFSET, INSERT_APPEND, NULL);
+    RESTORE_FROM_DC(&ilist, dcontext, REG_CPSR,CPSR_OFFSET, INSERT_APPEND, NULL);
+    RESTORE_FROM_DC(&ilist, dcontext, REG_RR10,R10_OFFSET, INSERT_APPEND, NULL);
+    RESTORE_FROM_DC(&ilist, dcontext, REG_RR9, R9_OFFSET, INSERT_APPEND, NULL);
+    RESTORE_FROM_DC(&ilist, dcontext, REG_RR8, R8_OFFSET, INSERT_APPEND, NULL);
+    RESTORE_FROM_DC(&ilist, dcontext, REG_RR7, R7_OFFSET, INSERT_APPEND, NULL);
+    RESTORE_FROM_DC(&ilist, dcontext, REG_RR5, R5_OFFSET, INSERT_APPEND, NULL);
+    RESTORE_FROM_DC(&ilist, dcontext, REG_RR4, R4_OFFSET, INSERT_APPEND, NULL);
+    RESTORE_FROM_DC(&ilist, dcontext, REG_RR3, R3_OFFSET, INSERT_APPEND, NULL);
+    RESTORE_FROM_DC(&ilist, dcontext, REG_RR2, R2_OFFSET, INSERT_APPEND, NULL);
+    RESTORE_FROM_DC(&ilist, dcontext, REG_RR1, R1_OFFSET, INSERT_APPEND, NULL);
 
     /* Jump indirect through next_tag.  Dispatch set this value with
      * where we want to go next in the fcache_t.
@@ -3264,9 +3191,13 @@ emit_fcache_enter_common(dcontext_t *dcontext, generated_code_t *code, byte *pc,
                                      opnd_create_mem_reg(REG_RR6),
                                      OPND_CREATE_IMM12(0), COND_ALWAYS ));
 
-    APP(&ilist, INSTR_CREATE_branch_ind(dcontext, opnd_create_reg(REG_RR7)));
+    //Once the value is removed from r0 and r7 then restore it
+    //Cannot preserve r7. Might be able to do it another way or have to use
+    //a different register
+    RESTORE_FROM_DC(&ilist, dcontext, REG_RR0, R0_OFFSET, INSERT_APPEND, NULL);
+    RESTORE_FROM_DC(&ilist, dcontext, REG_RR6, R6_OFFSET, INSERT_APPEND, NULL);
 
- 
+    APP(&ilist, INSTR_CREATE_branch_ind(dcontext, opnd_create_reg(REG_RR7)));
 
     /* now encode the instructions */
     len = encode_with_patch_list(dcontext, &patch, &ilist, pc);
@@ -3412,7 +3343,6 @@ append_fcache_return_common(dcontext_t *dcontext, generated_code_t *code,
     /* currently linkstub is only used for coarse-grain exits */
     ASSERT(linkstub == NULL || !absolute);
 
-    SAVE_TO_DC(ilist, dcontext, REG_CPSR,CPSR_OFFSET, INSERT_APPEND, NULL);
     SAVE_TO_DC(ilist, dcontext, REG_RR0, R0_OFFSET, INSERT_APPEND, NULL);
     SAVE_TO_DC(ilist, dcontext, REG_RR1, R1_OFFSET, INSERT_APPEND, NULL);
     SAVE_TO_DC(ilist, dcontext, REG_RR2, R2_OFFSET, INSERT_APPEND, NULL);
@@ -3424,6 +3354,7 @@ append_fcache_return_common(dcontext_t *dcontext, generated_code_t *code,
     SAVE_TO_DC(ilist, dcontext, REG_RR8, R8_OFFSET, INSERT_APPEND, NULL);
     SAVE_TO_DC(ilist, dcontext, REG_RR9, R9_OFFSET, INSERT_APPEND, NULL);
     SAVE_TO_DC(ilist, dcontext, REG_RR10,R10_OFFSET, INSERT_APPEND, NULL);
+    SAVE_TO_DC(ilist, dcontext, REG_CPSR,CPSR_OFFSET, INSERT_APPEND, NULL);
 
     /* save last_exit, currently in xax, into dcontext->last_exit */
     SAVE_TO_DC(ilist, dcontext, REG_RR0, LAST_EXIT_OFFSET, INSERT_APPEND, NULL);
