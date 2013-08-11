@@ -664,7 +664,7 @@ decode_cti(dcontext_t *dcontext, byte *pc, instr_t *instr)
     byte0 = *pc;
     byte1 = *(pc + 1);
 
-/* TODO SJF 
+/* SJF 
    decode the instruction opcode. 
    If it is a cti or a syscall then decode it fully.
    return pc after instr
@@ -687,6 +687,28 @@ decode_cti(dcontext_t *dcontext, byte *pc, instr_t *instr)
 
       return pc;
     } 
+    else if( opcode_is_relative_load( instr->opcode ))
+    {
+      // If needs to be converted to an absolute, decode fully then covnert.
+      // Make sure not to set the raw bits to valid as it will ignore the 
+      // changed instr
+      //Reset the instr to allow a full decode
+      instr_reset( dcontext, instr );
+
+      //Roll back the pc to get the same instruction again
+      pc -= sz;
+
+      //decode fully only call decode_common.
+      pc = decode( dcontext, pc, instr );
+      //Set the pc so the abs value can be calcd
+      instr->bytes = (pc - sz);
+
+      instr = instr_rewrite_relative_to_absolute( dcontext, instr );
+
+      CLIENT_ASSERT( (instr != NULL), "decode_cti: invalid instr rewrite" );
+
+      return pc;
+    }
     else
     {
       /* all non-pc-relative instructions */

@@ -2356,6 +2356,45 @@ instr_branch_set_prefix_target(instr_t *instr, bool val)
 }
 #endif /* UNSUPPORTED_API */
 
+
+instr_t*
+instr_rewrite_relative_to_absolute( dcontext_t* dcontext, instr_t* instr )
+{
+    opnd_t orig_opnd;
+
+    ASSERT( (instr != NULL) );
+
+    switch( instr->opcode )
+    {
+        case OP_ldr_lit:
+        case OP_ldrb_lit:
+        case OP_ldrd_lit:
+        case OP_ldrh_lit:
+        case OP_ldrsb_lit:
+        case OP_ldrsh_lit:
+          //Instead of having one immed source copy the pc value into 
+          // the first reg then move the immed to the 2nd
+          memcpy( &orig_opnd, &(instr->src0), sizeof( opnd_t ));  
+          instr->src0 = opnd_create_pc( instr->bytes );
+
+          //Allocate space for new src opnd
+          instr_set_num_opnds(dcontext, instr, 0, 2);
+
+          memcpy( &instr->srcs[0], &orig_opnd, sizeof( opnd_t ));
+
+          //bit of a hack here relies on the reg version of the instr 
+          // being after the lit one
+          instr->opcode++;
+
+          return instr;
+
+        default:
+          return instr;
+    }
+
+}
+
+
 /* Returns true iff instr has been marked as a selfmod check failure exit
  */
 bool
@@ -2528,9 +2567,6 @@ instr_set_raw_bits(instr_t *instr, byte *addr, uint length)
     instr->flags |= INSTR_RAW_BITS_VALID;
     instr->bytes = addr;
     instr->length = length;
-#ifdef X64
-    instr_set_rip_rel_valid(instr, false); /* relies on original raw bits */
-#endif
 }
 
 /* this is sort of a hack, used to allow dynamic reallocation of
@@ -4070,6 +4106,21 @@ opcode_is_unconditional(int opc)
      return true;
    else
      return false;
+}
+
+bool 
+opcode_is_relative_load( int opc )
+{
+  if( opc == OP_ldc_lit   || opc == OP_ldc2_lit ||
+      opc == OP_ldr_lit   || opc == OP_ldrb_lit ||
+      opc == OP_ldrd_lit  || opc == OP_ldrh_lit ||
+      opc == OP_ldrsb_lit || opc == OP_ldrsh_lit ||
+      opc == OP_pld_lit   || opc == OP_pldw_lit ||
+      opc == OP_pli_lit )
+    return true;
+  else
+    return false;
+
 }
 
 bool 

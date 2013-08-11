@@ -3787,7 +3787,7 @@ instr_encode_common(dcontext_t *dcontext, instr_t *instr, byte *copy_pc, byte *f
 
 
 #ifdef NO
-/* TODO SJF Eh? */
+/* TODO SJF Dont think I need this now. Done elsewhere */
 /* Indirect branches */
     if ((instr_is_cbr(instr) &&
          (!instr_is_cti_loop(instr) ||
@@ -3801,19 +3801,6 @@ instr_encode_common(dcontext_t *dcontext, instr_t *instr, byte *copy_pc, byte *f
                               _IF_DEBUG(assert_reachable));
         }
     } 
-
-    if (di.seg_override != REG_NULL) {
-        switch (di.seg_override) {
-        case SEG_ES: *field_ptr = 0x26; break;
-        case SEG_CS: *field_ptr = 0x2e; break;
-        case SEG_SS: *field_ptr = 0x36; break;
-        case SEG_DS: *field_ptr = 0x3e; break;
-        case SEG_FS: *field_ptr = 0x64; break;
-        case SEG_GS: *field_ptr = 0x65; break;
-        default: CLIENT_ASSERT(false, "instr_encode error: unknown segment prefix");
-        }
-        field_ptr++;
-    }
 #endif
 
     if (has_instr_opnds != NULL)
