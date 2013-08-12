@@ -3148,6 +3148,7 @@ emit_fcache_enter_common(dcontext_t *dcontext, generated_code_t *code, byte *pc,
     /*SJF For now Im commenting out all SAVE/RESTORE_TO/FROM/_TLS as Im not 
           sure its going to work and I dont need it for now */
     int len = 0;
+    instr_t* instr;
 
 /* SJF For now I am only getting this to jump to the required pc. Should be the 
        target fragment. Going to do the same for exit so it just jumps back to 
@@ -3165,6 +3166,8 @@ emit_fcache_enter_common(dcontext_t *dcontext, generated_code_t *code, byte *pc,
 
     //Restore cpsr and regs
     RESTORE_FROM_DC(&ilist, dcontext, REG_CPSR,CPSR_OFFSET, INSERT_APPEND, NULL);
+    RESTORE_FROM_DC(&ilist, dcontext, REG_RR12,R12_OFFSET, INSERT_APPEND, NULL);
+    RESTORE_FROM_DC(&ilist, dcontext, REG_RR11,R11_OFFSET, INSERT_APPEND, NULL);
     RESTORE_FROM_DC(&ilist, dcontext, REG_RR10,R10_OFFSET, INSERT_APPEND, NULL);
     RESTORE_FROM_DC(&ilist, dcontext, REG_RR9, R9_OFFSET, INSERT_APPEND, NULL);
     RESTORE_FROM_DC(&ilist, dcontext, REG_RR8, R8_OFFSET, INSERT_APPEND, NULL);
@@ -3187,9 +3190,11 @@ emit_fcache_enter_common(dcontext_t *dcontext, generated_code_t *code, byte *pc,
                                      opnd_create_immed_int(offset, OPSZ_4_12),
                                      COND_ALWAYS ));
 
-    APP(&ilist, INSTR_CREATE_ldr_imm(dcontext, opnd_create_reg(REG_RR7),
+    instr = INSTR_CREATE_ldr_imm(dcontext, opnd_create_reg(REG_RR7),
                                      opnd_create_mem_reg(REG_RR6),
-                                     OPND_CREATE_IMM12(0), COND_ALWAYS ));
+                                     OPND_CREATE_IMM12(0), COND_ALWAYS );
+    instr_set_u_flag( dcontext, instr, true );
+    APP(&ilist, instr );
 
     //Once the value is removed from r0 and r7 then restore it
     //Cannot preserve r7. Might be able to do it another way or have to use
@@ -3354,6 +3359,8 @@ append_fcache_return_common(dcontext_t *dcontext, generated_code_t *code,
     SAVE_TO_DC(ilist, dcontext, REG_RR8, R8_OFFSET, INSERT_APPEND, NULL);
     SAVE_TO_DC(ilist, dcontext, REG_RR9, R9_OFFSET, INSERT_APPEND, NULL);
     SAVE_TO_DC(ilist, dcontext, REG_RR10,R10_OFFSET, INSERT_APPEND, NULL);
+    SAVE_TO_DC(ilist, dcontext, REG_RR11,R11_OFFSET, INSERT_APPEND, NULL);
+    SAVE_TO_DC(ilist, dcontext, REG_RR12,R12_OFFSET, INSERT_APPEND, NULL);
     SAVE_TO_DC(ilist, dcontext, REG_CPSR,CPSR_OFFSET, INSERT_APPEND, NULL);
 
     /* save last_exit, currently in xax, into dcontext->last_exit */
@@ -4635,6 +4642,38 @@ emit_indirect_branch_lookup(dcontext_t *dcontext, generated_code_t *code, byte *
                             bool inline_ibl_head,
                             ibl_code_t *ibl_code /* IN/OUT */)
 {
+   /* SJF Assume the target of the indirect branch has been put into R0.
+          Save this to the dcontext, then jump back to dispatch */
+    instrlist_t ilist;
+    patch_list_t *patch = &ibl_code->ibl_patch;
+    bool absolute = true;
+
+    /* initialize the ilist */
+    instrlist_init(&ilist);
+
+    /* save indirect branch target, currently in xax, into dcontext->last_exit */
+    SAVE_TO_DC(&ilist, dcontext, REG_RR0, LAST_EXIT_OFFSET, INSERT_APPEND, NULL);
+
+    /* call central dispatch routine */
+    dr_insert_call((void *)dcontext, &ilist, NULL/*append*/,
+                   (void *)dispatch, 1,
+                   absolute ?
+                   opnd_create_pc((ptr_int_t)dcontext) : opnd_create_reg(REG_RR7));
+
+    /* should not return */
+    insert_reachable_cti(dcontext, &ilist, NULL, vmcode_get_start(),
+                         (byte *)unexpected_return, true/*jmp*/, false/*!precise*/,
+                         DR_REG_R11/*scratch*/, NULL);
+
+
+    ibl_code->ibl_routine_length = encode_with_patch_list(dcontext, patch, &ilist, pc);
+
+    /* free the instrlist_t elements */
+    instrlist_clear(dcontext, &ilist);
+
+    return pc + ibl_code->ibl_routine_length;
+
+
 #ifdef NO
 //TODO SJF
     instrlist_t ilist;
@@ -4680,17 +4719,9 @@ emit_indirect_branch_lookup(dcontext_t *dcontext, generated_code_t *code, byte *
      * path, so we need to restore %xbx. See more on the target_delete_entry
      * below, where the instr is added to the ilist.
      */
-#ifdef X64
-    if (x86_to_x64) {
-        target_delete_entry = SAVE_TO_REG(dcontext, REG_RR3, REG_RR10);
-    } else {
-#endif
         target_delete_entry = absolute ?
             instr_create_save_to_dcontext(dcontext, REG_RR3, R3_OFFSET) :
             SAVE_TO_TLS(dcontext, REG_RR3, INDIRECT_STUB_SPILL_SLOT);
-#ifdef X64
-    }
-#endif
     
     fragment_not_found = INSTR_CREATE_mov_reg(dcontext, opnd_create_reg(REG_RR1),
                                              opnd_create_reg(REG_RR3));
@@ -4716,23 +4747,11 @@ emit_indirect_branch_lookup(dcontext_t *dcontext, generated_code_t *code, byte *
          *          or src tag if DYNAMO_OPTION(coarse_units)
          * 2) xcx = effective address of indirect branch
          */
-#ifdef X64
-        instr_t *trace_cmp_entry;
-#endif
         append_ibl_head(dcontext, &ilist, ibl_code, patch, &fragment_found, &compare_tag,
                         IF_X64_ELSE(&trace_cmp_entry, NULL),
                         opnd_create_instr(next_fragment_nochasing),
                         true/*miss can have 8-bit offs*/, target_trace_table,
                         inline_ibl_head);
-#ifdef X64
-        if (IS_IBL_TRACE(ibl_code->source_fragment_type) &&
-            !GENCODE_IS_X86(code->gencode_mode)) {
-            /* if -unsafe_ignore_eflags_ibl this will equal regular entry */
-            add_patch_marker(patch, trace_cmp_entry, PATCH_ASSEMBLE_ABSOLUTE, 
-                             0 /* beginning of instruction */, 
-                             (ptr_uint_t*)&ibl_code->trace_cmp_entry);
-        }
-#endif
     }
     /* next_fragment_nochasing: */
     /*>>>    cmp     $0, HASHLOOKUP_TAG_OFFS(%xcx)                   */
@@ -5348,24 +5367,6 @@ emit_indirect_branch_lookup(dcontext_t *dcontext, generated_code_t *code, byte *
                              (ptr_uint_t*)&ibl_code->unlinked_ibl_entry);
         }
     }
-
-#ifdef X64
-    if (GENCODE_IS_X86(code->gencode_mode)) {
-        /* We currently have x86 code parsing the regular x64 table (PR 283895 covers
-         * using an x86 table, for both full correctness and performance: for now
-         * we have no way to detect a source in one mode jumping to a target built in
-         * another mode w/o a mode switch, but that would be an app error anyway).
-         * Rather than complicating the REG_X* defines used above we have a post-pass
-         * that shrinks all the registers and all the INTPTR immeds.
-         * The other two changes we need are performed up above:
-         *   1) cmp top bits to 0 for match
-         *   2) no trace_cmp entry points
-         * Note that we're punting on PR 283152: we go ahead and clobber the top bits
-         * of all our scratch registers.
-         */
-        instrlist_convert_to_x86(&ilist);
-    }
-#endif
 
     ibl_code->ibl_routine_length = encode_with_patch_list(dcontext, patch, &ilist, pc);
 

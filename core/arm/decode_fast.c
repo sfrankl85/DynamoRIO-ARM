@@ -689,10 +689,11 @@ decode_cti(dcontext_t *dcontext, byte *pc, instr_t *instr)
     } 
     else if( opcode_is_relative_load( instr->opcode ))
     {
-      // If needs to be converted to an absolute, decode fully then covnert.
-      // Make sure not to set the raw bits to valid as it will ignore the 
-      // changed instr
-      //Reset the instr to allow a full decode
+      /* To allow a relative instr to be covnerted to an absolute one later
+         then decode it fully here
+         Make sure not to set the raw bits to valid as it will ignore the 
+         changed instr
+         Reset the instr to allow a full decode */
       instr_reset( dcontext, instr );
 
       //Roll back the pc to get the same instruction again
@@ -702,8 +703,6 @@ decode_cti(dcontext_t *dcontext, byte *pc, instr_t *instr)
       pc = decode( dcontext, pc, instr );
       //Set the pc so the abs value can be calcd
       instr->bytes = (pc - sz);
-
-      instr = instr_rewrite_relative_to_absolute( dcontext, instr );
 
       CLIENT_ASSERT( (instr != NULL), "decode_cti: invalid instr rewrite" );
 

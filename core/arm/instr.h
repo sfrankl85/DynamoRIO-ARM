@@ -2082,6 +2082,15 @@ DR_API
 bool
 instr_has_r_flag( instr_t* instr );
 
+//Un relative instructions
+void
+instrlist_preinsert_move_32bits_to_reg(instrlist_t *ilist, dcontext_t *dcontext,
+                                reg_id_t target_reg, reg_id_t scratch, int target, instr_t* rel_instr );
+
+instrlist_t*
+instrlist_rewrite_relative_to_absolute( dcontext_t* dcontext, instrlist_t* ilist );
+
+
 
 DR_API
 /**
@@ -2569,6 +2578,11 @@ DR_API
  */
 uint 
 instr_get_opcode_eflags(int opcode);
+
+DR_API
+bool
+opcode_is_relative_load( int opc );
+
 
 DR_API
 /**

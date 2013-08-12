@@ -3926,6 +3926,9 @@ build_basic_block_fragment(dcontext_t *dcontext, app_pc start, uint initial_flag
     if (image_entry)
         bb.flags &= ~FRAG_COARSE_GRAIN;
 
+    //SJF Rewrite relative instructions to absolute versions here
+    instrlist_rewrite_relative_to_absolute( dcontext, bb.ilist );
+
     /* emit fragment into fcache */
     KSTART(bb_emit);
     f = emit_fragment_ex(dcontext, start, bb.ilist, bb.flags, bb.vmlist, link, visible);

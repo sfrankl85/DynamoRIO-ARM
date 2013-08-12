@@ -2170,6 +2170,7 @@ instr_instr_type_valid(instr_t *instr)
  * instr_get_opcode() will attempt to decode an OP_UNDECODED opcode, hence the
  * purpose of this routine.  
  */
+DR_API
 bool 
 instr_opcode_valid(instr_t *instr)
 {
@@ -2356,42 +2357,62 @@ instr_branch_set_prefix_target(instr_t *instr, bool val)
 }
 #endif /* UNSUPPORTED_API */
 
-
-instr_t*
-instr_rewrite_relative_to_absolute( dcontext_t* dcontext, instr_t* instr )
+instrlist_t*
+instrlist_rewrite_relative_to_absolute( dcontext_t* dcontext, instrlist_t* ilist )
 {
+    instr_t* inst;
     opnd_t orig_opnd;
 
-    ASSERT( (instr != NULL) );
-
-    switch( instr->opcode )
+    for (inst = instrlist_first(ilist); inst; inst = instr_get_next(inst)) 
     {
-        case OP_ldr_lit:
-        case OP_ldrb_lit:
-        case OP_ldrd_lit:
-        case OP_ldrh_lit:
-        case OP_ldrsb_lit:
-        case OP_ldrsh_lit:
-          //Instead of having one immed source copy the pc value into 
-          // the first reg then move the immed to the 2nd
-          memcpy( &orig_opnd, &(instr->src0), sizeof( opnd_t ));  
-          instr->src0 = opnd_create_pc( instr->bytes );
+        if( opcode_is_relative_load( inst->opcode ))
+        {
+          switch( inst->opcode )
+          {
+            case OP_ldr_lit:
+            case OP_ldrb_lit:
+            case OP_ldrd_lit:
+            case OP_ldrh_lit:
+            case OP_ldrsb_lit:
+            case OP_ldrsh_lit:
+              instrlist_meta_preinsert( ilist, inst, INSTR_CREATE_push(dcontext,
+                                               opnd_create_reg_list(REGLIST_R8|REGLIST_R9),
+                                               COND_ALWAYS ));
 
-          //Allocate space for new src opnd
-          instr_set_num_opnds(dcontext, instr, 0, 2);
+              memcpy( &orig_opnd, &(inst->src0), sizeof( opnd_t ));
 
-          memcpy( &instr->srcs[0], &orig_opnd, sizeof( opnd_t ));
+              //Move addr + offset into reg. SJF weird shit going on with offset so just add to addr
+              instrlist_preinsert_move_32bits_to_reg( ilist, dcontext, REG_RR8, REG_RR9,
+                                                      inst->bytes+8+orig_opnd.value.immed_int, inst ); //Before current inst 
 
-          //bit of a hack here relies on the reg version of the instr 
-          // being after the lit one
-          instr->opcode++;
+              //Change ldr*_lit to ldr*_reg 
+              inst->src0 = opnd_create_mem_reg( REG_RR8 );
 
-          return instr;
+              //Allocate space for new src opnd
+              instr_set_num_opnds(dcontext, inst, 0, 2);
 
-        default:
-          return instr;
+              //Set to 0 as added to the addr above
+              orig_opnd.value.immed_int = 0;
+              memcpy( &inst->srcs[0], &orig_opnd, sizeof( opnd_t ));
+
+              //bit of a hack here relies on the imm version of the instr 
+              // being before the lit one
+              inst->opcode--;
+              //Make sure it is computing base + offset 
+              instr_set_u_flag( dcontext, inst, true );
+
+              //Hope it isnt R9 that is the dst of the ldr instr
+              instrlist_meta_postinsert( ilist, inst, INSTR_CREATE_pop(dcontext,
+                                                         opnd_create_reg_list(REGLIST_R8|REGLIST_R9),
+                                                         COND_ALWAYS ));
+              break;
+
+            default:
+              CLIENT_ASSERT( false, "unimplemented relative instr found" );
+              break;
+          }
+        }
     }
-
 }
 
 
@@ -3518,6 +3539,8 @@ instr_set_flags_from_di( instr_t* instr, decode_info_t* di )
 {
     ASSERT(instr != NULL && di != NULL );
 
+    instr->cond = di->cond;
+
     instr->p_flag = di->p_flag;
     instr->u_flag = di->u_flag;
     instr->s_flag = di->s_flag;
@@ -3926,6 +3949,33 @@ instr_branch_type(instr_t *cti_instr)
         return LINK_DIRECT|LINK_CALL; 
     case OP_mov_reg:
     case OP_mov_imm:
+    case OP_ldr_reg:
+    case OP_ldr_imm:
+    case OP_ldr_lit:
+    case OP_ldrb_imm:
+    case OP_ldrb_lit:
+    case OP_ldrb_reg:
+    case OP_ldrbt:
+    case OP_ldrd_imm:
+    case OP_ldrd_lit:
+    case OP_ldrd_reg:
+    case OP_ldrex:
+    case OP_ldrexb:
+    case OP_ldrexd:
+    case OP_ldrexh:
+    case OP_ldrh_imm:
+    case OP_ldrh_lit:
+    case OP_ldrh_reg:
+    case OP_ldrht:
+    case OP_ldrsb_imm:
+    case OP_ldrsb_lit:
+    case OP_ldrsb_reg:
+    case OP_ldrsbt:
+    case OP_ldrsh_imm:
+    case OP_ldrsh_lit:
+    case OP_ldrsh_reg:
+    case OP_ldrsht:
+    case OP_ldrt:
         if( instr_is_return( cti_instr ))
           return LINK_INDIRECT|LINK_RETURN;
         //We know the opc is mov_reg/imm so can use this to just check the dest
@@ -4089,6 +4139,40 @@ opcode_get_encoding_type(int opc)
 }
 
 bool
+opcode_is_zero_extend( int opc )
+{
+  if( opc == OP_add_sp_imm || opc == OP_bkpt ||
+      opc == OP_ldc_imm    || opc == OP_ldc2_imm ||
+      opc == OP_ldc_lit    || opc == OP_ldc2_lit ||
+      opc == OP_ldr_imm    ||
+      opc == OP_ldr_lit    || opc == OP_ldrb_imm ||
+      opc == OP_ldrb_lit   || opc == OP_ldrbt    ||
+      opc == OP_ldrd_imm   || opc == OP_ldrd_lit ||
+      opc == OP_ldrh_imm   || opc == OP_ldrh_lit ||
+      opc == OP_ldrht      || opc == OP_ldrsb_imm ||
+      opc == OP_ldrsb_lit  || opc == OP_ldrsbt   ||
+      opc == OP_ldrsh_imm  || opc == OP_ldrsh_lit ||
+      opc == OP_ldrsht     || opc == OP_ldrt     ||
+      opc == OP_pld_imm    || opc == OP_pldw_imm ||
+      opc == OP_pld_lit    || opc == OP_pli_imm  ||
+      opc == OP_pli_lit    || opc == OP_stc      ||
+      opc == OP_stc2       || opc == OP_str_imm  ||
+      opc == OP_strb_imm   || opc == OP_strbt    ||
+      opc == OP_strd_imm   || opc == OP_strh_imm ||
+      opc == OP_strht      || opc == OP_strt     ||
+      opc == OP_sub_sp_imm || opc == OP_svc      )
+    return true;
+  else
+    return false;
+}
+
+bool
+opcode_is_sign_extend( int opc )
+{
+  return !opcode_is_zero_extend( opc );
+}
+
+bool
 opcode_is_unconditional(int opc)
 {
    if( opc == OP_cps     || opc == OP_setend  || opc == OP_pli_imm  ||
@@ -4127,10 +4211,12 @@ bool
 opcode_is_cti(int opc)
 {
    //A move instr to r15 is a control transfer instr.
-   // Caller needs to verify that instr dst 1 is r15
+   // Caller needs to verify that instr dst 1 is r15.
+   // This will return true if the opcode could be a cti
    if( opc == OP_b || opc == OP_bl || opc == OP_blx_imm ||
        opc == OP_blx_reg || opc == OP_bx || 
-       opc == OP_bxj || opc == OP_mov_reg )
+       opc == OP_bxj || opc == OP_mov_reg || opc == OP_mov_imm ||
+       (opc >= OP_ldr_imm && opc <= OP_ldrt ) )//All load instrs
      return true;
    else
      return false;
@@ -4167,6 +4253,13 @@ instr_is_exit_cti(instr_t *instr)
         !instr_ok_to_mangle(instr))
         return false;
 
+    return instr_is_cti( instr );
+
+#if 0
+    if (!instr_operands_valid(instr) || /* implies !opcode_valid */
+        !instr_ok_to_mangle(instr))
+        return false;
+
     if (instr_is_cti(instr) ) {
         /* far pc should only happen for mangle's call to here */
         return opnd_is_pc(instr_get_target(instr));
@@ -4191,6 +4284,7 @@ instr_is_exit_cti(instr_t *instr)
     }
 
     return false;
+#endif
 }
 
 bool
@@ -4244,7 +4338,7 @@ instr_is_mov_br(instr_t* instr)
 
          if( opnd.kind == REG_kind )
          {
-           if( opnd.value.reg == REG_R15 )
+           if( opnd.value.reg == REG_RR15 )
              return true;
          }
       }
@@ -5102,6 +5196,79 @@ instr_is_nop(instr_t *inst)
     return false;
 }
 
+void 
+instrlist_preinsert_move_32bits_to_reg(instrlist_t *ilist, dcontext_t *dcontext, 
+                                reg_id_t target_reg, reg_id_t scratch, int target, instr_t* rel_instr )
+{
+    int value=0;
+    instr_t* instr;
+
+    ASSERT(( ilist != NULL ));
+
+    instrlist_meta_preinsert(ilist, rel_instr, INSTR_CREATE_mov_imm
+            (dcontext, opnd_create_reg(target_reg), OPND_CREATE_IMM12(0), COND_ALWAYS));
+
+    //Add the value bit by bit
+    //Top 8 bits
+    value = ((int)target & 0xff000000) >> 24;
+
+    instrlist_meta_preinsert(ilist, rel_instr, INSTR_CREATE_mov_imm
+        (dcontext, opnd_create_reg(scratch), OPND_CREATE_IMM12(value), COND_ALWAYS));
+
+    //Rotate right by 8 to get top bits back in place
+    instr = INSTR_CREATE_orr_reg
+                (dcontext, opnd_create_reg(target_reg), opnd_create_reg(target_reg),
+                 opnd_create_reg(scratch),
+                 OPND_CREATE_IMM5(8), COND_ALWAYS);
+    instr_set_shift_type(dcontext, instr, ROTATE_RIGHT); //Shift it by 8
+
+    instrlist_meta_preinsert(ilist, rel_instr, instr);
+
+    //Second 8 bits
+    value = ((int)target & 0x00ff0000) >> 16;
+
+    instrlist_meta_preinsert(ilist, rel_instr, INSTR_CREATE_mov_imm
+        (dcontext, opnd_create_reg(scratch), OPND_CREATE_IMM12(value), COND_ALWAYS));
+
+    //Rotate right by 8 to get top bits back in place
+    instr = INSTR_CREATE_orr_reg
+                (dcontext, opnd_create_reg(target_reg), opnd_create_reg(target_reg),
+                 opnd_create_reg(scratch),
+                 OPND_CREATE_IMM5(16), COND_ALWAYS);
+    instr_set_shift_type(dcontext, instr, ROTATE_RIGHT); //Shift it by 16
+
+    instrlist_meta_preinsert(ilist, rel_instr, instr);
+    //Third 8 bits
+    value = ((int)target & 0x0000ff00) >> 8;
+
+    instrlist_meta_preinsert(ilist, rel_instr, INSTR_CREATE_mov_imm
+        (dcontext, opnd_create_reg(scratch), OPND_CREATE_IMM12(value), COND_ALWAYS));
+
+      //Rotate right by 8 to get top bits back in place
+    instr = INSTR_CREATE_orr_reg
+                (dcontext, opnd_create_reg(target_reg), opnd_create_reg(target_reg),
+                 opnd_create_reg(scratch),
+                 OPND_CREATE_IMM5(24), COND_ALWAYS);
+    instr_set_shift_type(dcontext, instr, ROTATE_RIGHT); //Shift it by 24
+
+    instrlist_meta_preinsert(ilist, rel_instr, instr);
+
+    //Last 8 bits
+    value = ((int)target & 0x000000ff);
+
+    instrlist_meta_preinsert(ilist, rel_instr, INSTR_CREATE_mov_imm
+        (dcontext, opnd_create_reg(scratch), OPND_CREATE_IMM12(value), COND_ALWAYS));
+
+    //Rotate right by 8 to get top bits back in place
+    instr = INSTR_CREATE_orr_reg
+                (dcontext, opnd_create_reg(target_reg), opnd_create_reg(target_reg),
+                 opnd_create_reg(scratch),
+                 OPND_CREATE_IMM5(0), COND_ALWAYS);
+    instr_set_shift_type(dcontext, instr, LOGICAL_LEFT); //Shift it by 0
+
+    instrlist_meta_preinsert(ilist, rel_instr, instr);
+}
+
 #ifndef STANDALONE_DECODER
 /****************************************************************************/
 /* dcontext convenience routines */
@@ -5244,78 +5411,6 @@ instrlist_postinsert_move_32bits_to_reg(instrlist_t *ilist, dcontext_t *dcontext
     instrlist_meta_postinsert(ilist, rel_instr, instr);
 }
 
-void 
-instrlist_preinsert_move_32bits_to_reg(instrlist_t *ilist, dcontext_t *dcontext, 
-                                reg_id_t target_reg, reg_id_t scratch, int target, instr_t* rel_instr )
-{
-    int value=0;
-    instr_t* instr;
-
-    ASSERT(( ilist != NULL ));
-
-    instrlist_meta_preinsert(ilist, rel_instr, INSTR_CREATE_mov_imm
-            (dcontext, opnd_create_reg(target_reg), OPND_CREATE_IMM12(0), COND_ALWAYS));
-
-    //Add the value bit by bit
-    //Top 8 bits
-    value = ((int)target & 0xff000000) >> 24;
-
-    instrlist_meta_preinsert(ilist, rel_instr, INSTR_CREATE_mov_imm
-        (dcontext, opnd_create_reg(scratch), OPND_CREATE_IMM12(value), COND_ALWAYS));
-
-    //Rotate right by 8 to get top bits back in place
-    instr = INSTR_CREATE_orr_reg
-                (dcontext, opnd_create_reg(target_reg), opnd_create_reg(target_reg),
-                 opnd_create_reg(scratch),
-                 OPND_CREATE_IMM5(8), COND_ALWAYS);
-    instr_set_shift_type(dcontext, instr, ROTATE_RIGHT); //Shift it by 8
-
-    instrlist_meta_preinsert(ilist, rel_instr, instr);
-
-    //Second 8 bits
-    value = ((int)target & 0x00ff0000) >> 16;
-
-    instrlist_meta_preinsert(ilist, rel_instr, INSTR_CREATE_mov_imm
-        (dcontext, opnd_create_reg(scratch), OPND_CREATE_IMM12(value), COND_ALWAYS));
-
-    //Rotate right by 8 to get top bits back in place
-    instr = INSTR_CREATE_orr_reg
-                (dcontext, opnd_create_reg(target_reg), opnd_create_reg(target_reg),
-                 opnd_create_reg(scratch),
-                 OPND_CREATE_IMM5(16), COND_ALWAYS);
-    instr_set_shift_type(dcontext, instr, ROTATE_RIGHT); //Shift it by 16
-
-    instrlist_meta_preinsert(ilist, rel_instr, instr);
-    //Third 8 bits
-    value = ((int)target & 0x0000ff00) >> 8;
-
-    instrlist_meta_preinsert(ilist, rel_instr, INSTR_CREATE_mov_imm
-        (dcontext, opnd_create_reg(scratch), OPND_CREATE_IMM12(value), COND_ALWAYS));
-
-      //Rotate right by 8 to get top bits back in place
-    instr = INSTR_CREATE_orr_reg
-                (dcontext, opnd_create_reg(target_reg), opnd_create_reg(target_reg),
-                 opnd_create_reg(scratch),
-                 OPND_CREATE_IMM5(24), COND_ALWAYS);
-    instr_set_shift_type(dcontext, instr, ROTATE_RIGHT); //Shift it by 24
-
-    instrlist_meta_preinsert(ilist, rel_instr, instr);
-
-    //Last 8 bits
-    value = ((int)target & 0x000000ff);
-
-    instrlist_meta_preinsert(ilist, rel_instr, INSTR_CREATE_mov_imm
-        (dcontext, opnd_create_reg(scratch), OPND_CREATE_IMM12(value), COND_ALWAYS));
-
-    //Rotate right by 8 to get top bits back in place
-    instr = INSTR_CREATE_orr_reg
-                (dcontext, opnd_create_reg(target_reg), opnd_create_reg(target_reg),
-                 opnd_create_reg(scratch),
-                 OPND_CREATE_IMM5(0), COND_ALWAYS);
-    instr_set_shift_type(dcontext, instr, LOGICAL_LEFT); //Shift it by 0
-
-    instrlist_meta_preinsert(ilist, rel_instr, instr);
-}
 
 void 
 instrlist_append_move_32bits_to_reg(instrlist_t *ilist, dcontext_t *dcontext, 

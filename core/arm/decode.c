@@ -241,7 +241,7 @@ lookup_opcode_from_opc( uint opc )
  */
 
 uint
-convert_shifted_immed_to_immed( uint immed_int, int sz )
+convert_shifted_immed_to_immed( uint immed_int, int sz, bool sign_extend )
 {
   int shifts = 0;
   int ret_immed=0;
@@ -249,14 +249,23 @@ convert_shifted_immed_to_immed( uint immed_int, int sz )
   switch( sz )
   {
     case OPSZ_4_12:
-      shifts = ((immed_int & 0xf00) >> 8); //Top 4 bits
-      ret_immed = (immed_int * 0xff);// Only want last 8 bits
-
-      for( int i=0; i<shifts; i++ )
+      if( sign_extend )
       {
-        ret_immed = (ret_immed << 30 ) | (ret_immed >> 2);
+        shifts = ((immed_int & 0xf00) >> 8); //Top 4 bits
+        ret_immed = (immed_int & 0xff);// Only want last 8 bits
+
+        for( int i=0; i<shifts; i++ )
+        {
+          ret_immed = (ret_immed << 30 ) | (ret_immed >> 2);
+        }
+        return ret_immed;
       }
-      return ret_immed;
+      else//Zero extend
+      {
+        ret_immed = (immed_int & 0xfff);// Only want 12 bits
+
+        return ret_immed;
+      }
 
     case OPSZ_4_24:
       ret_immed = (immed_int & 0xffffff) << 2; //Only want last 24 bits. Shift by two right
@@ -304,7 +313,7 @@ instr_info_t* decode_data_processing_and_els(byte* instr_word,
 
 void
 decode_1dst_reg_2src_reg_1src_imm( decode_info_t* di, byte* instr_word, opnd_t* dsts,
-                                   opnd_t* srcs, int *numdsts, int *numsrcs )
+                                   opnd_t* srcs, int *numdsts, int *numsrcs, bool sign_extend )
 {
     int reg, immed, type;
     //1st Dst
@@ -331,7 +340,7 @@ decode_1dst_reg_2src_reg_1src_imm( decode_info_t* di, byte* instr_word, opnd_t* 
 
     immed |= (instr_word[3] >> 7);
 
-    immed = convert_shifted_immed_to_immed( immed, OPSZ_4_5 );
+    immed = convert_shifted_immed_to_immed( immed, OPSZ_4_5, sign_extend );
 
     srcs[*numsrcs] = opnd_create_immed_int((ptr_int_t)(immed), OPSZ_4_5);
     (*numsrcs)++;
@@ -511,7 +520,7 @@ decode_1dst_reg_2src_reg_0src_imm_5( decode_info_t* di, byte* instr_word, opnd_t
 
 void
 decode_1dst_reg_0src_reg_1src_imm_1( decode_info_t* di, byte* instr_word, opnd_t* dsts,
-                                   opnd_t* srcs, int *numdsts, int *numsrcs )
+                                   opnd_t* srcs, int *numdsts, int *numsrcs, bool sign_extend )
 {
     int reg, immed;
 
@@ -527,7 +536,7 @@ decode_1dst_reg_0src_reg_1src_imm_1( decode_info_t* di, byte* instr_word, opnd_t
 
     immed |= (instr_word[3]);
 
-    immed = convert_shifted_immed_to_immed( immed, OPSZ_4_12 );
+    immed = convert_shifted_immed_to_immed( immed, OPSZ_4_12, sign_extend );
 
     srcs[*numsrcs] = opnd_create_immed_int((ptr_int_t)(immed), OPSZ_4_12);
     (*numsrcs)++;
@@ -535,7 +544,7 @@ decode_1dst_reg_0src_reg_1src_imm_1( decode_info_t* di, byte* instr_word, opnd_t
 
 void
 decode_1dst_reg_0src_reg_1src_imm_2( decode_info_t* di, byte* instr_word, opnd_t* dsts,
-                                   opnd_t* srcs, int *numdsts, int *numsrcs )
+                                   opnd_t* srcs, int *numdsts, int *numsrcs, bool sign_extend )
 {
     int reg, immed;
 
@@ -551,7 +560,7 @@ decode_1dst_reg_0src_reg_1src_imm_2( decode_info_t* di, byte* instr_word, opnd_t
 
     immed |= (instr_word[3]);
 
-    immed = convert_shifted_immed_to_immed( immed, OPSZ_4_12 );
+    immed = convert_shifted_immed_to_immed( immed, OPSZ_4_12, sign_extend );
 
     srcs[*numsrcs] = opnd_create_immed_int((ptr_int_t)(immed), OPSZ_4_12);
     (*numsrcs)++;
@@ -560,7 +569,7 @@ decode_1dst_reg_0src_reg_1src_imm_2( decode_info_t* di, byte* instr_word, opnd_t
 
 void
 decode_1dst_reg_0src_reg_1src_imm_3( decode_info_t* di, byte* instr_word, opnd_t* dsts,
-                                   opnd_t* srcs, int *numdsts, int *numsrcs )
+                                   opnd_t* srcs, int *numdsts, int *numsrcs, bool sign_extend )
 {
     int reg, immed;
 
@@ -576,7 +585,7 @@ decode_1dst_reg_0src_reg_1src_imm_3( decode_info_t* di, byte* instr_word, opnd_t
 
     immed |= (instr_word[3] & 0xf);
 
-    immed = convert_shifted_immed_to_immed( immed, OPSZ_4_8 );
+    immed = convert_shifted_immed_to_immed( immed, OPSZ_4_8, sign_extend );
 
     srcs[*numsrcs] = opnd_create_immed_int((ptr_int_t)(immed), OPSZ_4_8);
     (*numsrcs)++;
@@ -584,7 +593,7 @@ decode_1dst_reg_0src_reg_1src_imm_3( decode_info_t* di, byte* instr_word, opnd_t
 
 void
 decode_1dst_reg_1src_reg_1src_imm_1( decode_info_t* di, byte* instr_word, opnd_t* dsts,
-                                   opnd_t* srcs, int *numdsts, int *numsrcs )
+                                   opnd_t* srcs, int *numdsts, int *numsrcs, bool sign_extend )
 {
     int reg, immed;
 
@@ -606,7 +615,7 @@ decode_1dst_reg_1src_reg_1src_imm_1( decode_info_t* di, byte* instr_word, opnd_t
 
     immed |= (instr_word[3] >> 7);
 
-    immed = convert_shifted_immed_to_immed( immed, OPSZ_4_5 );
+    immed = convert_shifted_immed_to_immed( immed, OPSZ_4_5, sign_extend );
 
     srcs[*numsrcs] = opnd_create_immed_int((ptr_int_t)(immed), OPSZ_4_5);
     (*numsrcs)++;
@@ -617,7 +626,7 @@ decode_1dst_reg_1src_reg_1src_imm_1( decode_info_t* di, byte* instr_word, opnd_t
 
 void
 decode_1dst_reg_1src_reg_1src_imm_2( decode_info_t* di, byte* instr_word, opnd_t* dsts,
-                                   opnd_t* srcs, int *numdsts, int *numsrcs )
+                                   opnd_t* srcs, int *numdsts, int *numsrcs, bool sign_extend )
 {
     int reg, immed;
 
@@ -639,7 +648,7 @@ decode_1dst_reg_1src_reg_1src_imm_2( decode_info_t* di, byte* instr_word, opnd_t
 
     immed |= (instr_word[3]);
 
-    immed = convert_shifted_immed_to_immed( immed, OPSZ_4_12 );
+    immed = convert_shifted_immed_to_immed( immed, OPSZ_4_12, sign_extend );
 
     srcs[*numsrcs] = opnd_create_immed_int((ptr_int_t)(immed), OPSZ_4_12);
     (*numsrcs)++;
@@ -647,7 +656,7 @@ decode_1dst_reg_1src_reg_1src_imm_2( decode_info_t* di, byte* instr_word, opnd_t
 
 void
 decode_1dst_reg_1src_reg_1src_imm_3( decode_info_t* di, byte* instr_word, opnd_t* dsts,
-                                   opnd_t* srcs, int *numdsts, int *numsrcs )
+                                   opnd_t* srcs, int *numdsts, int *numsrcs, bool sign_extend )
 {
     int reg, immed;
 
@@ -669,7 +678,7 @@ decode_1dst_reg_1src_reg_1src_imm_3( decode_info_t* di, byte* instr_word, opnd_t
 
     immed |= ((instr_word[3] & 0x80) >> 7);
 
-    immed = convert_shifted_immed_to_immed( immed, OPSZ_4_5 );
+    immed = convert_shifted_immed_to_immed( immed, OPSZ_4_5, sign_extend );
 
     srcs[*numsrcs] = opnd_create_immed_int((ptr_int_t)(immed), OPSZ_4_5);
     (*numsrcs)++;
@@ -680,7 +689,7 @@ decode_1dst_reg_1src_reg_1src_imm_3( decode_info_t* di, byte* instr_word, opnd_t
 
 void
 decode_1dst_reg_1src_reg_1src_imm_4( decode_info_t* di, byte* instr_word, opnd_t* dsts,
-                                   opnd_t* srcs, int *numdsts, int *numsrcs )
+                                   opnd_t* srcs, int *numdsts, int *numsrcs, bool sign_extend )
 {
     int reg, immed;
 
@@ -702,7 +711,7 @@ decode_1dst_reg_1src_reg_1src_imm_4( decode_info_t* di, byte* instr_word, opnd_t
 
     immed |= (instr_word[3] & 0xf);
 
-    immed = convert_shifted_immed_to_immed( immed, OPSZ_4_8 );
+    immed = convert_shifted_immed_to_immed( immed, OPSZ_4_8, sign_extend );
 
     srcs[*numsrcs] = opnd_create_immed_int((ptr_int_t)(immed), OPSZ_4_8);
     (*numsrcs)++;
@@ -710,7 +719,7 @@ decode_1dst_reg_1src_reg_1src_imm_4( decode_info_t* di, byte* instr_word, opnd_t
 
 void
 decode_0dst_reg_1src_imm_1src_mask( decode_info_t* di, byte* instr_word, opnd_t* dsts,
-                                   opnd_t* srcs, int *numdsts, int *numsrcs )
+                                   opnd_t* srcs, int *numdsts, int *numsrcs, bool sign_extend )
 {
     int reg, immed;
 
@@ -720,7 +729,7 @@ decode_0dst_reg_1src_imm_1src_mask( decode_info_t* di, byte* instr_word, opnd_t*
 
     immed |= (instr_word[3]);
 
-    immed = convert_shifted_immed_to_immed( immed, OPSZ_4_12 );
+    immed = convert_shifted_immed_to_immed( immed, OPSZ_4_12, sign_extend );
 
     srcs[*numsrcs] = opnd_create_immed_int((ptr_int_t)(immed), OPSZ_4_12);
     (*numsrcs)++;
@@ -850,7 +859,7 @@ decode_branch_instrs( decode_info_t* di, byte* instr_word, opnd_t* dsts,
       addr |= (instr_word[2] << 8 );
       addr |= (instr_word[3]);
 
-      addr = convert_shifted_immed_to_immed( addr, OPSZ_4_24 );
+      addr = convert_shifted_immed_to_immed( addr, OPSZ_4_24, true );
 
       //Convert the relative address to an absolute one here(+8 for actual pc pos)
       addr += pc + 8;
@@ -862,7 +871,7 @@ decode_branch_instrs( decode_info_t* di, byte* instr_word, opnd_t* dsts,
 
 void
 decode_operands( decode_info_t* di, int encoding, byte* instr_word, opnd_t* dsts, 
-                 opnd_t* srcs, int *numdsts, int *numsrcs, byte* pc )
+                 opnd_t* srcs, int *numdsts, int *numsrcs, byte* pc, bool sign_extend )
 {
     switch( encoding )
     {
@@ -896,35 +905,35 @@ decode_operands( decode_info_t* di, int encoding, byte* instr_word, opnd_t* dsts
         break;
       case ENC_1DST_REG_0SRC_REG_1SRC_IMM_1: 
         decode_1dst_reg_0src_reg_1src_imm_1(di, instr_word, dsts, 
-                                            srcs, numdsts, numsrcs );
+                                            srcs, numdsts, numsrcs, sign_extend );
         break;
       case ENC_1DST_REG_0SRC_REG_1SRC_IMM_2:
         decode_1dst_reg_0src_reg_1src_imm_2(di, instr_word, dsts, 
-                                            srcs, numdsts, numsrcs );
+                                            srcs, numdsts, numsrcs, sign_extend );
         break;
       case ENC_1DST_REG_0SRC_REG_1SRC_IMM_3:
         decode_1dst_reg_0src_reg_1src_imm_3(di, instr_word, dsts, 
-                                            srcs, numdsts, numsrcs );
+                                            srcs, numdsts, numsrcs, sign_extend );
         break;
       case ENC_1DST_REG_1SRC_REG_1SRC_IMM_1:
         decode_1dst_reg_1src_reg_1src_imm_1(di, instr_word, dsts, 
-                                            srcs, numdsts, numsrcs );
+                                            srcs, numdsts, numsrcs, sign_extend );
         break;
       case ENC_1DST_REG_1SRC_REG_1SRC_IMM_2:
         decode_1dst_reg_1src_reg_1src_imm_2(di, instr_word, dsts, 
-                                            srcs, numdsts, numsrcs );
+                                            srcs, numdsts, numsrcs, sign_extend );
         break;
       case ENC_1DST_REG_1SRC_REG_1SRC_IMM_3:
         decode_1dst_reg_1src_reg_1src_imm_3(di, instr_word, dsts, 
-                                            srcs, numdsts, numsrcs );
+                                            srcs, numdsts, numsrcs, sign_extend );
         break;
       case ENC_1DST_REG_1SRC_REG_1SRC_IMM_4:
         decode_1dst_reg_1src_reg_1src_imm_4(di, instr_word, dsts, 
-                                            srcs, numdsts, numsrcs );
+                                            srcs, numdsts, numsrcs, sign_extend );
         break;
       case ENC_0DST_REG_1SRC_IMM_1SRC_MASK:
         decode_0dst_reg_1src_imm_1src_mask(di, instr_word, dsts, 
-                                           srcs, numdsts, numsrcs );
+                                           srcs, numdsts, numsrcs, sign_extend );
         break;
       case ENC_0DST_REG_1SRC_REG_1SRC_MASK:
         decode_0dst_reg_1src_reg_1src_mask(di, instr_word, dsts, 
@@ -936,7 +945,7 @@ decode_operands( decode_info_t* di, int encoding, byte* instr_word, opnd_t* dsts
         break;
       case ENC_1DST_REG_2SRC_REG_1SRC_IMM:
         decode_1dst_reg_2src_reg_1src_imm(di, instr_word, dsts, 
-                                          srcs, numdsts, numsrcs );
+                                          srcs, numdsts, numsrcs, sign_extend );
         break;
       case ENC_1DST_REG_3SRC_REG_0SRC_IMM:
         decode_1dst_reg_3src_reg_0src_imm(di, instr_word, dsts, 
@@ -1099,7 +1108,7 @@ instr_info_t* decode_data_processing_register_shifted_register(byte* instr_word,
 
 
     decode_operands( di, encoding, instr_word,
-                     dsts, srcs, numdsts, numsrcs, NULL );
+                     dsts, srcs, numdsts, numsrcs, NULL, opcode_is_sign_extend( di->opcode ) );
 
 
     return op_instr[di->opcode];
@@ -1247,7 +1256,7 @@ instr_info_t* decode_data_processing_imm(byte* instr_word,
 
 
     decode_operands( di, encoding, instr_word,
-                     dsts, srcs, numdsts, numsrcs, NULL );
+                     dsts, srcs, numdsts, numsrcs, NULL, opcode_is_sign_extend( di->opcode ));
 
     return op_instr[di->opcode];
 }
@@ -1354,7 +1363,7 @@ instr_info_t* decode_misc(byte* instr_word,
 
 
     decode_operands( di, encoding, instr_word,
-                     dsts, srcs, numdsts, numsrcs, NULL );
+                     dsts, srcs, numdsts, numsrcs, NULL, opcode_is_sign_extend( di->opcode ));
 
     return op_instr[di->opcode];
 }
@@ -1434,7 +1443,7 @@ instr_info_t* decode_halfword_mul_and_mla(byte* instr_word,
 
 
     decode_operands( di, encoding, instr_word,
-                     dsts, srcs, numdsts, numsrcs, NULL );
+                     dsts, srcs, numdsts, numsrcs, NULL, opcode_is_sign_extend( di->opcode ));
 
     return op_instr[di->opcode];
 }
@@ -1503,7 +1512,7 @@ instr_info_t* decode_mul_and_mla(byte* instr_word,
 
 
     decode_operands( di, encoding, instr_word,
-                     dsts, srcs, numdsts, numsrcs, NULL );
+                     dsts, srcs, numdsts, numsrcs, NULL, opcode_is_sign_extend( di->opcode ));
 
     return op_instr[di->opcode];
 
@@ -1555,7 +1564,7 @@ instr_info_t* decode_extra_load_store_unpriv_1(byte* instr_word,
 
 
     decode_operands( di, encoding, instr_word,
-                     dsts, srcs, numdsts, numsrcs, NULL );
+                     dsts, srcs, numdsts, numsrcs, NULL, opcode_is_sign_extend( di->opcode ));
 
     return op_instr[di->opcode];
  
@@ -1619,7 +1628,7 @@ instr_info_t* decode_extra_load_store_unpriv_2(byte* instr_word,
 
 
     decode_operands( di, encoding, instr_word,
-                     dsts, srcs, numdsts, numsrcs, NULL );
+                     dsts, srcs, numdsts, numsrcs, NULL, opcode_is_sign_extend( di->opcode ));
 
     return op_instr[di->opcode];
 }
@@ -1742,7 +1751,7 @@ instr_info_t* decode_extra_load_store_2(byte* instr_word,
 
 
     decode_operands( di, encoding, instr_word,
-                     dsts, srcs, numdsts, numsrcs, NULL );
+                     dsts, srcs, numdsts, numsrcs, NULL, opcode_is_sign_extend( di->opcode ));
 
     return op_instr[di->opcode];
 }
@@ -1810,7 +1819,7 @@ instr_info_t* decode_extra_load_store_1(byte* instr_word,
 
 
     decode_operands( di, encoding, instr_word,
-                     dsts, srcs, numdsts, numsrcs, NULL );
+                     dsts, srcs, numdsts, numsrcs, NULL, opcode_is_sign_extend( di->opcode ));
 
     return op_instr[di->opcode];
 }
@@ -1878,7 +1887,7 @@ instr_info_t* decode_syncro_prims(byte* instr_word,
 
 
     decode_operands( di, encoding, instr_word,
-                     dsts, srcs, numdsts, numsrcs, NULL );
+                     dsts, srcs, numdsts, numsrcs, NULL, opcode_is_sign_extend( di->opcode ));
 
     return op_instr[di->opcode];
 }
@@ -1953,7 +1962,7 @@ instr_info_t* decode_msr_and_hints(byte* instr_word,
     ASSERT( srcs != NULL && dsts != NULL );
 
     decode_operands( di, encoding, instr_word,
-                     dsts, srcs, numdsts, numsrcs, NULL );
+                     dsts, srcs, numdsts, numsrcs, NULL, opcode_is_sign_extend( di->opcode ));
 
     return op_instr[di->opcode];
 }
@@ -2117,7 +2126,7 @@ instr_info_t* decode_data_processing_register(byte* instr_word,
 
 
     decode_operands( di, encoding, instr_word, 
-                     dsts, srcs, numdsts, numsrcs, NULL );
+                     dsts, srcs, numdsts, numsrcs, NULL, opcode_is_sign_extend( di->opcode ));
 
     return op_instr[di->opcode];
 }
@@ -2434,7 +2443,7 @@ instr_info_t* decode_load_store_word_and_ubyte1(byte* instr_word,
 
 
     decode_operands( di, encoding, instr_word,
-                     dsts, srcs, numdsts, numsrcs, NULL );
+                     dsts, srcs, numdsts, numsrcs, NULL, opcode_is_sign_extend( di->opcode));
 
     return op_instr[di->opcode];
 }
@@ -2525,7 +2534,7 @@ instr_info_t* decode_parallel_unsigned_arith(byte* instr_word,
 
 
     decode_operands( di, encoding, instr_word,
-                     dsts, srcs, numdsts, numsrcs, NULL );
+                     dsts, srcs, numdsts, numsrcs, NULL, opcode_is_sign_extend( di->opcode ));
 
     return op_instr[di->opcode];
 
@@ -2601,7 +2610,7 @@ instr_info_t* decode_parallel_signed_arith(byte* instr_word,
 
 
     decode_operands( di, encoding, instr_word,
-                     dsts, srcs, numdsts, numsrcs, NULL );
+                     dsts, srcs, numdsts, numsrcs, NULL, opcode_is_sign_extend( di->opcode ));
 
     return op_instr[di->opcode];
 
@@ -2725,7 +2734,7 @@ instr_info_t* decode_signed_mul(byte* instr_word,
 
 
     decode_operands( di, encoding, instr_word,
-                     dsts, srcs, numdsts, numsrcs, NULL );
+                     dsts, srcs, numdsts, numsrcs, NULL, opcode_is_sign_extend( di->opcode ) );
 
     return op_instr[di->opcode];
 
@@ -2869,7 +2878,7 @@ instr_info_t* decode_parallel_pack_unpack(byte* instr_word,
 
 
     decode_operands( di, encoding, instr_word,
-                     dsts, srcs, numdsts, numsrcs, NULL );
+                     dsts, srcs, numdsts, numsrcs, NULL, opcode_is_sign_extend( di->opcode ) );
 
     return op_instr[di->opcode];
 
@@ -2955,7 +2964,7 @@ instr_info_t* decode_media(byte* instr_word,
 
 
     decode_operands( di, encoding, instr_word,
-                     dsts, srcs, numdsts, numsrcs, NULL );
+                     dsts, srcs, numdsts, numsrcs, NULL, opcode_is_sign_extend( di->opcode ) );
 
     return op_instr[di->opcode];
 }
@@ -3100,7 +3109,7 @@ instr_info_t* decode_system_call_and_coprocessor(byte* instr_word,
 
 
     decode_operands( di, encoding, instr_word,
-                     dsts, srcs, numdsts, numsrcs, NULL );
+                     dsts, srcs, numdsts, numsrcs, NULL, opcode_is_sign_extend( di->opcode ) );
 
     return op_instr[di->opcode];
 }
@@ -3192,7 +3201,7 @@ instr_info_t* decode_branch(byte* instr_word,
 
 
     decode_operands( di, encoding, instr_word,
-                     dsts, srcs, numdsts, numsrcs, pc );
+                     dsts, srcs, numdsts, numsrcs, pc, opcode_is_sign_extend( di->opcode ) );
 
     return op_instr[di->opcode];
 }

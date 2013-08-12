@@ -1957,6 +1957,19 @@ get_ibl_routine_code_internal(dcontext_t *dcontext,
     return NULL;
 }
 
+cache_pc
+get_indirect_branch_lookup_addr(dcontext_t* dcontext )
+{
+   ibl_code_t *ibl_code;
+
+   ibl_code = get_shared_gencode(dcontext);
+
+   if( ibl_code == NULL )
+     return NULL;
+
+   return ibl_code->indirect_branch_lookup_routine;
+}
+
 
 cache_pc 
 get_ibl_routine_ex(dcontext_t *dcontext, ibl_entry_point_type_t entry_type,

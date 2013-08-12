@@ -51,6 +51,10 @@
 #include "monitor.h"
 #include <string.h> /* memcpy */
 
+//SJF Quick hack to allow instr creation here
+#include "arm/instr.h"
+#include "arm/instr_create.h"
+
 #ifdef DEBUG
 # include "decode_fast.h" /* for decode_next_pc for stress_recreate_pc */
 #endif
@@ -431,6 +435,7 @@ emit_fragment_common(dcontext_t *dcontext, app_pc tag,
     byte      *prev_stub_pc = NULL;
     uint      stub_size = 0;
     bool      no_stub = false;
+    instr_t* new_inst;
     IF_X64(bool x86_mode;)
 
     KSTART(emit);
@@ -472,8 +477,54 @@ emit_fragment_common(dcontext_t *dcontext, app_pc tag,
             offset += instr_length(dcontext, inst);
         ASSERT_NOT_IMPLEMENTED(!TEST(INSTR_HOT_PATCHABLE, inst->flags));
         if (instr_is_exit_cti(inst)) {
-            target = instr_get_branch_target_pc(inst);
+            //SJF Change this to overwrite the indirect branch with a branch to
+            // the indirect branch lookup routine and an instr to move the branch 
+            // target into R0
+            if( instr_is_mbr( inst ))//If indirect then 
+            {
+              //Reg containing addr should be in first src 
+              //If blx/bl etc.. then get 1st src reg
+              //If mov or ldr then get address from other opnds
+              //Then move to r0 and replace the indirect with a 
+              // branch to the exit stub
+
+              /*TODO Im not sure whether this is even the correct place to do this.
+                     May need to replace this function with a proper one */
+              target = get_indirect_branch_lookup_addr(dcontext); 
+
+              if( inst->opcode == OP_blx_reg || inst->opcode == OP_bx || inst->opcode == OP_bxj )
+              {
+                //Copy the dest to R0
+                instrlist_meta_preinsert(ilist, inst, 
+                                         INSTR_CREATE_mov_reg( dcontext, opnd_create_reg(REG_RR0),
+                                                                inst->src0, COND_ALWAYS ));
+
+                //Change to a direct branch. Should be patched later
+                inst->opcode = OP_b; 
+              }
+              else if( inst->opcode == OP_mov_reg || inst->opcode == OP_mov_imm ||
+                        ( inst->opcode >= OP_ldr_imm && inst->opcode <= OP_ldrt ) )
+              {
+                //Change the dest of the instr to REG R0 and add branch to indirect stub after
+
+                inst->dsts[0].value.reg = REG_RR0;
+
+                new_inst = INSTR_CREATE_branch(dcontext, opnd_create_pc( target ), COND_ALWAYS );
+                instr_set_ok_to_mangle(new_inst, true);
+
+                instrlist_meta_postinsert( ilist, inst, new_inst );
+
+                //Make sure inst is pointing at the last instruction
+                inst = instrlist_last( ilist );
+              }
+            }
+            else
+            {
+              target = instr_get_branch_target_pc(inst);
+            }
+
             len = exit_stub_size(dcontext, (cache_pc)target, flags);
+
             if (PAD_FRAGMENT_JMPS(flags) && instr_ok_to_emit(inst)) {
                 /* Most exits have only a single patchable jmp (is difficult 
                  * to handle all the races for more then one). Exceptions are 

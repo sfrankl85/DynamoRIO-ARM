@@ -879,7 +879,7 @@ copy_and_re_relativize_raw_instr(dcontext_t *dcontext, instr_t *instr,
 
 
 int
-convert_immed_to_shifted_immed( int immed_int, int sz )
+convert_immed_to_shifted_immed( int immed_int, int sz, bool sign_extend )
 {
   #define MAX_12_SHIFTS  16
   #define MAX_24_SHIFTS  4
@@ -891,34 +891,38 @@ convert_immed_to_shifted_immed( int immed_int, int sz )
   switch( sz )
   {
     case OPSZ_4_12:
-      //SJF TODO Check if immed cannot fit in 8 bits. If not then shift it
-      if( to_shift > INT8_MAX || to_shift < INT8_MIN )
-      {
-        do
+      if( sign_extend )
+      { 
+        if( to_shift > INT8_MAX || to_shift < INT8_MIN )
         {
-          to_shift = (to_shift << 2) | (to_shift >> 30);
+          do
+          {
+            to_shift = (to_shift << 2) | (to_shift >> 30);
 
-          if( to_shift <= INT8_MAX && to_shift >= INT8_MIN )
-            fin = true;
+            if( to_shift <= INT8_MAX && to_shift >= INT8_MIN )
+              fin = true;
 
-          shifts++;
-        } while( !fin && shifts < MAX_12_SHIFTS );
+            shifts++;
+          } while( !fin && shifts < MAX_12_SHIFTS );
 
-        if( fin )//Succeeded 
-        {
-          shift_int |= (shifts<<8);  
+          if( fin )//Succeeded 
+          {
+            shift_int |= (shifts<<8);  
 
-          shift_int |= (to_shift&0xff);
+            shift_int |= (to_shift&0xff);
+          }
+          else
+            shift_int = immed_int; //SJF TODO Fail here???
+
+          return (int)shift_int;
         }
         else
-          shift_int = immed_int; //SJF TODO Fail here???
-
-        return (int)shift_int;
+          return immed_int;
       }
       else
-        return immed_int;
-      break;
-
+      {
+        return immed_int;        
+      }
     case OPSZ_4_24:
       /* Shrink to 26 bits
          and the shift to the left by 2 */  
@@ -1180,11 +1184,11 @@ encode_1dst_reg_2src_reg_1src_imm(decode_info_t* di, instr_t* instr, byte* pc)
         {
           //For _reg opcodes
           case IMMED_INTEGER_kind:
-            b = convert_immed_to_shifted_immed( opnd.value.immed_int, OPSZ_4_12 );
+            b = convert_immed_to_shifted_immed( opnd.value.immed_int, OPSZ_4_12, opcode_is_sign_extend( opc ) );
 
             word[2] |= (b >> 1);
 
-            b = (convert_immed_to_shifted_immed( opnd.value.immed_int, OPSZ_4_12 ) & 0x1);
+            b = (convert_immed_to_shifted_immed( opnd.value.immed_int, OPSZ_4_12, opcode_is_sign_extend( opc ) ) & 0x1);
 
             word[3] |= (b << 7 );
             break;
@@ -2102,11 +2106,11 @@ encode_1dst_reg_1src_reg_1src_imm_2(decode_info_t* di, instr_t* instr, byte* pc)
         switch( opnd.kind )
         {
           case IMMED_INTEGER_kind:
-            b = (convert_immed_to_shifted_immed( opnd.value.immed_int, OPSZ_4_12 ) >> 8 );
+            b = (convert_immed_to_shifted_immed( opnd.value.immed_int, OPSZ_4_12, opcode_is_sign_extend( opc ) ) >> 8 );
 
             word[2] |= b;
 
-            b = convert_immed_to_shifted_immed( opnd.value.immed_int, OPSZ_4_12 );
+            b = convert_immed_to_shifted_immed( opnd.value.immed_int, OPSZ_4_12, opcode_is_sign_extend( opc ) );
             b &= 0xff;
 
             word[3] = b;
@@ -2341,15 +2345,7 @@ encode_0dst_reg_1src_reg_0src_imm(decode_info_t* di, instr_t* instr, byte* pc)
 
     encode_bits_7_to_4( di, instr, info, word );
 
-   //Word should now be an instruction. MSB encoding
-   *((byte *)pc) = word[0];
-   pc++;
-   *((byte *)pc) = word[1];
-   pc++;
-   *((byte *)pc) = word[2];
-   pc++;
-   *((byte *)pc) = word[3];
-   pc++;
+    pc = write_word_to_fcache(pc, word );
 
    return pc;
 }
@@ -3108,13 +3104,13 @@ encode_branch_instrs(decode_info_t* di, instr_t* instr, byte* pc)
               //Now now the encode pc so relativeise the target pc
               value = (opnd.value.pc - pc - 8);
 
-              b = (byte)(convert_immed_to_shifted_immed( value, OPSZ_4_24 ) >> 16);
+              b = (byte)(convert_immed_to_shifted_immed( value, OPSZ_4_24, opcode_is_sign_extend( opc )) >> 16);
               word[1] = b;
 
-              b = (byte)(convert_immed_to_shifted_immed( value, OPSZ_4_24 ) >> 8);
+              b = (byte)(convert_immed_to_shifted_immed( value, OPSZ_4_24, opcode_is_sign_extend( opc )) >> 8);
               word[2] = b;
 
-              b = (byte)(convert_immed_to_shifted_immed( value, OPSZ_4_24 ) & 0xff);
+              b = (byte)(convert_immed_to_shifted_immed( value, OPSZ_4_24, opcode_is_sign_extend( opc )) & 0xff);
 
               word[3] = b;
               break;
