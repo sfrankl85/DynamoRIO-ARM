@@ -138,6 +138,7 @@
  */
 #define FRAG_COARSE_GRAIN         0x10000000
 
+
 /* Translation info was recorded at fragment emit time in a post-fragment_t field.
  * This is NOT set for flushed fragments, which store their info in the in_xlate
  * union instead and are marked FRAG_WAS_DELETED, though if both flags are set
@@ -157,6 +158,9 @@
 
 /* This fragment immediately follows a free entry in the fcache */
 #define FRAG_FOLLOWS_FREE_ENTRY   0x80000000
+
+//SJF TODO This overwrite free entry flag above so will need changing
+#define FAKE_INDIRECT_FRAG        0x80000000
 
 /* Flags that a future fragment can transfer to a real on taking its place:
  * Naturally we don't want FRAG_IS_FUTURE or FRAG_WAS_DELETED.

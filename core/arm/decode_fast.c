@@ -687,7 +687,8 @@ decode_cti(dcontext_t *dcontext, byte *pc, instr_t *instr)
 
       return pc;
     } 
-    else if( opcode_is_relative_load( instr->opcode ))
+    else if( opcode_is_relative_load( instr->opcode ) ||
+             opcode_is_other_relative( instr->opcode ))
     {
       /* To allow a relative instr to be covnerted to an absolute one later
          then decode it fully here

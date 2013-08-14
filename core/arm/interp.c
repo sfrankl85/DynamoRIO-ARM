@@ -2431,6 +2431,7 @@ build_bb_ilist(dcontext_t *dcontext, build_bb_t *bb)
     dcontext_t *my_dcontext = get_thread_private_dcontext();
     DEBUG_DECLARE(bool regenerated = false;)
     bool stop_bb_on_fallthrough = false;
+    instr_t*    new_inst;
 
     ASSERT(bb->initialized);
     /* note that it's ok for bb->start_pc to be NULL as our check_new_page_start
@@ -2733,17 +2734,8 @@ build_bb_ilist(dcontext_t *dcontext, build_bb_t *bb)
         }
 
         /* far direct is treated as indirect (i#823) */
-        //SJF For direct branches
-        if (instr_is_cti(bb->instr) && !instr_is_mbr(bb->instr)) {
-            if (bb_process_ubr(dcontext, bb))
-                continue;
-            else {
-                if (bb->instr != NULL) /* else, bb_process_ubr() set exit_type */
-                    bb->exit_type |= instr_branch_type(bb->instr);
-                break;
-            }
-        } else
-            instrlist_append(bb->ilist, bb->instr);
+        //Just append to the list and it will break out of the loop below
+        instrlist_append(bb->ilist, bb->instr);
 
 
 #ifdef RETURN_AFTER_CALL
@@ -2757,69 +2749,52 @@ build_bb_ilist(dcontext_t *dcontext, build_bb_t *bb)
 
         //Removed if and changed else if to if
         if (instr_is_mbr(bb->instr) ){ //Any indirect(from reg) cti instruction inclduing mov pc, lr
+             /* SJF If it is an indirect branch then just save the target into R0 and treat it
+                    as a normal branch. dispatch() should detect the target branch corectly. */
 
-            /* Manage the case where we don't need to perform 'normal'
-             * indirect branch processing.
-             */
-            bool normal_indirect_processing = true;
-            bool elide_and_continue_if_converted = true;
+              if( bb->instr->opcode == OP_blx_reg || bb->instr->opcode == OP_bx || bb->instr->opcode == OP_bxj )
+              {
+                //Copy the dest to R0
+                instrlist_meta_preinsert(bb->ilist, bb->instr,
+                                         INSTR_CREATE_mov_reg( dcontext, opnd_create_reg(REG_RR0),
+                                                                bb->instr->src0, COND_ALWAYS ));
+                //Change to a direct branch. Should be patched later
+                bb->instr->opcode = OP_b;
+                bb->instr->num_srcs = 1;
+                bb->instr->num_dsts = 0;
 
-            if (instr_is_return(bb->instr)) {
-                ibl_branch_type = IBL_RETURN;
-                STATS_INC(num_returns);
-            } else {
-                STATS_INC(num_all_calls);
-                STATS_INC(num_indirect_calls);
+                bb->instr->src0.kind = PC_kind;
+                bb->instr->src0.value.pc = 0; 
 
-                if (DYNAMO_OPTION(coarse_split_calls) && DYNAMO_OPTION(coarse_units) && 
-                    TEST(FRAG_COARSE_GRAIN, bb->flags)) {
-                    if (instrlist_first(bb->ilist) != bb->instr) {
-                        /* have call be in its own bb */
-                        bb_stop_prior_to_instr(dcontext, bb, true/*appended already*/);
-                        break; /* stop bb */
-                    } else {
-                        /* single-call fine-grained bb */
-                        bb->flags &= ~FRAG_COARSE_GRAIN;
-                        STATS_INC(coarse_prevent_cti);
-                    }
-                }
+                instr_set_raw_bits_valid( bb->instr, false );
+              }
+              else if( bb->instr->opcode == OP_mov_reg || bb->instr->opcode == OP_mov_imm ||
+                        ( bb->instr->opcode >= OP_ldr_imm && bb->instr->opcode <= OP_ldrt ) )
+              {
+                //Change the dest of the instr to REG R0 and add branch to indirect stub after
+                bb->instr->dsts[0].value.reg = REG_RR0;
+                instr_set_raw_bits_valid( bb->instr, false );
 
-                /* If the indirect call can be converted into a direct one,
-                 * bypass normal indirect call processing.
-                 */
-                if (DYNAMO_OPTION(indcall2direct)
-                    && bb_process_convertible_indcall(dcontext, bb)) {
-                    normal_indirect_processing = false;
-                    elide_and_continue_if_converted = true;
-                }
-                else if (bb_process_indcall_syscall(dcontext, bb,
-                                                    &elide_and_continue_if_converted)) {
-                    normal_indirect_processing = false;
-                }
-                else
-                    ibl_branch_type = IBL_INDCALL;
-            } 
+                //Should get overwrittn with branch to exit stub later
+                new_inst = INSTR_CREATE_branch(dcontext, opnd_create_pc( 0 ), COND_ALWAYS );
 
-#ifdef CUSTOM_TRACES_RET_REMOVAL
-            if (instr_is_return(bb->instr))
-                my_dcontext->num_rets++;
-            else if (instr_is_call_indirect(bb->instr))
-                my_dcontext->num_calls++;
-#endif
-            /* set exit type since this instruction will get mangled */
-            if (normal_indirect_processing) {
-                bb->exit_type |= instr_branch_type(bb->instr);
-                bb->exit_target = get_ibl_routine(dcontext,
-                                                  get_ibl_entry_type(bb->exit_type),
-                                                  DEFAULT_IBL_BB(), ibl_branch_type);
-                LOG(THREAD, LOG_INTERP, 4, "mbr exit target = "PFX"\n", bb->exit_target);
-                break;
-            } else {
-                /* decide whether to stop bb here */
-                if (!elide_and_continue_if_converted)
-                    break;
-                /* fall through for -max_bb_instrs check */
-            }
+                instrlist_meta_postinsert( bb->ilist, bb->instr, new_inst );
+                instr_set_ok_to_mangle(new_inst, true);
+                new_inst->flags |= INSTR_JMP_EXIT;
+
+                //Make sure inst is pointing at the last instruction
+                bb->instr = instrlist_last( bb->ilist );
+              }
+
+              bb->flags |= FAKE_INDIRECT_FRAG;
+              bb->exit_type |= instr_branch_type(bb->instr);
+              //SJF Copied from 'else if' below
+              total_branches++;
+              if (total_branches >= BRANCH_LIMIT) {
+                  /* set type of 1st exit cti for cbr (bb->exit_type is for fall-through) */
+                  instr_exit_branch_set_type(bb->instr, instr_branch_type(bb->instr));
+                  break;
+              }
         }
         else if (instr_is_cti(bb->instr)) {  //All other branches. Should be only direct 
             total_branches++;
@@ -2997,20 +2972,6 @@ build_bb_ilist(dcontext_t *dcontext, build_bb_t *bb)
     if (bb->unmangled_ilist != NULL)
         *bb->unmangled_ilist = instrlist_clone(dcontext, bb->ilist);
 #endif
-
-#ifdef NO
-//SJF No far ctis ???
-    if (bb->instr != NULL && instr_opcode_valid(bb->instr) &&
-        instr_is_far_cti(bb->instr)) {
-        /* Simplify far_ibl (i#823) vs trace_cmp ibl as well as
-         * cross-mode direct stubs varying in a trace by disallowing
-         * far cti in middle of trace
-         */
-        bb->flags |= FRAG_MUST_END_TRACE;
-        /* Simplify coarse by not requiring extra prefix stubs */
-        bb->flags &= ~FRAG_COARSE_GRAIN;
-    }
-#endif //NO
 
     /* create a final instruction that will jump to the exit stub
      * corresponding to the fall-through of the conditional branch or
@@ -3920,6 +3881,7 @@ build_basic_block_fragment(dcontext_t *dcontext, app_pc start, uint initial_flag
             build_native_exec_bb(dcontext, &bb);
         }
     }
+
     /* case 9652: we do not want to persist the image entry point, so we keep
      * it fine-grained
      */

@@ -1960,9 +1960,15 @@ get_ibl_routine_code_internal(dcontext_t *dcontext,
 cache_pc
 get_indirect_branch_lookup_addr(dcontext_t* dcontext )
 {
-   ibl_code_t *ibl_code;
+   ibl_code_t *ibl_code=NULL;
+   generated_code_t *gen_code=NULL;
 
-   ibl_code = get_shared_gencode(dcontext);
+   gen_code = get_emitted_routines_code(dcontext);
+  
+   if( gen_code == NULL )
+     return NULL;
+
+   ibl_code = &gen_code->bb_ibl[IBL_SHARED_SYSCALL];
 
    if( ibl_code == NULL )
      return NULL;

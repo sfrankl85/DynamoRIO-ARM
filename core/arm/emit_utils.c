@@ -131,6 +131,26 @@ void end_return_lookup(void);
 #  define FRAG_DB_SHARED(flags) (TEST(FRAG_SHARED, (flags)))
 #endif
 
+//Moved
+/* PR 244737: even thread-private fragments use TLS on x64.  We accomplish
+ * that at the caller site, so we should never see an "absolute" request.
+ */
+#define RESTORE_FROM_DC_VIA_REG(ilist, absolute, dc, reg_dr, reg, offs, where, relinstr)              \
+    ((absolute) ? (IF_X64_(ASSERT_NOT_IMPLEMENTED(false))                     \
+                   instr_create_restore_from_dcontext((ilist), (dc), (reg), (offs), (where), (relinstr), absolute)) : \
+     instr_create_restore_from_dc_via_reg((dc), (reg_dr), (reg), (offs)))
+/* Note the magic absolute boolean that callers are expected to have declared */
+#define SAVE_TO_DC_VIA_REG(ilist, absolute, dc, reg_dr, reg, offs, where, relinstr)              \
+    ((absolute) ? (IF_X64_(ASSERT_NOT_IMPLEMENTED(false))                \
+                   instr_create_save_to_dcontext((ilist), (dc), (reg), (offs), (where), (relinstr), absolute)) : \
+     instr_create_save_to_dc_via_reg((dc), reg_dr, (reg), (offs)))
+
+#define RESTORE_FROM_DC(ilist, dc, reg, offs, where, relinstr) \
+    RESTORE_FROM_DC_VIA_REG(ilist, absolute, dc, REG_NULL, reg, offs, where, relinstr)
+/* Note the magic absolute boolean that callers are expected to have declared */
+#define SAVE_TO_DC(ilist, dc, reg, offs, where, relinstr) \
+    SAVE_TO_DC_VIA_REG(ilist, absolute, dc, REG_NULL, reg, offs, where, relinstr)
+
 /**
  ** CAUTION!
  **
@@ -1088,6 +1108,22 @@ insert_exit_stub_other_flags(dcontext_t *dcontext, fragment_t *f,
         /* SJF Dont know what this is */
     } else {
         /* direct branch */
+        instrlist_t ilist;
+        instrlist_init(&ilist);
+        instr_t* inst;
+
+        /* SJF If this is a fake direct branch. i.e. indirect. Then 
+               make sure to store the target of the branch into next_tag*/
+        bool absolute=true;
+        if (TEST(FAKE_INDIRECT_FRAG, f->flags)) 
+           SAVE_TO_DC(&ilist, dcontext, REG_RR0, NEXT_TAG_OFFSET, INSERT_APPEND, NULL);
+
+        /* Output the instrs. Doesnt match how other instrs are added here but oh well */
+        for (inst = instrlist_first(&ilist); inst; inst = instr_get_next(inst)) {
+            byte *nxt_pc = instr_encode(dcontext, inst, pc);
+            ASSERT(nxt_pc != NULL);
+            pc = nxt_pc;
+        }
 
         /* we use XAX to hold the linkstub pointer before we get to fcache_return, 
            note that indirect stubs use XBX for linkstub pointer */
@@ -1520,6 +1556,8 @@ link_indirect_exit(dcontext_t *dcontext, fragment_t *f, linkstub_t *l, bool hot_
     app_pc exit_target, cur_target;
     app_pc target_tag = EXIT_TARGET_TAG(dcontext, f, l);
     byte *pc;
+
+#if 0
     /* w/ indirect exits now having their stub pcs computed based
      * on the cti targets, we must calculate them at a consistent
      * state (we do have multi-stage modifications for inlined stubs)
@@ -1629,10 +1667,12 @@ link_indirect_exit(dcontext_t *dcontext, fragment_t *f, linkstub_t *l, bool hot_
         }
 #endif
     }
+#endif //0
+
     /* get absolute address of target */
     cur_target = (app_pc) PC_RELATIVE_TARGET(pc+1);
     exit_target = get_linked_entry(dcontext, cur_target);
-    pc++; /* skip jmp opcode */
+    pc++; /* skip branch opcode */
     pc = insert_relative_target(pc, exit_target, hot_patch);
 }
 
@@ -3041,18 +3081,6 @@ build_profile_call_buffer()
 
 #endif /* PROFILE_RDTSC */
 
-/* PR 244737: even thread-private fragments use TLS on x64.  We accomplish
- * that at the caller site, so we should never see an "absolute" request.
- */
-#define RESTORE_FROM_DC_VIA_REG(ilist, absolute, dc, reg_dr, reg, offs, where, relinstr)              \
-    ((absolute) ? (IF_X64_(ASSERT_NOT_IMPLEMENTED(false))                     \
-                   instr_create_restore_from_dcontext((ilist), (dc), (reg), (offs), (where), (relinstr), absolute)) : \
-     instr_create_restore_from_dc_via_reg((dc), (reg_dr), (reg), (offs)))
-/* Note the magic absolute boolean that callers are expected to have declared */
-#define SAVE_TO_DC_VIA_REG(ilist, absolute, dc, reg_dr, reg, offs, where, relinstr)              \
-    ((absolute) ? (IF_X64_(ASSERT_NOT_IMPLEMENTED(false))                \
-                   instr_create_save_to_dcontext((ilist), (dc), (reg), (offs), (where), (relinstr), absolute)) : \
-     instr_create_save_to_dc_via_reg((dc), reg_dr, (reg), (offs)))
 
 /***************************************************************************/
 /*             THREAD-PRIVATE/SHARED ROUTINE GENERATION                    */
@@ -3068,11 +3096,6 @@ build_profile_call_buffer()
 /* PR 244737: even thread-private fragments use TLS on x64.  We accomplish
  * that at the caller site, so we should never see an "absolute" request.
  */
-#define RESTORE_FROM_DC(ilist, dc, reg, offs, where, relinstr) \
-    RESTORE_FROM_DC_VIA_REG(ilist, absolute, dc, REG_NULL, reg, offs, where, relinstr)
-/* Note the magic absolute boolean that callers are expected to have declared */
-#define SAVE_TO_DC(ilist, dc, reg, offs, where, relinstr) \
-    SAVE_TO_DC_VIA_REG(ilist, absolute, dc, REG_NULL, reg, offs, where, relinstr)
 
 #define OPND_TLS_FIELD(offs) opnd_create_tls_slot(os_tls_offset(offs))
 
@@ -7356,8 +7379,8 @@ emit_client_ibl_xfer(dcontext_t *dcontext, byte *pc, generated_code_t *code)
     /* free the instrlist_t elements */
     instrlist_clear(dcontext, &ilist);
     
-    return pc;
 #endif
+    return pc;
 }
  
 static void

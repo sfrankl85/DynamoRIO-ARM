@@ -2583,6 +2583,10 @@ DR_API
 bool
 opcode_is_relative_load( int opc );
 
+DR_API
+bool
+opcode_is_other_relative( int opc );
+
 
 DR_API
 /**

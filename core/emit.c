@@ -239,9 +239,11 @@ set_linkstub_fields(dcontext_t *dcontext, fragment_t *f, instrlist_t *ilist,
             target = instr_get_branch_target_pc(inst);
 
             if (is_indirect_branch_lookup_routine(dcontext, (cache_pc)target)) {
+/*           SJF IGNORE
                 ASSERT(IF_WINDOWS_ELSE_0(is_shared_syscall_routine(dcontext, target)) ||
                        is_ibl_routine_type(dcontext, (cache_pc)target,
                                            extract_branchtype((ushort)instr_exit_branch_type(inst))));
+*/
                 /* this is a mangled form of an original indirect
                  * branch or is a mangled form of an indirect branch
                  * to a real native pc out of the fragment
@@ -477,52 +479,7 @@ emit_fragment_common(dcontext_t *dcontext, app_pc tag,
             offset += instr_length(dcontext, inst);
         ASSERT_NOT_IMPLEMENTED(!TEST(INSTR_HOT_PATCHABLE, inst->flags));
         if (instr_is_exit_cti(inst)) {
-            //SJF Change this to overwrite the indirect branch with a branch to
-            // the indirect branch lookup routine and an instr to move the branch 
-            // target into R0
-            if( instr_is_mbr( inst ))//If indirect then 
-            {
-              //Reg containing addr should be in first src 
-              //If blx/bl etc.. then get 1st src reg
-              //If mov or ldr then get address from other opnds
-              //Then move to r0 and replace the indirect with a 
-              // branch to the exit stub
-
-              /*TODO Im not sure whether this is even the correct place to do this.
-                     May need to replace this function with a proper one */
-              target = get_indirect_branch_lookup_addr(dcontext); 
-
-              if( inst->opcode == OP_blx_reg || inst->opcode == OP_bx || inst->opcode == OP_bxj )
-              {
-                //Copy the dest to R0
-                instrlist_meta_preinsert(ilist, inst, 
-                                         INSTR_CREATE_mov_reg( dcontext, opnd_create_reg(REG_RR0),
-                                                                inst->src0, COND_ALWAYS ));
-
-                //Change to a direct branch. Should be patched later
-                inst->opcode = OP_b; 
-              }
-              else if( inst->opcode == OP_mov_reg || inst->opcode == OP_mov_imm ||
-                        ( inst->opcode >= OP_ldr_imm && inst->opcode <= OP_ldrt ) )
-              {
-                //Change the dest of the instr to REG R0 and add branch to indirect stub after
-
-                inst->dsts[0].value.reg = REG_RR0;
-
-                new_inst = INSTR_CREATE_branch(dcontext, opnd_create_pc( target ), COND_ALWAYS );
-                instr_set_ok_to_mangle(new_inst, true);
-
-                instrlist_meta_postinsert( ilist, inst, new_inst );
-
-                //Make sure inst is pointing at the last instruction
-                inst = instrlist_last( ilist );
-              }
-            }
-            else
-            {
-              target = instr_get_branch_target_pc(inst);
-            }
-
+            target = instr_get_branch_target_pc(inst);
             len = exit_stub_size(dcontext, (cache_pc)target, flags);
 
             if (PAD_FRAGMENT_JMPS(flags) && instr_ok_to_emit(inst)) {

@@ -2357,6 +2357,33 @@ instr_branch_set_prefix_target(instr_t *instr, bool val)
 }
 #endif /* UNSUPPORTED_API */
 
+/*Checks if the instr takes a reg or a mem reg as its first src.
+         If it does then it checks if the first src is the pc and returns true if it is
+         false otheriwse.
+*/
+DR_API
+bool
+instr_reads_pc( instr_t* instr )
+{
+   instr_info_t* ii;
+
+   ASSERT( (instr != NULL) );
+
+   ii = op_instr[instr->opcode];
+
+   if( ii->src1_type == TYPE_REG ||
+       ii->src1_type == TYPE_M )
+   {
+     if( instr->src0.kind == REG_kind ||
+         instr->src0.kind == MEM_REG_kind )
+       return ( instr->src0.value.reg == REG_RR15 );
+     else
+       return false;
+   } 
+   else
+     return false;
+}
+
 instrlist_t*
 instrlist_rewrite_relative_to_absolute( dcontext_t* dcontext, instrlist_t* ilist )
 {
@@ -2400,6 +2427,8 @@ instrlist_rewrite_relative_to_absolute( dcontext_t* dcontext, instrlist_t* ilist
               inst->opcode--;
               //Make sure it is computing base + offset 
               instr_set_u_flag( dcontext, inst, true );
+              //Make sure it writes the modified instruction
+              instr_set_raw_bits_valid( inst, false );
 
               //Hope it isnt R9 that is the dst of the ldr instr
               instrlist_meta_postinsert( ilist, inst, INSTR_CREATE_pop(dcontext,
@@ -2411,6 +2440,48 @@ instrlist_rewrite_relative_to_absolute( dcontext_t* dcontext, instrlist_t* ilist
               CLIENT_ASSERT( false, "unimplemented relative instr found" );
               break;
           }
+        }
+        else if( opcode_is_other_relative( inst->opcode ))
+        //First src is r15. If any other instrs have a 2nd++ src of r15 it wont check it
+        {
+          //Only unrelativeise the first src opnd
+          switch( inst->opcode )
+          {
+            case OP_adr:
+              instrlist_meta_preinsert( ilist, inst, INSTR_CREATE_push(dcontext,
+                                               opnd_create_reg_list(REGLIST_R8|REGLIST_R9),
+                                               COND_ALWAYS ));
+
+              memcpy( &orig_opnd, &(inst->src0), sizeof( opnd_t ));
+
+              //Move addr + offset into reg. SJF weird shit going on with offset so just add to addr
+              instrlist_preinsert_move_32bits_to_reg( ilist, dcontext, REG_RR8, REG_RR9,
+                                                      inst->bytes+8+orig_opnd.value.immed_int, inst ); //Before current inst
+
+              //Change ldr*_lit to ldr*_reg
+              inst->src0 = opnd_create_reg( REG_RR8 );
+
+              //Allocate space for new src opnd
+              instr_set_num_opnds(dcontext, inst, 0, 2);
+
+              //Set to 0 as added to the addr above
+              orig_opnd.value.immed_int = 0;
+              memcpy( &inst->srcs[0], &orig_opnd, sizeof( opnd_t ));
+
+              //Just change the adr to an add imm 
+              inst->opcode = OP_add_imm;
+              //Make sure it is computing base + offset
+              instr_set_u_flag( dcontext, inst, true );
+              //Make sure it writes the modified instruction
+              instr_set_raw_bits_valid( inst, false );
+
+              //Hope it isnt R9 that is the dst of the ldr instr
+              instrlist_meta_postinsert( ilist, inst, INSTR_CREATE_pop(dcontext,
+                                                         opnd_create_reg_list(REGLIST_R8|REGLIST_R9),
+                                                         COND_ALWAYS ));
+              break;
+          }
+
         }
     }
 }
@@ -3224,10 +3295,8 @@ instr_has_r_flag( instr_t* instr )
 
 DR_API
 bool
-instr_has_s_flag( instr_t* instr )
+opcode_has_s_flag( int opc )
 {
-    int opc = instr_get_opcode(instr);
-
     if( opc == OP_adc_imm || opc == OP_adc_reg ||
         opc == OP_adc_rsr || opc == OP_add_reg ||
         opc == OP_add_rsr || opc == OP_add_imm ||
@@ -3262,10 +3331,17 @@ instr_has_s_flag( instr_t* instr )
 
 DR_API
 bool
-instr_has_w_flag( instr_t* instr )
+instr_has_s_flag( instr_t* instr )
 {
     int opc = instr_get_opcode(instr);
 
+    return opcode_has_s_flag( opc );
+}
+
+DR_API
+bool
+opcode_has_w_flag( int opc )
+{
     if( opc == OP_ldc_imm || opc == OP_ldc2_imm || 
         opc == OP_ldm  || opc == OP_ldmia ||
         opc == OP_ldmfd || opc == OP_ldmda ||
@@ -3294,10 +3370,17 @@ instr_has_w_flag( instr_t* instr )
 
 DR_API
 bool
-instr_has_d_flag( instr_t* instr )
+instr_has_w_flag( instr_t* instr )
 {
     int opc = instr_get_opcode(instr);
 
+    return opcode_has_w_flag( opc );
+}
+
+DR_API
+bool
+opcode_has_d_flag( int opc )
+{
     if( opc == OP_ldc_imm || opc == OP_ldc2_imm ||
         opc == OP_ldc_lit || opc == OP_ldc2_lit ||
         opc == OP_stc || opc == OP_stc2 )
@@ -3308,10 +3391,17 @@ instr_has_d_flag( instr_t* instr )
 
 DR_API
 bool
-instr_has_u_flag( instr_t* instr )
+instr_has_d_flag( instr_t* instr )
 {
     int opc = instr_get_opcode(instr);
 
+    return opcode_has_d_flag( opc );
+}
+
+DR_API
+bool
+opcode_has_u_flag( int opc )
+{
     if( opc == OP_ldc_imm || opc == OP_ldc2_imm ||
         opc == OP_ldc_lit || opc == OP_ldc2_lit || 
         opc == OP_ldr_imm || opc == OP_ldr_lit ||
@@ -3342,12 +3432,20 @@ instr_has_u_flag( instr_t* instr )
 
 DR_API
 bool
-instr_has_p_flag( instr_t* instr )
+instr_has_u_flag( instr_t* instr )
 {
     int opc = instr_get_opcode(instr);
 
+    return opcode_has_u_flag( opc );
+}
+
+DR_API
+bool
+opcode_has_p_flag( int opc )
+{
     if( opc == OP_ldc_imm || opc == OP_ldc2_imm ||
-        opc == OP_ldr_reg || opc == OP_ldrb_reg ||
+        opc == OP_ldr_imm || opc == OP_ldr_reg || 
+        opc == OP_ldrb_imm || opc == OP_ldrb_reg ||
         opc == OP_ldrd_imm || opc == OP_ldrd_reg ||
         opc == OP_ldrh_imm || opc == OP_ldrh_reg ||
         opc == OP_ldrsb_imm || opc == OP_ldrsb_reg ||
@@ -3360,6 +3458,15 @@ instr_has_p_flag( instr_t* instr )
       return true;
     else
       return false;
+}
+
+DR_API
+bool
+instr_has_p_flag( instr_t* instr )
+{
+    int opc = instr_get_opcode(instr);
+
+    return opcode_has_p_flag( opc );
 }
 
 
@@ -4191,6 +4298,17 @@ opcode_is_unconditional(int opc)
    else
      return false;
 }
+
+bool
+opcode_is_other_relative( int opc )
+{
+  if( opc == OP_adr )
+    return true;
+  else
+    return false;
+
+}
+
 
 bool 
 opcode_is_relative_load( int opc )
