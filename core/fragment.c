@@ -2342,6 +2342,8 @@ static void
 fragment_init_heap(fragment_t *f, app_pc tag, int direct_exits, int indirect_exits,
                    uint flags)
 {
+    linkstub_t* l;
+
     ASSERT(f != NULL);
     f->flags = flags; /* MUST set before calling fcache_add_fragment or
                        * FRAGMENT_EXIT_STUBS */
@@ -2353,6 +2355,8 @@ fragment_init_heap(fragment_t *f, app_pc tag, int direct_exits, int indirect_exi
     f->also.also_vmarea = NULL; /* must be set by caller */
 
     linkstubs_init(FRAGMENT_EXIT_STUBS(f), direct_exits, indirect_exits, f);
+
+    l = FRAGMENT_EXIT_STUBS(f);
 
     /* initialize non-ibt entry to top of fragment (caller responsible for
      * setting up prefix)

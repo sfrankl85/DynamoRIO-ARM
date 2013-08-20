@@ -745,9 +745,10 @@ dispatch_enter_dynamorio(dcontext_t *dcontext)
                     STATS_INC(cbr_disambiguations);
                 }
             }
-            
-            dcontext->next_tag = EXIT_TARGET_TAG(dcontext, dcontext->last_fragment,
-                                                 dcontext->last_exit);
+            // SJF If it is a fake indirect then next_tag is already set.
+            if (!LINKSTUB_FAKE_INDIRECT(dcontext->last_exit->flags)) 
+              dcontext->next_tag = EXIT_TARGET_TAG(dcontext, dcontext->last_fragment,
+                                                   dcontext->last_exit);
         } else {
             /* get src info from coarse ibl exit into the right place */
             if (DYNAMO_OPTION(coarse_units)) {

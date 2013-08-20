@@ -219,6 +219,11 @@ set_linkstub_fields(dcontext_t *dcontext, fragment_t *f, instrlist_t *ilist,
             if (frag_offs_at_end)
                 l->flags |= LINK_FRAG_OFFS_AT_END;
 
+            //SJF Set the fake indirect for the linkstub
+            if(TEST(FAKE_INDIRECT_FRAG, f->flags))
+              l->flags |= LINK_FAKE_INDIRECT;
+
+
             DODEBUG({
                 if (emit && is_exit_cti_patchable(dcontext, inst, f->flags)) {
                     uint off = patchable_exit_cti_align_offs(dcontext, inst, pc);

@@ -91,6 +91,10 @@ enum {
      */
     LINK_TRACE_CMP       = 0x0100,
 #endif
+#ifdef ARM
+    // Stealing this value is ARM to use for fake indirect
+    LINK_FAKE_INDIRECT   = 0x0100,
+#endif
 #ifdef WINDOWS
     LINK_CALLBACK_RETURN = 0x0200,
 #else
@@ -297,6 +301,7 @@ typedef struct _coarse_incoming_t {
 #define LINKSTUB_FAKE(l) (TEST(LINK_FAKE, (l)->flags))
 /* direct includes normal direct and cbr fallthrough */
 #define LINKSTUB_DIRECT(flags) (TEST(LINK_DIRECT, (flags)))
+#define LINKSTUB_FAKE_INDIRECT(flags) (TEST(LINK_FAKE_INDIRECT, (flags)))
 #define LINKSTUB_NORMAL_DIRECT(flags) \
     (TEST(LINK_DIRECT, (flags)) && !TEST(LINK_INDIRECT, (flags)))
 #define LINKSTUB_INDIRECT(flags) \

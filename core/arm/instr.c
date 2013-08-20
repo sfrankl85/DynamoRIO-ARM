@@ -2481,7 +2481,34 @@ instrlist_rewrite_relative_to_absolute( dcontext_t* dcontext, instrlist_t* ilist
                                                          COND_ALWAYS ));
               break;
           }
+        }
+        else if( instr_is_pc_read( inst ))
+        //If the instr reads the PC then change to absolute
+        {
+          //Only unrelativeise the first src opnd
+          switch( inst->opcode )
+          {
+            case OP_add_reg:
+              instrlist_meta_preinsert( ilist, inst, INSTR_CREATE_push(dcontext,
+                                               opnd_create_reg_list(REGLIST_R8|REGLIST_R9),
+                                               COND_ALWAYS ));
 
+              //Move addr + offset into reg. SJF weird shit going on with offset so just add to addr
+              instrlist_preinsert_move_32bits_to_reg( ilist, dcontext, REG_RR8, REG_RR9,
+                                                      inst->bytes+8, inst ); //Before current inst
+
+              //Change reg r15 to reg r8
+              inst->src0 = opnd_create_reg( REG_RR8 );
+
+              //Make sure it writes the modified instruction
+              instr_set_raw_bits_valid( inst, false );
+
+              //Hope it isnt R9 that is the dst of the ldr instr
+              instrlist_meta_postinsert( ilist, inst, INSTR_CREATE_pop(dcontext,
+                                                         opnd_create_reg_list(REGLIST_R8|REGLIST_R9),
+                                                         COND_ALWAYS ));
+              break;
+          }
         }
     }
 }
