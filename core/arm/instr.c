@@ -2482,33 +2482,37 @@ instrlist_rewrite_relative_to_absolute( dcontext_t* dcontext, instrlist_t* ilist
               break;
           }
         }
-        else if( instr_is_pc_read( inst ))
+        else if( opcode_is_possible_pc_read( inst ) )
         //If the instr reads the PC then change to absolute
         {
           //Only unrelativeise the first src opnd
-          switch( inst->opcode )
+          if( instr_is_pc_read( inst ) )
           {
-            case OP_add_reg:
-              instrlist_meta_preinsert( ilist, inst, INSTR_CREATE_push(dcontext,
-                                               opnd_create_reg_list(REGLIST_R8|REGLIST_R9),
-                                               COND_ALWAYS ));
+            switch( inst->opcode )
+            {
+              case OP_add_reg:
+                instrlist_meta_preinsert( ilist, inst, INSTR_CREATE_push(dcontext,
+                                                 opnd_create_reg_list(REGLIST_R8|REGLIST_R9),
+                                                 COND_ALWAYS ));
 
-              //Move addr + offset into reg. SJF weird shit going on with offset so just add to addr
-              instrlist_preinsert_move_32bits_to_reg( ilist, dcontext, REG_RR8, REG_RR9,
-                                                      inst->bytes+8, inst ); //Before current inst
+                instrlist_preinsert_move_32bits_to_reg( ilist, dcontext, REG_RR8, REG_RR9,
+                                                        inst->bytes+8, inst ); //Before current inst
 
-              //Change reg r15 to reg r8
-              inst->src0 = opnd_create_reg( REG_RR8 );
+                //Change reg r15 to reg r8
+                inst->src0 = opnd_create_reg( REG_RR8 );
 
-              //Make sure it writes the modified instruction
-              instr_set_raw_bits_valid( inst, false );
+                //Make sure it writes the modified instruction
+                instr_set_raw_bits_valid( inst, false );
 
-              //Hope it isnt R9 that is the dst of the ldr instr
-              instrlist_meta_postinsert( ilist, inst, INSTR_CREATE_pop(dcontext,
-                                                         opnd_create_reg_list(REGLIST_R8|REGLIST_R9),
-                                                         COND_ALWAYS ));
-              break;
+                //Hope it isnt R9 that is the dst of the ldr instr
+                instrlist_meta_postinsert( ilist, inst, INSTR_CREATE_pop(dcontext,
+                                                           opnd_create_reg_list(REGLIST_R8|REGLIST_R9),
+                                                           COND_ALWAYS ));
+                break;
+            }
           }
+          else //If not a pc read then copy straight from app
+            instr_set_raw_bits_valid( inst, true );
         }
     }
 }
@@ -4336,6 +4340,15 @@ opcode_is_other_relative( int opc )
 
 }
 
+bool 
+opcode_is_possible_pc_read( int opc )
+{
+  //Add any possible pc read opcodes here
+  if( opc == OP_add_reg )
+    return true;
+  else
+    return false;
+}
 
 bool 
 opcode_is_relative_load( int opc )
@@ -4463,6 +4476,38 @@ instr_is_call(instr_t *instr)
 {
     int opc = instr_get_opcode(instr);
     return opcode_is_call(opc);
+}
+
+bool
+instr_is_pc_read( instr_t* instr )
+{
+  opnd_t opnd;
+
+  ASSERT( (instr != NULL) );
+
+  if( !opcode_is_possible_pc_read( instr->opcode ))
+    return false;
+  else
+  {
+    switch( instr->opcode)
+    {
+      case OP_add_reg:
+         //Check the source
+         opnd = instr->src0;
+
+         if( opnd.kind == REG_kind )
+         {
+           if( opnd.value.reg == REG_RR15 )
+             return true;
+         }
+        break;
+
+      default:
+        break;
+    }
+  }
+
+  return false;
 }
 
 //Returns true if instr is a mov_reg/imm that writes to the pc

@@ -110,6 +110,9 @@
 # define FRAG_HAS_MOV_SEG           0x200000
 #endif
 
+//SJF Steal the has mov seg flag 
+#define FAKE_INDIRECT_FRAG          0x200000
+
 #ifdef X64
 /* this fragment contains 32-bit code */
 # define FRAG_32_BIT                0x400000
@@ -159,8 +162,6 @@
 /* This fragment immediately follows a free entry in the fcache */
 #define FRAG_FOLLOWS_FREE_ENTRY   0x80000000
 
-//SJF TODO This overwrite free entry flag above so will need changing
-#define FAKE_INDIRECT_FRAG        0x80000000
 
 /* Flags that a future fragment can transfer to a real on taking its place:
  * Naturally we don't want FRAG_IS_FUTURE or FRAG_WAS_DELETED.

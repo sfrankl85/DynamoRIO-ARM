@@ -2219,6 +2219,10 @@ DR_API
 bool
 instr_is_exit_cti(instr_t *instr);
 
+bool
+instr_is_pc_read( instr_t* instr );
+
+
 DR_API
 /** Return true iff \p instr's opcode is OP_int, OP_into, or OP_int3. */
 bool
@@ -2582,6 +2586,9 @@ instr_get_opcode_eflags(int opcode);
 DR_API
 bool
 opcode_is_relative_load( int opc );
+
+bool
+opcode_is_possible_pc_read( int opc );
 
 DR_API
 bool

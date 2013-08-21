@@ -1118,6 +1118,9 @@ insert_exit_stub_other_flags(dcontext_t *dcontext, fragment_t *f,
         if (TEST(FAKE_INDIRECT_FRAG, f->flags)) 
            SAVE_TO_DC(&ilist, dcontext, REG_RR0, NEXT_TAG_OFFSET, INSERT_APPEND, NULL);
 
+        //Save R7
+        SAVE_TO_DC(&ilist, dcontext, REG_RR7, NEXT_TAG_OFFSET, INSERT_APPEND, NULL);
+
         /* Output the instrs. Doesnt match how other instrs are added here but oh well */
         for (inst = instrlist_first(&ilist); inst; inst = instr_get_next(inst)) {
             byte *nxt_pc = instr_encode(dcontext, inst, pc);
@@ -3189,6 +3192,8 @@ emit_fcache_enter_common(dcontext_t *dcontext, generated_code_t *code, byte *pc,
 
     //Restore cpsr and regs
     RESTORE_FROM_DC(&ilist, dcontext, REG_CPSR,CPSR_OFFSET, INSERT_APPEND, NULL);
+    RESTORE_FROM_DC(&ilist, dcontext, REG_RR14,R14_OFFSET, INSERT_APPEND, NULL);
+    RESTORE_FROM_DC(&ilist, dcontext, REG_RR13,R13_OFFSET, INSERT_APPEND, NULL);
     RESTORE_FROM_DC(&ilist, dcontext, REG_RR12,R12_OFFSET, INSERT_APPEND, NULL);
     RESTORE_FROM_DC(&ilist, dcontext, REG_RR11,R11_OFFSET, INSERT_APPEND, NULL);
     RESTORE_FROM_DC(&ilist, dcontext, REG_RR10,R10_OFFSET, INSERT_APPEND, NULL);
@@ -3384,6 +3389,8 @@ append_fcache_return_common(dcontext_t *dcontext, generated_code_t *code,
     SAVE_TO_DC(ilist, dcontext, REG_RR10,R10_OFFSET, INSERT_APPEND, NULL);
     SAVE_TO_DC(ilist, dcontext, REG_RR11,R11_OFFSET, INSERT_APPEND, NULL);
     SAVE_TO_DC(ilist, dcontext, REG_RR12,R12_OFFSET, INSERT_APPEND, NULL);
+    SAVE_TO_DC(ilist, dcontext, REG_RR13,R13_OFFSET, INSERT_APPEND, NULL);
+    SAVE_TO_DC(ilist, dcontext, REG_RR14,R14_OFFSET, INSERT_APPEND, NULL);
     SAVE_TO_DC(ilist, dcontext, REG_CPSR,CPSR_OFFSET, INSERT_APPEND, NULL);
 
     /* save last_exit, currently in xax, into dcontext->last_exit */
