@@ -1119,7 +1119,7 @@ insert_exit_stub_other_flags(dcontext_t *dcontext, fragment_t *f,
            SAVE_TO_DC(&ilist, dcontext, REG_RR0, NEXT_TAG_OFFSET, INSERT_APPEND, NULL);
 
         //Save R7
-        SAVE_TO_DC(&ilist, dcontext, REG_RR7, NEXT_TAG_OFFSET, INSERT_APPEND, NULL);
+        SAVE_TO_DC(&ilist, dcontext, REG_RR7, R7_OFFSET, INSERT_APPEND, NULL);
 
         /* Output the instrs. Doesnt match how other instrs are added here but oh well */
         for (inst = instrlist_first(&ilist); inst; inst = instr_get_next(inst)) {
@@ -3376,7 +3376,7 @@ append_fcache_return_common(dcontext_t *dcontext, generated_code_t *code,
     /* currently linkstub is only used for coarse-grain exits */
     ASSERT(linkstub == NULL || !absolute);
 
-    SAVE_TO_DC(ilist, dcontext, REG_RR0, R0_OFFSET, INSERT_APPEND, NULL);
+    //R0 save is done in exit stub
     SAVE_TO_DC(ilist, dcontext, REG_RR1, R1_OFFSET, INSERT_APPEND, NULL);
     SAVE_TO_DC(ilist, dcontext, REG_RR2, R2_OFFSET, INSERT_APPEND, NULL);
     SAVE_TO_DC(ilist, dcontext, REG_RR3, R3_OFFSET, INSERT_APPEND, NULL);

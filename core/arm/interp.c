@@ -74,6 +74,24 @@
 # include "vmkuw.h" /* VMKUW_SYSCALL_GATEWAY */
 #endif
 
+
+#define RESTORE_FROM_DC_VIA_REG(ilist, absolute, dc, reg_dr, reg, offs, where, relinstr)              \
+    ((absolute) ? (IF_X64_(ASSERT_NOT_IMPLEMENTED(false))                     \
+                   instr_create_restore_from_dcontext((ilist), (dc), (reg), (offs), (where), (relinstr), absolute)) : \
+     instr_create_restore_from_dc_via_reg((dc), (reg_dr), (reg), (offs)))
+/* Note the magic absolute boolean that callers are expected to have declared */
+#define SAVE_TO_DC_VIA_REG(ilist, absolute, dc, reg_dr, reg, offs, where, relinstr)              \
+    ((absolute) ? (IF_X64_(ASSERT_NOT_IMPLEMENTED(false))                \
+                   instr_create_save_to_dcontext((ilist), (dc), (reg), (offs), (where), (relinstr), absolute)) : \
+     instr_create_save_to_dc_via_reg((dc), reg_dr, (reg), (offs)))
+
+#define RESTORE_FROM_DC(ilist, dc, reg, offs, where, relinstr) \
+    RESTORE_FROM_DC_VIA_REG(ilist, absolute, dc, REG_NULL, reg, offs, where, relinstr)
+/* Note the magic absolute boolean that callers are expected to have declared */
+#define SAVE_TO_DC(ilist, dc, reg, offs, where, relinstr) \
+    SAVE_TO_DC_VIA_REG(ilist, absolute, dc, REG_NULL, reg, offs, where, relinstr)
+
+
 enum { DIRECT_XFER_LENGTH = 5 };
 
 /* forward declarations */
@@ -2432,6 +2450,8 @@ build_bb_ilist(dcontext_t *dcontext, build_bb_t *bb)
     DEBUG_DECLARE(bool regenerated = false;)
     bool stop_bb_on_fallthrough = false;
     instr_t*    new_inst;
+    int         new_cond;
+    int         orig_addr, next_instr;
 
     ASSERT(bb->initialized);
     /* note that it's ok for bb->start_pc to be NULL as our check_new_page_start
@@ -2748,61 +2768,237 @@ build_bb_ilist(dcontext_t *dcontext, build_bb_t *bb)
 #endif /* RETURN_AFTER_CALL */
 
         //Removed if and changed else if to if
-        if (instr_is_mbr(bb->instr) ){ //Any indirect(from reg) cti instruction inclduing mov pc, lr
+        if (instr_is_mbr(bb->instr) )
+        { //Any indirect(from reg) cti instruction inclduing mov pc, lr
              /* SJF If it is an indirect branch then just save the target into R0 and treat it
                     as a normal branch. dispatch() should detect the target branch corectly. */
-
-              if( bb->instr->opcode == OP_blx_reg || bb->instr->opcode == OP_bx || bb->instr->opcode == OP_bxj )
+              if( instr_is_cbr( bb->instr ))
               {
-                //Copy the dest to R0
-                instrlist_meta_preinsert(bb->ilist, bb->instr,
+                //SJF If it is a cbr indirect needs to split cond instr
+                new_cond = invert_cond_code( bb->instr->cond );
+
+                //Change indirect instr to write to R0 if cond
+                //Add additional instr of the same type but inverted cond code to write to R0 branhc + 4
+                //Insert new branch to jump back to dispatch()
+                if( bb->instr->opcode == OP_blx_reg || bb->instr->opcode == OP_bx || bb->instr->opcode == OP_bxj )
+                {
+                  //Save R0 to dcontext
+                  bool absolute = true;
+                  SAVE_TO_DC(bb->ilist, dcontext, REG_RR0, R0_OFFSET, INSERT_PRE, bb->instr);
+
+                  //Copy the dest to R0 if cond matched
+                  instrlist_meta_preinsert(bb->ilist, bb->instr,
+                                           INSTR_CREATE_mov_reg( dcontext, opnd_create_reg(REG_RR0),
+                                                                  bb->instr->src0, bb->instr->cond ));
+
+                  //Insert the address of the next instruction into R0 if cond branch not taken
+                  instrlist_meta_preinsert( bb->ilist, bb->instr, INSTR_CREATE_push(dcontext,
+                                            opnd_create_reg_list(REGLIST_R8|REGLIST_R9),
+                                            new_cond ));
+
+                  instrlist_preinsert_move_32bits_to_reg( bb->ilist, dcontext, REG_RR8, REG_RR9,
+                                                          bb->instr->bytes+4, bb->instr, new_cond ); 
+
+                  instrlist_meta_preinsert(bb->ilist, bb->instr,
+                                           INSTR_CREATE_mov_reg( dcontext, opnd_create_reg(REG_RR0),
+                                                                  opnd_create_reg(REG_RR8), new_cond ));
+
+                  instrlist_meta_preinsert( bb->ilist, bb->instr, INSTR_CREATE_pop(dcontext,
+                                            opnd_create_reg_list(REGLIST_R8|REGLIST_R9),
+                                            new_cond ));
+
+                  //Change to a direct branch. Should be patched later
+                  bb->instr->opcode = OP_b;
+                  bb->instr->num_srcs = 1;
+                  bb->instr->num_dsts = 0;
+
+                  bb->instr->src0.kind = PC_kind;
+                  bb->instr->src0.value.pc = 0;
+
+                  instr_set_raw_bits_valid( bb->instr, false );
+                }
+                else if( bb->instr->opcode == OP_mov_reg || bb->instr->opcode == OP_mov_imm ||
+                          ( bb->instr->opcode >= OP_ldr_imm && bb->instr->opcode <= OP_ldrt ) )
+                {
+                  bool absolute = true;
+                  //Save R0 to dcontext
+                  SAVE_TO_DC(bb->ilist, dcontext, REG_RR0, R0_OFFSET, INSERT_PRE, bb->instr);
+
+                  //Change the dest of the instr to REG R0 and add branch to indirect stub after
+                  bb->instr->dsts[0].value.reg = REG_RR0;
+                  instr_set_raw_bits_valid( bb->instr, false );
+
+                  //Insert the address of the next instruction into R0 if cond branch not taken
+                  instrlist_meta_append( bb->ilist, INSTR_CREATE_push(dcontext,
+                                            opnd_create_reg_list(REGLIST_R8|REGLIST_R9),
+                                            new_cond ));
+
+                  instrlist_append_move_32bits_to_reg( bb->ilist, dcontext, REG_RR8, REG_RR9,
+                                                        bb->instr->bytes+4, new_cond );
+
+                  instrlist_meta_append(bb->ilist,
+                                           INSTR_CREATE_mov_reg( dcontext, opnd_create_reg(REG_RR0),
+                                                                  opnd_create_reg(REG_RR8), new_cond ));
+
+                  instrlist_meta_append( bb->ilist, INSTR_CREATE_pop(dcontext,
+                                            opnd_create_reg_list(REGLIST_R8|REGLIST_R9),
+                                            new_cond ));
+
+
+                  //Should get overwrittn with branch to exit stub later
+                  new_inst = INSTR_CREATE_branch(dcontext, opnd_create_pc( 0 ), COND_ALWAYS );
+
+                  instrlist_meta_append( bb->ilist, new_inst );
+                  instr_set_ok_to_mangle(new_inst, true);
+                  new_inst->flags |= INSTR_JMP_EXIT;
+
+                  //Make sure inst is pointing at the last instruction
+                  bb->instr = instrlist_last( bb->ilist );
+                }
+
+                bb->flags |= FAKE_INDIRECT_FRAG;
+                bb->exit_type |= instr_branch_type(bb->instr);
+                //SJF Copied from 'else if' below
+                total_branches++;
+                if (total_branches >= BRANCH_LIMIT) {
+                    /* set type of 1st exit cti for cbr (bb->exit_type is for fall-through) */
+                    instr_exit_branch_set_type(bb->instr, instr_branch_type(bb->instr));
+                    break;
+                }
+ 
+              }
+              else
+              {
+                if( bb->instr->opcode == OP_blx_reg || bb->instr->opcode == OP_bx || bb->instr->opcode == OP_bxj )
+                {
+                  //Save R0 to dcontext 
+                  bool absolute = true;
+                  SAVE_TO_DC(bb->ilist, dcontext, REG_RR0, R0_OFFSET, INSERT_PRE, bb->instr);
+
+                  //Copy the dest to R0
+                  instrlist_meta_preinsert(bb->ilist, bb->instr,
+                                           INSTR_CREATE_mov_reg( dcontext, opnd_create_reg(REG_RR0),
+                                                                  bb->instr->src0, COND_ALWAYS ));
+                  //Change to a direct branch. Should be patched later
+                  bb->instr->opcode = OP_b;
+                  bb->instr->num_srcs = 1;
+                  bb->instr->num_dsts = 0;
+
+                  bb->instr->src0.kind = PC_kind;
+                  bb->instr->src0.value.pc = 0; 
+
+                  instr_set_raw_bits_valid( bb->instr, false );
+                }
+                else if( bb->instr->opcode == OP_mov_reg || bb->instr->opcode == OP_mov_imm ||
+                          ( bb->instr->opcode >= OP_ldr_imm && bb->instr->opcode <= OP_ldrt ) )
+                {
+                  bool absolute = true;
+                  //Save R0 to dcontext 
+                  SAVE_TO_DC(bb->ilist, dcontext, REG_RR0, R0_OFFSET, INSERT_PRE, bb->instr);
+
+                  //Change the dest of the instr to REG R0 and add branch to indirect stub after
+                  bb->instr->dsts[0].value.reg = REG_RR0;
+                  instr_set_raw_bits_valid( bb->instr, false );
+
+                  //Should get overwrittn with branch to exit stub later
+                  new_inst = INSTR_CREATE_branch(dcontext, opnd_create_pc( 0 ), COND_ALWAYS );
+
+                  instrlist_meta_postinsert( bb->ilist, bb->instr, new_inst );
+                  instr_set_ok_to_mangle(new_inst, true);
+                  new_inst->flags |= INSTR_JMP_EXIT;
+
+                  //Make sure inst is pointing at the last instruction
+                  bb->instr = instrlist_last( bb->ilist );
+                }
+
+                bb->flags |= FAKE_INDIRECT_FRAG;
+                bb->exit_type |= instr_branch_type(bb->instr);
+                //SJF Copied from 'else if' below
+                total_branches++;
+                if (total_branches >= BRANCH_LIMIT) {
+                    /* set type of 1st exit cti for cbr (bb->exit_type is for fall-through) */
+                    instr_exit_branch_set_type(bb->instr, instr_branch_type(bb->instr));
+                    break;
+                }
+              }
+        }
+        else if (instr_is_cti(bb->instr)) {  //All other branches. Should be only direct 
+            if( instr_is_cbr(bb->instr))//If conditional
+            {
+               //SJF If it is a cbr indirect needs to split cond instr
+               new_cond = invert_cond_code( bb->instr->cond );
+
+               bool absolute = true;
+               //Save R0 to dcontext 
+               SAVE_TO_DC(bb->ilist, dcontext, REG_RR0, R0_OFFSET, INSERT_PRE, bb->instr);
+               //Insert target into r0 if cond satisfied and instr addr + 4 if not.
+               //Treat as a fake indirect.
+               orig_addr = bb->instr->src0.value.pc;
+               next_instr = bb->instr->bytes+4;
+
+               //Insert the address of the branch target into R0 if cond branch is taken
+               instrlist_meta_preinsert( bb->ilist, bb->instr, INSTR_CREATE_push(dcontext,
+                                         opnd_create_reg_list(REGLIST_R8|REGLIST_R9),
+                                         bb->instr->cond ));
+
+               instrlist_preinsert_move_32bits_to_reg( bb->ilist, dcontext, REG_RR8, REG_RR9,
+                                                    orig_addr, bb->instr, bb->instr->cond );
+
+               instrlist_meta_preinsert( bb->ilist, bb->instr,
                                          INSTR_CREATE_mov_reg( dcontext, opnd_create_reg(REG_RR0),
-                                                                bb->instr->src0, COND_ALWAYS ));
-                //Change to a direct branch. Should be patched later
-                bb->instr->opcode = OP_b;
-                bb->instr->num_srcs = 1;
-                bb->instr->num_dsts = 0;
+                                                               opnd_create_reg(REG_RR8), bb->instr->cond ));
 
-                bb->instr->src0.kind = PC_kind;
-                bb->instr->src0.value.pc = 0; 
+               instrlist_meta_preinsert( bb->ilist, bb->instr, INSTR_CREATE_pop(dcontext,
+                                         opnd_create_reg_list(REGLIST_R8|REGLIST_R9),
+                                         bb->instr->cond ));
 
-                instr_set_raw_bits_valid( bb->instr, false );
-              }
-              else if( bb->instr->opcode == OP_mov_reg || bb->instr->opcode == OP_mov_imm ||
-                        ( bb->instr->opcode >= OP_ldr_imm && bb->instr->opcode <= OP_ldrt ) )
-              {
-                //Change the dest of the instr to REG R0 and add branch to indirect stub after
-                bb->instr->dsts[0].value.reg = REG_RR0;
-                instr_set_raw_bits_valid( bb->instr, false );
+               //Insert the address of the next instruction into R0 if cond branch not taken
+               instrlist_meta_preinsert( bb->ilist, bb->instr, INSTR_CREATE_push(dcontext,
+                                         opnd_create_reg_list(REGLIST_R8|REGLIST_R9),
+                                         new_cond ));
 
-                //Should get overwrittn with branch to exit stub later
-                new_inst = INSTR_CREATE_branch(dcontext, opnd_create_pc( 0 ), COND_ALWAYS );
+               instrlist_preinsert_move_32bits_to_reg( bb->ilist, dcontext, REG_RR8, REG_RR9,
+                                                       next_instr, bb->instr, new_cond );
 
-                instrlist_meta_postinsert( bb->ilist, bb->instr, new_inst );
-                instr_set_ok_to_mangle(new_inst, true);
-                new_inst->flags |= INSTR_JMP_EXIT;
+               instrlist_meta_preinsert( bb->ilist, bb->instr,
+                                         INSTR_CREATE_mov_reg( dcontext, opnd_create_reg(REG_RR0),
+                                                               opnd_create_reg(REG_RR8), new_cond ));
 
-                //Make sure inst is pointing at the last instruction
-                bb->instr = instrlist_last( bb->ilist );
-              }
+               instrlist_meta_preinsert( bb->ilist, bb->instr, INSTR_CREATE_pop(dcontext,
+                                         opnd_create_reg_list(REGLIST_R8|REGLIST_R9),
+                                         new_cond ));
 
-              bb->flags |= FAKE_INDIRECT_FRAG;
-              bb->exit_type |= instr_branch_type(bb->instr);
-              //SJF Copied from 'else if' below
+
+               //Make sure inst is pointing at the last instruction
+               bb->instr = instrlist_last( bb->ilist );
+               bb->instr->cond = COND_ALWAYS;
+               instr_set_raw_bits_valid( bb->instr, false );
+
+               //Flag as a fake indirect
+               bb->flags |= FAKE_INDIRECT_FRAG;
+               bb->exit_type |= instr_branch_type(bb->instr);
+               //SJF Copied from 'else if' below
+               total_branches++;
+               if (total_branches >= BRANCH_LIMIT) {
+                   /* set type of 1st exit cti for cbr (bb->exit_type is for fall-through) */
+                   instr_exit_branch_set_type(bb->instr, instr_branch_type(bb->instr));
+                   break;
+               }
+            }
+            else
+            {
+            
+              //Save R0 to DC
+              bool absolute = true;
+              SAVE_TO_DC(bb->ilist, dcontext, REG_RR0, R0_OFFSET, INSERT_PRE, bb->instr);
+
               total_branches++;
               if (total_branches >= BRANCH_LIMIT) {
                   /* set type of 1st exit cti for cbr (bb->exit_type is for fall-through) */
                   instr_exit_branch_set_type(bb->instr, instr_branch_type(bb->instr));
                   break;
               }
-        }
-        else if (instr_is_cti(bb->instr)) {  //All other branches. Should be only direct 
-            total_branches++;
-            if (total_branches >= BRANCH_LIMIT) {
-                /* set type of 1st exit cti for cbr (bb->exit_type is for fall-through) */
-                instr_exit_branch_set_type(bb->instr, instr_branch_type(bb->instr));
-                break;
-            }
+            } 
         }
         else if (instr_is_syscall(bb->instr)) {
             if (!bb_process_syscall(dcontext, bb))
