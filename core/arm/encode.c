@@ -3020,6 +3020,99 @@ encode_1dst_reg_1src_reglist(decode_info_t* di, instr_t* instr, byte* pc)
 }
 
 byte*
+encode_coproc_mrc(decode_info_t* di, instr_t* instr, byte* pc)
+{
+    byte word[4] = {0};  //Instr encoding in byte array
+    uint        opc;
+    byte        b, t;
+    uint        opc_bits;
+    opnd_t      opnd;
+    instr_info_t* info;
+    uint  instr_type;
+    int value; 
+
+    opc = instr_get_opcode(instr);
+
+    /*
+       Instruction encoded as 31-0
+       |cond|1010|imm24|
+     */
+
+    /*********** Encode condition code. TODO Move to decode_info_t *********/
+
+    if( instr_is_unconditional( instr ) )
+    {
+        //Encode unconditional(not a proper cond code '1111')
+        b = 0xf0;
+        word[0] |= b;
+    }
+    else
+    {
+        b = instr->cond;
+        word[0] |= (b << 4);
+    }
+
+    switch( opc )
+    {
+        //TODO MCR/MRC encoding
+        //SJF May not need this as not doing full encode prob
+    }
+
+    pc = write_word_to_fcache(pc, word );
+
+   // Have a separate function for branch instrs to calc correct address
+   // Branch instrs are pretty simple anyway
+   return pc;
+}
+
+byte*
+encode_coproc_mcr(decode_info_t* di, instr_t* instr, byte* pc)
+{
+    byte word[4] = {0};  //Instr encoding in byte array
+    uint        opc;
+    byte        b, t;
+    uint        opc_bits;
+    opnd_t      opnd;
+    instr_info_t* info;
+    uint  instr_type;
+    int value; 
+
+    opc = instr_get_opcode(instr);
+
+    /*
+       Instruction encoded as 31-0
+       |cond|1010|imm24|
+     */
+
+    /*********** Encode condition code. TODO Move to decode_info_t *********/
+
+    if( instr_is_unconditional( instr ) )
+    {
+        //Encode unconditional(not a proper cond code '1111')
+        b = 0xf0;
+        word[0] |= b;
+    }
+    else
+    {
+        b = instr->cond;
+        word[0] |= (b << 4);
+    }
+
+    switch( opc )
+    {
+        //TODO MCR/MRC encoding
+        //SJF May not need this as not doing full encode prob
+    }
+
+    pc = write_word_to_fcache(pc, word );
+
+   // Have a separate function for branch instrs to calc correct address
+   // Branch instrs are pretty simple anyway
+   return pc;
+}
+
+
+byte*
 encode_branch_instrs(decode_info_t* di, instr_t* instr, byte* pc)
 {
     byte word[4] = {0};  //Instr encoding in byte array
@@ -3658,10 +3751,14 @@ encode_advanced_coprocessor_and_syscall(decode_info_t* di, instr_t* instr, byte*
     {
         case OP_cdp:
         case OP_cdp2:
+          break;
         case OP_mcr:
         case OP_mcr2:
+          nxt_pc = encode_coproc_mcr(di, instr, pc);
+          break;
         case OP_mrc:
         case OP_mrc2:
+          nxt_pc = encode_coproc_mrc(di, instr, pc);
           break;
         default:
             CLIENT_ASSERT(false, "instr_encode error: invalid opcode for instr_type" );

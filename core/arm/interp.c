@@ -2818,7 +2818,9 @@ build_bb_ilist(dcontext_t *dcontext, build_bb_t *bb)
                   instr_set_raw_bits_valid( bb->instr, false );
                 }
                 else if( bb->instr->opcode == OP_mov_reg || bb->instr->opcode == OP_mov_imm ||
-                          ( bb->instr->opcode >= OP_ldr_imm && bb->instr->opcode <= OP_ldrt ) )
+                         ( bb->instr->opcode >= OP_ldr_imm && bb->instr->opcode <= OP_ldrt ) ||
+                          ( bb->instr->opcode == OP_add_imm || bb->instr->opcode == OP_sub_imm ||
+                            bb->instr->opcode == OP_add_reg || bb->instr->opcode == OP_sub_reg ) )
                 {
                   bool absolute = true;
                   //Save R0 to dcontext
@@ -2890,7 +2892,9 @@ build_bb_ilist(dcontext_t *dcontext, build_bb_t *bb)
                   instr_set_raw_bits_valid( bb->instr, false );
                 }
                 else if( bb->instr->opcode == OP_mov_reg || bb->instr->opcode == OP_mov_imm ||
-                          ( bb->instr->opcode >= OP_ldr_imm && bb->instr->opcode <= OP_ldrt ) )
+                         ( bb->instr->opcode >= OP_ldr_imm && bb->instr->opcode <= OP_ldrt ) ||
+                          ( bb->instr->opcode == OP_add_imm || bb->instr->opcode == OP_sub_imm ||
+                            bb->instr->opcode == OP_add_reg || bb->instr->opcode == OP_sub_reg ) )
                 {
                   bool absolute = true;
                   //Save R0 to dcontext 
@@ -3000,10 +3004,15 @@ build_bb_ilist(dcontext_t *dcontext, build_bb_t *bb)
               }
             } 
         }
+/*
+        SJF Not sure whether I need to do any processing for syscalls.
+            They should juts return to the pc they called from but there
+            may be some cases that can change the execution flow. TODO
         else if (instr_is_syscall(bb->instr)) {
             if (!bb_process_syscall(dcontext, bb))
                 break;
-        } /* end syscall */
+        }
+*/
 
         if (total_instrs > DYNAMO_OPTION(max_bb_instrs)) {
             /* this could be an enormous basic block, or it could

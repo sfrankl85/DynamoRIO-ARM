@@ -1987,6 +1987,11 @@ struct _instr_t {
 
     int  shift_type;
 
+    //Just for coprocessor instructions
+    int opc1;
+    int opc2;
+    int coproc;
+
 }; /* instr_t */
 #endif /* DR_FAST_IR */
 

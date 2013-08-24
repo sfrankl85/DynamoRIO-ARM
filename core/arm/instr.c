@@ -4271,6 +4271,11 @@ opcode_get_encoding_type(int opc)
       case OP_bx:         case OP_bxj:
         return BRANCH_INSTR;
 
+      case OP_mrc:        case OP_mrc2:
+        return COPROC_MRC;
+      case OP_mcr:        case OP_mcr2:
+        return COPROC_MCR;
+
       default:
         return INVALID_ENCODING;
     }
@@ -4374,7 +4379,9 @@ opcode_is_cti(int opc)
    if( opc == OP_b || opc == OP_bl || opc == OP_blx_imm ||
        opc == OP_blx_reg || opc == OP_bx || 
        opc == OP_bxj || opc == OP_mov_reg || opc == OP_mov_imm ||
-       (opc >= OP_ldr_imm && opc <= OP_ldrt ) )//All load instrs
+       (opc >= OP_ldr_imm && opc <= OP_ldrt ) || //All load instrs
+       ( opc == OP_add_imm || opc == OP_sub_imm ||
+         opc == OP_add_reg || opc == OP_sub_reg ) )
      return true;
    else
      return false;
@@ -4519,7 +4526,9 @@ instr_is_mov_br(instr_t* instr)
    opnd_t opnd;
 
    if( opc == OP_mov_reg || opc == OP_mov_imm || 
-       ( opc >= OP_ldr_imm && opc <= OP_ldrt ) )
+       ( opc >= OP_ldr_imm && opc <= OP_ldrt ) ||
+       ( opc == OP_add_imm || opc == OP_sub_imm ||
+         opc == OP_add_reg || opc == OP_sub_reg ) )
    {
        //Make sure there are dsts
        if( instr->dsts != NULL )

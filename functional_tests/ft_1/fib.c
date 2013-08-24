@@ -67,9 +67,11 @@ main(int argc, char** argv)
 
   printf( "%d\n" , fib(5));
 
+/*
   printf( "%d\n" , fib(15));
 
   printf( "%d\n" , fib(25));
+*/
 
 // Do not print the values as want to avoid using shared libraries or syscalls.
 //    printf("fib(%d)=%d\n", 5, fib(5));
