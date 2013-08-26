@@ -3323,6 +3323,7 @@ instr_has_r_flag( instr_t* instr )
     return false;
 }
 
+/*** TODO Add all this information to instr_info_t and change all calls ***/
 
 DR_API
 bool

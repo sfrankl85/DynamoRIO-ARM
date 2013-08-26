@@ -1337,7 +1337,7 @@ instr_info_t* decode_misc(byte* instr_word,
   // | cond | 000 | 10 | op | 0 | op1 |    | 0 | op2 |     |
   int encoding;
 
-  if( (instr_word[0] & 0xf0 ) == 0x50 ) //op2 == 0101
+  if( (instr_word[3] & 0xf0 ) == 0x50 ) //op2 == 0101
   {
     if( ((instr_word[0] & 0x1) == 0x1) && //op1 == 10000
              ((instr_word[1] & 0xf0) == 0x0 ))
@@ -1360,7 +1360,7 @@ instr_info_t* decode_misc(byte* instr_word,
       di->opcode = OP_qdsub;
     }
   }
-  else if( (instr_word[0] & 0xf0 ) == 0x0 ) //op2 == 0000
+  else if( (instr_word[3] & 0xf0 ) == 0x0 ) //op2 == 0000
   {
     if( (instr_word[1] & 0x20) == 0x0 ) //op == x0
     {
@@ -1377,7 +1377,7 @@ instr_info_t* decode_misc(byte* instr_word,
       di->opcode = OP_msr_reg;
     }
   }
-  else if( (instr_word[0] & 0xf0 ) == 0x10 ) //op2 == 0001
+  else if( (instr_word[3] & 0xf0 ) == 0x10 ) //op2 == 0001
   {
     if( (instr_word[1] & 0x60) == 0x20 ) //op == 01 
     {
@@ -1388,21 +1388,21 @@ instr_info_t* decode_misc(byte* instr_word,
       di->opcode = OP_clz;
     }
   }
-  else if( (instr_word[0] & 0xf0 ) == 0x20 ) //op2 == 0010
+  else if( (instr_word[3] & 0xf0 ) == 0x20 ) //op2 == 0010
   {
     if( (instr_word[1] & 0x60) == 0x20 ) //op == 01 
     {
       di->opcode = OP_bxj; 
     }
   }
-  else if( (instr_word[0] & 0xf0 ) == 0x30 ) //op2 == 0011
+  else if( (instr_word[3] & 0xf0 ) == 0x30 ) //op2 == 0011
   {
     if( (instr_word[1] & 0x60) == 0x20 ) //op == 01 
     {
       di->opcode = OP_blx_reg;
     }
   }
-  else if( (instr_word[0] & 0xf0 ) == 0x70 ) //op2 == 0111
+  else if( (instr_word[3] & 0xf0 ) == 0x70 ) //op2 == 0111
   {
     if( (instr_word[1] & 0x60) == 0x20 ) //op == 01 
     {
@@ -2304,18 +2304,18 @@ instr_info_t* decode_data_processing_and_misc(byte* instr_word,
             info = decode_data_processing_imm(instr_word, di, just_opcode, 
                                               dsts, srcs, numdsts, numsrcs);
         }
-        else if( ((instr_word[0] & 0x1) == 1) && //op1 == 10000
-                 ((instr_word[1] & 0xf0) == 0 )) 
+        if( ((instr_word[0] & 0x1) == 1) && //op1 == 10000
+            ((instr_word[1] & 0xf0) == 0 )) 
         {
           //decode_16bit_imm_load
         }
-        else if( ((instr_word[0] & 0x1) == 1) && //op1 == 10100
-                 ((instr_word[1] & 0xf0) == 0x40) )
+        if( ((instr_word[0] & 0x1) == 1) && //op1 == 10100
+            ((instr_word[1] & 0xf0) == 0x40) )
         {
           //decode_high_halfword_16bit_imm_load
         }
-        else if( ((instr_word[0] & 0x1) == 1) && //op1 == 10x10
-                 ((instr_word[1] & 0xf0) == 0x20) )
+        if( ((instr_word[0] & 0x1) == 1) && //op1 == 10x10
+            ((instr_word[1] & 0xf0) == 0x20) )
         {
             info = decode_msr_and_hints(instr_word, di, just_opcode,
                                         dsts, srcs, numdsts, numsrcs);

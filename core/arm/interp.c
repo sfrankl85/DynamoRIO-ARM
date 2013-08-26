@@ -2545,6 +2545,10 @@ build_bb_ilist(dcontext_t *dcontext, build_bb_t *bb)
         bb->record_translation = true;
     }
 
+    //SJF Quick HACK to get Register R7 restored before block executes
+    bool absolute=true;
+    RESTORE_FROM_DC(bb->ilist, dcontext, REG_RR7, R7_OFFSET, INSERT_APPEND, NULL);
+
     KSTART(bb_decoding);
     while (true) {
         if (check_for_stopping_point(dcontext, bb)) {
@@ -2807,6 +2811,26 @@ build_bb_ilist(dcontext_t *dcontext, build_bb_t *bb)
                                             opnd_create_reg_list(REGLIST_R8|REGLIST_R9),
                                             new_cond ));
 
+                  //If bl then store addr after in r14
+                  if( bb->instr->opcode == OP_blx_reg )
+                  {
+                    instrlist_meta_preinsert( bb->ilist, bb->instr, INSTR_CREATE_push(dcontext,
+                                              opnd_create_reg_list(REGLIST_R8|REGLIST_R9),
+                                              COND_ALWAYS ));
+
+                    instrlist_preinsert_move_32bits_to_reg( bb->ilist, dcontext, REG_RR8, REG_RR9,
+                                                            bb->instr->bytes+4, bb->instr, COND_ALWAYS );
+
+                    SAVE_TO_DC(bb->ilist, dcontext, REG_RR8, R14_OFFSET, INSERT_PRE, bb->instr);
+
+                    instrlist_meta_preinsert( bb->ilist, bb->instr, INSTR_CREATE_pop(dcontext,
+                                              opnd_create_reg_list(REGLIST_R8|REGLIST_R9),
+                                              COND_ALWAYS ));
+                  }
+                  else //If not a bl then store old value to dcontext
+                    SAVE_TO_DC(bb->ilist, dcontext, REG_RR14, R14_OFFSET, INSERT_PRE, bb->instr);
+
+
                   //Change to a direct branch. Should be patched later
                   bb->instr->opcode = OP_b;
                   bb->instr->num_srcs = 1;
@@ -2823,8 +2847,9 @@ build_bb_ilist(dcontext_t *dcontext, build_bb_t *bb)
                             bb->instr->opcode == OP_add_reg || bb->instr->opcode == OP_sub_reg ) )
                 {
                   bool absolute = true;
-                  //Save R0 to dcontext
+                  //Save R0 + R14 to dcontext
                   SAVE_TO_DC(bb->ilist, dcontext, REG_RR0, R0_OFFSET, INSERT_PRE, bb->instr);
+                  SAVE_TO_DC(bb->ilist, dcontext, REG_RR14, R14_OFFSET, INSERT_PRE, bb->instr);
 
                   //Change the dest of the instr to REG R0 and add branch to indirect stub after
                   bb->instr->dsts[0].value.reg = REG_RR0;
@@ -2881,6 +2906,26 @@ build_bb_ilist(dcontext_t *dcontext, build_bb_t *bb)
                   instrlist_meta_preinsert(bb->ilist, bb->instr,
                                            INSTR_CREATE_mov_reg( dcontext, opnd_create_reg(REG_RR0),
                                                                   bb->instr->src0, COND_ALWAYS ));
+
+                  if( bb->instr->opcode == OP_blx_reg )
+                  {
+                    instrlist_meta_preinsert( bb->ilist, bb->instr, INSTR_CREATE_push(dcontext,
+                                              opnd_create_reg_list(REGLIST_R8|REGLIST_R9),
+                                              COND_ALWAYS ));
+
+                    instrlist_preinsert_move_32bits_to_reg( bb->ilist, dcontext, REG_RR8, REG_RR9,
+                                                            bb->instr->bytes+4, bb->instr, COND_ALWAYS );
+
+                    SAVE_TO_DC(bb->ilist, dcontext, REG_RR8, R14_OFFSET, INSERT_PRE, bb->instr);
+
+                    instrlist_meta_preinsert( bb->ilist, bb->instr, INSTR_CREATE_pop(dcontext,
+                                              opnd_create_reg_list(REGLIST_R8|REGLIST_R9),
+                                              COND_ALWAYS ));
+                  }
+                  else //If not a bl then store old value to dcontext
+                    SAVE_TO_DC(bb->ilist, dcontext, REG_RR14, R14_OFFSET, INSERT_PRE, bb->instr);
+
+
                   //Change to a direct branch. Should be patched later
                   bb->instr->opcode = OP_b;
                   bb->instr->num_srcs = 1;
@@ -2911,6 +2956,9 @@ build_bb_ilist(dcontext_t *dcontext, build_bb_t *bb)
                   instr_set_ok_to_mangle(new_inst, true);
                   new_inst->flags |= INSTR_JMP_EXIT;
 
+                  //Save lr last
+                  SAVE_TO_DC(bb->ilist, dcontext, REG_RR14, R14_OFFSET, INSERT_PRE, new_inst);
+
                   //Make sure inst is pointing at the last instruction
                   bb->instr = instrlist_last( bb->ilist );
                 }
@@ -2935,6 +2983,7 @@ build_bb_ilist(dcontext_t *dcontext, build_bb_t *bb)
                bool absolute = true;
                //Save R0 to dcontext 
                SAVE_TO_DC(bb->ilist, dcontext, REG_RR0, R0_OFFSET, INSERT_PRE, bb->instr);
+
                //Insert target into r0 if cond satisfied and instr addr + 4 if not.
                //Treat as a fake indirect.
                orig_addr = bb->instr->src0.value.pc;
@@ -2972,6 +3021,23 @@ build_bb_ilist(dcontext_t *dcontext, build_bb_t *bb)
                                          opnd_create_reg_list(REGLIST_R8|REGLIST_R9),
                                          new_cond ));
 
+               if( bb->instr->opcode == OP_bl || bb->instr->opcode == OP_blx_imm )
+               {
+                 instrlist_meta_preinsert( bb->ilist, bb->instr, INSTR_CREATE_push(dcontext,
+                                           opnd_create_reg_list(REGLIST_R8|REGLIST_R9),
+                                           COND_ALWAYS ));
+
+                 instrlist_preinsert_move_32bits_to_reg( bb->ilist, dcontext, REG_RR8, REG_RR9,
+                                                         bb->instr->bytes+4, bb->instr, COND_ALWAYS );
+
+                 SAVE_TO_DC(bb->ilist, dcontext, REG_RR8, R14_OFFSET, INSERT_PRE, bb->instr);
+
+                 instrlist_meta_preinsert( bb->ilist, bb->instr, INSTR_CREATE_pop(dcontext,
+                                           opnd_create_reg_list(REGLIST_R8|REGLIST_R9),
+                                           COND_ALWAYS ));
+               }
+               else //If not a bl then store old value to dcontext
+                 SAVE_TO_DC(bb->ilist, dcontext, REG_RR14, R14_OFFSET, INSERT_PRE, bb->instr);
 
                //Make sure inst is pointing at the last instruction
                bb->instr = instrlist_last( bb->ilist );
@@ -2991,10 +3057,27 @@ build_bb_ilist(dcontext_t *dcontext, build_bb_t *bb)
             }
             else
             {
-            
               //Save R0 to DC
               bool absolute = true;
               SAVE_TO_DC(bb->ilist, dcontext, REG_RR0, R0_OFFSET, INSERT_PRE, bb->instr);
+
+              if( bb->instr->opcode == OP_bl || bb->instr->opcode == OP_blx_imm )
+              {
+                instrlist_meta_preinsert( bb->ilist, bb->instr, INSTR_CREATE_push(dcontext,
+                                          opnd_create_reg_list(REGLIST_R8|REGLIST_R9),
+                                          COND_ALWAYS ));
+
+                instrlist_preinsert_move_32bits_to_reg( bb->ilist, dcontext, REG_RR8, REG_RR9,
+                                                        bb->instr->bytes+4, bb->instr, COND_ALWAYS );
+
+                SAVE_TO_DC(bb->ilist, dcontext, REG_RR8, R14_OFFSET, INSERT_PRE, bb->instr);
+
+                instrlist_meta_preinsert( bb->ilist, bb->instr, INSTR_CREATE_pop(dcontext,
+                                          opnd_create_reg_list(REGLIST_R8|REGLIST_R9),
+                                          COND_ALWAYS ));
+              }
+              else //If not a bl then store old value to dcontext
+                SAVE_TO_DC(bb->ilist, dcontext, REG_RR14, R14_OFFSET, INSERT_PRE, bb->instr);
 
               total_branches++;
               if (total_branches >= BRANCH_LIMIT) {

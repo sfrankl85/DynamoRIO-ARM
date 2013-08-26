@@ -1118,20 +1118,19 @@ insert_exit_stub_other_flags(dcontext_t *dcontext, fragment_t *f,
         if (TEST(FAKE_INDIRECT_FRAG, f->flags)) 
            SAVE_TO_DC(&ilist, dcontext, REG_RR0, NEXT_TAG_OFFSET, INSERT_APPEND, NULL);
 
-        //Save R7
+        //Save R1
+        SAVE_TO_DC(&ilist, dcontext, REG_RR1, R1_OFFSET, INSERT_APPEND, NULL);
         SAVE_TO_DC(&ilist, dcontext, REG_RR7, R7_OFFSET, INSERT_APPEND, NULL);
 
-        /* Output the instrs. Doesnt match how other instrs are added here but oh well */
+        /* Output the instrs. */
         for (inst = instrlist_first(&ilist); inst; inst = instr_get_next(inst)) {
             byte *nxt_pc = instr_encode(dcontext, inst, pc);
             ASSERT(nxt_pc != NULL);
             pc = nxt_pc;
         }
 
-        /* we use XAX to hold the linkstub pointer before we get to fcache_return, 
-           note that indirect stubs use XBX for linkstub pointer */
-       //Get the linkstub addr into R0 for fcache_return
-       pc = insert_addr_into_reg( dcontext, pc, REG_RR0, REG_RR7, l );
+       //Get the linkstub addr into R1 for fcache_return
+       pc = insert_addr_into_reg( dcontext, pc, REG_RR1, REG_RR7, l );
 
 #ifdef PROFILE_LINKCOUNT
         if (linkcount) {
@@ -1141,7 +1140,7 @@ insert_exit_stub_other_flags(dcontext_t *dcontext, fragment_t *f,
         }
 #endif
 
-        /* jmp to exit target */
+        /* branch to exit target */
         pc = insert_relative_branch(pc, exit_target, NOT_HOT_PATCHABLE);
 
 #ifdef PROFILE_LINKCOUNT
@@ -3226,8 +3225,8 @@ emit_fcache_enter_common(dcontext_t *dcontext, generated_code_t *code, byte *pc,
     //Once the value is removed from r0 and r7 then restore it
     //Cannot preserve r7. Might be able to do it another way or have to use
     //a different register
-    RESTORE_FROM_DC(&ilist, dcontext, REG_RR0, R0_OFFSET, INSERT_APPEND, NULL);
     RESTORE_FROM_DC(&ilist, dcontext, REG_RR6, R6_OFFSET, INSERT_APPEND, NULL);
+    RESTORE_FROM_DC(&ilist, dcontext, REG_RR0, R0_OFFSET, INSERT_APPEND, NULL);
     RESTORE_FROM_DC(&ilist, dcontext, REG_CPSR,CPSR_OFFSET, INSERT_APPEND, NULL);
 
     APP(&ilist, INSTR_CREATE_branch_ind(dcontext, opnd_create_reg(REG_RR7)));
@@ -3376,25 +3375,23 @@ append_fcache_return_common(dcontext_t *dcontext, generated_code_t *code,
     /* currently linkstub is only used for coarse-grain exits */
     ASSERT(linkstub == NULL || !absolute);
 
-    //R0 save is done in exit stub
+    //R0, R1 + R7 save is done in exit stub
     SAVE_TO_DC(ilist, dcontext, REG_CPSR,CPSR_OFFSET, INSERT_APPEND, NULL);
-    SAVE_TO_DC(ilist, dcontext, REG_RR1, R1_OFFSET, INSERT_APPEND, NULL);
     SAVE_TO_DC(ilist, dcontext, REG_RR2, R2_OFFSET, INSERT_APPEND, NULL);
     SAVE_TO_DC(ilist, dcontext, REG_RR3, R3_OFFSET, INSERT_APPEND, NULL);
     SAVE_TO_DC(ilist, dcontext, REG_RR4, R4_OFFSET, INSERT_APPEND, NULL);
     SAVE_TO_DC(ilist, dcontext, REG_RR5, R5_OFFSET, INSERT_APPEND, NULL);
     SAVE_TO_DC(ilist, dcontext, REG_RR6, R6_OFFSET, INSERT_APPEND, NULL);
-    SAVE_TO_DC(ilist, dcontext, REG_RR7, R7_OFFSET, INSERT_APPEND, NULL);
     SAVE_TO_DC(ilist, dcontext, REG_RR8, R8_OFFSET, INSERT_APPEND, NULL);
     SAVE_TO_DC(ilist, dcontext, REG_RR9, R9_OFFSET, INSERT_APPEND, NULL);
     SAVE_TO_DC(ilist, dcontext, REG_RR10,R10_OFFSET, INSERT_APPEND, NULL);
     SAVE_TO_DC(ilist, dcontext, REG_RR11,R11_OFFSET, INSERT_APPEND, NULL);
     SAVE_TO_DC(ilist, dcontext, REG_RR12,R12_OFFSET, INSERT_APPEND, NULL);
     SAVE_TO_DC(ilist, dcontext, REG_RR13,R13_OFFSET, INSERT_APPEND, NULL);
-    SAVE_TO_DC(ilist, dcontext, REG_RR14,R14_OFFSET, INSERT_APPEND, NULL);
+    //Do not store r14 here. If it has been set by a bl this will be done at the end of the block
 
-    /* save last_exit, currently in xax, into dcontext->last_exit */
-    SAVE_TO_DC(ilist, dcontext, REG_RR0, LAST_EXIT_OFFSET, INSERT_APPEND, NULL);
+    /* save last_exit, currently in r1, into dcontext->last_exit */
+    SAVE_TO_DC(ilist, dcontext, REG_RR1, LAST_EXIT_OFFSET, INSERT_APPEND, NULL);
 
     /* call central dispatch routine */
     dr_insert_call((void *)dcontext, ilist, NULL/*append*/,
