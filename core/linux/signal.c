@@ -1049,7 +1049,8 @@ signal_init()
 {
     IF_X64(ASSERT(ALIGNED(offsetof(sigpending_t, xstate), AVX_ALIGNMENT)));
     os_itimers_thread_shared();
-
+#if 0
+ SJF Remvoe for now
     /* Set up a handler for safe_read (or other fault detection) during
      * DR init before thread is initialized.
      *
@@ -1062,6 +1063,7 @@ signal_init()
     signal_info_init_sigaction(GLOBAL_DCONTEXT, &init_info);
     intercept_signal(GLOBAL_DCONTEXT, &init_info, SIGSEGV);
     intercept_signal(GLOBAL_DCONTEXT, &init_info, SIGBUS);
+#endif
 }
 
 void

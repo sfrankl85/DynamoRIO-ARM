@@ -457,8 +457,9 @@ const instr_info_t thumb_instrs[] = {
 
 /* At intruction F* page A8-100 in ARMv7-A tech manual. */
 /* All ARM instructions are fixed length at 32 bits. 
-   The opcode is split across multiple bits. TODO may need another opcode */
+   The opcode is split across multiple bits.*/
 const instr_info_t armv7a_instrs[] = {
+    /* opcode, instr_type, op, text, Dest1, Dest2, Src1, Src2, Src3, op2, flags, cpsr, code */
     {OP_adc_imm,     dpi, 0xa, "adc_imm",  Ra, xx, Ra,  I12, xx,  0x0, 0x0,  x, END_LIST}, /*adc_imm()*/
     {OP_adc_reg,     dpe, 0xa, "adc_reg",  Ra, xx, Ra,  Ra,  I5,  0x0, 0x0,  x, END_LIST}, /*adc_reg()*/
     {OP_adc_rsr,     dpe, 0xa, "adc_rsr",  Ra, xx, Ra,  Ra,  Ra,  0x1, 0x0,  x, END_LIST}, /*adc_rsr()*/

@@ -1203,7 +1203,7 @@ use_addr_prefix_on_short_disp(void)
  */
 // SJF Changed this to Only have the branch instruction as a size
 // SJF Now has the instrs to insert last exit into r0 for fcache_return
-#define INSERT_REG_INTO_ADDR 20 * 4
+#define INSERT_REG_INTO_ADDR 31 * 4
 #define SAVE_NEXT_TAG 13 * 4 
 #define SAVE_TO_DC_SIZE 12 * 4
 

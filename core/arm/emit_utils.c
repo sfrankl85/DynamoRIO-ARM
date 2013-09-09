@@ -1100,14 +1100,8 @@ insert_exit_stub_other_flags(dcontext_t *dcontext, fragment_t *f,
 
     if (indirect) {
         pc = insert_jmp_to_ibl(pc, f, l, exit_target, dcontext);
-    } else if (TEST(FRAG_COARSE_GRAIN, f->flags)) {
-        /* This is an entrance stub.  It may be executed even when linked,
-         * so we store target info to memory instead of a register.
-         * The exact bytes used here are assumed by entrance_stub_target_tag().
-         */
-        /* SJF Dont know what this is */
     } else {
-        /* direct branch */
+        /* direct + fake indirect branch */
         instrlist_t ilist;
         instrlist_init(&ilist);
         instr_t* inst;
@@ -1115,7 +1109,7 @@ insert_exit_stub_other_flags(dcontext_t *dcontext, fragment_t *f,
         /* SJF If this is a fake direct branch. i.e. indirect. Then 
                make sure to store the target of the branch into next_tag*/
         bool absolute=true;
-        if (TEST(FAKE_INDIRECT_FRAG, f->flags)) 
+        //if (TEST(FAKE_INDIRECT_FRAG, f->flags))  Always write the target into next_tag
            SAVE_TO_DC(&ilist, dcontext, REG_RR0, NEXT_TAG_OFFSET, INSERT_APPEND, NULL);
 
         //Save R1
@@ -1131,6 +1125,22 @@ insert_exit_stub_other_flags(dcontext_t *dcontext, fragment_t *f,
 
        //Get the linkstub addr into R1 for fcache_return
        pc = insert_addr_into_reg( dcontext, pc, REG_RR1, REG_RR7, l );
+
+       //Move this here to try and ensure linkstub written correctly
+       instrlist_t ilist2;
+       instrlist_init(&ilist2);
+       inst=NULL;
+
+       /* save last_exit, currently in r1, into dcontext->last_exit */
+       SAVE_TO_DC(&ilist2, dcontext, REG_RR1, LAST_EXIT_OFFSET, INSERT_APPEND, NULL);
+
+        /* Output the instrs. */
+        for (inst = instrlist_first(&ilist2); inst; inst = instr_get_next(inst)) {
+            byte *nxt_pc = instr_encode(dcontext, inst, pc);
+            ASSERT(nxt_pc != NULL);
+            pc = nxt_pc;
+        }
+
 
 #ifdef PROFILE_LINKCOUNT
         if (linkcount) {
@@ -3197,7 +3207,7 @@ emit_fcache_enter_common(dcontext_t *dcontext, generated_code_t *code, byte *pc,
     RESTORE_FROM_DC(&ilist, dcontext, REG_RR10,R10_OFFSET, INSERT_APPEND, NULL);
     RESTORE_FROM_DC(&ilist, dcontext, REG_RR9, R9_OFFSET, INSERT_APPEND, NULL);
     RESTORE_FROM_DC(&ilist, dcontext, REG_RR8, R8_OFFSET, INSERT_APPEND, NULL);
-    RESTORE_FROM_DC(&ilist, dcontext, REG_RR7, R7_OFFSET, INSERT_APPEND, NULL);
+    RESTORE_FROM_DC(&ilist, dcontext, REG_RR6, R6_OFFSET, INSERT_APPEND, NULL);
     RESTORE_FROM_DC(&ilist, dcontext, REG_RR5, R5_OFFSET, INSERT_APPEND, NULL);
     RESTORE_FROM_DC(&ilist, dcontext, REG_RR4, R4_OFFSET, INSERT_APPEND, NULL);
     RESTORE_FROM_DC(&ilist, dcontext, REG_RR3, R3_OFFSET, INSERT_APPEND, NULL);
@@ -3211,13 +3221,13 @@ emit_fcache_enter_common(dcontext_t *dcontext, generated_code_t *code, byte *pc,
 
     int offset = offsetof(dcontext_t, next_tag);
      
-    APP(&ilist, INSTR_CREATE_add_imm(dcontext, opnd_create_reg(REG_RR6),
+    APP(&ilist, INSTR_CREATE_add_imm(dcontext, opnd_create_reg(REG_RR0),
                                      opnd_create_reg(REG_RR0),
                                      opnd_create_immed_int(offset, OPSZ_4_12),
                                      COND_ALWAYS ));
 
     instr = INSTR_CREATE_ldr_imm(dcontext, opnd_create_reg(REG_RR7),
-                                     opnd_create_mem_reg(REG_RR6),
+                                     opnd_create_mem_reg(REG_RR0),
                                      OPND_CREATE_IMM12(0), COND_ALWAYS );
     instr_set_u_flag( dcontext, instr, true );
     APP(&ilist, instr );
@@ -3225,7 +3235,6 @@ emit_fcache_enter_common(dcontext_t *dcontext, generated_code_t *code, byte *pc,
     //Once the value is removed from r0 and r7 then restore it
     //Cannot preserve r7. Might be able to do it another way or have to use
     //a different register
-    RESTORE_FROM_DC(&ilist, dcontext, REG_RR6, R6_OFFSET, INSERT_APPEND, NULL);
     RESTORE_FROM_DC(&ilist, dcontext, REG_RR0, R0_OFFSET, INSERT_APPEND, NULL);
     RESTORE_FROM_DC(&ilist, dcontext, REG_CPSR,CPSR_OFFSET, INSERT_APPEND, NULL);
 
@@ -3305,6 +3314,43 @@ append_shared_restore_dcontext_reg(dcontext_t *dcontext, instrlist_t *ilist)
     APP(ilist, RESTORE_FROM_TLS(dcontext, REG_RR7, DCONTEXT_BASE_SPILL_SLOT));
 }
 
+void 
+clear_all_regs( dcontext_t* dcontext, instrlist_t *ilist )
+{
+    ASSERT ((ilist != NULL ));
+
+    APP(ilist, INSTR_CREATE_mov_imm(dcontext, opnd_create_reg(REG_RR0),
+                                     OPND_CREATE_IMM12(0), COND_ALWAYS));
+    APP(ilist, INSTR_CREATE_mov_imm(dcontext, opnd_create_reg(REG_RR1),
+                                     OPND_CREATE_IMM12(0), COND_ALWAYS));
+    APP(ilist, INSTR_CREATE_mov_imm(dcontext, opnd_create_reg(REG_RR2),
+                                     OPND_CREATE_IMM12(0), COND_ALWAYS));
+    APP(ilist, INSTR_CREATE_mov_imm(dcontext, opnd_create_reg(REG_RR3),
+                                     OPND_CREATE_IMM12(0), COND_ALWAYS));
+    APP(ilist, INSTR_CREATE_mov_imm(dcontext, opnd_create_reg(REG_RR4),
+                                     OPND_CREATE_IMM12(0), COND_ALWAYS));
+    APP(ilist, INSTR_CREATE_mov_imm(dcontext, opnd_create_reg(REG_RR5),
+                                     OPND_CREATE_IMM12(0), COND_ALWAYS));
+    APP(ilist, INSTR_CREATE_mov_imm(dcontext, opnd_create_reg(REG_RR6),
+                                     OPND_CREATE_IMM12(0), COND_ALWAYS));
+    APP(ilist, INSTR_CREATE_mov_imm(dcontext, opnd_create_reg(REG_RR7),
+                                     OPND_CREATE_IMM12(0), COND_ALWAYS));
+    APP(ilist, INSTR_CREATE_mov_imm(dcontext, opnd_create_reg(REG_RR8),
+                                     OPND_CREATE_IMM12(0), COND_ALWAYS));
+    APP(ilist, INSTR_CREATE_mov_imm(dcontext, opnd_create_reg(REG_RR9),
+                                     OPND_CREATE_IMM12(0), COND_ALWAYS));
+    APP(ilist, INSTR_CREATE_mov_imm(dcontext, opnd_create_reg(REG_RR10),
+                                     OPND_CREATE_IMM12(0), COND_ALWAYS));
+    APP(ilist, INSTR_CREATE_mov_imm(dcontext, opnd_create_reg(REG_RR11),
+                                     OPND_CREATE_IMM12(0), COND_ALWAYS));
+    APP(ilist, INSTR_CREATE_mov_imm(dcontext, opnd_create_reg(REG_RR12),
+                                     OPND_CREATE_IMM12(0), COND_ALWAYS));
+    APP(ilist, INSTR_CREATE_mov_imm(dcontext, opnd_create_reg(REG_RR13),
+                                     OPND_CREATE_IMM12(0), COND_ALWAYS));
+    APP(ilist, INSTR_CREATE_mov_imm(dcontext, opnd_create_reg(REG_RR14),
+                                     OPND_CREATE_IMM12(0), COND_ALWAYS));
+}
+
 /*
 # fcache_return: context switch back to DynamoRIO.
 # Invoked via
@@ -3376,6 +3422,7 @@ append_fcache_return_common(dcontext_t *dcontext, generated_code_t *code,
     ASSERT(linkstub == NULL || !absolute);
 
     //R0, R1 + R7 save is done in exit stub
+    //R14 done at end of block
     SAVE_TO_DC(ilist, dcontext, REG_CPSR,CPSR_OFFSET, INSERT_APPEND, NULL);
     SAVE_TO_DC(ilist, dcontext, REG_RR2, R2_OFFSET, INSERT_APPEND, NULL);
     SAVE_TO_DC(ilist, dcontext, REG_RR3, R3_OFFSET, INSERT_APPEND, NULL);
@@ -3390,14 +3437,17 @@ append_fcache_return_common(dcontext_t *dcontext, generated_code_t *code,
     SAVE_TO_DC(ilist, dcontext, REG_RR13,R13_OFFSET, INSERT_APPEND, NULL);
     //Do not store r14 here. If it has been set by a bl this will be done at the end of the block
 
-    /* save last_exit, currently in r1, into dcontext->last_exit */
+    /* save last_exit, currently in r1, into dcontext->last_exit 
+       Moved this to the exit stub
     SAVE_TO_DC(ilist, dcontext, REG_RR1, LAST_EXIT_OFFSET, INSERT_APPEND, NULL);
+     */
+
+    //clear_all_regs(dcontext, ilist);
 
     /* call central dispatch routine */
     dr_insert_call((void *)dcontext, ilist, NULL/*append*/,
                    (void *)dispatch, 1,
-                   absolute ?
-                   opnd_create_pc((ptr_int_t)dcontext) : opnd_create_reg(REG_RR7));
+                   opnd_create_pc((ptr_int_t)dcontext));
 
     /* dispatch() shouldn't return! */
     insert_reachable_cti(dcontext, ilist, NULL, vmcode_get_start(),

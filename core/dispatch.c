@@ -746,9 +746,12 @@ dispatch_enter_dynamorio(dcontext_t *dcontext)
                 }
             }
             // SJF If it is a fake indirect then next_tag is already set.
+            /* SJF Completly remove this. All blcoks need to write their target 
+                   into next_tag
             if (!LINKSTUB_FAKE_INDIRECT(dcontext->last_exit->flags)) 
               dcontext->next_tag = EXIT_TARGET_TAG(dcontext, dcontext->last_fragment,
                                                    dcontext->last_exit);
+             */
         } else {
             /* get src info from coarse ibl exit into the right place */
             if (DYNAMO_OPTION(coarse_units)) {

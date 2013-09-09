@@ -2491,6 +2491,11 @@ instrlist_rewrite_relative_to_absolute( dcontext_t* dcontext, instrlist_t* ilist
             switch( inst->opcode )
             {
               case OP_add_reg:
+              case OP_add_imm:
+              case OP_sub_reg:
+              case OP_sub_imm:
+                //TODO Check dest and poss other src of instr and use different
+                //scratch registers if used
                 instrlist_meta_preinsert( ilist, inst, INSTR_CREATE_push(dcontext,
                                                  opnd_create_reg_list(REGLIST_R8|REGLIST_R9),
                                                  COND_ALWAYS ));
@@ -4350,7 +4355,8 @@ bool
 opcode_is_possible_pc_read( int opc )
 {
   //Add any possible pc read opcodes here
-  if( opc == OP_add_reg )
+  if( opc == OP_add_reg || opc == OP_add_imm || 
+      opc == OP_sub_reg || opc == OP_sub_imm )
     return true;
   else
     return false;
@@ -4500,6 +4506,9 @@ instr_is_pc_read( instr_t* instr )
     switch( instr->opcode)
     {
       case OP_add_reg:
+      case OP_add_imm:
+      case OP_sub_reg:
+      case OP_sub_imm:
          //Check the source
          opnd = instr->src0;
 

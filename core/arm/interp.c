@@ -3061,6 +3061,22 @@ build_bb_ilist(dcontext_t *dcontext, build_bb_t *bb)
               bool absolute = true;
               SAVE_TO_DC(bb->ilist, dcontext, REG_RR0, R0_OFFSET, INSERT_PRE, bb->instr);
 
+              instrlist_meta_preinsert( bb->ilist, bb->instr, INSTR_CREATE_push(dcontext,
+                                        opnd_create_reg_list(REGLIST_R8|REGLIST_R9),
+                                        COND_ALWAYS ));
+
+              instrlist_preinsert_move_32bits_to_reg( bb->ilist, dcontext, REG_RR8, REG_RR9,
+                                                      bb->instr->src0.value.pc, bb->instr, COND_ALWAYS );
+
+              instrlist_meta_preinsert( bb->ilist, bb->instr,
+                                        INSTR_CREATE_mov_reg( dcontext, opnd_create_reg(REG_RR0),
+                                                              opnd_create_reg(REG_RR8), COND_ALWAYS ));
+
+              instrlist_meta_preinsert( bb->ilist, bb->instr, INSTR_CREATE_pop(dcontext,
+                                        opnd_create_reg_list(REGLIST_R8|REGLIST_R9),
+                                        COND_ALWAYS ));
+
+
               if( bb->instr->opcode == OP_bl || bb->instr->opcode == OP_blx_imm )
               {
                 instrlist_meta_preinsert( bb->ilist, bb->instr, INSTR_CREATE_push(dcontext,
@@ -3078,6 +3094,11 @@ build_bb_ilist(dcontext_t *dcontext, build_bb_t *bb)
               }
               else //If not a bl then store old value to dcontext
                 SAVE_TO_DC(bb->ilist, dcontext, REG_RR14, R14_OFFSET, INSERT_PRE, bb->instr);
+
+              //Make sure inst is pointing at the last instruction
+              bb->instr = instrlist_last( bb->ilist );
+              bb->instr->cond = COND_ALWAYS;
+              instr_set_raw_bits_valid( bb->instr, false );
 
               total_branches++;
               if (total_branches >= BRANCH_LIMIT) {
