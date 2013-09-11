@@ -495,7 +495,8 @@ enter_fcache(dcontext_t *dcontext, fcache_enter_func_t entry, cache_pc pc)
     ASSERT(dcontext->try_except.try_except_state == NULL);
 
     /* prepare to enter fcache */
-    LOG(THREAD, LOG_DISPATCH, 4, "fcache_enter = "PFX", target = "PFX"\n", entry, pc);
+    LOG(THREAD, LOG_DISPATCH, 4, "fcache_enter = "PFX", target = "PFX", instruction = 0x%.2x%.2x%.2x%.2x\n", 
+                        entry, pc, (int*)*(pc+3), (int*)*(pc+2), (int*)*(pc+1), (int*)*(pc));
     set_fcache_target(dcontext, pc);
     ASSERT(pc != NULL);
 

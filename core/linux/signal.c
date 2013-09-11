@@ -1047,10 +1047,10 @@ os_itimers_thread_shared(void)
 void
 signal_init()
 {
+#if 0
+SJF Removed all signal catching
     IF_X64(ASSERT(ALIGNED(offsetof(sigpending_t, xstate), AVX_ALIGNMENT)));
     os_itimers_thread_shared();
-#if 0
- SJF Remvoe for now
     /* Set up a handler for safe_read (or other fault detection) during
      * DR init before thread is initialized.
      *
@@ -1080,6 +1080,8 @@ signal_exit()
 void
 signal_thread_init(dcontext_t *dcontext)
 {
+#if 0
+SJF Removed all signal catching
 #ifdef HAVE_SIGALTSTACK
     int rc;
 #endif
@@ -1126,6 +1128,7 @@ signal_thread_init(dcontext_t *dcontext)
      * for first thread, called from initial setup; else, from new_thread_setup
      * or share_siginfo_after_take_over.
      */
+#endif
 }
 
 /* i#27: create custom data to pass to the child of a clone
@@ -1300,6 +1303,8 @@ signal_info_exit_sigaction(dcontext_t *dcontext, thread_sig_info_t *info,
 app_pc
 signal_thread_inherit(dcontext_t *dcontext, void *clone_record)
 {
+#if 0
+SJF Removed all signal catching
     app_pc res = NULL;
     clone_record_t *record = (clone_record_t *) clone_record;
     thread_sig_info_t *info = (thread_sig_info_t *) dcontext->signal_field;
@@ -1516,6 +1521,7 @@ signal_thread_inherit(dcontext_t *dcontext, void *clone_record)
     info->fully_initialized = true;
 
     return res;
+#endif
 }
 
 /* When taking over existing app threads, we assume they're using pthreads and
@@ -1549,6 +1555,8 @@ share_siginfo_after_take_over(dcontext_t *dcontext, dcontext_t *takeover_dc)
 void
 signal_fork_init(dcontext_t *dcontext)
 {
+#if 0
+SJF Removed all signal catching
     thread_sig_info_t *info = (thread_sig_info_t *) dcontext->signal_field;
     int i;
     /* Child of fork is a single thread in a new process so should
@@ -1602,6 +1610,7 @@ signal_fork_init(dcontext_t *dcontext)
 
     /* Assumed to be async safe. */
     info->fully_initialized = true;
+#endif
 }
 
 #ifdef DEBUG
@@ -1618,6 +1627,8 @@ sigsegv_handler_is_ours(void)
 void
 signal_thread_exit(dcontext_t *dcontext, bool other_thread)
 {
+#if 0
+SJF Removed all signal catching
     thread_sig_info_t *info = (thread_sig_info_t *) dcontext->signal_field;
     int i;
 
@@ -1733,6 +1744,7 @@ signal_thread_exit(dcontext_t *dcontext, bool other_thread)
                         (void (*func)(dcontext_t *, priv_mcontext_t *))
                         perfctr_update_gui());
 #endif
+#endif //0
 }
 
 static void

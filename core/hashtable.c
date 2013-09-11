@@ -401,6 +401,9 @@ print_hashtable_stats(dcontext_t *dcontext,
                       const char *brtype_str,
                       hashtable_statistics_t *lookup_stats) 
 {
+#if 0
+SJF TODO Causing logging crash because of divide_uint64_print ASSERT 
+         and no hashtables at the moment anyway
     uint64 hits_stat = lookup_stats->hit_stat;
     uint64 total_lookups;
     if (lookup_stats->hit_stat < lookup_stats->collision_hit_stat) {
@@ -535,6 +538,7 @@ print_hashtable_stats(dcontext_t *dcontext,
                 );
         }
     });
+#endif
 }
 
 #endif /* HASHTABLE_STATISTICS */

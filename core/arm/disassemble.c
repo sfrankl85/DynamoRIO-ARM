@@ -1289,12 +1289,14 @@ common_disassemble_fragment(dcontext_t *dcontext,
 void
 disassemble_fragment(dcontext_t *dcontext, fragment_t *f, bool just_header)
 {
+/* SJF TODO Needs full decoding
     if ((stats->logmask & LOG_EMIT) != 0) {
         common_disassemble_fragment(dcontext, f, THREAD,
                                     true, !just_header);
         if (!just_header)
             LOG(THREAD, LOG_EMIT, 1, "\n");
     }
+*/
 }
 #endif /* DEBUG */
 

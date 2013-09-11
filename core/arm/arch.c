@@ -124,6 +124,8 @@ dump_emitted_routines(dcontext_t *dcontext, file_t file,
                       const char *code_description, 
                       generated_code_t *code, byte *emitted_pc)
 {
+#if 0
+SJF TODO Remove this for now as decode logic not working fully. 
     byte *last_pc;
 
 #ifdef X64
@@ -209,6 +211,8 @@ dump_emitted_routines(dcontext_t *dcontext, file_t file,
     if (GENCODE_IS_X86(code->gencode_mode))
         set_x86_mode(dcontext, false/*x64*/);
 #endif
+
+#endif //0
 }
 
 void
@@ -1227,7 +1231,9 @@ arch_patch_syscall(dcontext_t *dcontext, byte *target)
 void 
 update_generated_hashtable_access(dcontext_t *dcontext)
 {
+/* SJF TODO IBL Hashtable
     update_indirect_branch_lookup(dcontext);
+*/
 }
 
 void
@@ -4314,33 +4320,31 @@ dump_mcontext(priv_mcontext_t *context, file_t f, bool dump_xml)
 {
     print_file(f, dump_xml ? 
                "\t<priv_mcontext_t value=\"@"PFX"\""
-               "\n\t\tr0=\""PFX"\"\n\t\tr3=\""PFX"\""
-               "\n\t\tr1=\""PFX"\"\n\t\tr2=\""PFX"\""
+               "\n\t\tr0=\""PFX"\"\n\t\tr1=\""PFX"\""
+               "\n\t\tr2=\""PFX"\"\n\t\tr3=\""PFX"\""
+               "\n\t\tr4=\""PFX"\"\n\t\tr5=\""PFX"\""
                "\n\t\tr6=\""PFX"\"\n\t\tr7=\""PFX"\""
-               "\n\t\tr5=\""PFX"\"\n\t\tr13=\""PFX"\""
                "\n\t\tr8=\""PFX"\"\n\t\tr9=\""PFX"\""
                "\n\t\tr10=\""PFX"\"\n\t\tr11=\""PFX"\""
                "\n\t\tr12=\""PFX"\"\n\t\tr13=\""PFX"\""
                "\n\t\tr14=\""PFX"\"\n\t\tr15=\""PFX"\""
                : 
                "priv_mcontext_t @"PFX"\n"
-               "\tr0 = "PFX"\n\tr3 = "PFX"\n\tr1 = "PFX"\n\tr2 = "PFX"\n"
-               "\tr6 = "PFX"\n\tr7 = "PFX"\n\tr5 = "PFX"\n\tr13 = "PFX"\n"
+               "\tr0  = "PFX"\n\tr1  = "PFX"\n\tr2  = "PFX"\n\tr3  = "PFX"\n"
+               "\tr4  = "PFX"\n\tr5  = "PFX"\n\tr6  = "PFX"\n\tr7  = "PFX"\n"
                "\tr8  = "PFX"\n\tr9  = "PFX"\n\tr10 = "PFX"\n\tr11 = "PFX"\n"
                "\tr12 = "PFX"\n\tr13 = "PFX"\n\tr14 = "PFX"\n\tr15 = "PFX"\n"
                ,
                context, 
-               context->r0, context->r3, context->r1, context->r2,
-               context->r6, context->r7, context->r5, context->r13 
-#ifdef X64
-               , context->r8,  context->r9,  context->r10,  context->r11,
+               context->r0, context->r1, context->r2, context->r3,
+               context->r4, context->r5, context->r6, context->r7,
+               context->r8,  context->r9,  context->r10,  context->r11,
                context->r12, context->r13, context->r14,  context->r15
-#endif
                );
     print_file(f, dump_xml ? 
                "\n\t\tcpsr=\""PFX"\"\n\t\tpc=\""PFX"\" />\n"
                :
-               "\tcpsr = "PFX"\n\tpc     = "PFX"\n",
+               "\tcpsr = "PFX"\n\tpc   = "PFX"\n",
                context->cpsr, context->r15);
 }
 

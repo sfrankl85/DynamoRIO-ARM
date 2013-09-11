@@ -3874,7 +3874,8 @@ instr_encode_common(dcontext_t *dcontext, instr_t *instr, byte *copy_pc, byte *f
 
     if( field_ptr == di.start_pc + sz )//Success
     {
-        LOG(THREAD, LOG_EMIT, ENC_LEVEL, "\nwritten instruction '%x' at addr '%x'\n",
+        LOG(THREAD, LOG_EMIT, ENC_LEVEL, "\nwritten instruction '0x%.2x%.2x%.2x%.2x' at addr '0x%x'\n",
+                   (int*)*(field_ptr-1), (int*)*(field_ptr-2), (int*)*(field_ptr-3), 
                    (int*)*(field_ptr-4), (int)(field_ptr-4) );
     }
 

@@ -770,7 +770,7 @@ print_vm_areas(vm_area_vector_t *v, file_t outf)
     int i;
     ASSERT_VMAREA_VECTOR_PROTECTED(v, READWRITE);
     for(i = 0; i < v->length; i++) {
-        print_vm_area(v, &v->buf[i], outf, "  ");
+        //SJF TODO Readdprint_vm_area(v, &v->buf[i], outf, "  ");
     }
 }
 
@@ -5812,11 +5812,13 @@ prepend_entry_to_fraglist(vm_area_t *area, fragment_t *entry)
     /* Can't assert area_contains_frag_pc() because vm_area_unlink_fragments
      * moves all also entries onto the area fraglist that's being flushed.
      */
+/* SJF TODO Causing crash
     LOG(THREAD_GET, LOG_VMAREAS, 4,
         "%s: putting F%d ("PFX") (%s) on vmarea "PFX"-"PFX"\n",
         __FUNCTION__, FRAG_ID(entry), FRAG_PC(entry),
         TEST(FRAG_SHARED, entry->flags) ? "shared" : "private",
         area->start, area->end);
+*/
     FRAG_NEXT_ASSIGN(entry, area->custom.frags);
     /* prev wraps around, but not next */
     if (area->custom.frags != NULL) {

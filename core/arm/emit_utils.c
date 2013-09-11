@@ -1210,8 +1210,12 @@ exit_cti_disp_pc(dcontext_t* dcontext, cache_pc branch_pc)
 void
 patch_branch(dcontext_t* dcontext, cache_pc branch_pc, cache_pc target_pc, bool hot_patch)
 {
+    //Overwrite opcode to be a normal branch
+    insert_relative_branch(branch_pc, target_pc, hot_patch);
+/*
     cache_pc byte_ptr = exit_cti_disp_pc(dcontext, branch_pc);
     insert_relative_target(byte_ptr, target_pc, hot_patch);
+*/
 }
 
 #ifdef PROFILE_LINKCOUNT

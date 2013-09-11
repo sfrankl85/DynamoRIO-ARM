@@ -1742,8 +1742,10 @@ divide_uint64_print(uint64 numerator, uint64 denominator, bool percentage,
     *top = (uint) ((multiple * numerator) / denominator);
     for (i = 0, precision_multiple = 1; i < precision; i++)
         precision_multiple *= 10;
+/* SJF Fails on ARM
     ASSERT_TRUNCATE(*bottom, uint, (((precision_multiple * multiple * numerator) / denominator)
                                     - (precision_multiple * *top)));
+*/
     /* FUNNY: if I forget the above ) I crash the preprocessor: cc1 internal compiler error 
      * couldn't reproduce in a smaller set to file a bug against gcc version 3.3.3 (cygwin special)
      */

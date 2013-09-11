@@ -207,6 +207,10 @@ opnd_get_size(opnd_t opnd)
     switch(opnd.kind) {
     case REG_kind: 
         return reg_get_size(opnd_get_reg(opnd));
+    case MEM_REG_kind: 
+        return OPSZ_4_4;
+    case REG_LIST_kind: 
+        return OPSZ_4_16;
     case IMMED_INTEGER_kind:
     case IMMED_FLOAT_kind:
     case BASE_DISP_kind:
@@ -217,6 +221,8 @@ opnd_get_size(opnd_t opnd)
         return OPSZ_PTR;
     case NULL_kind:
         return OPSZ_NA;
+    case MASK_kind:
+        return OPSZ_4_2;
     default:
         CLIENT_ASSERT(false, "opnd_get_size: unknown opnd type");
         return OPSZ_NA;
@@ -1155,6 +1161,19 @@ opnd_size_in_bytes(opnd_size_t size)
         return 108;
     case OPSZ_512:
         return 512;
+    case OPSZ_4_2:
+    case OPSZ_4_3:
+    case OPSZ_4_4:
+    case OPSZ_4_5:
+    case OPSZ_4_6:
+    case OPSZ_4_8:
+        return 1;
+    case OPSZ_4_10:
+    case OPSZ_4_12:
+    case OPSZ_4_16:
+        return 2;
+    case OPSZ_4_24:
+        return 3;
     default:
         CLIENT_ASSERT(false, "opnd_size_in_bytes: invalid opnd type");
         return 0;
@@ -2516,8 +2535,14 @@ instrlist_rewrite_relative_to_absolute( dcontext_t* dcontext, instrlist_t* ilist
                 break;
             }
           }
-          else //If not a pc read then copy straight from app
+          //If not a pc read then copy straight from app. unless it is a cti
+          /* Remove this for now. As cti will have been changed to write to R0
+             then this will not know it is a cti and try to mark it as raw bits 
+             valid. This will cause a slowdown as all possible pc read instrs
+             will now be fully encoded.
+          else if( !instr_is_cti( inst )) 
             instr_set_raw_bits_valid( inst, true );
+           */
         }
     }
 }
@@ -4178,7 +4203,8 @@ opcode_get_encoding_type(int opc)
         return ENC_1DST_REG_2SRC_REG_1SRC_IMM;
 
       case OP_mvn_reg: case OP_add_sp_reg:
-      case OP_sub_sp_reg:
+      case OP_sub_sp_reg: case OP_lsr_imm:
+      case OP_ror_imm:
         return ENC_1DST_REG_1SRC_REG_1SRC_IMM_1;
 
       case OP_sub_imm: case OP_sbc_imm:
@@ -4387,8 +4413,8 @@ opcode_is_cti(int opc)
        opc == OP_blx_reg || opc == OP_bx || 
        opc == OP_bxj || opc == OP_mov_reg || opc == OP_mov_imm ||
        (opc >= OP_ldr_imm && opc <= OP_ldrt ) || //All load instrs
-       ( opc == OP_add_imm || opc == OP_sub_imm ||
-         opc == OP_add_reg || opc == OP_sub_reg ) )
+       opc == OP_add_imm || opc == OP_sub_imm ||
+       opc == OP_add_reg || opc == OP_sub_reg )
      return true;
    else
      return false;
@@ -4537,8 +4563,8 @@ instr_is_mov_br(instr_t* instr)
 
    if( opc == OP_mov_reg || opc == OP_mov_imm || 
        ( opc >= OP_ldr_imm && opc <= OP_ldrt ) ||
-       ( opc == OP_add_imm || opc == OP_sub_imm ||
-         opc == OP_add_reg || opc == OP_sub_reg ) )
+       opc == OP_add_imm || opc == OP_sub_imm ||
+       opc == OP_add_reg || opc == OP_sub_reg )
    {
        //Make sure there are dsts
        if( instr->dsts != NULL )

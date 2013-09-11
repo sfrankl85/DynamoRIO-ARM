@@ -2625,9 +2625,10 @@ build_bb_ilist(dcontext_t *dcontext, build_bb_t *bb)
             }
 
             total_instrs++;
-            DOELOG(3, LOG_INTERP, {
+            /*SJF TODO Needs full decode
+                DOELOG(3, LOG_INTERP, {
                 disassemble_with_bytes(dcontext, bb->instr_start, THREAD);
-            });
+            });*/
 
 #if defined(INTERNAL) || defined(CLIENT_INTERFACE)
             if (bb->outf != INVALID_FILE)
@@ -2938,8 +2939,8 @@ build_bb_ilist(dcontext_t *dcontext, build_bb_t *bb)
                 }
                 else if( bb->instr->opcode == OP_mov_reg || bb->instr->opcode == OP_mov_imm ||
                          ( bb->instr->opcode >= OP_ldr_imm && bb->instr->opcode <= OP_ldrt ) ||
-                          ( bb->instr->opcode == OP_add_imm || bb->instr->opcode == OP_sub_imm ||
-                            bb->instr->opcode == OP_add_reg || bb->instr->opcode == OP_sub_reg ) )
+                          bb->instr->opcode == OP_add_imm || bb->instr->opcode == OP_sub_imm ||
+                          bb->instr->opcode == OP_add_reg || bb->instr->opcode == OP_sub_reg )
                 {
                   bool absolute = true;
                   //Save R0 to dcontext 
@@ -3604,16 +3605,19 @@ mangle_bb_ilist(dcontext_t *dcontext, build_bb_t *bb)
         }
         STATS_INC(num_sandboxed_fragments);
     }
-
+/* SJF TODO Needs full decoding
     DOLOG(4, LOG_INTERP, {
         LOG(THREAD, LOG_INTERP, 4, "bb ilist before mangling:\n");
         instrlist_disassemble(dcontext, bb->start_pc, bb->ilist, THREAD);
     });
+*/
     mangle(dcontext, bb->ilist, bb->flags, true, bb->record_translation);
+/* SJF TODO Needs full decoding
     DOLOG(4, LOG_INTERP, {
         LOG(THREAD, LOG_INTERP, 4, "bb ilist after mangling:\n");
         instrlist_disassemble(dcontext, bb->start_pc, bb->ilist, THREAD);
     });
+*/
     return true;
 }
 

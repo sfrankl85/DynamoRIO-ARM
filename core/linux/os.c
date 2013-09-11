@@ -2618,13 +2618,13 @@ void
 os_thread_under_dynamo(dcontext_t *dcontext)
 {
     os_swap_context(dcontext, false/*to dr*/);
-    start_itimer(dcontext);
+    //start_itimer(dcontext); SJF signal
 }
 
 void
 os_thread_not_under_dynamo(dcontext_t *dcontext)
 {
-    stop_itimer(dcontext);
+    //stop_itimer(dcontext); SJF signal
     os_swap_context(dcontext, true/*to app*/);
 }
 
@@ -7646,7 +7646,8 @@ maps_iterator_next(maps_iter_t *iter)
     }
     LOG(GLOBAL, LOG_VMAREAS, 6, 
         "\nget_memory_info_from_os: newline=[%s]\n",
-        iter->newline ? iter->newline : "(null)");
+        "(null)"); //Crashing
+        //iter->newline ? iter->newline : "(null)");
 
     /* buffer is big enough to hold at least one line */
     ASSERT(iter->newline != NULL);

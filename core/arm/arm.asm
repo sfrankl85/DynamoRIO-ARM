@@ -1052,7 +1052,6 @@ GLOBAL_LABEL(dynamorio_nonrt_sigreturn:)
         END_FUNC(dynamorio_sigreturn)
 #endif
 
-#ifdef HAVE_SIGALTSTACK
 /* We used to get the SP by taking the address of our args, but that doesn't
  * work on x64 nor with other compilers.  Today we use asm to pass in the
  * initial SP.  For x64, we add a 4th register param and tail call to
@@ -1070,94 +1069,6 @@ GLOBAL_LABEL(master_signal_handler:)
         CALLC1(master_signal_handler_C, REG_R0)
         mov 	 REG_R15, REG_R14 
         END_FUNC(master_signal_handler)
-
-#else /* !HAVE_SIGALTSTACK */
-
-/* PR 283149: if we're on the app stack now and we need to deliver
- * immediately, we can't copy over our own sig frame w/ the app's, and we
- * can't push the app's below ours and have continuation work.  One choice
- * is to copy the frame to pending and assume we'll deliver right away.
- * Instead we always swap to dstack, which also makes us a little more 
- * transparent wrt running out of app stack or triggering app stack guard
- * pages.  We do it in asm since it's ugly to swap stacks in the middle
- * of a C routine: have to fix up locals + frame ptr, or jmp to start of
- * func and clobber callee-saved regs (which messes up vmkernel sigreturn).
- */
-        DECLARE_FUNC(master_signal_handler)
-GLOBAL_LABEL(master_signal_handler:)
-        mov      REG_XAX, ARG1
-        mov      REG_XCX, ARG2
-        mov      REG_XDX, ARG3
-        /* save args */
-        push     REG_XAX
-        push     REG_XCX
-        push     REG_XDX
-        /* make space for answers: struct clone_and_swap_args */
-        sub      REG_XSP, CLONE_AND_SWAP_STRUCT_SIZE
-        mov      REG_XAX, REG_XSP
-        /* call a C routine rather than writing everything in asm */
-        CALLC2(sig_should_swap_stack, REG_XAX, REG_XDX)
-        cmp      REG_XAX, 0
-        pop      REG_XAX /* clone_and_swap_args.stack */
-        pop      REG_XCX /* clone_and_swap_args.tos */
-        je       no_swap
-        /* calculate the offset between stacks */
-        mov      REG_XDX, REG_XAX
-        sub      REG_XDX, REG_XCX /* shift = stack - tos */
-# ifdef VMX86_SERVER
-        /* update the two parameters to sigreturn for new stack
-         * we can eliminate this once we have PR 405694
-         */
-#  ifdef X64
-        add      r12, REG_XDX     /* r12 += shift */
-#  else
-        add      REG_XSI, REG_XDX /* xsi += shift */
-#  endif
-        add      REG_XBP, REG_XDX /* xbp += shift */
-# endif
-        push     REG_XDX
-        CALLC2(clone_and_swap_stack, REG_XAX, REG_XCX)
-        /* get shift back and update arg2 and arg3 */
-        pop      REG_XDX
-        pop      REG_XCX /* arg3 */
-        pop      REG_XAX /* arg2 */
-        add      REG_XAX, REG_XDX /* arg2 += shift */
-        add      REG_XCX, REG_XDX /* arg3 += shift */
-# ifndef X64
-        /* update the official arg2 and arg3 on the stack */
-        mov     [3*ARG_SZ + REG_XSP], REG_XAX  /* skip arg1+retaddr+arg1 */
-        mov     [4*ARG_SZ + REG_XSP], REG_XCX
-# endif
-        push     REG_XAX
-        push     REG_XCX
-        /* need to get arg1, old frame, new frame */
-        mov      REG_XAX, [4*ARG_SZ + REG_XSP] /* skip 3 args + retaddr */
-        neg      REG_XDX
-        add      REG_XDX, REG_XSP /* xsp-shift = old frame */
-        add      REG_XDX, 3*ARG_SZ /* old frame */
-        mov      REG_XCX, REG_XSP
-        add      REG_XCX, 3*ARG_SZ /* new frame */
-        /* have to be careful about order of reg params */
-        CALLC5(fixup_rtframe_pointers, 0, REG_XAX, REG_XDX, REG_XCX, 0)
-no_swap:
-# ifdef X64
-        pop      ARG3
-        pop      ARG2
-        pop      ARG1
-        mov      rcx, rsp /* pass as 4th arg */
-        jmp      master_signal_handler_C
-        /* can't return, no retaddr */
-# else
-        add      REG_XSP, 3*ARG_SZ
-        /* We need to pass in xsp.  The easiest way is to create an
-         * intermediate frame.
-         */
-        mov      REG_XAX, REG_XSP
-        CALLC1(master_signal_handler_C, REG_XAX)
-        ret
-# endif
-        END_FUNC(master_signal_handler)
-#endif /* !HAVE_SIGALTSTACK */
 
 /* SYS_clone swaps the stack so we need asm support to call it.
  * signature:
