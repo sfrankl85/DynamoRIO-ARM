@@ -868,6 +868,11 @@ copy_and_re_relativize_raw_instr(dcontext_t *dcontext, instr_t *instr,
     /* For PR 251646 we have special support for mangled jecxz/loop* */
     memcpy(dst_pc, instr->bytes, instr->length);
 
+    LOG(THREAD, LOG_EMIT, ENC_LEVEL, "\nwritten instruction (RAW ENCODE) '0x%.2x%.2x%.2x%.2x' at addr '0x%x'\n",
+                   (int*)*(dst_pc+3), (int*)*(dst_pc+2), (int*)*(dst_pc+1),
+                   (int*)*(dst_pc), (int)(dst_pc) );
+
+
     return orig_dst_pc + instr->length;
 }
 
@@ -3874,7 +3879,7 @@ instr_encode_common(dcontext_t *dcontext, instr_t *instr, byte *copy_pc, byte *f
 
     if( field_ptr == di.start_pc + sz )//Success
     {
-        LOG(THREAD, LOG_EMIT, ENC_LEVEL, "\nwritten instruction '0x%.2x%.2x%.2x%.2x' at addr '0x%x'\n",
+        LOG(THREAD, LOG_EMIT, ENC_LEVEL, "\nwritten instruction (FULL ENCODE) '0x%.2x%.2x%.2x%.2x' at addr '0x%x'\n",
                    (int*)*(field_ptr-1), (int*)*(field_ptr-2), (int*)*(field_ptr-3), 
                    (int*)*(field_ptr-4), (int)(field_ptr-4) );
     }

@@ -1981,7 +1981,7 @@ choose_gdt_slots(os_local_state_t *os_tls)
 static void
 os_tls_app_seg_init(os_local_state_t *os_tls, void *segment)
 {
-#ifdef HAVE_TLS //SJF Remove TLs shit
+#ifdef HAVE_TLS //SJF Remove TLS 
     int i, index;
     our_modify_ldt_t *desc;
     app_pc app_fs_base, app_gs_base;
@@ -2316,7 +2316,7 @@ os_tls_get_gdt_index(dcontext_t *dcontext)
 void
 os_tls_pre_init(int gdt_index)
 {
-#ifdef HAVE_TLS //SJF Remove tls shit
+#ifdef HAVE_TLS //SJF Remove TLS 
     /* Only set to above 0 for tls_type == TLS_TYPE_GDT */
     if (gdt_index > 0) {
         /* PR 458917: clear gdt slot to avoid leak across exec */ 

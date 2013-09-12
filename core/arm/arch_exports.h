@@ -357,7 +357,7 @@ static inline int64 atomic_add_exchange_int64(volatile int64 *var, int64 value) 
   } while (0)
   //From macro above __asm__ __volatile__("swp (%0), (%0), %1" : : "r" (target), "r" (value) : "memory"); 
 
-//SJF Forget about atomicity fo now. ldrex doesnt want to work so fuck it
+//SJF Forget about atomicity fo now. ldrex doesnt want to work 
 # define ATOMIC_3BYTE_WRITE(target, value, hot_patch) do {          \
     byte write;                                                     \
                                                                     \
@@ -512,7 +512,7 @@ static inline int64 atomic_add_exchange_int64(volatile int64 *var, int64 value) 
 # define GET_FRAME_PTR(var) asm("mov %0, r11 " : "=r"(var))
 # define GET_STACK_PTR(var) asm("mov %0, r13" : "=r"(var))
 
-/* SJF New stats atomic defs here to deal with the stats shit */
+/* SJF New stats atomic defs here to deal with the stats */
 /* SJF F*ck this just comment it out. Getting  -- `ldrex r3,[fp,#-16]'
        errors when trying to do it correctly. */
 static inline void stats_atomic_inc( int var )

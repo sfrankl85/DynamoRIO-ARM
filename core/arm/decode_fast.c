@@ -672,6 +672,9 @@ decode_cti(dcontext_t *dcontext, byte *pc, instr_t *instr)
 
     pc = decode_opcode( dcontext, pc, instr );
 
+    LOG(THREAD, LOG_EMIT, 6, "\nread instruction with opcode '%d' and bytes '0x%.2x%.2x%.2x%.2x' at addr '0x%x'\n",
+                   instr->opcode, (int*)*(pc-1), (int*)*(pc-2), (int*)*(pc-3), (int*)*(pc-4), (int)(pc-4) );
+
     if( opcode_is_cti( instr->opcode ))
     {
       //Reset the instr to allow a full decode

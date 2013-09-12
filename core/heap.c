@@ -3389,7 +3389,7 @@ common_heap_alloc(thread_units_t *tu, size_t size HEAPACCT(which_heap_t which))
         ACCOUNT_FOR_ALLOC(alloc_new, tu, which, alloc_size, aligned_size);
     }
 #ifdef NO
-//TODO SJF Comment this crap out 
+//TODO SJF Comment this out 
     DOSTATS({
         /* do this before done_allocating: want to ignore special-unit allocs */
         atomic_add( block_count[bucket], 1);

@@ -3217,12 +3217,15 @@ emit_fcache_enter_common(dcontext_t *dcontext, generated_code_t *code, byte *pc,
     RESTORE_FROM_DC(&ilist, dcontext, REG_RR3, R3_OFFSET, INSERT_APPEND, NULL);
     RESTORE_FROM_DC(&ilist, dcontext, REG_RR2, R2_OFFSET, INSERT_APPEND, NULL);
     RESTORE_FROM_DC(&ilist, dcontext, REG_RR1, R1_OFFSET, INSERT_APPEND, NULL);
+    RESTORE_FROM_DC(&ilist, dcontext, REG_RR0, R0_OFFSET, INSERT_APPEND, NULL);
 
     /* Jump indirect through next_tag.  Dispatch set this value with
      * where we want to go next in the fcache_t.
      */
     //dcontext is in r0 so just add offset to it and get entry point 
 
+#if 0
+Use absolute address
     int offset = offsetof(dcontext_t, next_tag);
      
     APP(&ilist, INSTR_CREATE_add_imm(dcontext, opnd_create_reg(REG_RR0),
@@ -3235,11 +3238,12 @@ emit_fcache_enter_common(dcontext_t *dcontext, generated_code_t *code, byte *pc,
                                      OPND_CREATE_IMM12(0), COND_ALWAYS );
     instr_set_u_flag( dcontext, instr, true );
     APP(&ilist, instr );
+#endif
 
-    //Once the value is removed from r0 and r7 then restore it
-    //Cannot preserve r7. Might be able to do it another way or have to use
-    //a different register
-    RESTORE_FROM_DC(&ilist, dcontext, REG_RR0, R0_OFFSET, INSERT_APPEND, NULL);
+    //Cannot preserve r7. 
+    //next_tag should also be stored in mcontext
+    RESTORE_FROM_DC(&ilist, dcontext, REG_RR7, R15_OFFSET, INSERT_APPEND, NULL);
+
     RESTORE_FROM_DC(&ilist, dcontext, REG_CPSR,CPSR_OFFSET, INSERT_APPEND, NULL);
 
     APP(&ilist, INSTR_CREATE_branch_ind(dcontext, opnd_create_reg(REG_RR7)));

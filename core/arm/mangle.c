@@ -1500,10 +1500,8 @@ insert_reachable_cti(dcontext_t *dcontext, instrlist_t *ilist, instr_t *where,
             if (inlined_tgt_instr != NULL)
                 *inlined_tgt_instr = NULL;
         }
-        if (branch)
-            PRE(ilist, where, INSTR_CREATE_branch_ind(dcontext, ind_tgt));
-        else
-            PRE(ilist, where, INSTR_CREATE_bl_ind(dcontext, ind_tgt));
+        PRE(ilist, where, INSTR_CREATE_branch_ind(dcontext, ind_tgt));
+
         if (inlined_tgt != NULL)
             PRE(ilist, where, inlined_tgt);
         return false;

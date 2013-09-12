@@ -1455,8 +1455,9 @@ dispatch_exit_fcache_stats(dcontext_t *dcontext)
         }
 # endif /* RETURN_AFTER_CALL */
     } else { /* DIRECT LINK */
-        ASSERT(LINKSTUB_DIRECT(dcontext->last_exit->flags) ||
-               IS_COARSE_LINKSTUB(dcontext->last_exit));
+        //Dont check 
+        //ASSERT(LINKSTUB_DIRECT(dcontext->last_exit->flags) ||
+        //       IS_COARSE_LINKSTUB(dcontext->last_exit));
 
         if (TESTANY(LINK_NI_SYSCALL_ALL,
                     dcontext->last_exit->flags)) {
