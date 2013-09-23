@@ -1,0 +1,1 @@
+bin32/drrun -debug -loglevel 6 -reset_at_fragment_count 1000 -- functional_tests/ft_1/fib
