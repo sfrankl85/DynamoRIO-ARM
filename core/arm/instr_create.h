@@ -378,8 +378,8 @@
     instr_create_0dst_0src((dc), OP_ldmed)
 #define INSTR_CREATE_ldr_imm(dc, d, s1, s2, c) \
     instr_create_1dst_2src((dc), OP_ldr_imm, (d), (s1), (s2), (c))
-#define INSTR_CREATE_ldr_lit(dc, d, s, i, c) \
-    instr_create_1dst_2src((dc), OP_ldr_lit, (d), (s), (i), (c))
+#define INSTR_CREATE_ldr_lit(dc, d, i, c) \
+    instr_create_1dst_1src((dc), OP_ldr_lit, (d), (i), (c))
 #define INSTR_CREATE_ldr_reg(dc, d, s1, s2, i, c) \
     instr_create_1dst_3src((dc), OP_ldr_reg, (d), (s1), (s2), (i), (c))
 #define INSTR_CREATE_ldrb_imm(dc) \

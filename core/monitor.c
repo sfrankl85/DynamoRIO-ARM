@@ -2356,6 +2356,9 @@ monitor_cache_enter(dcontext_t *dcontext, fragment_t *f)
             start_trace = false;
         }
     }
+
+    //SJF I am not doing traces so never enter this bit of code
+    start_trace = false;
     if (start_trace) {
         KSTART(trace_building);
         /* ensure our sentinel counter value for counter clearing will work */

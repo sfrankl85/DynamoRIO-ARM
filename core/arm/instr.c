@@ -4414,7 +4414,8 @@ opcode_is_cti(int opc)
        opc == OP_bxj || opc == OP_mov_reg || opc == OP_mov_imm ||
        (opc >= OP_ldr_imm && opc <= OP_ldrt ) || //All load instrs
        opc == OP_add_imm || opc == OP_sub_imm ||
-       opc == OP_add_reg || opc == OP_sub_reg )
+       opc == OP_add_reg || opc == OP_sub_reg ||
+       opc == OP_pop )
      return true;
    else
      return false;
@@ -4578,7 +4579,17 @@ instr_is_mov_br(instr_t* instr)
          }
       }
    }
-
+   else if( opc == OP_pop )
+   {
+     if( instr->src0.kind == REG_LIST_kind )
+     {
+       if( ( instr->src0.value.reg_list & REGLIST_R15 ) == REGLIST_R15 )
+       {
+         return true;
+       }
+     }
+   }
+  
    return false;
 }
 

@@ -7817,7 +7817,10 @@ check_thread_vm_area(dcontext_t *dcontext, app_pc pc, app_pc tag, void **vmlist,
                         frag_flags |= SANDBOX_FLAG();
                     }
                 }
-
+#if 0 
+SJF I do not know why this is done. 
+    I do know that it breaks DR as I have removed the 
+    signal catching code.
                 if (TEST(FRAG_SELFMOD_SANDBOXED, frag_flags)) {
                     LOG(GLOBAL, LOG_VMAREAS, 2,
                         "\tNew executable region "PFX"-"PFX" is writable, but selfmod, "
@@ -7841,6 +7844,7 @@ check_thread_vm_area(dcontext_t *dcontext, app_pc pc, app_pc tag, void **vmlist,
                     vm_flags |= VM_MADE_READONLY;
                     STATS_INC(num_rw2r_code_regions);
                 }
+#endif
             }
             /* now add the new region to the global list */
             ASSERT(!TEST(FRAG_COARSE_GRAIN, frag_flags)); /* else no pre-exec query */
@@ -7954,6 +7958,7 @@ check_thread_vm_area(dcontext_t *dcontext, app_pc pc, app_pc tag, void **vmlist,
     result = true;
     
     /* we are building a real bb, assert consistency checks */
+/* SJF Ignore checks
     DOCHECK(1, {
         uint prot2;
         ok = get_memory_info(pc, NULL, NULL, &prot2);
@@ -7961,6 +7966,7 @@ check_thread_vm_area(dcontext_t *dcontext, app_pc pc, app_pc tag, void **vmlist,
                TEST(FRAG_SELFMOD_SANDBOXED, *flags));
         ASSERT(is_readable_without_exception_try(pc, 1));
     });
+*/
 
  check_thread_return:
     check_thread_vm_area_cleanup(dcontext, false/*not aborting*/,

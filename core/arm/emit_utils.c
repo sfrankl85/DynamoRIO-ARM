@@ -1141,7 +1141,6 @@ insert_exit_stub_other_flags(dcontext_t *dcontext, fragment_t *f,
             pc = nxt_pc;
         }
 
-
 #ifdef PROFILE_LINKCOUNT
         if (linkcount) {
             pc = insert_linkcount_saveflags(pc, dcontext, f->flags);
@@ -1152,6 +1151,9 @@ insert_exit_stub_other_flags(dcontext_t *dcontext, fragment_t *f,
 
         /* branch to exit target */
         pc = insert_relative_branch(pc, exit_target, NOT_HOT_PATCHABLE);
+
+        //SJF Clear the cache to make sure invalid instrs are not executed
+        __clear_cache( (char*)stub_pc, (char*)pc+4 );
 
 #ifdef PROFILE_LINKCOUNT
         if (linkcount) {
@@ -3222,24 +3224,6 @@ emit_fcache_enter_common(dcontext_t *dcontext, generated_code_t *code, byte *pc,
     /* Jump indirect through next_tag.  Dispatch set this value with
      * where we want to go next in the fcache_t.
      */
-    //dcontext is in r0 so just add offset to it and get entry point 
-
-#if 0
-Use absolute address
-    int offset = offsetof(dcontext_t, next_tag);
-     
-    APP(&ilist, INSTR_CREATE_add_imm(dcontext, opnd_create_reg(REG_RR0),
-                                     opnd_create_reg(REG_RR0),
-                                     opnd_create_immed_int(offset, OPSZ_4_12),
-                                     COND_ALWAYS ));
-
-    instr = INSTR_CREATE_ldr_imm(dcontext, opnd_create_reg(REG_RR7),
-                                     opnd_create_mem_reg(REG_RR0),
-                                     OPND_CREATE_IMM12(0), COND_ALWAYS );
-    instr_set_u_flag( dcontext, instr, true );
-    APP(&ilist, instr );
-#endif
-
     //Cannot preserve r7. 
     //next_tag should also be stored in mcontext
     RESTORE_FROM_DC(&ilist, dcontext, REG_RR7, R15_OFFSET, INSERT_APPEND, NULL);
@@ -3247,6 +3231,42 @@ Use absolute address
     RESTORE_FROM_DC(&ilist, dcontext, REG_CPSR,CPSR_OFFSET, INSERT_APPEND, NULL);
 
     APP(&ilist, INSTR_CREATE_branch_ind(dcontext, opnd_create_reg(REG_RR7)));
+
+#if 0
+    //Change the saving and restoring or regs to use ldr_lit to avoid having to use scratch regs
+    APP(&ilist, INSTR_CREATE_ldr_lit(dcontext, opnd_create_reg( REG_RR0 ),
+                        OPND_CREATE_IMM12(&dcontext->upcontext->upcontext->mcontext->r0), COND_ALWAYS));
+    APP(&ilist, INSTR_CREATE_ldr_lit(dcontext, opnd_create_reg( REG_RR1 ),
+                        OPND_CREATE_IMM12(&dcontext->upcontext->upcontext->mcontext->r1), COND_ALWAYS));
+    APP(&ilist, INSTR_CREATE_ldr_lit(dcontext, opnd_create_reg( REG_RR2 ),
+                        OPND_CREATE_IMM12(&dcontext->upcontext->upcontext->mcontext->r2), COND_ALWAYS));
+    APP(&ilist, INSTR_CREATE_ldr_lit(dcontext, opnd_create_reg( REG_RR3 ),
+                        OPND_CREATE_IMM12(&dcontext->upcontext->upcontext->mcontext->r3), COND_ALWAYS));
+    APP(&ilist, INSTR_CREATE_ldr_lit(dcontext, opnd_create_reg( REG_RR4 ),
+                        OPND_CREATE_IMM12(&dcontext->upcontext->upcontext->mcontext->r4), COND_ALWAYS));
+    APP(&ilist, INSTR_CREATE_ldr_lit(dcontext, opnd_create_reg( REG_RR5 ),
+                        OPND_CREATE_IMM12(&dcontext->upcontext->upcontext->mcontext->r5), COND_ALWAYS));
+    APP(&ilist, INSTR_CREATE_ldr_lit(dcontext, opnd_create_reg( REG_RR6 ),
+                        OPND_CREATE_IMM12(&dcontext->upcontext->upcontext->mcontext->r6), COND_ALWAYS));
+    APP(&ilist, INSTR_CREATE_ldr_lit(dcontext, opnd_create_reg( REG_RR7 ),
+                        OPND_CREATE_IMM12(&dcontext->upcontext->upcontext->mcontext->r7), COND_ALWAYS));
+    APP(&ilist, INSTR_CREATE_ldr_lit(dcontext, opnd_create_reg( REG_RR8 ),
+                        OPND_CREATE_IMM12(&dcontext->upcontext->upcontext->mcontext->r8), COND_ALWAYS));
+    APP(&ilist, INSTR_CREATE_ldr_lit(dcontext, opnd_create_reg( REG_RR9 ),
+                        OPND_CREATE_IMM12(&dcontext->upcontext->upcontext->mcontext->r9), COND_ALWAYS));
+    APP(&ilist, INSTR_CREATE_ldr_lit(dcontext, opnd_create_reg( REG_RR10 ),
+                        OPND_CREATE_IMM12(&dcontext->upcontext->upcontext->mcontext->r10), COND_ALWAYS));
+    APP(&ilist, INSTR_CREATE_ldr_lit(dcontext, opnd_create_reg( REG_RR11 ),
+                        OPND_CREATE_IMM12(&dcontext->upcontext->upcontext->mcontext->r11), COND_ALWAYS));
+    APP(&ilist, INSTR_CREATE_ldr_lit(dcontext, opnd_create_reg( REG_RR12 ),
+                        OPND_CREATE_IMM12(&dcontext->upcontext->upcontext->mcontext->r12), COND_ALWAYS));
+    APP(&ilist, INSTR_CREATE_ldr_lit(dcontext, opnd_create_reg( REG_RR13 ),
+                        OPND_CREATE_IMM12(&dcontext->upcontext->upcontext->mcontext->r13), COND_ALWAYS));
+    APP(&ilist, INSTR_CREATE_ldr_lit(dcontext, opnd_create_reg( REG_RR14 ),
+                        OPND_CREATE_IMM12(&dcontext->upcontext->upcontext->mcontext->r14), COND_ALWAYS));
+    APP(&ilist, INSTR_CREATE_ldr_lit(dcontext, opnd_create_reg( REG_RR15 ),
+                        OPND_CREATE_IMM12(&dcontext->upcontext->upcontext->mcontext->r15), COND_ALWAYS));
+#endif
 
     /* now encode the instructions */
     len = encode_with_patch_list(dcontext, &patch, &ilist, pc);
@@ -3449,6 +3469,14 @@ append_fcache_return_common(dcontext_t *dcontext, generated_code_t *code,
        Moved this to the exit stub
     SAVE_TO_DC(ilist, dcontext, REG_RR1, LAST_EXIT_OFFSET, INSERT_APPEND, NULL);
      */
+
+    // switch to clean dstack
+    instrlist_append_move_32bits_to_reg( ilist, dcontext, REG_RR8, REG_RR9, 
+                                         (((int)(ptr_int_t)(dcontext)) + DSTACK_OFFSET), COND_ALWAYS );
+
+    instrlist_meta_append( ilist, INSTR_CREATE_ldr_imm(dcontext, opnd_create_reg(REG_RR13),
+                                                       opnd_create_mem_reg(REG_RR8),
+                                                       OPND_CREATE_IMM12(0), COND_ALWAYS ));
 
     //clear_all_regs(dcontext, ilist);
 

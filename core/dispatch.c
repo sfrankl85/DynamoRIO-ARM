@@ -129,6 +129,8 @@ dispatch(dcontext_t *dcontext)
     fragment_t *targetf;
     fragment_t coarse_f;
 
+    LOG(THREAD, LOG_INTERP, 2, "\ndispatch() entered\n");
+
 #ifdef HAVE_TLS
     ASSERT(dcontext == get_thread_private_dcontext());
 #else
@@ -1117,6 +1119,8 @@ dispatch_exit_fcache(dcontext_t *dcontext)
 static void
 dispatch_exit_fcache_stats(dcontext_t *dcontext)
 {
+//  static int cnt=1;
+
 #if defined(DEBUG) || defined(KSTATS)
     fragment_t *next_f;
     fragment_t *last_f;
@@ -1309,9 +1313,13 @@ dispatch_exit_fcache_stats(dcontext_t *dcontext)
         /* FIXME: this stat is not mutually exclusive of reason-for-exit stats */
         STATS_INC(num_exits_coarse_trace_head);
     } else {
-        LOG(THREAD, LOG_DISPATCH, 2, "Exit from F%d("PFX")."PFX, 
-            last_f->id, last_f->tag, EXIT_CTI_PC(dcontext->last_fragment,
-                                                 dcontext->last_exit));
+        LOG(THREAD, LOG_DISPATCH, 2, "Exit from block("PFX")."PFX" targeting("PFX")", 
+            last_f->tag, EXIT_CTI_PC(dcontext->last_fragment,
+                                                 dcontext->last_exit), dcontext->next_tag);
+
+        //LOG(THREAD, LOG_DISPATCH, 2, "\n%03d - Start Addr: "PFX", Target Addr: "PFX"", 
+        //    cnt, last_f->tag, dcontext->next_tag);
+        //cnt++;
     }
 
     DOSTATS({

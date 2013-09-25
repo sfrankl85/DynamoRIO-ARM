@@ -406,6 +406,9 @@ set_linkstub_fields(dcontext_t *dcontext, fragment_t *f, instrlist_t *ilist,
             }
         }
     }
+    //SJF Clear the cache to make sure invalid instrs are not executed
+    __clear_cache( (char*)FCACHE_ENTRY_PC(f), (char*)pc+4 );
+
     return pc;
 }
 

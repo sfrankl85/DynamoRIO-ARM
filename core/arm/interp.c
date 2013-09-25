@@ -2779,6 +2779,8 @@ build_bb_ilist(dcontext_t *dcontext, build_bb_t *bb)
                     as a normal branch. dispatch() should detect the target branch corectly. */
               if( instr_is_cbr( bb->instr ))
               {
+                
+                LOG(THREAD, LOG_INTERP, 5, "\nIndirect Block: Conditional\n" );
                 //SJF If it is a cbr indirect needs to split cond instr
                 new_cond = invert_cond_code( bb->instr->cond );
 
@@ -2883,9 +2885,46 @@ build_bb_ilist(dcontext_t *dcontext, build_bb_t *bb)
                   //Make sure inst is pointing at the last instruction
                   bb->instr = instrlist_last( bb->ilist );
                 }
+                else if( bb->instr->opcode == OP_pop )
+                { 
+                  //TODO May neeed changin is cond
+                  /*Special processing for pop cti
+                    Need to pop to lr instead of pc to preserve the order that they are popped in
+                    According to the ARM manual you cannot pop lr and pc at the same time so should 
+                    not cause an issue. */
 
-                bb->flags |= FAKE_INDIRECT_FRAG;
-                bb->exit_type |= instr_branch_type(bb->instr);
+                  bool absolute = true;
+                  //Save R0 + R14 to dcontext
+                  SAVE_TO_DC(bb->ilist, dcontext, REG_RR0, R0_OFFSET, INSERT_PRE, bb->instr);
+                  SAVE_TO_DC(bb->ilist, dcontext, REG_RR14, R14_OFFSET, INSERT_PRE, bb->instr);
+ 
+                  // Remove the pc flag
+                  bb->instr->src0.value.reg_list &= (REG_RR0|REG_RR1|REG_RR2|REG_RR3|REG_RR4|REG_RR5|REG_RR6|REG_RR7|
+                                                     REG_RR8|REG_RR9|REG_RR10|REG_RR11|REG_RR12|REG_RR13|REG_RR14);
+                  //Then add r14 to preserve popping order
+                  bb->instr->src0.value.reg_list |= REG_RR14;
+                  instr_set_raw_bits_valid( bb->instr, false );
+
+                  //Once popped move to R0
+                  new_inst = INSTR_CREATE_mov_reg(dcontext, opnd_create_reg( REG_RR0 ), 
+                                                  opnd_create_reg( REG_RR14 ), COND_ALWAYS );
+                  instrlist_meta_append( bb->ilist, new_inst );
+                  instr_set_ok_to_mangle(new_inst, true);
+
+                  //Should get overwrittn with branch to exit stub later
+                  new_inst = INSTR_CREATE_branch(dcontext, opnd_create_pc( 0 ), COND_ALWAYS );
+
+                  instrlist_meta_append( bb->ilist, new_inst );
+                  instr_set_ok_to_mangle(new_inst, true);
+                  new_inst->flags |= INSTR_JMP_EXIT;
+
+                  //Make sure inst is pointing at the last instruction
+                  bb->instr = instrlist_last( bb->ilist );
+
+                  bb->flags |= FAKE_INDIRECT_FRAG;
+                  bb->exit_type |= instr_branch_type(bb->instr);
+                }
+
                 //SJF Copied from 'else if' below
                 total_branches++;
                 if (total_branches >= BRANCH_LIMIT) {
@@ -2893,10 +2932,10 @@ build_bb_ilist(dcontext_t *dcontext, build_bb_t *bb)
                     instr_exit_branch_set_type(bb->instr, instr_branch_type(bb->instr));
                     break;
                 }
- 
               }
               else
               {
+                LOG(THREAD, LOG_INTERP, 5, "\nIndirect Block: Unconditional\n" );
                 if( bb->instr->opcode == OP_blx_reg || bb->instr->opcode == OP_bx || bb->instr->opcode == OP_bxj )
                 {
                   //Save R0 to dcontext 
@@ -2962,10 +3001,48 @@ build_bb_ilist(dcontext_t *dcontext, build_bb_t *bb)
 
                   //Make sure inst is pointing at the last instruction
                   bb->instr = instrlist_last( bb->ilist );
-                }
 
-                bb->flags |= FAKE_INDIRECT_FRAG;
-                bb->exit_type |= instr_branch_type(bb->instr);
+                  bb->flags |= FAKE_INDIRECT_FRAG;
+                  bb->exit_type |= instr_branch_type(bb->instr);
+                }
+                else if( bb->instr->opcode == OP_pop )
+                {
+                  /*Special processing for pop cti
+                    Need to pop to lr instead of pc to preserve the order that they are popped in
+                    According to the ARM manual you cannot pop lr and pc at the same time so should
+                    not cause an issue. */
+
+                  bool absolute = true;
+                  //Save R0 + R14 to dcontext
+                  SAVE_TO_DC(bb->ilist, dcontext, REG_RR0, R0_OFFSET, INSERT_PRE, bb->instr);
+                  SAVE_TO_DC(bb->ilist, dcontext, REG_RR14, R14_OFFSET, INSERT_PRE, bb->instr);
+
+                  // Remove the pc flag
+                  bb->instr->src0.value.reg_list &= (REG_RR0|REG_RR1|REG_RR2|REG_RR3|REG_RR4|REG_RR5|REG_RR6|REG_RR7|
+                                                     REG_RR8|REG_RR9|REG_RR10|REG_RR11|REG_RR12|REG_RR13|REG_RR14);
+                  //Then add r14 to preserve popping order
+                  bb->instr->src0.value.reg_list |= REG_RR14;
+                  instr_set_raw_bits_valid( bb->instr, false );
+
+                  //Once popped move to R0
+                  new_inst = INSTR_CREATE_mov_reg(dcontext, opnd_create_reg( REG_RR0 ),
+                                                  opnd_create_reg( REG_RR14 ), COND_ALWAYS );
+                  instrlist_meta_append( bb->ilist, new_inst );
+                  instr_set_ok_to_mangle(new_inst, true);
+
+                  //Should get overwrittn with branch to exit stub later
+                  new_inst = INSTR_CREATE_branch(dcontext, opnd_create_pc( 0 ), COND_ALWAYS );
+
+                  instrlist_meta_append( bb->ilist, new_inst );
+                  instr_set_ok_to_mangle(new_inst, true);
+                  new_inst->flags |= INSTR_JMP_EXIT;
+
+                  //Make sure inst is pointing at the last instruction
+                  bb->instr = instrlist_last( bb->ilist );
+
+                  bb->flags |= FAKE_INDIRECT_FRAG;
+                  bb->exit_type |= instr_branch_type(bb->instr);
+                }
                 //SJF Copied from 'else if' below
                 total_branches++;
                 if (total_branches >= BRANCH_LIMIT) {
@@ -2975,9 +3052,11 @@ build_bb_ilist(dcontext_t *dcontext, build_bb_t *bb)
                 }
               }
         }
-        else if (instr_is_cti(bb->instr)) {  //All other branches. Should be only direct 
+        else if (instr_is_cti(bb->instr)) 
+        {  //All other branches. Should be only direct 
             if( instr_is_cbr(bb->instr))//If conditional
             {
+                LOG(THREAD, LOG_INTERP, 5, "\nDirect Block: Conditional\n" );
                //SJF If it is a cbr indirect needs to split cond instr
                new_cond = invert_cond_code( bb->instr->cond );
 
@@ -3058,6 +3137,8 @@ build_bb_ilist(dcontext_t *dcontext, build_bb_t *bb)
             }
             else
             {
+              LOG(THREAD, LOG_INTERP, 5, "\nDirect Block: Unconditional\n" );
+
               //Save R0 to DC
               bool absolute = true;
               SAVE_TO_DC(bb->ilist, dcontext, REG_RR0, R0_OFFSET, INSERT_PRE, bb->instr);
